@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Troubleshoot LarePass VPN connection issues on macOS, Windows, and mobile devices.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, LarePass VPN, VPN not working, macOS extension, troubleshoot
 ---
 # LarePass VPN not working
 

@@ -57,9 +57,9 @@ func (m *InstallDepsModule) Init() {
 		Retry:    0,
 	}
 
-	patchOs := &task.RemoteTask{
+	// OS preparation modifies the local machine, including its APT sources.
+	patchOs := &task.LocalTask{
 		Name:   "PatchOs",
-		Hosts:  m.Runtime.GetAllHosts(),
 		Action: new(PatchTask),
 		Retry:  0,
 	}
@@ -96,5 +96,22 @@ func (m *CorrectHostnameModule) Init() {
 
 	m.Tasks = []task.Interface{
 		correctHostname,
+	}
+}
+
+type PatchNfsScriptModule struct {
+	common.KubeModule
+}
+
+func (m *PatchNfsScriptModule) Init() {
+	m.Name = "PatchNfsScript"
+
+	patchNfsScript := &task.LocalTask{
+		Name:   "PatchNfsScript",
+		Action: new(PatchNfsScriptTask),
+	}
+
+	m.Tasks = []task.Interface{
+		patchNfsScript,
 	}
 }

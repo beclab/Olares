@@ -8,7 +8,7 @@ head:
 ---
 
 :::warning
-本文档由 AI 自动翻译，可能存在表述差异。如需核对，请参考[英文原文](../../one/expand-storage-internal-ssd.md)。
+本文档由 AI 自动翻译，仅供参考。涉及关键操作或信息时，请以[英文原文](../../one/expand-storage-internal-ssd.md)为准。
 :::
 
 # 使用 NVMe M.2 SSD 扩展存储 <Badge type="tip" text="15 min" />
@@ -25,10 +25,10 @@ head:
   :::
 
 Olares One 主板包含两个 PCIe SSD 插槽：
-* 插槽 1 (PCIe 4.0)：预装 2TB 系统 SSD 占用。
-* 插槽 2 (PCIe 5.0)：可用于扩展。
+* PCIe 5.0 插槽：预装的 2TB 系统 SSD 占用。
+* PCIe 4.0 插槽：可用于扩展。
 
-你可以使用第二个插槽来扩展当前的系统存储。
+你可以使用 PCIe 4.0 插槽扩展当前的系统存储。
 
 ## 前提条件
 **硬件**
@@ -158,4 +158,3 @@ Olares One 主板包含两个 PCIe SSD 插槽：
 ## 相关资源
 - [通过 USB 设备扩展存储](expand-storage-usb-drive.md)
 - [使用外接 SSD 扩展存储](expand-storage-external-ssd.md)
-- [`olares-cli disk`](../developer/install/cli/disk.md)。

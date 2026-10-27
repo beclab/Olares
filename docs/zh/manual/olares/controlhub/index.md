@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 熟悉 Olares 中控制面板应用的操作界面，了解如何导航资源视图、管理工作负载和服务等。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 控制面板, Control Hub, Kubernetes, 工作负载, 资源管理, 终端
 ---
 
 # 通过控制面板管理 Olares

@@ -5,16 +5,16 @@ head:
   - - meta
     - name: keywords
       content: Olares, OpenClaw, OpenClaw 教程, OpenClaw 使用指南, 安装技能, 安装插件
-app_version: "1.0.3"
-doc_version: "1.1"
-doc_updated: "2026-05-29"      
+app_version: "1.0.36"
+doc_version: "1.3"
+doc_updated: "2026-09-04"
 ---
 
 :::warning
-本页面为 AI 翻译版本，内容仅供快速参考。关键信息建议以[英文原文](../../use-cases/openclaw-skills.md)为准。
+本文档由 AI 自动翻译，仅供参考。涉及关键操作或信息时，请以[英文原文](../../use-cases/openclaw-skills.md)为准。
 :::
 
-# 管理技能和插件
+# 管理 OpenClaw 技能和插件
 
 OpenClaw 可以通过技能和插件进行扩展：
 - 技能为 AI 添加新能力。例如，管理模型上下文协议（MCP）服务器。
@@ -68,7 +68,7 @@ OpenClaw 可以通过技能和插件进行扩展：
 
 ### 通过 `openclaw config` 安装
 
-你可以使用内置配置向导安装默认或官方支持的技能。本示例将安装 `clawhub` 技能，供后续方法使用。
+你可以使用内置配置向导安装默认或官方支持的技能及其缺失的依赖项。
 
 1. 打开 OpenClaw CLI。
 2. 输入以下命令启动向导：
@@ -80,14 +80,12 @@ OpenClaw 可以通过技能和插件进行扩展：
 
     | 设置 | 选项 |
     |:---------|:-------|
-    | Where will the Gateway run | Local (this machine) |
-    | What do you want to configure | Skills |
-    | Configure skills now | Yes |
-    | Install missing skill dependencies | 导航到 **clawhub** 技能，按**空格**键<br>选中它，然后按**回车**。 |
-    | Preferred node manager for skill installs | npm<br>等待 `Installed clawhub` 消息出现<br>后再继续。 |
-    | Set [API_KEY] for [skill] | 对所有这些设置选择 **No**。|
+    | <nobr>Where will the Gateway run</nobr> | Local (this machine) |
+    | <nobr>What do you want to configure</nobr> | Skills |
+    | <nobr>Install missing skill dependencies</nobr> | 按需选择 |
 
-4. 最后，对 **What do you want to configure** 选择 **Done**。出现 `Configure complete` 消息时，表示设置已完成。
+4. 等待安装完成，并查看已安装摘要。
+5. 当提示 **What do you want to configure** 时，选择 **Done**。出现 `Configuration updated` 消息时，表示设置已完成。
 
 ### 从 ClawHub 安装
 
@@ -114,10 +112,6 @@ OpenClaw 可以通过技能和插件进行扩展：
 
     ![ClawHub 中的技能 ID](/images/manual/use-cases/openclaw-skill-id.png#bordered)
     
-    :::warning 安全建议
-    强烈建议在安装技能之前，先在官方 ClawHub 网站上搜索并阅读该技能的详细信息。这可以确保你安装的是正确的技能，并防止安装恶意包。
-    :::
-
 4. 使用技能 ID 安装目标技能。
     
     例如，要安装此日历技能，应运行以下命令：
@@ -126,7 +120,10 @@ OpenClaw 可以通过技能和插件进行扩展：
     openclaw skills install caldav-calendar
     ```
 
-5. 等待终端指示技能已安装，然后通过运行以下命令验证：
+    终端会显示该技能的安全审计报告。
+
+5. 查看审计结果，然后输入 `y` 并按 **Enter** 继续。
+6. 等待终端指示技能已安装，然后通过运行以下命令验证：
 
     ```bash
     openclaw skills list
@@ -134,13 +131,13 @@ OpenClaw 可以通过技能和插件进行扩展：
 
     **caldav-calendar** 的状态为 **ready**，表示安装成功。
 
-6. 打开 **Control UI**，从左侧边栏选择 **Skills**，然后点击 **Ready** 标签页。你会看到新安装的技能已启用。
-
-    ![新安装的技能已启用](/images/manual/use-cases/skill-enabled.png#bordered)
+7. 打开 **Control UI**，点击左下角的用户账户，然后选择 **Settings**。
+8. 从左侧边栏选择 **Agents**，然后点击 **Skills** 标签页。
+9. 搜索你刚安装的技能，你会看到它已启用。
 
 ### 上传技能
 
-1. 打开文件管理器，然后进入**应用** > **数据** > **clawdbot** > **config**。
+1. 从启动台打开文件管理器，然后进入 **Data** > **clawdbot** > **config**。
 2. 创建一个名为 `skills` 的新文件夹。
 3. 将你的技能包（例如解压后的 `.zip` 文件）上传到此 `skills` 文件夹中。
 4. 如有缺失，安装所需的包依赖。
@@ -157,8 +154,6 @@ OpenClaw 可以通过技能和插件进行扩展：
     
     终端列出所有不可用的技能，并在括号中显示其缺失的要求。
 
-    ![从 CLI 安装缺失的依赖项](/images/manual/use-cases/missing-dependency-cli1.png#bordered){width=70%}
-
 2. 使用 `npm` 或 `brew` 手动安装依赖项。有关安装要求的详细信息，请参阅 `skills.md` 文件。
 
     - 示例：`gh-issues` 技能需要安装 `gh`。
@@ -174,11 +169,13 @@ OpenClaw 可以通过技能和插件进行扩展：
 
 4. 验证安装：
 
-    a. 打开 Control UI。
+    a. 打开 Control UI，点击左下角的用户账户，然后选择 **Settings**。
     
-    b. 进入 **Skills** 页面。该技能现在应标记为 **eligible**。
+    b. 从左侧边栏选择 **Agents**，然后点击 **Skills** 标签页。
     
-    c. 如有需要，配置必需的 API 密钥，然后智能体将能够使用该技能。
+    c. 搜索该技能。它现在应标记为 **eligible**。
+    
+    d. 如有需要，配置必需的 API 密钥，然后智能体将能够使用该技能。
 
 ## 安装插件
 
@@ -193,10 +190,10 @@ OpenClaw 可以通过技能和插件进行扩展：
     ```bash
     openclaw plugins install {Name}
     ```
-    例如，要安装 BlueBubbles，应输入以下命令：
+    例如，要安装 LLM Task，应输入以下命令：
 
     ```bash
-    openclaw plugins install @openclaw/bluebubbles
+    openclaw plugins install @openclaw/llm-task
     ```
 
     :::warning 插件安装被阻止
@@ -208,7 +205,7 @@ OpenClaw 可以通过技能和插件进行扩展：
     ```
     :::
 
-3. 安装完成后，关闭 OpenClaw CLI 并重新打开它以加载新插件。
+3. 安装完成后，重启 gateway 以加载新插件。
 4. 通过检查插件状态进行验证：
 
     ```bash
@@ -217,17 +214,16 @@ OpenClaw 可以通过技能和插件进行扩展：
 
     现在插件的状态为 **enabled**。
 
-5. 打开 Control UI，从左侧边栏选择 **Settings**，然后进入 **Automation** > **Plugins**。
-6. 找到 **@openclaw/bluebubbles** 并点击它以展开面板：
+5. 打开 Control UI，点击左下角的用户账户，然后选择 **Settings**。
+6. 从左侧边栏选择 **Automation**，然后点击 **Plugins** 标签页。
+7. 找到 **LLM Task** 并点击它以展开面板：
 
     - 如果已启用，关闭切换开关，然后再打开，以强制系统显式保存配置。
     - 如果已禁用，打开切换开关。
 
-    ![开启插件](/images/manual/use-cases/toggle-plugin2.png#bordered)
+    系统验证配置并自动应用更改。
 
-7. 点击右上角的 **Save**。系统验证配置并自动应用更改。
-
-    ::: tip 手动重启
+    :::tip 手动重启
     如果你需要手动重启 OpenClaw，请不要使用 OpenClaw CLI。请使用以下方法之一：
     - **从设置或应用市场重启应用**：
         - 打开**设置**，进入**应用** > **OpenClaw**，点击**暂停**，然后点击**恢复**。

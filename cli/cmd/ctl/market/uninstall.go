@@ -13,9 +13,9 @@ import (
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
-// inFlightCancelableStates mirrors app-service's CancelableStates: while the
-// app is mid-operation, app-service rejects a direct uninstall and only
-// accepts a cancel. `market uninstall` orchestrates around this (cancel
+// inFlightCancelableStates are the in-flight states that both Market's cancel
+// whitelist and app-service accept: while the app is mid-operation,
+// app-service rejects a direct uninstall and only accepts a cancel. `market uninstall` orchestrates around this (cancel
 // first, then finish with a real uninstall if the cancel only stopped the
 // app) so "uninstall == fully remove" holds regardless of state.
 var inFlightCancelableStates = map[string]bool{
@@ -23,9 +23,40 @@ var inFlightCancelableStates = map[string]bool{
 	"downloading":  true,
 	"installing":   true,
 	"initializing": true,
-	"upgrading":    true,
-	"applyingEnv":  true,
-	"resuming":     true,
+	stateUpgrading: true,
+	stateResuming:  true,
+}
+
+// installTeardownStates are the in-flight states whose cancel deletes the
+// partial install, so the only way forward is a fresh install; the other
+// in-flight states cancel to `stopped`, which upgrade accepts.
+var installTeardownStates = map[string]bool{
+	"pending":     true,
+	"downloading": true,
+	"installing":  true,
+}
+
+// uninstallRejectingStates are the settled states whose entry in
+// app-service's OperationAllowedInState
+// (framework/app-service/pkg/appstate/state_transition.go) permits InstallOp
+// but not UninstallOp: nothing was ever deployed, so an uninstall is answered
+// with a 404.
+//
+// This is deliberately NOT notInstalledStates from types.go, which answers a
+// different question — whether the row renders under `market list --mine`.
+// The two sets differ on exactly one state, and it matters: `installFailed`
+// is absent from `--mine` yet DOES accept UninstallOp, because a failed
+// install can have left resources behind that the uninstall cleans up.
+//
+// `downloadFailed` is the member to expect in practice. A bad image
+// reference fails while pulling, so it lands here rather than in
+// installFailed.
+var uninstallRejectingStates = map[string]bool{
+	"downloadFailed":      true,
+	"pendingCanceled":     true,
+	"downloadingCanceled": true,
+	"installingCanceled":  true,
+	"uninstalled":         true,
 }
 
 func NewCmdMarketUninstall(f *cmdutil.Factory) *cobra.Command {
@@ -58,7 +89,21 @@ is ALWAYS cascaded — the backend forces all=true and the SPA disables
 the checkbox — so --cascade=false is overridden (a stderr note reports
 the force). The --cascade=false override only takes effect on 1.12.5.
 
-Use --delete-data to also remove the app's persistent data.
+--delete-data covers only the app's OWN data (the JSON payload field
+is "deleteData"). What happens to each storage area on uninstall:
+
+  - cache/<node>/<app> — node-local and regenerable, so it is always
+    cleared, with or without the flag.
+  - drive/Data/<app> — app-private state (db files, config); cleared
+    only when --delete-data is passed.
+  - drive/Home/... — NEVER deleted. The manifest's permission.userData
+    grants an app access to the user's own files; it does not make the
+    app their owner, and the same paths may be shared with other apps
+    holding that permission. Clean up leftovers yourself with
+    "olares-cli files rm --recursive <path>".
+
+An app declaring only permission.userData therefore owns no data at
+all, and --delete-data has nothing to remove for it.
 
 --watch blocks until the row reaches 'uninstalled' or disappears
 entirely (acceptInitialAbsent=true: if the user's per-user row is
@@ -79,9 +124,11 @@ Examples:
 		},
 	}
 	opts.addOutputFlags(cmd)
+	describeLifecycleJSON(cmd)
 	opts.addCascadeFlag(cmd)
 	opts.addDeleteDataFlag(cmd)
 	opts.addWatchFlags(cmd)
+	explainNoSourceFlag(cmd)
 	return cmd
 }
 
@@ -150,8 +197,33 @@ func runUninstall(opts *MarketOptions, cmd *cobra.Command, appName string) error
 	// removal from the CLI (cancel first, then a real uninstall if the cancel
 	// only stopped the app) so "uninstall == fully remove" holds regardless
 	// of state.
+	if row != nil && curState == stateApplyingEnv {
+		return opts.failOp("uninstall", appName, errApplyingEnvNotCancelable)
+	}
 	if row != nil && inFlightCancelableStates[curState] {
 		return runUninstallViaCancel(opts, mc, appName, source, version, cascade, curState, atLeast126)
+	}
+
+	// A row in one of the states that does not accept UninstallOp names a
+	// source but has nothing deployed behind it, and app-service answers the
+	// uninstall with a bare 404. Forwarding that reads like the app name was
+	// wrong, when in fact the record of a failed operation is all that is
+	// left.
+	//
+	// This is the same stance as the missing-row branch below — nothing
+	// actionable to delete, so report it and stop — except that we must not
+	// hand off to --watch: the row is present and will never move, so the
+	// watcher would sit there until it timed out and then exit non-zero.
+	if row != nil && uninstallRejectingStates[curState] {
+		opts.info("'%s' is in state '%s', which is not an installed app; nothing to uninstall", appName, curState)
+		if source == chartUploadSource {
+			opts.info("  the row is a record of the failed operation; 'olares-cli market delete %s' removes the uploaded chart and clears it", appName)
+		} else {
+			opts.info("  the row is a record of the failed operation; re-run 'olares-cli market install %s' to retry", appName)
+		}
+		result := newOperationResult(mc, "uninstall", appName, source, version,
+			fmt.Sprintf("state %q is not installed; nothing to uninstall", curState), nil)
+		return finishOperation(opts, mc, result)
 	}
 
 	opts.info("Uninstalling '%s' for user '%s'...", appName, mc.olaresID)
@@ -159,7 +231,7 @@ func runUninstall(opts *MarketOptions, cmd *cobra.Command, appName string) error
 		opts.info("  --cascade: will uninstall all sub-charts")
 	}
 	if opts.DeleteData {
-		opts.info("  --delete-data: will delete persistent data")
+		opts.info("  --delete-data: will delete the app's data dir (drive/Data/<app>); drive/Home is not touched")
 	}
 
 	// 1.12.6 requires source in the uninstall body, and the only place we

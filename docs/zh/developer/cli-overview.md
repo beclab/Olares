@@ -1,40 +1,33 @@
 ---
 outline: [2, 3]
-description: 了解如何用 olares-cli 管理集群、诊断系统，以及让 AI Agent 代你操作 Olares。涵盖主机、用户和集群内三种模式。
+description: 使用 olares-cli 维护 Olares OS、管理运行中的 Olares，并通过内置 Agent Skills 让 AI Agent 执行任务。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, olares-cli, 命令行工具, 集群管理, Agent Skills, AI Agent
 ---
 
 # Olares CLI
 
-`olares-cli` 是 Olares 的命令行工具。安装 Olares 时会自带它，你也可以在 macOS、Windows 或 Linux 上单独安装，无需安装完整系统。它可以用来完成以下任务：
+`olares-cli` 是 Olares 官方命令行工具，可用于安装、升级和维护 Olares OS，也可以管理运行中的 Olares 上的文件、应用、设置和系统状态。CLI 内置 Agent Skills（技能），让 AI Agent 可以把自然语言请求转换为具体命令。
 
-- **管理集群**：在新机器上安装 Olares、在版本之间升级、添加或移除节点，以及彻底卸载。
-- **诊断和修复系统**：运行安装前检查、收集日志、查询节点状态、排查问题。
-- **让 AI Agent 操作 Olares**：让 Agent 通过自然语言代你管理文件、应用和设置。
+你可以在 macOS、Windows 或 Linux 上单独安装 Olares CLI，让另一台电脑上的 AI Agent 管理正在运行的 Olares。Olares OS 主机也会自带一份用于系统维护的 CLI。
 
-## Olares CLI 的三种模式
-olares-cli 提供三种模式，区别在于运行位置和鉴权方式。
+## 开始使用
 
-| 模式 | 运行位置 | 鉴权方式 |
-|------|---------|---------|
-| 主机模式 | 与 Olares OS 同一台机器 | 主机 root 和 kubeconfig，无需登录。|
-| 用户模式 <Badge type="tip" text="^1.12.5" /> | 任意安装了 `olares-cli` 的机器，以登录<br>用户的身份运行 | 通过与网页端、LarePass 相同的 HTTP API，使用 profile 和访问令牌 |
-| 集群内模式 <Badge type="tip" text="^1.12.6" /> | Olares 应用容器内部 | 凭证以环境变量注入，权限范围由应用的 `OlaresManifest` 决定 |
+### 通过 AI Agent 管理 Olares
 
-:::tip
-要使用用户模式，请通过 npm 安装 CLI。如果主机上已有的 `olares-cli` 版本早于表中所示版本，相关命令可能不可用。参见[安装 olares-cli](./cli-install.md)。
-:::
+在运行 AI Agent 的电脑上安装 Olares CLI 和技能，再用 Olares ID 登录。之后用自然语言描述任务，Agent 就能通过命令管理 Olares 上的文件、应用、设置、模型和系统状态。按照[通过 AI Agent 使用 Olares CLI](./cli-install.md)完成配置和第一个任务。
 
-## 让 AI Agent 操作 Olares
+运行在 Olares 上的 [Lares](../use-cases/lares.md)、[Hermes Agent](../use-cases/hermes.md) 和 [OpenClaw](../use-cases/openclaw.md) 已经内置 Olares CLI 和技能。请按照所用应用的指南开始使用。
 
-要让 AI Agent 代你运行 Olares CLI：
+### 维护 Olares OS
 
-1. 安装 CLI 和 Agent Skills。推荐用 `npx @olares/cli install`，一步装好两者。参见[安装 olares-cli](./cli-install.md)。
-2. 用 Olares ID 登录。参见[登录 Olares](./cli-log-in.md)。
-3. 通过 Agent 用自然语言操作 Olares。
+在运行 Olares OS 的 Linux 主机上，使用系统自带的 `/usr/local/bin/olares-cli` 安装或升级 Olares、管理节点和硬件、收集日志、排查系统问题。这些操作使用主机的 root 权限和 kubeconfig，不需要登录 Olares ID。
+
+检查状态、收集日志和排查问题，请参阅[Olares CLI 常用命令](./install/cli/olares-cli.md)。有关安装架构、环境变量和版本规则，请参阅[集群管理](./install/index.md)。
 
 ## 了解更多
 
-- [集群管理](./install/index.md)：在新机器上安装 Olares、在版本之间升级、管理磁盘和 GPU、收集日志等。
-- [安装 olares-cli](./cli-install.md)：在你的机器上安装独立版 CLI。
-- [登录 Olares](./cli-log-in.md)：创建 profile，让 CLI 以你的 Olares 用户身份操作。
-- [安装与使用 Agent Skills](./cli-agent-skills.md)：为 Agent 添加操作 Olares 所需的技能。
+- [Olares CLI Agent Skills](./cli-agent-skills.md)：查看技能清单，了解技能的分发和版本同步机制。
+- [使用任意 AI Agent，通过 Olares CLI 管理 Olares](https://www.olares.com/blog/olares-cli-ai-agents-explained/)：了解 Olares、CLI、Agent Skills 与 AI Agent 如何协同工作。

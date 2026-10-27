@@ -1,5 +1,9 @@
 ---
 description: 设置和使用 LarePass 的密码自动填充功能，在所有设备上实现安全便捷的密码管理体验。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, LarePass, 自动填充, 密码管理, Vault, Android, iOS
 ---
 # 使用 LarePass 自动填充密码
 

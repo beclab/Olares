@@ -1,5 +1,6 @@
 ---
 search: false
+noindex: true
 ---
 ## 激活 Olares
 
@@ -12,7 +13,7 @@ search: false
 2. 输入一次性密码，点击**继续**。
 
    ![输入密码](/images/manual/get-started/wizard-enter-password1.png#bordered)
-3. 选择系统语言。
+3. 选择系统语言。Olares 支持英语、简体中文、德语、西班牙语、意大利语、法语和日语。选择后，向导会立即切换语言。激活后，Olares 桌面也会使用该语言。
 
    ![选择语言](/images/manual/get-started/select-language.png#bordered)
 <!-- #endregion activation-wizard-basics -->
@@ -40,7 +41,7 @@ search: false
 <!-- #endregion scan-qr-and-reset-password -->
 
    ::: tip 提示
-   如果你重新安装了 Olares，原有实例将不可用。你可以使用同一个 ID [重新激活 Olares](../larepass/activate-olares.md#使用同一-olares-id-重新激活)。
+   如果你重新安装了 Olares，原有实例将不可用。你可以使用同一个 ID [重新激活 Olares](../larepass/activate-olares.md)。
    :::
 
 <!-- #region activation-complete-redirect -->

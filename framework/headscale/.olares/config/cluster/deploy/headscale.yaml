@@ -1,0 +1,1505 @@
+# One shared Headscale control plane and one Tailscale node for Olares.
+#
+# This template is packaged into the os-framework system chart for normal
+# Olares installation and upgrades. All workload resources deliberately remain
+# in os-network.
+#
+# Namespace/os-network and the shared l4-bfl-proxy are intentionally not part
+# of this manifest. Removing these workloads must not delete system networking
+# resources.
+#
+# Inspect:
+#   kubectl -n os-network get pods -l 'app in (headscale,tailscale)' -o wide
+#   kubectl -n os-network exec deploy/headscale -- headscale nodes list
+#   kubectl -n os-network exec deploy/tailscale -c tailscale -- tailscale status
+#
+# This expects the existing Olares L4 entrypoint to be healthy so HTTPS traffic
+# received on the shared Tailscale address can reach normal application routing.
+# LarePass key issuance is provided by the unified API wrapper after it verifies
+# the Olares session identity.
+# ACL groups reserve independently controlled subnet-route and exit-node access.
+# Membership starts empty and is maintained only by the authenticated control
+# path. Headscale users are reconciled from LLDAP, but synchronization never
+# grants policy membership or other authorization.
+# Shared-node state and the bootstrap handoff use control-plane-node storage so
+# Pod replacement preserves the Tailscale identity and route configuration.
+# Enrollment keys are fetched on startup and are never stored in this directory.
+# PostgreSQL is provisioned through the existing Olares middleware controller.
+# Helm generates the password on first install and reuses the existing Secret on
+# upgrades, matching the previous per-user Headscale chart.
+
+{{- $resourceNamespace := "os-network" }}
+{{- $secretName := "headscale-postgres-secret" }}
+{{- $existingSecret := lookup "v1" "Secret" $resourceNamespace $secretName }}
+{{- $pgPassword := "" }}
+{{- if $existingSecret }}
+{{- $pgPassword = index $existingSecret "data" "pg_password" }}
+{{- else }}
+{{- $pgPassword = randAlphaNum 32 | b64enc }}
+{{- end }}
+{{- $natsSecretName := "headscale-user-sync-nats-secret" }}
+{{- $existingNatsSecret := lookup "v1" "Secret" $resourceNamespace $natsSecretName }}
+{{- $natsPassword := "" }}
+{{- if $existingNatsSecret }}
+{{- $natsPassword = index $existingNatsSecret "data" "nats_password" }}
+{{- else }}
+{{- $natsPassword = randAlphaNum 32 | b64enc }}
+{{- end }}
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $secretName }}
+  namespace: {{ $resourceNamespace }}
+  labels:
+    app: headscale
+type: Opaque
+data:
+  pg_password: {{ $pgPassword | quote }}
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $natsSecretName }}
+  namespace: {{ $resourceNamespace }}
+  labels:
+    app: headscale
+type: Opaque
+data:
+  nats_password: {{ $natsPassword | quote }}
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: headscale-dns-renderer
+  namespace: os-network
+  labels:
+    app: headscale
+automountServiceAccountToken: true
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: tailscale
+  namespace: os-network
+  labels:
+    app: tailscale
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: headscale-dns-renderer
+  labels:
+    app: headscale
+rules:
+  # Olares User objects are cluster-scoped. The DNS renderer lists their zones,
+  # while the API wrapper gets one User to enforce owner-only operations.
+  - apiGroups: ["iam.kubesphere.io"]
+    resources: ["users"]
+    verbs: ["get", "list"]
+  # The API wrapper authenticates Tailscale bootstrap requests with TokenReview.
+  - apiGroups: ["authentication.k8s.io"]
+    resources: ["tokenreviews"]
+    verbs: ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: headscale-dns-renderer
+  labels:
+    app: headscale
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: headscale-dns-renderer
+subjects:
+  - kind: ServiceAccount
+    name: headscale-dns-renderer
+    namespace: os-network
+
+---
+apiVersion: apr.bytetrade.io/v1alpha1
+kind: MiddlewareRequest
+metadata:
+  name: headscale-pg
+  namespace: os-network
+  labels:
+    app: headscale
+spec:
+  app: headscale
+  appNamespace: os-network
+  middleware: postgres
+  postgreSQL:
+    user: headscale
+    password:
+      valueFrom:
+        secretKeyRef:
+          name: {{ $secretName }}
+          key: pg_password
+    databases:
+      - name: headscale
+
+---
+apiVersion: apr.bytetrade.io/v1alpha1
+kind: MiddlewareRequest
+metadata:
+  name: headscale-user-sync-nats
+  namespace: os-network
+  labels:
+    app: headscale
+spec:
+  app: headscale-user-sync
+  appNamespace: os
+  middleware: nats
+  nats:
+    user: os-headscale-user-sync
+    password:
+      valueFrom:
+        secretKeyRef:
+          name: {{ $natsSecretName }}
+          key: nats_password
+    subjects:
+      # Enables the standard JetStream API permissions added by tapr without
+      # granting publication to the account lifecycle subjects.
+      - name: headscale-user-sync.control
+        permission:
+          pub: allow
+          sub: deny
+    refs:
+      - appName: app-service
+        appNamespace: os
+        subjects:
+          - name: users
+            sub: allow
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: headscale-config
+  namespace: os-network
+  labels:
+    app: headscale
+data:
+  config.yaml.tpl: |
+    # The renderer replaces this with the public shared Headscale URL after
+    # the primary Olares DNS zone is bound.
+    server_url: __HEADSCALE_SERVER_URL__
+    listen_addr: 0.0.0.0:8080
+    metrics_listen_addr: 0.0.0.0:9090
+    grpc_listen_addr: 127.0.0.1:50443
+    grpc_allow_insecure: false
+
+    noise:
+      private_key_path: /var/lib/headscale/noise_private.key
+
+    prefixes:
+      v4: 100.64.0.0/10
+      v6: fd7a:115c:a1e0::/48
+      allocation: sequential
+
+    derp:
+      server:
+        enabled: false
+        region_id: 999
+        region_code: olares
+        region_name: Olares
+        verify_clients: true
+        stun_listen_addr: 0.0.0.0:3478
+        private_key_path: /var/lib/headscale/derp_server_private.key
+        automatically_add_embedded_derp_region: false
+      urls:
+        - https://api.olares.com/controlplane/derpmap/default
+      paths: []
+      auto_update_enabled: true
+      update_frequency: 3h
+
+    disable_check_updates: true
+    node:
+      expiry: 0
+      ephemeral:
+        inactivity_timeout: 30m
+
+    database:
+      type: postgres
+      debug: false
+      gorm:
+        prepare_stmt: true
+        parameterized_queries: true
+        skip_err_record_not_found: true
+        slow_threshold: 1000
+      postgres:
+        host: citus-master-svc.os-platform
+        port: 5432
+        name: os_network_headscale
+        user: headscale
+        # Injected through HEADSCALE_DATABASE_POSTGRES_PASS below.
+        pass: ""
+        max_open_conns: 10
+        max_idle_conns: 10
+        conn_max_idle_time_secs: 3600
+        ssl: false
+
+    tls_cert_path: ""
+    tls_key_path: ""
+
+    log:
+      level: info
+      format: text
+
+    policy:
+      mode: database
+
+    # The actual shared-node address is rendered by the Headscale container at
+    # startup. A liveness check restarts the container when the Tailscale
+    # postStart hook publishes a new IPv4 address.
+    dns:
+      magic_dns: false
+      base_domain: olares.internal
+      override_local_dns: false
+      nameservers:
+        global: []
+        __TAILSCALE_DNS_SPLIT__
+      search_domains: []
+      extra_records: []
+
+    unix_socket: /var/run/headscale/headscale.sock
+    unix_socket_permission: "0770"
+
+    logtail:
+      enabled: false
+    taildrop:
+      enabled: false
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: headscale-nginx-config
+  namespace: os-network
+  labels:
+    app: headscale
+data:
+  default.conf: |
+    map $http_upgrade $connection_upgrade {
+      default upgrade;
+      ''      close;
+    }
+
+    server {
+      listen 8443 ssl;
+      ssl_certificate /etc/nginx/certs/tls.crt;
+      ssl_certificate_key /etc/nginx/certs/tls.key;
+
+      location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+      }
+    }
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tailscale-dns
+  namespace: os-network
+  labels:
+    app: tailscale
+data:
+  Corefile: |
+    .:53 {
+        # Bind only to the Tailnet interface. This avoids exposing DNS on every
+        # host interface and avoids colliding with the node's existing port 53.
+        bind ts-olares
+        errors
+        # Keep stale-address exposure short if the infrastructure node is
+        # deleted and re-registers with a different Tailnet IP.
+        cache 5
+        reload 2s
+
+        # Headscale sends only the exact Olares split zones rendered at Pod
+        # startup. Every query that reaches this resolver therefore belongs to
+        # this Olares instance and resolves to its shared ingress node. The L4
+        # proxy selects the actual user/application using SNI or Host.
+        template IN A {
+            answer "{{`{{ .Name }}`}} 5 IN A __TAILSCALE_DNS_IP__"
+        }
+        template IN ANY {
+            rcode NOERROR
+        }
+    }
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: headscale-ingress
+  namespace: os-network
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-10"
+    helm.sh/hook-delete-policy: before-hook-creation
+  labels:
+    app: headscale
+    # The Olares security reconciler prunes unknown NetworkPolicies. These are
+    # the existing labels it uses for externally managed route policies that
+    # must survive the namespace policy reconciliation loop.
+    app.kubernetes.io/managed-by: app-service
+    app.kubernetes.io/component: route-control
+spec:
+  podSelector:
+    matchLabels:
+      app: headscale
+  policyTypes:
+    - Ingress
+  ingress:
+    # Each user's olares-app forwards Headscale control traffic on 8080.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              bytetrade.io/ns-type: user-space
+          podSelector:
+            matchLabels:
+              app: olares-app
+      ports:
+        - protocol: TCP
+          port: 8080
+    # The authenticated /server provider runs in vault-server. It is the
+    # effective caller that requests a pre-auth key from the wrapper.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: os-framework
+          podSelector:
+            matchLabels:
+              app: vault-server
+      ports:
+        - protocol: TCP
+          port: 9000
+    # Per-user system-server instances authenticate and authorize Settings
+    # provider requests before forwarding them to the management API.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              bytetrade.io/ns-type: user-internal
+          podSelector:
+            matchLabels:
+              app: systemserver
+      ports:
+        - protocol: TCP
+          port: 8000
+    # app-service is the only writer of the application-owned port set.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: os-framework
+          podSelector:
+            matchLabels:
+              tier: app-service
+      ports:
+        - protocol: TCP
+          port: 8001
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: headscale-postgres-ingress
+  namespace: os-platform
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-10"
+    helm.sh/hook-delete-policy: before-hook-creation
+  labels:
+    app: headscale
+    app.kubernetes.io/managed-by: app-service
+    app.kubernetes.io/component: route-control
+spec:
+  podSelector:
+    matchLabels:
+      app: citus
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: os-network
+          podSelector:
+            matchLabels:
+              app: headscale
+      ports:
+        - protocol: TCP
+          port: 5432
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: headscale-nats-ingress
+  namespace: os-platform
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-10"
+    helm.sh/hook-delete-policy: before-hook-creation
+  labels:
+    app: headscale
+    app.kubernetes.io/managed-by: app-service
+    app.kubernetes.io/component: route-control
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: nats
+      app.kubernetes.io/instance: nats
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: os-network
+          podSelector:
+            matchLabels:
+              app: headscale
+      ports:
+        - protocol: TCP
+          port: 4222
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: headscale-lldap-ingress
+  namespace: os-platform
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-10"
+    helm.sh/hook-delete-policy: before-hook-creation
+  labels:
+    app: headscale
+    app.kubernetes.io/managed-by: app-service
+    app.kubernetes.io/component: route-control
+spec:
+  podSelector:
+    matchLabels:
+      app: lldap
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: os-network
+          podSelector:
+            matchLabels:
+              app: headscale
+      ports:
+        - protocol: TCP
+          port: 17170
+        - protocol: TCP
+          port: 17171
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: headscale
+  namespace: os-network
+  labels:
+    app: headscale
+    applications.app.bytetrade.io/author: bytetrade.io
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: headscale
+  template:
+    metadata:
+      labels:
+        app: headscale
+    spec:
+      serviceAccountName: headscale-dns-renderer
+      # Keep the standard Kubernetes service-account mount, matching the
+      # existing Headscale deployment and kubectl's in-cluster discovery.
+      automountServiceAccountToken: true
+      priorityClassName: system-cluster-critical
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/os
+                    operator: In
+                    values: [linux]
+                  - key: node-role.kubernetes.io/control-plane
+                    operator: Exists
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      initContainers:
+        - name: render-dns-config
+          image: alpine/kubectl:1.33.4
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -ec
+          args:
+            - |
+              raw_zones=/etc/headscale-runtime/user-zones.raw
+              zones=/etc/headscale-runtime/user-zones
+              split=/etc/headscale-runtime/dns-split.yaml
+              rendered=/etc/headscale-runtime/config.yaml.tpl
+              kube_api=https://kubernetes.default.svc:443
+              kube_ca=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+              kube_token_file=/var/run/secrets/kubernetes.io/serviceaccount/token
+              headscale_server_url=https://headscale-server-svc.os-network.svc.cluster.local
+
+              kube() {
+                kubectl \
+                  --server="${kube_api}" \
+                  --certificate-authority="${kube_ca}" \
+                  --token="$(cat "${kube_token_file}")" \
+                  "$@"
+              }
+
+              : > "${zones}"
+
+              valid_zone() {
+                zone="$(printf '%s' "$1" | tr 'A-Z' 'a-z')"
+                case "${zone}" in
+                  ""|.*|*.|*..*|*[^a-z0-9.-]*) return 1 ;;
+                esac
+                case "${zone}" in
+                  *.*) printf '%s\n' "${zone}" ;;
+                  *) return 1 ;;
+                esac
+              }
+
+              if test -n "${OLARES_DNS_ZONE}"; then
+                # Comma-separated; the first zone names the Headscale URL.
+                printf '%s\n' "${OLARES_DNS_ZONE}" | tr ',' '\n' \
+                  | sed 's/^[[:space:]]*//; s/[[:space:]]*$//' > "${raw_zones}"
+                primary_zone=""
+                while IFS= read -r zone; do
+                  test -n "${zone}" || continue
+                  if ! normalized_zone="$(valid_zone "${zone}")"; then
+                    echo "invalid Olares DNS zone annotation: ${OLARES_DNS_ZONE}" >&2
+                    exit 1
+                  fi
+                  printf '%s\n' "${normalized_zone}" >> "${zones}"
+                  test -n "${primary_zone}" || primary_zone="${normalized_zone}"
+                done < "${raw_zones}"
+                if test -z "${primary_zone}"; then
+                  echo "invalid Olares DNS zone annotation: ${OLARES_DNS_ZONE}" >&2
+                  exit 1
+                fi
+                echo "using global Olares split DNS zones, primary: ${primary_zone}"
+                headscale_server_url="https://headscale.${primary_zone}"
+              else
+                echo "global Olares DNS zone is absent; using per-user DNS zones"
+
+                # Compatibility path for current multi-domain Olares. Only the
+                # zone consumed by CoreDNS proves that binding has completed.
+                kube get users.iam.kubesphere.io \
+                  --request-timeout=30s \
+                  -o jsonpath='{range .items[*]}{.metadata.annotations.bytetrade\.io/zone}{"\n"}{end}' \
+                  > "${raw_zones}"
+
+                while IFS= read -r zone; do
+                  if normalized_zone="$(valid_zone "${zone}")"; then
+                    printf '%s\n' "${normalized_zone}" >> "${zones}"
+                  fi
+                done < "${raw_zones}"
+              fi
+              sort -u -o "${zones}" "${zones}"
+
+              if test -s "${zones}"; then
+                echo "rendering Headscale split DNS zones:"
+                sed 's/^/  - /' "${zones}"
+                printf '    split:\n' > "${split}"
+                while IFS= read -r zone; do
+                  printf '      %s:\n' "${zone}" >> "${split}"
+                  printf '        - __TAILSCALE_DNS_IP__\n' >> "${split}"
+                done < "${zones}"
+              else
+                # A fresh installation may start before the first Olares user
+                # has completed domain binding. A later Pod restart re-renders
+                # the routes after the user exists.
+                echo "no Olares user DNS zones found; rendering empty split DNS"
+                printf '    split: {}\n' > "${split}"
+              fi
+
+              sed \
+                -e "s|__HEADSCALE_SERVER_URL__|${headscale_server_url}|g" \
+                -e '/^[[:space:]]*__TAILSCALE_DNS_SPLIT__[[:space:]]*$/ {' \
+                -e 'r /etc/headscale-runtime/dns-split.yaml' \
+                -e 'd' \
+                -e '}' \
+                /etc/headscale-template/config.yaml.tpl \
+                > "${rendered}.tmp"
+              mv "${rendered}.tmp" "${rendered}"
+
+              rm -f "${raw_zones}" "${zones}" "${split}"
+          env:
+            - name: OLARES_DNS_ZONE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.annotations['bytetrade.io/zone']
+            - name: HOME
+              value: /etc/headscale-runtime
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 1000
+          volumeMounts:
+            - name: config
+              mountPath: /etc/headscale-template
+              readOnly: true
+            - name: config-runtime
+              mountPath: /etc/headscale-runtime
+        - name: wait-for-postgres
+          image: postgres:16.0-alpine3.18
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -ec
+            - |
+              until psql -c 'SELECT 1' >/dev/null 2>&1; do
+                echo "waiting for PostgreSQL at ${PGHOST}:${PGPORT}/${PGDATABASE}"
+                sleep 2
+              done
+          env:
+            - name: PGHOST
+              value: citus-master-svc.os-platform
+            - name: PGPORT
+              value: "5432"
+            - name: PGDATABASE
+              value: os_network_headscale
+            - name: PGUSER
+              value: headscale
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $secretName }}
+                  key: pg_password
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 70
+        - name: init-cert
+          image: alpine/openssl:3.5.5
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -ec
+            - |
+              if ! test -s /certs/tls.crt || ! test -s /certs/tls.key || ! test -s /certs/ca.crt; then
+                echo "generating the internal Headscale TLS certificate"
+                openssl req -x509 -newkey rsa:4096 -nodes \
+                  -keyout /certs/tls.key \
+                  -out /certs/tls.crt \
+                  -days 36500 \
+                  -subj "/CN=headscale-server-svc" \
+                  -addext "subjectAltName=DNS:headscale-server-svc,DNS:headscale-server-svc.os-network,DNS:headscale-server-svc.os-network.svc,DNS:headscale-server-svc.os-network.svc.cluster.local"
+                cp /certs/tls.crt /certs/ca.crt
+              fi
+              chown 1000:1000 /certs/tls.crt /certs/tls.key /certs/ca.crt
+              chmod 0644 /certs/tls.crt /certs/ca.crt
+              chmod 0600 /certs/tls.key
+          securityContext:
+            runAsNonRoot: false
+            runAsUser: 0
+          volumeMounts:
+            - name: tls-cert
+              mountPath: /certs
+        - name: init-data
+          image: busybox:1.28
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -ec
+            - |
+              mkdir -p /var/lib/headscale/bootstrap /var/run/headscale
+              chown -R 1000:1000 /var/lib/headscale /var/run/headscale
+              # Tailscale runs as uid 0 without CAP_DAC_OVERRIDE. Its pod
+              # fsGroup is 1000, so group write is enough to publish tailscale.ip
+              # and group read is enough to load subnet routes.
+              chmod 0770 /var/lib/headscale/bootstrap
+          securityContext:
+            runAsNonRoot: false
+            runAsUser: 0
+          volumeMounts:
+            - name: headscale-data
+              mountPath: /var/lib/headscale
+            - name: headscale-run
+              mountPath: /var/run/headscale
+      containers:
+        - name: headscale
+          image: headscale/headscale:0.29.3-debug
+          imagePullPolicy: IfNotPresent
+          command: [/busybox/sh, -ec]
+          args:
+            - |
+              chmod 0770 /var/lib/headscale/bootstrap
+              dns_ip="$(cat /var/lib/headscale/bootstrap/tailscale.ip 2>/dev/null || true)"
+              if test -z "${dns_ip}"; then
+                # Headscale must start once before Tailscale can register and get
+                # its real address. With a fresh database and sequential
+                # allocation, the shared node is expected to register first.
+                dns_ip=100.64.0.1
+              fi
+              rm -f /var/run/headscale/policy.ready
+              sed "s/__TAILSCALE_DNS_IP__/${dns_ip}/g" \
+                /etc/headscale/config.yaml.tpl \
+                > /etc/headscale/config.yaml.tmp
+              mv /etc/headscale/config.yaml.tmp \
+                /etc/headscale/config.yaml
+              printf '%s\n' "${dns_ip}" \
+                > /var/lib/headscale/bootstrap/headscale-dns.applied
+              exec /ko-app/headscale serve
+          env:
+            - name: HEADSCALE_CONFIG
+              value: /etc/headscale/config.yaml
+            - name: HEADSCALE_DATABASE_POSTGRES_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $secretName }}
+                  key: pg_password
+          lifecycle:
+            postStart:
+              exec:
+                command:
+                  - /busybox/sh
+                  - -ec
+                  - |
+                    (
+                      export NO_COLOR=1
+                      for i in $(seq 1 300); do
+                        test -S /var/run/headscale/headscale.sock && break
+                        sleep 1
+                      done
+                      test -S /var/run/headscale/headscale.sock
+
+                      # PostgreSQL is the policy source of truth. Seed a fresh
+                      # database exactly once; Pod restarts and chart upgrades
+                      # must never overwrite policy updated through the API.
+                      if /ko-app/headscale policy get >/dev/null 2>&1; then
+                        echo "Headscale database policy already exists"
+                      else
+                        echo "initializing Headscale database policy"
+                        bootstrap_policy="$(/busybox/cat <<'POLICY_EOF'
+                    {
+                      // Membership is maintained through authenticated
+                      // control-plane updates. LLDAP synchronization creates
+                      // identities but never grants user capabilities.
+                      "groups": {
+                        "group:admins": [],
+                        "group:self-mesh": [],
+                        "group:subnet-users": [],
+                        "group:exit-users": []
+                      },
+                      "acls": [
+                        {
+                          // Shared Olares services available to every user.
+                          // TCP 53 supports DNS responses truncated over UDP.
+                          "action": "accept",
+                          "src": ["autogroup:member"],
+                          "proto": "tcp",
+                          "dst": ["tag:olares:80,443,53,18088"]
+                        },
+                        {
+                          "action": "accept",
+                          "src": ["autogroup:member"],
+                          "proto": "udp",
+                          "dst": ["tag:olares:53"]
+                        },
+                        {
+                          "action": "accept",
+                          "src": ["autogroup:member"],
+                          "proto": "icmp",
+                          "dst": ["tag:olares:*"]
+                        },
+                        {
+                          // Members may access devices owned by themselves.
+                          "action": "accept",
+                          "src": ["group:self-mesh"],
+                          "dst": ["autogroup:self:*"]
+                        },
+                        {
+                          // Exit-node access is independent from subnet access.
+                          "action": "accept",
+                          "src": ["group:exit-users"],
+                          "dst": ["autogroup:internet:*"]
+                        },
+                        {
+                          // Existing LarePass clients identify the shared
+                          // Olares node through this PrimaryRoutes marker.
+                          "action": "accept",
+                          "src": ["autogroup:member"],
+                          "dst": ["10.255.255.254/32:*"]
+                        }
+                      ],
+                      "tagOwners": {
+                        "tag:olares": ["group:admins"]
+                      },
+                      "autoApprovers": {
+                        "routes": {
+                          "10.255.255.254/32": ["tag:olares"]
+                        },
+                        "exitNode": ["tag:olares"]
+                      }
+                    }
+                    POLICY_EOF
+                    )"
+                        printf '%s\n%s\n%s\n' \
+                          '----- Headscale bootstrap policy -----' \
+                          "${bootstrap_policy}" \
+                          '----- end bootstrap policy -----'
+                        printf '%s\n' "${bootstrap_policy}" \
+                          | /ko-app/headscale policy set --file /dev/stdin
+                      fi
+                      touch /var/run/headscale/policy.ready
+
+                      # This is a per-Pod runtime credential. Always create a
+                      # fresh key and publish it atomically for the API wrapper.
+                      # Any failure must fail the postStart hook instead of
+                      # leaving Headscale running without a usable wrapper.
+                      umask 077
+                      rm -f /var/run/headscale-auth/headscale.apikey.tmp
+                      /ko-app/headscale apikeys create \
+                        --expiration 87600h \
+                        > /var/run/headscale-auth/headscale.apikey.tmp
+                      test -s /var/run/headscale-auth/headscale.apikey.tmp
+                      mv /var/run/headscale-auth/headscale.apikey.tmp \
+                        /var/run/headscale-auth/headscale.apikey
+
+                    ) > /var/lib/headscale/bootstrap/bootstrap.log 2>&1
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+            - name: metrics
+              containerPort: 9090
+              protocol: TCP
+          readinessProbe:
+            exec:
+              command:
+                - /busybox/sh
+                - -ec
+                - |
+                  test -S /var/run/headscale/headscale.sock
+                  test -f /var/run/headscale/policy.ready
+                  desired="$(cat /var/lib/headscale/bootstrap/tailscale.ip 2>/dev/null || true)"
+                  applied="$(cat /var/lib/headscale/bootstrap/headscale-dns.applied 2>/dev/null || true)"
+                  test -z "${desired}" || test "${desired}" = "${applied}"
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          livenessProbe:
+            exec:
+              command:
+                - /busybox/sh
+                - -ec
+                - |
+                  test -S /var/run/headscale/headscale.sock
+                  desired="$(cat /var/lib/headscale/bootstrap/tailscale.ip 2>/dev/null || true)"
+                  applied="$(cat /var/lib/headscale/bootstrap/headscale-dns.applied 2>/dev/null || true)"
+                  test -z "${desired}" || test "${desired}" = "${applied}"
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 1
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 1000
+          volumeMounts:
+            - name: config-runtime
+              mountPath: /etc/headscale
+            - name: headscale-data
+              mountPath: /var/lib/headscale
+            - name: headscale-run
+              mountPath: /var/run/headscale
+            - name: api-key-runtime
+              mountPath: /var/run/headscale-auth
+        - name: headscale-nginx-https
+          image: nginxinc/nginx-unprivileged:1.29.5-alpine3.23
+          imagePullPolicy: IfNotPresent
+          command: [nginx, -g, "daemon off;"]
+          ports:
+            - name: https
+              containerPort: 8443
+              protocol: TCP
+          readinessProbe:
+            tcpSocket:
+              port: https
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 1000
+          volumeMounts:
+            - name: tls-cert
+              mountPath: /etc/nginx/certs
+              readOnly: true
+            - name: headscale-nginx-config
+              mountPath: /etc/nginx/conf.d
+              readOnly: true
+        - name: headscale-api-wrapper
+          image: beclab/headscale-api-wrapper:v0.2.6
+          imagePullPolicy: IfNotPresent
+          command: [/bin/sh, -ec]
+          args:
+            - |
+              until test -s /var/run/headscale-auth/headscale.apikey; do
+                echo "waiting for the Headscale API-wrapper key"
+                sleep 2
+              done
+              APIKEY="$(cat /var/run/headscale-auth/headscale.apikey)"
+              export APIKEY
+              exec /headscale-api-wrapper \
+                --host 127.0.0.1 \
+                --port 8080 \
+                --config /etc/headscale/config.yaml
+          ports:
+            - name: management
+              containerPort: 8000
+              protocol: TCP
+            - name: policy
+              containerPort: 8001
+              protocol: TCP
+            - name: authkey
+              containerPort: 9000
+              protocol: TCP
+          env:
+            - name: TOKEN_VERIFY_URL
+              value: http://lldap-service.os-platform:17170/auth/token/verify
+            - name: LLDAP_READONLY_URL
+              value: http://lldap-service.os-platform:17171
+            - name: HEADSCALE_USER_SYNC_INTERVAL
+              value: 30s
+            - name: NATS_URL
+              value: nats://nats.os-platform:4222
+            - name: NATS_USERNAME
+              value: os-headscale-user-sync
+            - name: NATS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $natsSecretName }}
+                  key: nats_password
+            - name: NATS_STREAM
+              value: os-stream
+            - name: NATS_DURABLE
+              value: headscale-users
+            - name: SUBNET_ROUTES_FILE
+              value: /var/lib/headscale/bootstrap/subnet-routes
+            # Keep these aligned with the fixed Linux installation defaults.
+            - name: OLARES_CLUSTER_CIDRS
+              value: "10.233.64.0/18,10.233.0.0/18"
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 1000
+          volumeMounts:
+            - name: config-runtime
+              mountPath: /etc/headscale
+              readOnly: true
+            - name: api-key-runtime
+              mountPath: /var/run/headscale-auth
+              readOnly: true
+            - name: headscale-bootstrap
+              mountPath: /var/lib/headscale/bootstrap
+      volumes:
+        - name: config
+          configMap:
+            name: headscale-config
+        - name: config-runtime
+          emptyDir: {}
+        - name: headscale-nginx-config
+          configMap:
+            name: headscale-nginx-config
+        - name: tls-cert
+          hostPath:
+            path: /var/lib/olares/headscale/certs
+            type: DirectoryOrCreate
+        - name: headscale-run
+          emptyDir: {}
+        - name: api-key-runtime
+          emptyDir:
+            medium: Memory
+        - name: headscale-data
+          hostPath:
+            path: /var/lib/olares/headscale
+            type: DirectoryOrCreate
+        - name: headscale-bootstrap
+          hostPath:
+            path: /var/lib/olares/headscale/bootstrap
+            type: DirectoryOrCreate
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: headscale-server-svc
+  namespace: os-network
+  labels:
+    app: headscale
+spec:
+  type: ClusterIP
+  selector:
+    app: headscale
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8080
+      targetPort: http
+    - name: metrics
+      protocol: TCP
+      port: 9090
+      targetPort: metrics
+    - name: https
+      protocol: TCP
+      port: 443
+      targetPort: https
+    - name: management
+      protocol: TCP
+      port: 8000
+      targetPort: management
+    - name: policy
+      protocol: TCP
+      port: 8001
+      targetPort: policy
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: headscale-authkey-svc
+  namespace: os-network
+  labels:
+    app: headscale
+spec:
+  type: ClusterIP
+  selector:
+    app: headscale
+  ports:
+    - name: authkey
+      protocol: TCP
+      port: 9000
+      targetPort: authkey
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tailscale
+  namespace: os-network
+  labels:
+    app: tailscale
+    applications.app.bytetrade.io/author: bytetrade.io
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: tailscale
+  template:
+    metadata:
+      labels:
+        app: tailscale
+    spec:
+      priorityClassName: system-cluster-critical
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      serviceAccountName: tailscale
+      securityContext:
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+      affinity:
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app: headscale
+              topologyKey: kubernetes.io/hostname
+      initContainers:
+        - name: init-dns-config
+          image: busybox:1.28
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -ec
+            - |
+              # Seed the expected first allocation. The Tailscale postStart hook
+              # replaces it with the address reported by tailscaled.
+              # Replace the root-owned Corefile left by a previous start.
+              corefile_tmp=$(mktemp /etc/coredns-runtime/Corefile.XXXXXX)
+              trap 'rm -f "${corefile_tmp}"' EXIT
+              sed 's/__TAILSCALE_DNS_IP__/100.64.0.1/g' \
+                /etc/coredns-template/Corefile \
+                > "${corefile_tmp}"
+              chmod 0644 "${corefile_tmp}"
+              mv -f "${corefile_tmp}" /etc/coredns-runtime/Corefile
+              trap - EXIT
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 1000
+          volumeMounts:
+            - name: dns-template
+              mountPath: /etc/coredns-template
+              readOnly: true
+            - name: dns-runtime
+              mountPath: /etc/coredns-runtime
+        # Sidecar so dns-proxy is not started until ts-olares exists. CoreDNS
+        # resolves `bind` once, at process start, and exits if the interface
+        # is missing. restartPolicy Always keeps tailscaled running after the
+        # startup probe passes.
+        - name: tailscale
+          restartPolicy: Always
+          image: tailscale/tailscale:v1.94.2
+          imagePullPolicy: IfNotPresent
+          command: [/bin/sh, -ec]
+          args:
+            - |
+              # emptyDir survives container restarts; discard any previous key first.
+              rm -f /var/run/tailscale-auth/authkey
+              until test -s /certs/ca.crt; do
+                echo "waiting for the Headscale TLS CA"
+                sleep 1
+              done
+              cp /certs/ca.crt /usr/local/share/ca-certificates/headscale-ca.crt
+              update-ca-certificates
+              bootstrap_timeout=30
+              if ! grep -q '"_current-profile"[[:space:]]*:' /var/lib/tailscale/tailscaled.state 2>/dev/null; then
+                # A state file alone does not imply enrollment; allow longer without a profile.
+                bootstrap_timeout=120
+              fi
+              # Requests may overrun the deadline. Never log credentials or response bodies.
+              deadline=$(( $(date +%s) + bootstrap_timeout ))
+              while test "$(date +%s)" -lt "${deadline}"; do
+                if authkey="$(wget -q -T 5 -O - --post-data="" \
+                  --header="Authorization: Bearer $(cat /var/run/secrets/tokens/bootstrap)" \
+                  http://headscale-server-svc.os-network.svc.cluster.local:8000/bootstrap/tailscale-authkey 2>/dev/null)" &&
+                  test -n "${authkey}"; then
+                  break
+                fi
+                # A failed transfer may leave partial output.
+                authkey=""
+                sleep 2
+              done
+              if test -n "${authkey}"; then
+                # Keep the secret out of argv and the exported environment.
+                (umask 077; printf '%s' "${authkey}" > /var/run/tailscale-auth/authkey)
+                export TS_AUTHKEY=file:/var/run/tailscale-auth/authkey
+              else
+                echo "bootstrap key unavailable (wait limit ${bootstrap_timeout}s); trying persisted Tailscale login"
+              fi
+              unset authkey
+              exec /usr/local/bin/containerboot
+          lifecycle:
+            postStart:
+              exec:
+                command:
+                  - /bin/sh
+                  - -ec
+                  - |
+                    dns_ip=""
+                    # Covers key retrieval (up to 120s) plus containerboot login (up to 60s).
+                    deadline=$(( $(date +%s) + 240 ))
+                    while test "$(date +%s)" -lt "${deadline}"; do
+                      if status="$(tailscale status --json 2>/dev/null)" &&
+                        printf '%s\n' "${status}" | grep -q '"BackendState"[[:space:]]*:[[:space:]]*"Running"'; then
+                        rm -f /var/run/tailscale-auth/authkey
+                        dns_ip="$(tailscale ip -4 2>/dev/null | head -n 1 || true)"
+                        test -n "${dns_ip}" && break
+                      fi
+                      sleep 1
+                    done
+                    test -n "${dns_ip}"
+
+                    # TS_AUTH_ONCE keeps the persisted node login across Pod
+                    # replacements, so TS_EXTRA_ARGS is not reapplied on every
+                    # boot. Enforce exit-node advertisement through the local
+                    # API after tailscaled is online; this is idempotent for
+                    # both fresh installs and upgrades.
+                    tailscale set \
+                      --advertise-exit-node=true
+
+                    sed "s/__TAILSCALE_DNS_IP__/${dns_ip}/g" \
+                      /etc/coredns-template/Corefile \
+                      > /etc/coredns-runtime/Corefile.tmp
+                    mv /etc/coredns-runtime/Corefile.tmp \
+                      /etc/coredns-runtime/Corefile
+
+                    # CoreDNS reloads every two seconds. Publish the new
+                    # split-DNS target after the resolver has reloaded.
+                    sleep 3
+                    printf '%s\n' "${dns_ip}" \
+                      > /etc/headscale-bootstrap/tailscale.ip.tmp
+                    mv /etc/headscale-bootstrap/tailscale.ip.tmp \
+                      /etc/headscale-bootstrap/tailscale.ip
+                    # This container's uid is 0. Headscale runs as uid 1000 and
+                    # has to be able to read the address on its next start.
+                    chmod 0644 /etc/headscale-bootstrap/tailscale.ip
+                    echo "synchronized shared Tailscale DNS address: ${dns_ip}"
+          env:
+            - name: TS_DISABLE_TAILDROP
+              value: "true"
+            - name: TS_DEBUG_FIREWALL_MODE
+              value: nftables
+            - name: TS_SOCKET
+              value: /var/run/tailscale/tailscaled.sock
+            - name: TS_STATE_DIR
+              value: /var/lib/tailscale
+            - name: TS_HOSTNAME
+              value: olares
+            - name: TS_USERSPACE
+              value: "false"
+            - name: TS_AUTH_ONCE
+              value: "true"
+            - name: TS_KUBE_SECRET
+              value: ""
+            - name: TS_TAILSCALED_EXTRA_ARGS
+              value: >-
+                --no-logs-no-support
+                --verbose=1
+                --tun=ts-olares
+            - name: TS_EXTRA_ARGS
+              value: >-
+                --reset
+                --login-server=https://headscale-server-svc.os-network.svc.cluster.local
+                --netfilter-mode=on
+                --advertise-exit-node
+          securityContext:
+            privileged: false
+            allowPrivilegeEscalation: false
+            runAsNonRoot: false
+            runAsUser: 0
+            capabilities:
+              drop: [ALL]
+              add: [NET_ADMIN, NET_RAW]
+          volumeMounts:
+            - name: bootstrap-token
+              mountPath: /var/run/secrets/tokens
+              readOnly: true
+            - name: bootstrap-authkey
+              mountPath: /var/run/tailscale-auth
+            - name: headscale-bootstrap
+              mountPath: /etc/headscale-bootstrap
+            - name: tailscale-data
+              mountPath: /var/lib/tailscale
+            - name: tailscale-run
+              mountPath: /var/run/tailscale
+            - name: tun
+              mountPath: /dev/net/tun
+            - name: dns-template
+              mountPath: /etc/coredns-template
+              readOnly: true
+            - name: dns-runtime
+              mountPath: /etc/coredns-runtime
+            - name: tls-cert
+              mountPath: /certs
+              readOnly: true
+          # Hold dns-proxy until tailscaled has created ts-olares. The entrypoint
+          # can wait for the CA and bootstrap API before that device exists;
+          # keep the failure window longer than Headscale's own bootstrap.
+          startupProbe:
+            exec:
+              command: ["/sbin/ip", "link", "show", "ts-olares"]
+            periodSeconds: 2
+            timeoutSeconds: 2
+            failureThreshold: 180
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -ec
+                - >-
+                  tailscale status --json >/dev/null &&
+                  test -n "$(tailscale ip -4 | head -n 1)"
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 5
+      containers:
+        - name: subnet-router-sync
+          image: tailscale/tailscale:v1.94.2
+          imagePullPolicy: IfNotPresent
+          command: [/bin/sh, -ec]
+          args:
+            - |
+              failures=0
+              read_failures=0
+              prefs_failures=0
+              routes_file=/etc/headscale-bootstrap/subnet-routes
+              # Read only the CIDR array from the CLI's JSON, without requiring jq.
+              actual_routes() {
+                awk '
+                  { json = json $0 }
+                  END {
+                    if (!match(json, /"AdvertiseRoutes"[[:space:]]*:[[:space:]]*(null|\[[^]]*\])/)) exit 1
+                    value = substr(json, RSTART, RLENGTH)
+                    sub(/^[^:]*:[[:space:]]*/, "", value)
+                    if (value == "null") exit 0
+                    sub(/^\[/, "", value); sub(/\]$/, "", value)
+                    gsub(/[[:space:]]/, "", value)
+                    if (value == "") exit 0
+                    count = split(value, routes, ",")
+                    for (i = 1; i <= count; i++) {
+                      if (routes[i] !~ /^"[0-9a-fA-F:.]+\/[0-9]+"$/) exit 1
+                      gsub(/"/, "", routes[i])
+                      if (routes[i] != "0.0.0.0/0" && routes[i] != "::/0") print routes[i]
+                    }
+                  }
+                '
+              }
+              while true; do
+                configured=""
+                if test -e "${routes_file}"; then
+                  if ! configured="$(cat "${routes_file}" 2>&1)"; then
+                    read_failures=$((read_failures + 1))
+                    if test "${read_failures}" -eq 1 || test "$((read_failures % 150))" -eq 0; then
+                      echo "cannot read ${routes_file}; keeping current routes: ${configured}" >&2
+                    fi
+                    sleep 2
+                    continue
+                  fi
+                fi
+                read_failures=0
+                configured="$(printf '%s' "${configured}" | tr -d '[:space:]')"
+                # Compatibility marker for existing LarePass clients.
+                desired="10.255.255.254/32"
+                if test -n "${configured}"; then
+                  desired="${desired},${configured}"
+                fi
+                if prefs="$(tailscale debug prefs 2>/dev/null)" &&
+                  actual="$(printf '%s\n' "${prefs}" | actual_routes)"; then
+                  prefs_failures=0
+                else
+                  prefs_failures=$((prefs_failures + 1))
+                  if test "${prefs_failures}" -eq 1 || test "$((prefs_failures % 150))" -eq 0; then
+                    echo "cannot read Tailscale advertised routes; keeping current routes and retrying in 2s" >&2
+                  fi
+                  sleep 2
+                  continue
+                fi
+                expected="$(printf '%s\n' "${desired}" | tr ',' '\n' | LC_ALL=C sort -u)"
+                actual="$(printf '%s\n' "${actual}" | LC_ALL=C sort -u)"
+                if test "${actual}" = "${expected}"; then
+                  failures=0
+                  sleep 2
+                  continue
+                fi
+                if set_output="$(tailscale set \
+                  --advertise-routes="${desired}" 2>&1)"; then
+                  failures=0
+                else
+                  set_status=$?
+                  failures=$((failures + 1))
+                  if test "${failures}" -eq 1 || test "$((failures % 150))" -eq 0; then
+                    echo "failed to publish Olares subnet routes (exit ${set_status}); retrying in 2s: ${set_output}" >&2
+                  fi
+                fi
+                sleep 2
+              done
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+            readOnlyRootFilesystem: true
+            runAsNonRoot: false
+            runAsUser: 0
+          volumeMounts:
+            - name: headscale-bootstrap
+              mountPath: /etc/headscale-bootstrap
+              readOnly: true
+            - name: tailscale-run
+              mountPath: /var/run/tailscale
+              readOnly: true
+        - name: dns-proxy
+          image: registry.k8s.io/coredns/coredns:v1.11.3
+          imagePullPolicy: IfNotPresent
+          args:
+            - -conf
+            - /etc/coredns/Corefile
+          ports:
+            - name: dns-udp
+              containerPort: 53
+              protocol: UDP
+            - name: dns-tcp
+              containerPort: 53
+              protocol: TCP
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              add: [NET_BIND_SERVICE]
+              drop: [ALL]
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 1000
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+          volumeMounts:
+            - name: dns-runtime
+              mountPath: /etc/coredns
+              readOnly: true
+      volumes:
+        - name: bootstrap-authkey
+          emptyDir:
+            medium: Memory
+            sizeLimit: 1Mi
+        - name: bootstrap-token
+          projected:
+            defaultMode: 0400
+            sources:
+              - serviceAccountToken:
+                  path: bootstrap
+                  audience: headscale-bootstrap
+                  expirationSeconds: 600
+        - name: headscale-bootstrap
+          hostPath:
+            path: /var/lib/olares/headscale/bootstrap
+            type: DirectoryOrCreate
+        - name: tailscale-data
+          hostPath:
+            path: /var/lib/olares/tailscale
+            type: DirectoryOrCreate
+        - name: tailscale-run
+          emptyDir: {}
+        - name: tls-cert
+          hostPath:
+            path: /var/lib/olares/headscale/certs
+            type: DirectoryOrCreate
+        - name: tun
+          hostPath:
+            path: /dev/net/tun
+            type: CharDevice
+        - name: dns-template
+          configMap:
+            name: tailscale-dns
+        - name: dns-runtime
+          emptyDir: {}

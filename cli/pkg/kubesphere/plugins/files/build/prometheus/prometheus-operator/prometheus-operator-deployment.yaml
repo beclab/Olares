@@ -30,6 +30,8 @@ spec:
       - args:
         - --kubelet-service=kube-system/kubelet
         - --prometheus-config-reloader=kubesphere/prometheus-config-reloader:v0.55.1
+        - --secret-field-selector=type!=helm.sh/release.v1
+        - --namespaces=kubesphere-monitoring-system
         image: kubesphere/prometheus-operator:v0.55.1
         name: prometheus-operator
         ports:

@@ -9,6 +9,14 @@
 {{ $files_postgres_password = randAlphaNum 16 | b64enc }}
 {{- end -}}
 
+{{- $files_secret_key := "" -}}
+{{ if $files_secret -}}
+{{ $files_secret_key = (index $files_secret "data" "files_secret_key") | default "" }}
+{{- end -}}
+{{ if not $files_secret_key -}}
+{{ $files_secret_key = randAlphaNum 32 | b64enc }}
+{{- end -}}
+
 {{- $files_redis_password := "" -}}
 {{ if $files_secret -}}
 {{ $files_redis_password = (index $files_secret "data" "files_redis_password") }}
@@ -144,13 +152,15 @@ spec:
 {{ end }}
 
         - name: samba-server
-          image: beclab/samba-server:0.0.14
+          image: beclab/samba-server:0.0.16
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: true
             runAsUser: 0
             privileged: true
           volumeMounts:
+            - mountPath: /appcommon/
+              name: common-data
             - mountPath: /data/appcache/
               name: upload-appdata
             - name: fb-data
@@ -167,6 +177,11 @@ spec:
           ports:
             - containerPort: 445
           env:
+            - name: FILES_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: files-secrets
+                  key: files_secret_key
 {{ if .Values.sharedlib }}        
             - name: NODE_IP
               valueFrom:
@@ -210,7 +225,7 @@ spec:
           command:
             - /samba_share
         - name: files
-          image: beclab/files-server:v0.2.189
+          image: beclab/files-server:v0.2.199
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: true
@@ -237,6 +252,11 @@ spec:
           ports:
             - containerPort: 8110
           env:
+            - name: FILES_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: files-secrets
+                  key: files_secret_key
 {{ if .Values.sharedlib }}        
             - name: NODE_IP
               valueFrom:
@@ -481,6 +501,7 @@ type: Opaque
 data:
   files_postgres_password: {{ $files_postgres_password }}
   files_redis_password: {{ $files_redis_password }}
+  files_secret_key: {{ $files_secret_key }}
 
 ---
 apiVersion: v1
@@ -607,7 +628,7 @@ data:
 
       sendfile        on;
       keepalive_timeout  2700;
-      client_max_body_size 4000M;
+      client_max_body_size 100M;
 
       client_body_buffer_size 64m;
       proxy_buffers 32 256k;
@@ -641,7 +662,7 @@ data:
       gzip_http_version 1.1;
       gzip_comp_level 6;
       gzip_types *;
-      client_max_body_size 2000M;
+      client_max_body_size 100M;
       root /app;
 
       # normal routes
@@ -664,7 +685,7 @@ data:
           proxy_set_header X-Forwarded-Host $host;
 
           client_body_timeout 600s;
-          client_max_body_size 2000M;
+          client_max_body_size 100M;
           proxy_request_buffering off;
           keepalive_timeout 750s;
           proxy_read_timeout 600s;
@@ -681,7 +702,7 @@ data:
           proxy_set_header X-Forwarded-Host $host;
 
           client_body_timeout 1800s;
-          client_max_body_size 4000M;
+          client_max_body_size 100M;
           proxy_request_buffering off;
           keepalive_timeout 2700s;
           proxy_read_timeout 1800s;
@@ -698,7 +719,7 @@ data:
           proxy_set_header X-Forwarded-Host $host;
 
           client_body_timeout 1800s;
-          client_max_body_size 4000M;
+          client_max_body_size 100M;
           proxy_request_buffering off;
           keepalive_timeout 2700s;
           proxy_read_timeout 1800s;
@@ -714,7 +735,7 @@ data:
           proxy_set_header X-Forwarded-Host $host;
           add_header Accept-Ranges bytes;
           client_body_timeout 1800s;
-          client_max_body_size 4000M;
+          client_max_body_size 100M;
           proxy_request_buffering off;
           keepalive_timeout 2700s;
           proxy_read_timeout 1800s;
@@ -730,7 +751,7 @@ data:
           proxy_set_header X-Forwarded-Host $host;
           add_header Accept-Ranges bytes;
           client_body_timeout 1800s;
-          client_max_body_size 4000M;
+          client_max_body_size 100M;
           proxy_request_buffering off;
           keepalive_timeout 2700s;
           proxy_read_timeout 1800s;
@@ -746,7 +767,7 @@ data:
           proxy_set_header X-Forwarded-Host $host;
           add_header Accept-Ranges bytes;
           client_body_timeout 1800s;
-          client_max_body_size 4000M;
+          client_max_body_size 100M;
           proxy_request_buffering off;
           keepalive_timeout 2700s;
           proxy_read_timeout 1800s;
@@ -763,7 +784,7 @@ data:
           proxy_set_header X-Forwarded-Host $host;
 
           client_body_timeout 60s;
-          client_max_body_size 2000M;
+          client_max_body_size 100M;
           proxy_request_buffering off;
           keepalive_timeout 75s;
           proxy_read_timeout 60s;
@@ -782,7 +803,7 @@ data:
           add_header Accept-Ranges bytes;
 
           client_body_timeout 600s;
-          client_max_body_size 4000M;
+          client_max_body_size 100M;
           proxy_request_buffering off;
           keepalive_timeout 750s;
           proxy_read_timeout 600s;
@@ -801,7 +822,7 @@ data:
           add_header Accept-Ranges bytes;
 
           client_body_timeout 600s;
-          client_max_body_size 4000M;
+          client_max_body_size 100M;
           proxy_request_buffering off;
           keepalive_timeout 750s;
           proxy_read_timeout 600s;
@@ -847,7 +868,7 @@ data:
           add_header Accept-Ranges bytes;
 
           client_body_timeout 600s;
-          client_max_body_size 4000M;
+          client_max_body_size 100M;
           proxy_request_buffering off;
           keepalive_timeout 750s;
           proxy_read_timeout 600s;
@@ -866,7 +887,7 @@ data:
           add_header Accept-Ranges bytes;
 
           client_body_timeout 600s;
-          client_max_body_size 4000M;
+          client_max_body_size 100M;
           proxy_request_buffering off;
           keepalive_timeout 750s;
           proxy_read_timeout 600s;
@@ -885,7 +906,7 @@ data:
           add_header Accept-Ranges bytes;
 
           client_body_timeout 600s;
-          client_max_body_size 2000M;
+          client_max_body_size 100M;
           proxy_request_buffering off;
           keepalive_timeout 750s;
           proxy_read_timeout 600s;
@@ -904,7 +925,7 @@ data:
           add_header Accept-Ranges bytes;
 
           client_body_timeout 600s;
-          client_max_body_size 2000M;
+          client_max_body_size 100M;
           proxy_request_buffering off;
           keepalive_timeout 750s;
           proxy_read_timeout 600s;
@@ -923,7 +944,7 @@ data:
           add_header Accept-Ranges bytes;
 
           client_body_timeout 600s;
-          client_max_body_size 2000M;
+          client_max_body_size 100M;
           proxy_request_buffering off;
           keepalive_timeout 750s;
           proxy_read_timeout 600s;

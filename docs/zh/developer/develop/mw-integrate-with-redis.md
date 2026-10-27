@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 了解如何在 Olares 中将应用接入内置的 Redis 服务。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Redis, 中间件集成, OlaresManifest, 缓存, 环境变量映射, 命名空间
 ---
 # 集成 Redis
 

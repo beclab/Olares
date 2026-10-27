@@ -61,7 +61,6 @@ func GetInternalIpv4Addr(opts ...any) (internalAddrs []*NetInterface, err error)
 		case strings.HasPrefix(ief.Name, "eth"):
 		case strings.HasPrefix(ief.Name, "en"):
 		case strings.HasPrefix(ief.Name, "wl"):
-		case ief.Name == "br-olares":
 		case ief.Name == gatewayInf.Name:
 		default:
 			continue
@@ -131,6 +130,14 @@ func LookupHostIps() (addrs []string, err error) {
 	if err != nil {
 		klog.Error("get hostname error, ", err)
 		return
+	}
+
+	// Read the explicit selection directly; hostname resolution can still cache
+	// the previous IP after change-host updates /etc/hosts.
+	if addr, e := GetHostIpFromHostsFile(hostname); e == nil {
+		if ip := net.ParseIP(addr); ip != nil && ip.To4() != nil && ip.IsGlobalUnicast() {
+			return []string{ip.To4().String()}, nil
+		}
 	}
 
 	ips, err := net.LookupIP(hostname)

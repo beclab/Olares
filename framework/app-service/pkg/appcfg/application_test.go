@@ -208,3 +208,49 @@ func TestDesiredReplicas(t *testing.T) {
 		})
 	}
 }
+
+func TestEffectiveWorkloadReplicasPrefersWorkloadOptions(t *testing.T) {
+	legacy := WorkloadReplicas{"app": 9}
+	two := int32(2)
+	zero := int32(0)
+	cfg := ApplicationConfig{
+		WorkloadReplicas: &legacy,
+		WorkloadOptions: WorkloadOptions{
+			"app":    {Replicas: &two},
+			"worker": {Replicas: &zero},
+		},
+	}
+
+	effective := cfg.EffectiveWorkloadReplicas()
+	if effective["app"] != 2 || effective["worker"] != 0 || len(effective) != 2 {
+		t.Fatalf("effective replicas = %#v", effective)
+	}
+	if !cfg.HasWorkloadReplicas() || cfg.DesiredReplicas("app") != 2 || cfg.DesiredReplicas("worker") != 0 {
+		t.Fatalf("workloadOptions replica helpers did not use the effective view")
+	}
+}
+
+func TestEffectiveOverlayGatewayFromWorkloadOptions(t *testing.T) {
+	config := &ApplicationConfig{
+		OverlayGateway: OverlayGateway{Enable: true, Entrances: []OverlayEntrance{{Workload: "legacy"}}},
+		WorkloadOptions: WorkloadOptions{
+			"worker": {OverlayGateway: &WorkloadOverlayGateway{Entrances: []WorkloadOverlayEntrance{{
+				Title: "Worker", Port: 8080, Description: "worker endpoint", Protocol: "tcp",
+			}}}},
+			"api": {OverlayGateway: &WorkloadOverlayGateway{Entrances: []WorkloadOverlayEntrance{{
+				Title: "API", Port: 3000, Protocol: "udp",
+			}}}},
+		},
+	}
+
+	got := config.EffectiveOverlayGateway()
+	if !got.Enable || len(got.Entrances) != 2 {
+		t.Fatalf("effective overlay gateway = %#v", got)
+	}
+	if got.Entrances[0].Workload != "api" || got.Entrances[1].Workload != "worker" {
+		t.Fatalf("entrance workloads = %#v", got.Entrances)
+	}
+	if got.Entrances[1].Description != "worker endpoint" || got.Entrances[1].Protocol != "tcp" {
+		t.Fatalf("worker entrance = %#v", got.Entrances[1])
+	}
+}

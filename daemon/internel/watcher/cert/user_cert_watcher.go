@@ -39,13 +39,7 @@ func (u *userCertWatcher) Watch(ctx context.Context) {
 		return
 	}
 
-	dynamicClient, err := utils.GetDynamicClient()
-	if err != nil {
-		klog.Error("failed to get dynamic client, ", err)
-		return
-	}
-
-	users, err := utils.ListUsers(ctx, dynamicClient)
+	users, err := utils.ListUsers(ctx)
 	if err != nil {
 		klog.Error("failed to list users, ", err)
 		return

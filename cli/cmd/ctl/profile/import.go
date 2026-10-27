@@ -67,7 +67,7 @@ func runImport(ctx context.Context, o *importOptions) error {
 		return err
 	}
 	store := auth.NewTokenStore()
-	profile, err := ensureProfileWritable(cfg, store, o.commonCredFlags, time.Now())
+	profile, err := ensureProfileWritable(cfg, store, o.commonCredFlags, "import credentials for", time.Now())
 	if err != nil {
 		return err
 	}

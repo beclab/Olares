@@ -64,8 +64,7 @@ func (t *RunChecks) Execute(runtime connector.Runtime) error {
 		}
 	}
 	if errBuffer.Len() > 0 {
-		logger.Errorf("Some checks have failed:\n%s", errBuffer.String())
-		os.Exit(1)
+		return fmt.Errorf("some checks have failed:\n%s", strings.TrimSpace(errBuffer.String()))
 	}
 	return nil
 }
@@ -309,33 +308,64 @@ func (t *NvidiaCardArchChecker) Check(runtime connector.Runtime) error {
 	if strings.TrimSpace(model) == "" {
 		return nil
 	}
+	if arch == "Unknown" {
+		// Prechecks run before OS dependency installation. A stale pci.ids can
+		// hide the chip codename of a supported card, so refresh only when needed.
+		logger.Info("NVIDIA card architecture is unknown; refreshing the PCI ID database ...")
+		// Bound the entire process group, including update-pciids' downloader.
+		// A context timeout on the shell alone can leave curl/wget running.
+		if _, err := runtime.GetRunner().SudoCmd("timeout --kill-after=5s 30s update-pciids", false, false); err != nil {
+			return fmt.Errorf("cannot determine architecture of NVIDIA card %s: PCI ID database refresh failed: %w; ensure pciutils is installed, run `sudo update-pciids`, and retry", model, err)
+		}
+		model, arch, err = utils.DetectNvidiaModelAndArch(runtime)
+		if err != nil {
+			return fmt.Errorf("failed to detect NVIDIA card after refreshing the PCI ID database: %w", err)
+		}
+		if strings.TrimSpace(model) == "" {
+			return fmt.Errorf("NVIDIA card was no longer detected after refreshing the PCI ID database; check `lspci -nn -d 10de:` and retry")
+		}
+		if arch == "Unknown" {
+			return fmt.Errorf("cannot determine architecture of NVIDIA card %s even after refreshing the PCI ID database; check `lspci -nn -d 10de:` and verify that this GPU is supported by the current Olares CLI", model)
+		}
+	}
 	if !slices.Contains(supportedArchs, arch) {
 		return fmt.Errorf("unsupported NVIDIA card %s of architecture: %s, Olares only supports the following architectures: %s", model, arch, strings.Join(supportedArchs, ", "))
 	}
 	return nil
 }
 
-// NouveauChecker checks whether nouveau is loaded and has modeset=1 or -1.
-// This check only runs when an NVIDIA GPU is present.
-type NouveauChecker struct{}
+// ConflictingGPUDriverChecker looks for in-tree NVIDIA drivers that would keep
+// the proprietary driver from taking ownership of the card: nouveau loaded with
+// modeset enabled, and nova, which binds every Turing or later GPU and ships
+// enabled in some distro kernels. This check only runs when an NVIDIA GPU is
+// present.
+type ConflictingGPUDriverChecker struct{}
 
-func (n *NouveauChecker) Name() string {
-	return "NouveauKernelModule"
+const disableConflictingDriversHint = "`sudo olares-cli gpu disable-conflicts`"
+
+func (n *ConflictingGPUDriverChecker) Name() string {
+	return "ConflictingGPUKernelModule"
 }
 
-func (n *NouveauChecker) Check(runtime connector.Runtime) error {
+func (n *ConflictingGPUDriverChecker) Check(runtime connector.Runtime) error {
 	if !runtime.GetSystemInfo().IsLinux() {
 		return nil
 	}
 	model, _, err := utils.DetectNvidiaModelAndArch(runtime)
 	if err != nil {
-		fmt.Println("Error detecting NVIDIA card:", err)
-		os.Exit(1)
+		return fmt.Errorf("error detecting NVIDIA card: %w", err)
 	}
 	if strings.TrimSpace(model) == "" {
 		return nil
 	}
 
+	if err := n.checkNova(runtime); err != nil {
+		return err
+	}
+	return n.checkNouveau()
+}
+
+func (n *ConflictingGPUDriverChecker) checkNouveau() error {
 	if !util.IsExist("/sys/module/nouveau") {
 		return nil
 	}
@@ -343,14 +373,32 @@ func (n *NouveauChecker) Check(runtime connector.Runtime) error {
 	const modesetPath = "/sys/module/nouveau/parameters/modeset"
 	data, err := os.ReadFile(modesetPath)
 	if err != nil {
-		fmt.Printf("Error reading modeset parameter of nouveau kernel module by reading file %s: %v", modesetPath, err)
-		os.Exit(1)
+		return fmt.Errorf("error reading nouveau modeset parameter from %s: %w", modesetPath, err)
 	}
 	val := strings.TrimSpace(string(data))
 	if val == "1" || val == "-1" {
-		return fmt.Errorf("detected nouveau kernel module loaded with modeset=%s; this conflicts with the NVIDIA driver that Olares will install, please disable it by running `sudo olares-cli gpu disable-nouveau`, REBOOT your machine, and try again", val)
+		return fmt.Errorf("detected nouveau kernel module loaded with modeset=%s; this conflicts with the NVIDIA driver that Olares will install, please disable it by running %s, REBOOT your machine, and try again", val, disableConflictingDriversHint)
 	}
 	return nil
+}
+
+func (n *ConflictingGPUDriverChecker) checkNova(runtime connector.Runtime) error {
+	if !utils.IsNovaModuleLoaded(runtime) {
+		return nil
+	}
+
+	driver, devices, err := utils.DetectNovaBoundGPUs(runtime)
+	if err != nil {
+		return fmt.Errorf("error detecting GPUs bound to the nova driver: %w", err)
+	}
+	if len(devices) > 0 {
+		return fmt.Errorf("detected GPU %s bound to the in-tree %s driver; it prevents the NVIDIA driver that Olares will install from taking ownership of the device, please disable it by running %s, REBOOT your machine, and try again", strings.Join(devices, ", "), driver, disableConflictingDriversHint)
+	}
+
+	// unlike nouveau, nova has no modeset switch that stops it from claiming
+	// the card, so a module that holds nothing right now is still going to
+	// race the NVIDIA driver on the next boot
+	return fmt.Errorf("detected the nova kernel module loaded; it probes every NVIDIA GPU and prevents the NVIDIA driver that Olares will install from taking ownership of the device, please disable it by running %s, REBOOT your machine, and try again", disableConflictingDriversHint)
 }
 
 type CudaChecker struct{}
@@ -412,13 +460,8 @@ func (r *RocmChecker) Check(runtime connector.Runtime) error {
 		return nil
 	}
 
-	// detect AMD Ryzen AI Max APU presence
-	ryzenAIMaxExists, err := connector.HasRyzenAIMax(runtime)
-	if err != nil {
-		return err
-	}
-	// no AMD Ryzen AI Max found, no need to check rocm
-	if !ryzenAIMaxExists {
+	// ROCm is required for Ryzen AI Max ("amd") and discrete AMD GPUs ("amd-gpu").
+	if !si.IsRyzenAIMax() && !si.IsAmdGPU() {
 		return nil
 	}
 

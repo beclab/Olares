@@ -1,0 +1,313 @@
+package router
+
+import (
+	"bytes"
+	"encoding/json"
+	"strings"
+	"testing"
+	"time"
+)
+
+// A queued request and a slow one look the same from outside, so the reading has
+// to arrive whole: what is running, what is behind it, how wide the engine is,
+// and how old the numbers are.
+func TestAProviderShowsWhatItsEngineIsHolding(t *testing.T) {
+	const raw = `{
+  "id": "11111111-1111-1111-1111-111111111111",
+  "name": "Olares",
+  "provider_type": "openai-compatible",
+  "base_url": "http://localhost",
+  "status": "active",
+  "source": "olares",
+  "olares_app_name": "llamacppqwen3",
+  "credentials_version": 1,
+  "engine_load": {
+    "engine_kind": "llama.cpp",
+    "processing": 1,
+    "deferred": 18,
+    "slots": 1,
+    "observed_at": "2026-08-27T10:00:00Z"
+  },
+  "created_at": "2026-08-01T00:00:00Z",
+  "updated_at": "2026-08-01T00:00:00Z"
+}`
+	var p providerRow
+	if err := json.Unmarshal([]byte(raw), &p); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if p.EngineLoad == nil {
+		t.Fatal("engine_load did not decode")
+	}
+	var buf bytes.Buffer
+	if err := renderProviderRow(&buf, &p); err != nil {
+		t.Fatalf("renderProviderRow: %v", err)
+	}
+	out := buf.String()
+	for _, want := range []string{"ENGINE LOAD", "1 of 1 slots busy", "18 queued behind", "llama.cpp", "ago"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("expected %q in:\n%s", want, out)
+		}
+	}
+}
+
+// A provider with no reading says nothing rather than claiming an idle queue: a
+// cloud account has no engine of ours to report one.
+func TestAProviderWithNoReadingClaimsNothing(t *testing.T) {
+	var buf bytes.Buffer
+	if err := renderProviderRow(&buf, &providerRow{Name: "OpenAI", Source: "manual", Status: "active"}); err != nil {
+		t.Fatalf("renderProviderRow: %v", err)
+	}
+	if strings.Contains(buf.String(), "ENGINE LOAD") {
+		t.Fatalf("nothing reported a queue here:\n%s", buf.String())
+	}
+}
+
+// Slots absent means the engine kept its own default, which is not a number
+// readable from out here. Saying "0 of 0" would read as serving nobody.
+func TestAnEngineThatDidNotDeclareItsWidthIsNotGivenOne(t *testing.T) {
+	load := &engineLoad{Processing: 2, Deferred: 0, ObservedAt: time.Now()}
+	got := load.describe()
+	if !strings.Contains(got, "2 processing") {
+		t.Fatalf("got %q, want the count without a width", got)
+	}
+	if strings.Contains(got, "slots") {
+		t.Fatalf("nothing declared a width, got %q", got)
+	}
+}
+
+func TestAReadingWithNoTimestampSaysSo(t *testing.T) {
+	load := &engineLoad{Processing: 1, Deferred: 1}
+	if !strings.Contains(load.describe(), "no timestamp") {
+		t.Fatalf("an undated reading should say so, got %q", load.describe())
+	}
+}
+
+// The width only exists for a local engine, so the column comes and goes with
+// the rows. A permanent column of dashes reads as a figure nobody filled in.
+func TestTheWidthColumnAppearsOnlyWhereItIsKnown(t *testing.T) {
+	ptr := func(s string) *string { return &s }
+	local := []adminModelRow{{
+		ProviderName: "Olares", ProviderType: "openai-compatible", ProviderSource: "olares",
+		ProviderStatus: "active", ProviderOlaresStatus: ptr("running"), ModelConsoleStatus: ptr("ready"),
+		Model: providerModelRow{Name: "qwen3", Mode: "chat", Enabled: true, Status: "active", MaxConcurrency: 4},
+	}}
+	var buf bytes.Buffer
+	if err := renderModelList(&buf, local, 1, 100, 0); err != nil {
+		t.Fatalf("renderModelList: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, "AT ONCE") || !strings.Contains(out, "4") {
+		t.Fatalf("expected the width column, got:\n%s", out)
+	}
+
+	cloud := []adminModelRow{{
+		ProviderName: "OpenAI", ProviderType: "openai", ProviderSource: "manual", ProviderStatus: "active",
+		Model: providerModelRow{Name: "gpt-4o", Mode: "chat", Enabled: true, Status: "active"},
+	}}
+	var plain bytes.Buffer
+	if err := renderModelList(&plain, cloud, 1, 100, 0); err != nil {
+		t.Fatalf("renderModelList: %v", err)
+	}
+	if strings.Contains(plain.String(), "AT ONCE") {
+		t.Fatalf("no cloud model declares a width:\n%s", plain.String())
+	}
+}
+
+// A pool smaller than window × width is one cache the slots share, not a
+// private window for each, so the width is marked rather than looking exclusive.
+func TestASharedKVPoolIsMarkedOnTheWidth(t *testing.T) {
+	model := providerModelRow{
+		Name: "qwen3", Mode: "chat", Enabled: true, Status: "active",
+		MaxConcurrency: 2, ContextSize: 102400, KVPoolTokens: 102400,
+	}
+	local := []adminModelRow{{
+		ProviderName: "Olares", ProviderType: "openai-compatible", ProviderSource: "olares",
+		ProviderStatus: "active",
+		Model:          model,
+	}}
+	var list bytes.Buffer
+	if err := renderModelList(&list, local, 1, 100, 0); err != nil {
+		t.Fatalf("renderModelList: %v", err)
+	}
+	if !strings.Contains(list.String(), "2 shared") {
+		t.Fatalf("expected a shared width, got:\n%s", list.String())
+	}
+
+	var detail bytes.Buffer
+	if err := renderProviderGet(&detail, &providerDetail{
+		providerRow: providerRow{Name: "Olares", Source: "olares", Status: "active"},
+		Models:      []providerModelRow{model},
+	}); err != nil {
+		t.Fatalf("renderProviderGet: %v", err)
+	}
+	if !strings.Contains(detail.String(), "2 shared") {
+		t.Fatalf("expected a shared width on the provider table, got:\n%s", detail.String())
+	}
+}
+
+// Window × width that fits in the pool is a split cache, even when the numbers
+// look like they were copied from one field to another.
+func TestASplitKVPoolIsNotMarkedShared(t *testing.T) {
+	model := providerModelRow{
+		Name: "qwen3", Mode: "chat", Enabled: true, Status: "active",
+		MaxConcurrency: 2, ContextSize: 51200, KVPoolTokens: 102400,
+	}
+	local := []adminModelRow{{
+		ProviderName: "Olares", ProviderType: "openai-compatible", ProviderSource: "olares",
+		ProviderStatus: "active",
+		Model:          model,
+	}}
+	var list bytes.Buffer
+	if err := renderModelList(&list, local, 1, 100, 0); err != nil {
+		t.Fatalf("renderModelList: %v", err)
+	}
+	out := list.String()
+	if strings.Contains(out, "2 shared") {
+		t.Fatalf("a pool that covers the width is not shared, got:\n%s", out)
+	}
+	if !strings.Contains(out, "2") {
+		t.Fatalf("expected the width, got:\n%s", out)
+	}
+
+	var detail bytes.Buffer
+	if err := renderProviderGet(&detail, &providerDetail{
+		providerRow: providerRow{Name: "Olares", Source: "olares", Status: "active"},
+		Models:      []providerModelRow{model},
+	}); err != nil {
+		t.Fatalf("renderProviderGet: %v", err)
+	}
+	if strings.Contains(detail.String(), "2 shared") {
+		t.Fatalf("a pool that covers the width is not shared on the provider table, got:\n%s", detail.String())
+	}
+}
+
+func TestOneModelReportsItsWidth(t *testing.T) {
+	var buf bytes.Buffer
+	err := renderProviderModel(&buf,
+		&providerRow{Name: "Olares", Source: "olares"},
+		&providerModelRow{Name: "qwen3", Mode: "chat", Enabled: true, Status: "active", MaxConcurrency: 4})
+	if err != nil {
+		t.Fatalf("renderProviderModel: %v", err)
+	}
+	if !strings.Contains(buf.String(), "AT ONCE") || !strings.Contains(buf.String(), "4 requests") {
+		t.Fatalf("expected the width, got:\n%s", buf.String())
+	}
+}
+
+// The data plane's own list carries the width too, and it is the list a caller
+// reads before sending. Its json has to keep the card's figures rather than drop
+// them on re-serialization.
+func TestTheCallableListKeepsTheCardsFigures(t *testing.T) {
+	const raw = `{"id":"Olares/qwen3","object":"model","mode":"chat","supports":["chat"],
+	"readiness":"ready","owned_by":"llamacppqwen3","context_size":32768,
+	"max_output_tokens":4096,"max_concurrency":4}`
+	var m modelObject
+	if err := json.Unmarshal([]byte(raw), &m); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if m.ContextSize != 32768 || m.MaxOutputTokens != 4096 || m.MaxConcurrency != 4 {
+		t.Fatalf("the card's figures did not decode: %+v", m)
+	}
+	var buf bytes.Buffer
+	if err := renderModelsList(&buf, []modelObject{m}, false); err != nil {
+		t.Fatalf("renderModelsList: %v", err)
+	}
+	if !strings.Contains(buf.String(), "AT ONCE") {
+		t.Fatalf("expected the width column, got:\n%s", buf.String())
+	}
+}
+
+// Router projects the pool on every entry of /v1/models, and the caller's list
+// is where somebody decides how long a prompt to send. Dropping it here left
+// the one reading that explains a refusal with a slot free out of the one view
+// written for the person about to be refused.
+func TestTheCallableListCarriesTheKVPool(t *testing.T) {
+	const raw = `{"id":"Olares/qwen3","object":"model","mode":"chat","supports":["chat"],
+	"readiness":"ready","owned_by":"llamacppqwen3","context_size":102400,
+	"max_concurrency":2,"kv_pool_tokens":102400}`
+	var m modelObject
+	if err := json.Unmarshal([]byte(raw), &m); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if m.KVPoolTokens != 102400 {
+		t.Fatalf("the pool did not decode: %+v", m)
+	}
+	var buf bytes.Buffer
+	if err := renderModelsList(&buf, []modelObject{m}, false); err != nil {
+		t.Fatalf("renderModelsList: %v", err)
+	}
+	if !strings.Contains(buf.String(), "2 shared") {
+		t.Fatalf("expected a shared width on the callable list, got:\n%s", buf.String())
+	}
+
+	// Re-serialization has to keep it too: -o json is what a script reads.
+	out, err := json.Marshal(m)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	if !strings.Contains(string(out), `"kv_pool_tokens":102400`) {
+		t.Fatalf("the pool was dropped on the way out: %s", out)
+	}
+}
+
+// One model in full is where the three figures can be shown against each other,
+// and the pair alone cannot say whether a window is a reservation or a ceiling.
+func TestOneModelReportsThePoolItsSlotsShare(t *testing.T) {
+	var buf bytes.Buffer
+	err := renderProviderModel(&buf,
+		&providerRow{Name: "Olares", Source: "olares"},
+		&providerModelRow{
+			Name: "qwen3", Mode: "chat", Enabled: true, Status: "active",
+			ContextSize: 102400, MaxConcurrency: 2, KVPoolTokens: 102400,
+		})
+	if err != nil {
+		t.Fatalf("renderProviderModel: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, "KV POOL") || !strings.Contains(out, "102400 tokens") {
+		t.Fatalf("expected the pool, got:\n%s", out)
+	}
+	if !strings.Contains(out, "shared across all 2") {
+		t.Fatalf("a pool this size cannot cover the width and should say so, got:\n%s", out)
+	}
+}
+
+// A pool that covers window × width is the ordinary case and needs no warning:
+// each slot really does hold what the window promises.
+func TestASplitPoolIsReportedWithoutTheWarning(t *testing.T) {
+	var buf bytes.Buffer
+	err := renderProviderModel(&buf,
+		&providerRow{Name: "Olares", Source: "olares"},
+		&providerModelRow{
+			Name: "qwen3", Mode: "chat", Enabled: true, Status: "active",
+			ContextSize: 51200, MaxConcurrency: 2, KVPoolTokens: 102400,
+		})
+	if err != nil {
+		t.Fatalf("renderProviderModel: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, "KV POOL") {
+		t.Fatalf("expected the pool, got:\n%s", out)
+	}
+	if strings.Contains(out, "shared") {
+		t.Fatalf("this pool covers the width, got:\n%s", out)
+	}
+}
+
+// A full engine and a broken one both answer 5xx, and the generic branch below
+// this one says the application is not serving — the opposite of what happened.
+func TestAFullKVCacheIsNotReportedAsADeadApplication(t *testing.T) {
+	err := callErr(&RouterError{
+		Status: 503, Code: "kv_budget_exhausted", Type: "upstream_error",
+		Message: "the model's KV cache is fully reserved", RetryAfter: time.Second,
+	})
+	got := err.Error()
+	for _, want := range []string{"serving, not", "shorter prompt", "router model get"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("expected %q in:\n%s", want, got)
+		}
+	}
+	if strings.Contains(got, "not serving yet") {
+		t.Fatalf("this engine is answering; it read as a stopped application:\n%s", got)
+	}
+}

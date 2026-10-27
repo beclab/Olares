@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Learn how to integrate your app with MariaDB service in Olares.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, MariaDB integration, integrate with MariaDB, Olares middleware, app database integration
 ---
 # Integrate with MariaDB
 

@@ -1,6 +1,10 @@
 ---
 outline: [2, 4]
 description: Reference for runtime values injected into application `values.yaml` during Olares deployment.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, system-injected runtime values, values.yaml, runtime variables, Olares deployment
 ---
 
 # System-injected runtime values

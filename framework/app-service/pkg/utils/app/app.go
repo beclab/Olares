@@ -11,9 +11,11 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"time"
 
+	"dario.cat/mergo"
 	corev1 "k8s.io/api/core/v1"
 
 	sysv1alpha1 "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
@@ -231,7 +233,8 @@ func UpdateAppMgrStatus(name string, status v1alpha1.ApplicationManagerStatus, m
 
 // ApplyAppEnv applies the environment variable configuration of the app:
 // if no existing AppEnv is found for the app, the AppEnv is created
-// if existing AppEnv is found for the app, any new configured env is added to the AppEnv
+// if existing AppEnv is found, new envs are added and existing envs have empty
+// fields filled from the configuration. Defaults always follow the configuration.
 func ApplyAppEnv(ctx context.Context, c client.Client, appConfig *appcfg.ApplicationConfig) (*sysv1alpha1.AppEnv, error) {
 	if appConfig == nil {
 		return nil, fmt.Errorf("app config is nil")
@@ -295,13 +298,27 @@ func ApplyAppEnv(ctx context.Context, c client.Client, appConfig *appcfg.Applica
 	updated := false
 
 	if len(desiredAppEnvs) > 0 {
-		existingEnvs := make(map[string]struct{}, len(appEnv.Envs))
-		for _, e := range appEnv.Envs {
-			existingEnvs[e.EnvName] = struct{}{}
+		existingEnvs := make(map[string]int, len(appEnv.Envs))
+		for i, e := range appEnv.Envs {
+			existingEnvs[e.EnvName] = i
 		}
 		for _, e := range desiredAppEnvs {
-			if _, ok := existingEnvs[e.EnvName]; !ok {
+			i, ok := existingEnvs[e.EnvName]
+			if !ok {
+				existingEnvs[e.EnvName] = len(appEnv.Envs)
 				appEnv.Envs = append(appEnv.Envs, e)
+				updated = true
+				continue
+			}
+			existing := &appEnv.Envs[i]
+			previous := existing.DeepCopy()
+			// set previously unset and now non-empty fields from the new configuration
+			if err := mergo.Merge(existing, e); err != nil {
+				return nil, fmt.Errorf("merge app env %s: %w", e.EnvName, err)
+			}
+			// override default value with the new configuration, whether empty previously or not
+			existing.Default = e.Default
+			if !reflect.DeepEqual(previous, existing) {
 				updated = true
 			}
 		}
@@ -622,6 +639,13 @@ func parseDestination(dest string) (string, string, error) {
 	}
 
 	return alias, tokens[len(tokens)-1], nil
+}
+
+// ACLDestinationPort returns the port token of a headscale ACL destination.
+// "*:443" yields "443". "tag:api-server:80,443" yields "80,443".
+func ACLDestinationPort(dest string) (string, error) {
+	_, port, err := parseDestination(dest)
+	return port, err
 }
 
 func TryToGetAppdataDirFromDeployment(ctx context.Context, namespace, name, owner string, appData bool) (appCacheDirs []string, appDataDirs []string, err error) {
@@ -1103,6 +1127,7 @@ func toApplicationConfig(opt *ConfigOptions, chart string, cfg *appcfg.AppConfig
 		OIDC:                 cfg.Options.OIDC,
 		ApiTimeout:           cfg.Options.ApiTimeout,
 		RunAsUser:            cfg.Spec.RunAsUser,
+		LoginOlaresCLI:       cfg.Permission.LoginOlaresCLI,
 		AllowedOutboundPorts: cfg.Options.AllowedOutboundPorts,
 		RequiredGPU:          cfg.Spec.RequiredGPU,
 		PodGPUConsumePolicy:  cfg.Spec.PodGPUConsumePolicy,
@@ -1119,13 +1144,16 @@ func toApplicationConfig(opt *ConfigOptions, chart string, cfg *appcfg.AppConfig
 		SharedEntrances:      cfg.SharedEntrances,
 		SelectedGpuType:      opt.SelectedGpu,
 		Accelerator:          cfg.Spec.Accelerator,
+		SupportArch:          cfg.Spec.SupportArch,
 		NeedsSharedAccess:    cfg.Options.NeedsSharedAccess,
 		LLMGatewaySupported:  cfg.Options.LLMGatewaySupported,
 		OverlayGateway:       cfg.OverlayGateway,
 		WorkloadReplicas:     cfg.WorkloadReplicas,
+		WorkloadOptions:      cfg.WorkloadOptions,
 		TemplateOnly:         cfg.Options.TemplateOnly,
 		Shared:               cfg.Options.Shared,
 	}
+	appConfig.OverlayGateway = appConfig.EffectiveOverlayGateway()
 
 	// Shared apps are themselves the destination of cross-namespace shared
 	// traffic and need the same downstream treatment (mesh sidecar,

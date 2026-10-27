@@ -1,7 +1,12 @@
 ---
-description: 在 Olares 上部署 Stable Diffusion 的指南，包括模型安装、多用户配置和系统优化，轻松实现 AI 图像生成。
+noindex: true
+description: 在 Olares 上本地运行 Stable Diffusion：自托管 SD WebUI 进行文生图，支持多用户，无按张付费，数据完全私有。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Stable Diffusion, stable diffusion webui, self-hosted stable diffusion, run stable diffusion locally, stable diffusion on olares
 ---
-# Stable Diffusion
+# 本地运行 Stable Diffusion
 
 Stable Diffusion 是基于潜在扩散模型（LDM）的新一代 AI 图像生成技术。它通过在低维空间处理图像生成过程，显著降低了计算需求，同时保持了高保真度的输出质量。
 
@@ -29,7 +34,7 @@ Stable Diffusion 是基于潜在扩散模型（LDM）的新一代 AI 图像生�
 
 ## 多人使用避免冲突
 
-模型检查点（checkpoint）默认采用全局共享机制——当有用户切换检查点后，其他用户的后续操作都会使用新选择的检查点。为避免互相影响，建议在创建任务时指定专用检查点。
+模型检查点（checkpoint）默认采用全局共享机制。当有用户切换检查点后，其他用户的后续操作都会使用新选择的检查点。为避免互相影响，建议在创建任务时指定专用检查点。
 
 ![检查点配置说明](/images/manual/use-cases/sd-checkpoint.png)
 

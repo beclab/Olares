@@ -9,7 +9,6 @@ import (
 
 	"github.com/beclab/Olares/framework/app-service/pkg/utils/registry"
 
-	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/cmd/ctr/commands"
@@ -68,10 +67,9 @@ func (is *imageService) PullImage(ctx context.Context, ref appv1alpha1.Ref, opts
 		return ref.Name, err
 	}
 	ref.Name = originNamed.String()
-	// replaced image ref
-	currentMirrors := registry.GetMirrors()
-	replacedRef, plainHTTP := utils.ReplacedImageRef(currentMirrors, originNamed.String(), false)
-	config := newFetchConfig(plainHTTP)
+	// Resolve the original registry through containerd's hosts configuration.
+	replacedRef := originNamed.String()
+	config := newFetchConfig(ctx)
 
 	ongoing := newJobs(replacedRef, originNamed.String())
 
@@ -246,11 +244,8 @@ func shouldPUllImage(ref appv1alpha1.Ref, imagePresent bool) bool {
 	return false
 }
 
-func newFetchConfig(plainHTTP bool) *content.FetchConfig {
-	options := docker.ResolverOptions{
-		PlainHTTP: plainHTTP,
-	}
-	resolver := docker.NewResolver(options)
+func newFetchConfig(ctx context.Context) *content.FetchConfig {
+	resolver := registry.NewResolver(ctx)
 	config := &content.FetchConfig{
 		Resolver:        resolver,
 		PlatformMatcher: platforms.Default(),

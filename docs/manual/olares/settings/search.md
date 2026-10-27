@@ -1,6 +1,10 @@
 ---
 outline: [2,3]
 description: Configure file indexing in Olares to control search scope, manage exclusions, and enable full-text search for specific directories.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Settings, file search, search index, excluded files, full-text search
 ---
 # Configure file search
 

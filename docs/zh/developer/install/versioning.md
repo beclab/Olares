@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Olares 的版本管理系统，包括发布类型、分支策略和升级规范。详述语义化版本的实现方式和兼容性要求。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 版本说明, 语义版本, 正式版, RC 版, 升级策略
 ---
 # Olares 版本说明
 

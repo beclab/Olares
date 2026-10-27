@@ -1,8 +1,10 @@
 ---
+noindex: true
 outline: [2, 3]
+title: Install Olares on Windows with Docker (WSL 2)
 description: Learn how to run Olares on Windows using WSL 2 and Docker, including system preparation, configuration, and container management.
 ---
-# Install Olares on Windows (WSL 2) with Docker image
+# Install Olares on Windows (WSL 2) with Docker
 You can use Docker to install and run Olares in a containerized environment. This guide walks you through setting up Olares with Docker and WSL 2, preparing the installation environment, completing the activation process, and managing the container lifecycle.
 
 :::warning Not for production use
@@ -38,6 +40,7 @@ You can also confirm your GPU in **Task Manager > Performance**. To verify the d
 
 ## Before you begin
 Before you begin, ensure the following:
+<!--@include: ./reusables.md#larepass-prerequisite-->
 - [Docker Desktop](https://docs.docker.com/desktop/setup/install/windows-install/)  is installed and running on your system.
   :::info WSL 2 and Hyper-V  
   If Docker Desktop is configured to use **Hyper-V**, GPU support for Olares cannot be enabled. Ensure Docker Desktop is set to run in the **WSL 2** mode.
@@ -49,7 +52,6 @@ Before you begin, ensure the following:
   ipconfig | findstr /i "IPv4.*192"
   ```
     :::
-- You have [created an Olares ID via LarePass](/manual/get-started/create-olares-id.md).
 
 ## Configure WSL 2
 1. Open PowerShell and run the following command to confirm the kernel version of WSL installed on your system:

@@ -1,4 +1,5 @@
 ---
+noindex: true
 description: 在 Olares 中导入区块链钱包、关联 NFT 藏品并设置为个性化头像，展现独特的数字身份标识。
 ---
 # 使用 NFT 图像作为个人头像
@@ -7,7 +8,7 @@ Olares 支持使用 NFT（非同质化代币）图像作为你的个人头像，
 
 ## 开始之前
 
-在开始之前，请先[将 Olares 与 Olares Space 集成](settings/integrations.md)。
+在开始之前，请先将 Olares 与 Olares Space 连接。授权步骤参见[在 Olares Space 中监控 Olares 状态与流量](../space/manage-olares.md#before-you-begin)。
 
 ## 第一步：设置区块链钱包
 

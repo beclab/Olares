@@ -34,6 +34,7 @@ type ApplicationManagerController struct {
 	client.Client
 	KubeConfig  *rest.Config
 	ImageClient images.ImageManager
+	Deps        appstate.Deps
 }
 
 // SetupWithManager sets up the ApplicationManagerController with the provided controller manager

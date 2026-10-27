@@ -53,6 +53,18 @@ type Device struct {
 	SupportType           string       `json:"supportType"`
 	AvailableSupportTypes []string     `json:"availableSupportTypes,omitempty"`
 	Bindings              []Allocation `json:"bindings,omitempty"`
+	// Reserved is the memory the device runtime holds on top of the bindings'
+	// quotas (MemorySliceReserve per binding), in bytes.
+	Reserved int64 `json:"reserved,omitempty"`
+}
+
+// isReady reports whether the node's kubelet was still heartbeating when this
+// view was built. buildNodeResource always fills Health in from the NodeReady
+// condition, so in production the answer comes straight from the cluster; an
+// empty Health only occurs in the in-memory node fixtures the tests build, and
+// is read as ready so those fixtures do not all have to spell it out.
+func (n Node) isReady() bool {
+	return n.Health == "" || n.Health == deviceHealthYes
 }
 
 // SupportsMode reports whether the node can host a pod of the given mode. cpu
@@ -262,10 +274,16 @@ func AddedResourcesFromAppConfig(appConfig *appcfg.ApplicationConfig) AddedResou
 }
 
 func IsHAMIMode(mode string) bool {
-	switch mode {
-	case utils.NvidiaCardType, utils.GB10ChipType:
-		return true
-	default:
-		return false
-	}
+	return CapabilityFor(mode).HAMI
+}
+
+// UsesGPUExtendedResource reports whether pods in this GPU mode are scheduled
+// onto GPU nodes via a Kubernetes extended resource. For these modes the
+// kube-scheduler already picks a matching node from resources.limits, so the
+// gpu-limit webhook must NOT additionally pin the pod with a nodeSelector —
+// doing so can create an unschedulable combination when the allocation's node
+// no longer advertises the resource. The other modes have no extended resource
+// and rely on nodeSelector to reach the correct node.
+func UsesGPUExtendedResource(mode string) bool {
+	return CapabilityFor(mode).ExtendedResource != ""
 }

@@ -1,17 +1,26 @@
+---
+description: Olares ID 智能合约的结构说明，涵盖 DID 管理与链上信誉系统。
+outline: [2, 4]
+head:
+  - - meta
+    - name: keywords
+      content: Olares, TerminusDID, 智能合约, DID Registry, 标签系统, Tagger, 声誉协议
+---
+
 # 智能合约
 
 Olares ID 的智能合约包含两个部分。
 
-- [TerminusDID](https://github.com/beclab/terminusdid-contract-system/blob/main/src/core/TerminusDID.sol) 合约扮演着关键角色，并作为 [DID Registry (DID 注册表)](/developer/concepts/registry.md)。查看[合约](https://optimistic.etherscan.io/address/0x5da4fa8e567d86e52ef8da860de1be8f54cae97d)。
+- [TerminusDID](https://github.com/beclab/terminusdid-contract-system/blob/main/src/core/TerminusDID.sol) 合约扮演着关键角色，并作为 [DID Registry (DID 注册表)](/zh/developer/concepts/registry.md)。查看[合约](https://optimistic.etherscan.io/address/0x5da4fa8e567d86e52ef8da860de1be8f54cae97d)。
 - 第三方协议可以基于 [TerminusDID](https://github.com/beclab/terminusdid-contract-system/blob/main/src/core/TerminusDID.sol) 扩展信誉系统。目前，已部署以下信誉协议：
     - [Otmoic Trader Reputation](https://github.com/otmoic/reputation-contract-evm/blob/main/contracts/Reputation.sol)。查看[合约](https://optimistic.etherscan.io/address/0xE924F7f68D1dcd004720e107F62c6303aF271ed3)。
     - [Application Reputation](https://github.com/beclab/terminusdid-contract-system/blob/main/src/taggers/TerminusAppMarketReputation.sol)。查看[合约](https://optimistic.etherscan.io/address/0x08065353D266121938B93D4B1071Bb52CD0C0EE4)。
 
-# TerminusDID
+## TerminusDID
 
 TerminusDID 合约管理着一个源自 [Domain (域)](/zh/developer/concepts/olares-id.md#domain) 的层级结构。
 
-## 节点 (Node)
+### 节点 (Node)
 
 每个节点都拥有几个默认属性。
 
@@ -36,7 +45,7 @@ TerminusDID 合约管理着一个源自 [Domain (域)](/zh/developer/concepts/ol
 }
 ```
 
-## 所有者 (Owner)
+### 所有者 (Owner)
 
 不同节点的所有权如下：
 
@@ -52,13 +61,13 @@ TerminusDID 合约管理着一个源自 [Domain (域)](/zh/developer/concepts/ol
   `alice.org1.com` 和 `bob.org2.io` 属于组织 Terminus 名称，由各自的用户所有。
 
 - **实体 (Entity)** \<br\>
-  `Application Score` 属于[实体域 (Entity Domain)](/zh/developer/concepts/olares-id.md#域名类型)，由该实体的申请人所有。组织管理员和用户可以参考[域管理](https://www.google.com/search?q=../contract/manage/contract.md%23register-did)来管理他们自己的节点和子节点。
+  `Application Score` 属于[实体域 (Entity Domain)](/zh/developer/concepts/olares-id.md#域名类型)，由该实体的申请人所有。组织管理员和用户可以参考[域管理](../contract/manage/contract.md#register-did)来管理他们自己的节点和子节点。
 
 :::info
 项目稳定后，Terminus 团队会将所有权转移给 DAO 组织的多签地址。
 :::
 
-## 标签 (Tag)
+### 标签 (Tag)
 
 [Tag (标签)](https://github.com/beclab/terminusdid-contract-system/blob/main/src/core/TagRegistry.sol) 机制允许 [TerminusDID](https://github.com/beclab/terminusdid-contract-system/blob/main/src/core/TerminusDID.sol) 合约扩展节点上存储的元数据。
 
@@ -71,7 +80,7 @@ TerminusDID 合约管理着一个源自 [Domain (域)](/zh/developer/concepts/ol
 对于复杂结构或数组，以及复杂结构和数组相互嵌套的情况，如果每次都以标签为单位写入数据，将会导致巨大的无效 Gas 消耗。因此，我们在系统中实现了单独更新单个字段或操作单个数组的功能。在执行单次更新时，除了**定义者、使用者和标签名**之外，你还需要提供数据的**路径 (path)**，即结构体内部的变量名。
 :::
 
-### 自定义标签
+#### 自定义标签
 
 | 字段         | 描述                                                                       |
 | ------------ | -------------------------------------------------------------------------- |
@@ -84,7 +93,7 @@ TerminusDID 合约管理着一个源自 [Domain (域)](/zh/developer/concepts/ol
 作为自定义标签的 Owner/did 仅对该节点及其子节点有效。
 :::
 
-### Tagger
+#### Tagger
 
 Tagger 是每个标签内部的必要信息之一。它代表有权修改标签值的唯一实体，可以是一个钱包地址或一个合约。Tagger 可能会频繁更改。
 
@@ -95,7 +104,7 @@ Tagger 是每个标签内部的必要信息之一。它代表有权修改标签�
 - 对于复杂的标签结构或具有特殊规范的数据内容，将 Tagger 设置为合约可以在链上验证数据格式或建立更全面的自定义规则。例如，对于官方标签中 RSAPubKey 的值，我们在链上对 Pkcs8 ASN.1 格式的字节数据进行验证，以防止设置无法解析的值。
 :::
 
-## 使用案例
+### 使用案例
 
 在根 (Root) 节点下提供了一些 Tagger：
 
@@ -130,9 +139,9 @@ Tagger 是每个标签内部的必要信息之一。它代表有权修改标签�
 
 :::
 
-# 信誉 (Reputation)
+## 信誉 (Reputation)
 
-我们可以基于 Tagger 创建高度灵活的[信誉](/developer/concepts/reputation.md)协议。
+我们可以基于 Tagger 创建高度灵活的[信誉](/zh/developer/concepts/reputation.md)协议。
 
 在实现链上信誉系统时，最关键的要素是：
 
@@ -142,7 +151,7 @@ Tagger 是每个标签内部的必要信息之一。它代表有权修改标签�
 
 针对这些要素，TerminusDID 提供了一套全面的解决方案。我们可以使用个人 (Individual) 和实体 (Entity) 类型的 DID 来代表待评估的对象，使用标签 (Tags) 来存储扩展的元数据，并利用 TerminusDID 内置的权限管理功能来验证身份。在以下两个案例中了解更多信息。
 
-## Otmoic Trader Reputation
+### Otmoic Trader Reputation
 
 Otmoic 的信誉合约使用 DID 所有者的 EIP712 签名进行身份验证，然后将投诉的 DID (complain did) 存储在 `otmoic.reputation` 实体的 `complaints` 字段中。
 
@@ -176,7 +185,7 @@ Otmoic 的信誉合约使用 DID 所有者的 EIP712 签名进行身份验证，
 ```
 :::
 
-## 应用声誉
+### 应用声誉
 
 1.  定义名为 `ratings` 的标签，并将其 Tagger 设置为 Application Reputation 合约。
 2.  当应用有新版本时，在区块链上创建 **`<version>.<appname>.app.myterminus.com`**。

@@ -17,6 +17,7 @@ func (h *Handlers) EnableOverlayGateway(ctx *fiber.Ctx, cmd commands.Interface) 
 
 	s, err := h.getOverlayGatewayStatus(ctx.Context())
 	if err != nil {
+		klog.Errorf("overlay gateway enable: get status failed: %v", err)
 		return h.ErrJSON(ctx, http.StatusInternalServerError, err.Error())
 	}
 
@@ -25,12 +26,12 @@ func (h *Handlers) EnableOverlayGateway(ctx *fiber.Ctx, cmd commands.Interface) 
 	}
 
 	// check if the lock file exists
-	if _, err := os.Stat(OverlayGatewayEnableLockFile); err == nil {
+	if inFlight, _ := consumeOverlayGatewayOpLock(OverlayGatewayEnableLockFile); inFlight {
 		s.Status = OverlayGatewayActivating
 		return h.OkJSON(ctx, "success", s)
 	}
 
-	if _, err := os.Stat(OverlayGatewayDisableLockFile); err == nil {
+	if inFlight, _ := consumeOverlayGatewayOpLock(OverlayGatewayDisableLockFile); inFlight {
 		s.Status = OverlayGatewayDeactivating
 		return h.OkJSON(ctx, "success", s)
 	}
@@ -39,21 +40,34 @@ func (h *Handlers) EnableOverlayGateway(ctx *fiber.Ctx, cmd commands.Interface) 
 		return h.ErrJSON(ctx, http.StatusBadRequest, "overlay gateway is already enabled")
 	}
 
+	// create the lock file synchronously while holding the mutex so that a
+	// concurrent enable request observes it and returns "activating" instead of
+	// starting a second switch (single-flight).
+	f, err := os.Create(OverlayGatewayEnableLockFile)
+	if err != nil {
+		klog.Errorf("overlay gateway enable: create lock file failed: %v", err)
+		return h.ErrJSON(ctx, http.StatusInternalServerError, "failed to create overlay gateway enable lock")
+	}
+	_ = f.Close()
+	enableOverlayGatewayError = ""
+	disableOverlayGatewayError = ""
+
 	go func() {
-		// create the lock file
-		os.Create(OverlayGatewayEnableLockFile)
 		defer os.Remove(OverlayGatewayEnableLockFile)
-		enableOverlayGatewayError = ""
-		disableOverlayGatewayError = ""
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
-		_, err = cmd.Execute(ctx, nil)
+
+		// The enable command only registers the overlay parent and the desired
+		// state; a non-nil error means nothing was changed. Surface the failure
+		// so the UI stops spinning.
+		_, err := cmd.Execute(ctx, nil)
 		if err != nil {
+			klog.Errorf("overlay gateway enable: execute failed: %v", err)
 			enableOverlayGatewayError = err.Error()
 			return
 		}
 
-		// check if the overlay gateway is enabled
+		// confirm the reported status reaches "on"
 		t := time.NewTicker(2 * time.Second)
 		timeout := time.NewTimer(60 * time.Second)
 		defer t.Stop()
@@ -61,8 +75,10 @@ func (h *Handlers) EnableOverlayGateway(ctx *fiber.Ctx, cmd commands.Interface) 
 		for {
 			select {
 			case <-t.C:
-				s, err = h.getOverlayGatewayStatus(ctx)
+				s, err := h.getOverlayGatewayStatus(ctx)
 				if err != nil {
+					klog.Errorf("overlay gateway enable: status poll failed: %v", err)
+					enableOverlayGatewayError = err.Error()
 					return
 				}
 				if s.Status == OverlayGatewayOn {
@@ -71,6 +87,7 @@ func (h *Handlers) EnableOverlayGateway(ctx *fiber.Ctx, cmd commands.Interface) 
 				}
 			case <-timeout.C:
 				klog.Error("overlay gateway enable timeout")
+				enableOverlayGatewayError = "overlay gateway enable timeout"
 				return
 			}
 		}

@@ -1,10 +1,11 @@
 # Build the manager binary
-FROM golang:1.24.11 as builder
+FROM golang:1.25.0 as builder
 
 WORKDIR /workspace
 # Copy the Go Modules manifests
 COPY go.mod github.com/beclab/Olares/framework/app-service/go.mod
 COPY go.sum github.com/beclab/Olares/framework/app-service/go.sum
+
 
 RUN cd github.com/beclab/Olares/framework/app-service && \
     go mod download

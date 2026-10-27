@@ -3,7 +3,8 @@ package apis
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+
+	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	"bytetrade.io/web3os/bfl/pkg/api/response"
 	"bytetrade.io/web3os/bfl/pkg/apis/iam/v1alpha1/operator"
@@ -11,8 +12,6 @@ import (
 	"bytetrade.io/web3os/bfl/pkg/app_service/v1"
 	"bytetrade.io/web3os/bfl/pkg/constants"
 	"bytetrade.io/web3os/bfl/pkg/userenv"
-	"bytetrade.io/web3os/bfl/pkg/utils"
-
 	iamV1alpha2 "github.com/beclab/api/iam/v1alpha2"
 	"github.com/emicklei/go-restful/v3"
 	"github.com/pkg/errors"
@@ -61,16 +60,7 @@ func (h *Base) GetAppListAndServicePort(req *restful.Request, appService *app_se
 			continue
 		}
 
-		if len(apps[i].Entrances) == 1 {
-			apps[i].Entrances[0].ID = app.ID
-			apps[i].Entrances[0].URL = app.URL
-			if apps[i].Entrances[0].Icon == "" {
-				apps[i].Entrances[0].Icon = app.Icon
-			}
-			continue
-		}
-
-		var appDomainConfigs []utils.DefaultThirdLevelDomainConfig
+		var appDomainConfigs []appv1alpha1.DefaultThirdLevelDomainConfig
 		if len(app.DefaultThirdLevelDomainConfig) > 0 {
 			err := json.Unmarshal([]byte(app.DefaultThirdLevelDomainConfig), &appDomainConfigs)
 			if err != nil {
@@ -78,16 +68,25 @@ func (h *Base) GetAppListAndServicePort(req *restful.Request, appService *app_se
 			}
 
 		}
+		apiEntrances := make([]*appv1alpha1.Entrance, len(apps[i].Entrances))
+		for k := range apps[i].Entrances {
+			e := apps[i].Entrances[k]
+			apiEntrances[k] = &appv1alpha1.Entrance{
+				Name:       e.Name,
+				Icon:       e.Icon,
+				Title:      e.Title,
+				AuthLevel:  e.AuthLevel,
+				Invisible:  e.Invisible,
+				URL:        e.URL,
+				OpenMethod: e.OpenMethod,
+			}
+		}
+
 		// return all entrances, let the frontend filter invisible or not
 		// filteredEntrances := make([]app_service.Entrance, 0)
 		for j := range apps[i].Entrances {
-			apps[i].Entrances[j].ID = fmt.Sprintf("%s%d", app.ID, j)
-			for _, adc := range appDomainConfigs {
-				if adc.EntranceName == apps[i].Entrances[j].Name && len(adc.ThirdLevelDomain) > 0 {
-					apps[i].Entrances[j].ID = adc.ThirdLevelDomain
-				}
-			}
-			apps[i].Entrances[j].URL = appURLMulti(app.Name, app.ID, j, apps[i].Entrances, appDomainConfigs)
+			apps[i].Entrances[j].ID = appv1alpha1.ResolveEntranceIDWithDefaultThirdLevelDomainOverride(apiEntrances, j, app.ID, appDomainConfigs)
+			apps[i].Entrances[j].URL = appURLMulti(app.Name, app.ID, j, apiEntrances, appDomainConfigs)
 			if apps[i].Entrances[j].Icon == "" {
 				apps[i].Entrances[j].Icon = app.Icon
 			}

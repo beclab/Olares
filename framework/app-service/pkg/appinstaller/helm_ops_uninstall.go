@@ -66,22 +66,22 @@ func (h *HelmOps) UninstallAll() error {
 	err = h.ClearCache(client, appCacheDirs)
 	if err != nil {
 		klog.Errorf("Failed to clear app cache dirs %v err=%v", appCacheDirs, err)
-		return err
 	}
 	if deleteData {
-		h.ClearData(client, appDataDirs)
-		if err != nil {
+		// Non-fatal: the release is already gone, so a failed data wipe must
+		// not block namespace teardown.
+		if err := h.ClearData(client, appDataDirs); err != nil {
 			klog.Errorf("Failed to clear app data dirs %v err=%v", appDataDirs, err)
-			//return err
 		}
 	}
 
 	err = h.DeleteNamespace(client, h.app.Namespace)
 	if err != nil {
 		klog.Errorf("Failed to delete namespace %s err=%v", h.app.Namespace, err)
+		return err
 	}
 
-	return err
+	return nil
 }
 
 func (h *HelmOps) Uninstall_(client kubernetes.Interface, actionConfig *action.Configuration,
@@ -128,6 +128,11 @@ func (h *HelmOps) Uninstall_(client kubernetes.Interface, actionConfig *action.C
 	if err != nil {
 		klog.Warningf("Failed to unregister app provider err=%v", err)
 	}
+
+	// Also covers the install-failure path, which tears down through the same
+	// call, so a grant minted for an install that never finished is revoked
+	// instead of outliving it.
+	h.ReleaseOlaresCLICredential()
 
 	return nil
 }

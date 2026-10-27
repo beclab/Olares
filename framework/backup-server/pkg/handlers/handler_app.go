@@ -13,9 +13,9 @@ import (
 	"olares.com/backup-server/pkg/util/log"
 )
 
-const (
-	BackupAppHost = "rss-svc.knowledge-shared:3010"
-)
+const defaultBackupWiseHost = "rss-svc.knowledgev3-shared:3010"
+
+var BackupAppHost = util.GetEnvOrDefault("BACKUP_WISE_HOST", defaultBackupWiseHost)
 
 const (
 	BackupAppStartPath   = "{app}/backup/start"
@@ -26,7 +26,7 @@ const (
 )
 
 var appNameMap = map[string]string{
-	"wise": "knowledge",
+	"wisev3": "knowledge",
 }
 
 type AppHandler struct {

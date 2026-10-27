@@ -29,10 +29,10 @@ type UninstallingApp struct {
 	*baseOperationApp
 }
 
-func NewUninstallingApp(c client.Client,
+func NewUninstallingApp(deps Deps,
 	manager *appsv1.ApplicationManager, ttl time.Duration) (StatefulApp, StateError) {
 
-	return appFactory.New(c, manager, ttl,
+	return deps.Factory.New(deps, manager, ttl,
 		func(c client.Client, manager *appsv1.ApplicationManager, ttl time.Duration) StatefulApp {
 			return &UninstallingApp{
 				&baseOperationApp{
@@ -49,7 +49,7 @@ func NewUninstallingApp(c client.Client,
 func (p *UninstallingApp) Exec(ctx context.Context) (StatefulInProgressApp, error) {
 	opCtx, cancel := context.WithCancel(context.Background())
 
-	return appFactory.execAndWatch(opCtx, p,
+	return p.deps.Factory.execAndWatch(opCtx, p,
 		func(c context.Context) (StatefulInProgressApp, error) {
 			in := uninstallingInProgressApp{
 				UninstallingApp: p,
@@ -171,7 +171,7 @@ func (p *UninstallingApp) exec(ctx context.Context) error {
 		klog.Errorf("unmarshal to appConfig failed %v", err)
 		return err
 	}
-	kubeConfig, err := getKubeConfig()
+	kubeConfig, err := p.deps.KubeConfig()
 	if err != nil {
 		klog.Errorf("get kube config failed %v", err)
 		return err
@@ -180,7 +180,7 @@ func (p *UninstallingApp) exec(ctx context.Context) error {
 		klog.Infof("delete old mongodb ..........")
 		return p.oldMongodbUninstall(ctx, kubeConfig)
 	}
-	ops, err := newHelmOps(ctx, kubeConfig, appCfg, token, appinstaller.Opt{MarketSource: appcfg.GetMarketSource(p.manager)})
+	ops, err := p.deps.NewHelmOps(ctx, kubeConfig, appCfg, token, appinstaller.Opt{MarketSource: appcfg.GetMarketSource(p.manager)})
 	if err != nil {
 		klog.Errorf("make helm ops failed %v", err)
 		return err
@@ -219,7 +219,7 @@ func (p *UninstallingApp) exec(ctx context.Context) error {
 
 func (p *UninstallingApp) Cancel(ctx context.Context) error {
 	klog.Infof("cancel uninstalling operation appName=%s", p.manager.Spec.AppName)
-	if ok := appFactory.cancelOperation(p.manager.Name); !ok {
+	if ok := p.deps.Factory.cancelOperation(p.manager.Name); !ok {
 		klog.Errorf("app %s operation is not ", p.manager.Name)
 	}
 

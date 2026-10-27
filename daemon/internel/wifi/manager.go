@@ -16,7 +16,7 @@ func NewManager() (*Manager, error) {
 	wifiManager := new(Manager)
 
 	log.Debug("Connecting to system DBus")
-	conn, err := dbus.SystemBus()
+	conn, err := dbus.ConnectSystemBus()
 	if err != nil {
 		return nil, err
 	}
@@ -42,3 +42,6 @@ type Manager struct {
 	networkManager *network_manager.NetworkManager
 	settings       *network_manager.NetworkManager_Settings
 }
+
+// Close releases this manager's private bus connection.
+func (m *Manager) Close() error { return m.conn.Close() }

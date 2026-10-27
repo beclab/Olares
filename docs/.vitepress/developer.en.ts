@@ -49,6 +49,9 @@ export const developerSidebar: DefaultTheme.Sidebar = {
       text: "Olares CLI",
       link: "/developer/cli-overview",
       items: [
+        { text: "Use Olares CLI with AI agents",       link: "/developer/cli-install" },
+        { text: "Olares CLI Agent Skills",             link: "/developer/cli-agent-skills" },
+        { text: "Common Olares CLI commands",          link: "/developer/install/cli/olares-cli" },
         {
           text: "Cluster management",
           link: "/developer/install/",
@@ -64,7 +67,7 @@ export const developerSidebar: DefaultTheme.Sidebar = {
             //   link: "/developer/install/cli/olares-cli",
             //   collapsed: true,
             //   items: [
-            //     { text: "Access Olares terminal", link: "/developer/reference/access-olares-terminal" },
+            //     { text: "Access Olares terminal", link: "/manual/access-olares-terminal" },
             //     {
             //       text: "backups",
             //       link: "/developer/install/cli/backups",
@@ -111,21 +114,13 @@ export const developerSidebar: DefaultTheme.Sidebar = {
             // },
           ],
         },
-        {
-          text: "Use with AI agents",
-          collapsed: false,
-          items: [
-            { text: "Install olares-cli",            link: "/developer/cli-install" },
-            { text: "Log in to Olares",             link: "/developer/cli-log-in" },
-            { text: "Install and use Agent Skills",  link: "/developer/cli-agent-skills" },
-          ],
-        },
       ],
     },
     {
       text: "Develop Olares apps",
       link: "/developer/develop/",
       items: [
+        /*
         {
           text: "Develop with Studio",
           collapsed: true,
@@ -149,6 +144,7 @@ export const developerSidebar: DefaultTheme.Sidebar = {
             },
           ],
         },
+        */
         {
           text: "Application package",
           collapsed: true,
@@ -372,16 +368,17 @@ export const developerSidebar: DefaultTheme.Sidebar = {
           text: "Promote your apps",
           link:"/developer/develop/promote-apps"
         },
-        {
+        /*{
           text: "Publish paid apps",
           link: "/developer/develop/paid-apps",
-        },
-        
+        },*/
+
       ],
     },
     {
       text: "Contribute to Olares",
       items: [
+        /*
         {
           text: "Develop system app",
           collapsed: true,
@@ -408,6 +405,7 @@ export const developerSidebar: DefaultTheme.Sidebar = {
             },
           ],
         },
+        */
         {
           text: "Develop protocols",
           collapsed: true,

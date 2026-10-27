@@ -1,6 +1,7 @@
 ---
+noindex: true
 outline: [2, 3]
-description: Set up your cloud based Olares instance in Olares Space. Configure system resources, monitor installation progress, and activate your instance with proper credentials.
+description: Create a cloud-based Olares instance in Olares Space. Choose resources, monitor installation, and activate the system.
 ---
 :::warning Documentation does not match current experience
 We are currently updating this documentation to match the latest experience on the Olares Space platform. If there are differences, follow the actual platform.
@@ -21,7 +22,7 @@ Ensure you get an Olares ID to log in to Olares Space and activate the Olares in
 
 ## Create an Olares
 
-1. Log in to [Olares Space](https://space.olares.com/) by scanning the QR code using LarePass.
+1. Log in to [Olares Space](https://www.olares.com/space) by scanning the QR code using LarePass.
 2. Navigate to the **Cluster** page and select the second option to start creating.
 
     ![Basic Configuration](/images/how-to/space/basic_configuration.jpg#bordered)
@@ -86,4 +87,4 @@ When the installation enters the **Pending Activation** state, activate Olares:
 
 2. Access the wizard URL in your browser, and use the one-time password to log into Olares for the first time. 
 3. Change the Olares password via LarePass when prompted. 
-4. Follow the on-screen instructions to finish the rest of activation process. 
+4. Follow the on-screen instructions to finish the rest of activation process.

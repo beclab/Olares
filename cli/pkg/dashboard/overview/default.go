@@ -25,13 +25,24 @@ var sectionKeys = []string{"physical", "user", "ranking"}
 // applied here — the default action is one-shot only because the
 // per-leaf cadences differ and a unified --watch-interval would lie
 // to consumers.
+//
+// The envelope is written either way; only a run where every section
+// failed exits non-zero, and it does so through ErrAlreadyReported so
+// the entrypoint adds nothing on top of the envelope.
 func RunDefault(ctx context.Context, c *pkgdashboard.Client, cf *pkgdashboard.CommonFlags) error {
 	now := time.Now()
 	env := BuildSectionsEnvelope(ctx, c, cf, now)
 	if cf.Output == pkgdashboard.OutputJSON {
-		return pkgdashboard.WriteJSON(os.Stdout, env)
+		if err := pkgdashboard.WriteJSON(os.Stdout, env); err != nil {
+			return err
+		}
+	} else if err := WriteSectionsTable(os.Stdout, env); err != nil {
+		return err
 	}
-	return WriteSectionsTable(os.Stdout, env)
+	if pkgdashboard.EverySectionFailed(env) {
+		return pkgdashboard.ErrAlreadyReported
+	}
+	return nil
 }
 
 // BuildSectionsEnvelope fans out the three section builders in

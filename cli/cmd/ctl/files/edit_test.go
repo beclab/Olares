@@ -587,16 +587,17 @@ func TestDefaultMaxSize(t *testing.T) {
 // 403, 404, 409) plus the 459 Olares-edge variant.
 func TestReformatEditHTTPErr(t *testing.T) {
 	cases := []struct {
-		name   string
-		status int
-		expect string
+		name      string
+		status    int
+		expect    string
+		notExpect string
 	}{
-		{"401 mentions profile login", 401, "profile login"},
-		{"403 mentions profile login", 403, "profile login"},
-		{"459 (Olares edge auth-failed) maps to login CTA", 459, "profile login"},
-		{"404 says not found", 404, "not found on the server"},
-		{"409 hints at concurrent change", 409, "concurrently"},
-		{"413 surfaces payload too large", 413, "payload too large"},
+		{"401 mentions profile login", 401, "profile login", ""},
+		{"403 refreshes identity without login", 403, "profile whoami --refresh", "profile login"},
+		{"459 (Olares edge auth-failed) maps to login CTA", 459, "profile login", ""},
+		{"404 says not found", 404, "not found on the server", ""},
+		{"409 hints at concurrent change", 409, "concurrently", ""},
+		{"413 surfaces payload too large", 413, "payload too large", ""},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -607,6 +608,9 @@ func TestReformatEditHTTPErr(t *testing.T) {
 			}
 			if !strings.Contains(got.Error(), c.expect) {
 				t.Errorf("err %q does not contain %q", got.Error(), c.expect)
+			}
+			if c.notExpect != "" && strings.Contains(got.Error(), c.notExpect) {
+				t.Errorf("err %q unexpectedly contains %q", got.Error(), c.notExpect)
 			}
 		})
 	}
@@ -1039,11 +1043,11 @@ func TestRunEdit_PickEditorFailsBeforeFactory(t *testing.T) {
 	}
 	err := runEdit(
 		context.Background(),
-		nil,           // *cmdutil.Factory — MUST NOT be touched in the post-fix order
+		nil, // *cmdutil.Factory — MUST NOT be touched in the post-fix order
 		io.Discard,
-		nil,           // editorStdin
-		io.Discard,    // editorStdout
-		io.Discard,    // editorStderr
+		nil,        // editorStdin
+		io.Discard, // editorStdout
+		io.Discard, // editorStderr
 		"drive/Home/Documents/notes.md",
 		o,
 	)

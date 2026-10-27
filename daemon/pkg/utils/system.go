@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/godbus/dbus/v5"
@@ -96,9 +97,9 @@ func GetSystemPendingShutdowm() (mode string, shuttingdown bool, err error) {
 	return "", false, nil
 }
 
-// getScheduledShutdownFromLogind reads logind's ScheduledShutdown property,
-// which is set for delayed shutdowns (the same source that backs
-// /run/systemd/shutdown/scheduled).
+// getScheduledShutdownFromLogind reads logind's ScheduledShutdown property.
+// Besides delayed shutdowns, logind may leave an immediate sleep action such as
+// ("suspend", 0) in this property after the machine wakes up.
 func getScheduledShutdownFromLogind(conn *dbus.Conn) (mode string, scheduled bool) {
 	obj := conn.Object("org.freedesktop.login1", dbus.ObjectPath("/org/freedesktop/login1"))
 	v, err := obj.GetProperty("org.freedesktop.login1.Manager.ScheduledShutdown")
@@ -115,13 +116,7 @@ func getScheduledShutdownFromLogind(conn *dbus.Conn) (mode string, scheduled boo
 
 	action, _ := fields[0].(string)
 	action = strings.TrimSpace(action)
-	// empty action means nothing is scheduled; dry-run actions only send a wall
-	// message and do not actually power the machine down.
-	if action == "" || strings.HasPrefix(action, "dry-") {
-		return "", false
-	}
-
-	return normalizeShutdownMode(action), true
+	return scheduledShutdownMode(action)
 }
 
 // getActiveShutdownFromSystemd checks whether systemd has a pending job for any
@@ -146,13 +141,17 @@ func getActiveShutdownFromSystemd(conn *dbus.Conn) (mode string, shuttingdown bo
 	return "", false, nil
 }
 
-// normalizeShutdownMode maps a logind/systemd action string to the coarse mode
-// used by callers ("reboot" or "shutdown").
-func normalizeShutdownMode(action string) string {
-	if strings.Contains(action, shutdownModeReboot) || strings.Contains(action, "kexec") {
-		return shutdownModeReboot
+// scheduledShutdownMode accepts only known shutdown and reboot actions.
+// Sleep, unknown, and dry-prefixed actions must not be treated as poweroff.
+func scheduledShutdownMode(action string) (mode string, scheduled bool) {
+	switch action {
+	case "reboot", "kexec", "soft-reboot":
+		return shutdownModeReboot, true
+	case "poweroff", "halt":
+		return shutdownModePoweroff, true
+	default:
+		return "", false
 	}
-	return shutdownModePoweroff
 }
 
 // getPendingShutdownFromFile is the legacy detection based on
@@ -289,7 +288,26 @@ func GetBaseDirFromReleaseFile() (string, error) {
 	return baseDir, nil
 }
 
+var (
+	cpuNameMu    sync.Mutex
+	cpuNameValue string
+)
+
+// GetCPUName returns the CPU brand name. The result is static for the lifetime
+// of the process, so it is cached to avoid the lscpu/dmidecode fallbacks below
+// running on every status tick. An empty result (e.g. a transient boot-time
+// failure) is not cached, so a later tick can still populate it.
 func GetCPUName() string {
+	cpuNameMu.Lock()
+	defer cpuNameMu.Unlock()
+	if cpuNameValue != "" {
+		return cpuNameValue
+	}
+	cpuNameValue = computeCPUName()
+	return cpuNameValue
+}
+
+func computeCPUName() string {
 	brandName := cpu.CPU.BrandName
 	if brandName == "" {
 		// cannot read info from /proc/cpuinfo, try to get from lscpu command
@@ -304,7 +322,7 @@ func GetCPUName() string {
 
 	// try to get AIBOOK M1000 model name
 	if brandName == "" {
-		cmd := exec.Command("sh", "-c", "command -v dmidecode 1>/dev/null && dmidecode -s processor-version")
+		cmd := exec.Command("sh", "-c", "command -v dmidecode 1>/dev/null && dmidecode -s processor-version || true")
 		output, err := cmd.Output()
 		if err != nil {
 			klog.Error("get CPU name error, ", err)

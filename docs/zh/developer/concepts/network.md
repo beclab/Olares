@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Olares 网络架构设计说明，阐述应用入口类型、本地访问机制、端点配置和内部网络安全策略的基本原理。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 网络, 入口, 端点, 路由 ID, 私有入口, 内部网络, 命名空间隔离
 ---
 # 网络
 
@@ -86,5 +90,5 @@ Olares 在网关架构中采用多层代理路由设计。流量经过多个层�
 
 ## 了解更多
 
-- [为应用设置自定义域名](../../manual/olares/settings/custom-app-domain.md#自定义域名)
+- [为应用设置自定义域名](../../manual/olares/settings/custom-app-domain.md#设置自定义域名)
 - [通过专用网络访问 Olares 应用](../../manual/larepass/private-network.md)

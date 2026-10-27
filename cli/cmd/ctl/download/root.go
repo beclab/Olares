@@ -1,0 +1,67 @@
+package download
+
+import (
+	"github.com/spf13/cobra"
+
+	"github.com/beclab/Olares/cli/pkg/cmdutil"
+)
+
+// NewDownloadCommand assembles `olares-cli knowledge download`.
+// Identity and transport come from the active profile (same as market /
+// files / settings). Requires Olares >= 1.12.7.
+//
+// Naming: this tree is the download-server *task centre*. It is not
+// top-level `download` (installer packages) and not `files download`
+// (pull a file from files-backend).
+func NewDownloadCommand(f *cmdutil.Factory) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "download",
+		Short: "manage download tasks",
+		Long: `Create and manage Olares download tasks.
+
+Invoked as: olares-cli knowledge download <verb>
+
+Requires Olares 1.12.7+ and uses the active profile.
+
+This is the download *task centre* (create / list / pause / …). It is
+not the top-level "download" command (installer packages) and not
+"files download" (copy a file out of Drive).
+
+Verb families:
+
+  lifecycle   create, list, info, wait, pause, resume, cancel, remove
+  probe       inspect
+  prefs       prefs get, prefs set
+  sync        unfinished, sync
+  torrent     torrent inspect, stats, peers, files, seed stop|resume
+  file        file exists, file remove
+  settings    settings get, settings set  (download-server global config)
+
+Universal flags:
+
+  -o, --output {table,json}
+      --app <name>     one of: wise, larepass (default larepass; create / list / prefs / sync)
+
+Run "olares-cli knowledge download <verb> --help" for verb-specific flags.
+`,
+	}
+	cmd.SilenceErrors = true
+	cmd.SilenceUsage = true
+
+	cmd.AddCommand(NewCreateCommand(f))
+	cmd.AddCommand(NewListCommand(f))
+	cmd.AddCommand(NewInfoCommand(f))
+	cmd.AddCommand(NewWaitCommand(f))
+	cmd.AddCommand(NewPauseCommand(f))
+	cmd.AddCommand(NewResumeCommand(f))
+	cmd.AddCommand(NewCancelCommand(f))
+	cmd.AddCommand(NewRemoveCommand(f))
+	cmd.AddCommand(NewInspectCommand(f))
+	cmd.AddCommand(NewPrefsCommand(f))
+	cmd.AddCommand(NewUnfinishedCommand(f))
+	cmd.AddCommand(NewSyncCommand(f))
+	cmd.AddCommand(NewTorrentCommand(f))
+	cmd.AddCommand(NewFileCommand(f))
+	cmd.AddCommand(NewSettingsCommand(f))
+	return cmd
+}

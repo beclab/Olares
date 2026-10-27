@@ -40,7 +40,7 @@ Olares One operates quietly even under load. In lab testing, the device generate
 ### What is the power consumption?
 
 The device consumes 30W in standby. Under load, the GPU power depends on your selected mode:
-* **Silent Mode**: GPU 95W
+* **Silent Mode**: GPU 50W
 * **Performance Mode**: GPU 175W
 
 When the CPU is fully utilized on its own, power consumption reaches 120W. During combined maximum load, the system balances power distribution with the CPU operating at 55W and the GPU at 175W. The thermal design sustains these performance levels.
@@ -66,9 +66,16 @@ Olares OS simplifies local AI with one-click deployment and workflow integration
 ### Is it possible to upgrade or expand the hardware?
 
 Yes. You can modify the hardware through several internal slots and expansion ports:
-* **Storage**: The motherboard includes two PCIe SSD slots, one PCIe 4.0 and one PCIe 5.0. The preinstalled 2TB SSD occupies the PCIe 4.0 slot. The second slot remains available for system storage expansion via LVM or for a dual-boot configuration.
+* **Storage**: The motherboard includes two PCIe SSD slots, one PCIe 4.0 and one PCIe 5.0. The preinstalled 2TB SSD occupies the PCIe 5.0 slot. The PCIe 4.0 slot remains available for system storage expansion via LVM or for a dual-boot configuration.
 * **Memory**: The RAM capacity can be upgraded to a maximum of 128GB.
-* **External graphics & displays**: The Thunderbolt 5 port supports eGPU enclosures to connect external graphics cards. It also supports docking stations to connect up to two external monitors simultaneously at up to 8K resolution, with video output handled by the RTX 5090 Mobile.
+* **External graphics**: You can connect a compatible Thunderbolt external graphics device. See [Can I use an eGPU with Olares One?](#can-i-use-an-egpu-with-olares-one)
+* **External displays**: The Thunderbolt 5 port supports docking stations with up to two external monitors at up to 8K resolution. The built-in RTX 5090 Mobile handles video output.
+
+### Can I use an eGPU with Olares One?
+
+Yes. You can connect a Thunderbolt external graphics device with a GPU already installed, or install a compatible desktop NVIDIA GPU in a powered eGPU dock or enclosure. Hardware compatibility and setup differ between Olares OS and Windows 11.
+
+See [Connect an eGPU to Olares One](egpu.md) for known compatibility, current limitations, and setup instructions.
 
 ### Is there a way to view the Olares OS UI via HDMI?
 
@@ -85,6 +92,17 @@ For detailed instructions, see [Manage BIOS](../one/update-firmware.md).
 ### Is Olares One designed for "always-on" operation?
 
 Yes. Olares One functions as a personal AI cloud and reliably supports 24/7 continuous operation for scenarios like Large Language Model (LLM) hosting.
+
+### Does Olares One support out-of-band management?
+
+Support for common out-of-band management capabilities on Olares One is as follows:
+
+- **Automatic startup**: Supported. Olares One can start automatically when AC power is connected or restored after a power outage.
+  - On Olares OS, this feature requires Olares OS 1.12.6 or later and EC firmware 1.03 or later. See [Manage hardware settings](hardware-settings.md#set-automatic-startup).
+  - On Ubuntu, configure the setting from the command line. See **Configure automatic startup** in the [Ubuntu Server](install-ubuntu-server.md#configure-automatic-startup) or [Ubuntu Desktop](install-ubuntu-desktop.md#configure-automatic-startup) installation guide.
+- **Wake-on-LAN (WOL)**: Supported on Olares One running Olares OS, Ubuntu, or Windows, with EC firmware 1.01 or later and a wired network connection. For setup and wake-up instructions on the same local network, see [Set up Wake-on-LAN for Olares One](wake-on-lan.md). The Windows steps cover waking from sleep.
+- **Remote KVM**: Not supported.
+- **IPMI**: Not supported.
 
 ### Are there additional fees to use Olares One?
 

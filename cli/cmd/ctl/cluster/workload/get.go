@@ -46,7 +46,9 @@ Output:
   table   vertical key/value summary plus a CONDITIONS line and an
           UpdateStrategy line; pivot from here to "cluster pod list -l
           <selector>" using the SELECTOR row to find the controlled pods.
-  json    the K8s native response forwarded verbatim.
+  json    every field the K8s API returned, re-indented but not otherwise
+          reshaped — including the ones the table does not render, such as
+          container command, env, ports and resource limits.
 `,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
@@ -79,18 +81,31 @@ func runGet(ctx context.Context, o *clusteropts.ClusterOptions, namespace, name,
 		return err
 	}
 	path := buildGetPath(namespace, kindPlural, name)
-	var w Workload
-	if err := clusterclient.GetK8sObject(ctx, client, path, &w); err != nil {
+	// Fetch bytes rather than decoding straight into Workload: -o json has
+	// to forward what the server sent. The typed struct only models the
+	// fields the table renders — containers, for instance, carry just name
+	// and image — so re-serializing it dropped the container command, env,
+	// ports and resources from a response that claimed to be K8s native.
+	body, err := clusterclient.GetRaw(ctx, client, path)
+	if err != nil {
 		return fmt.Errorf("get %s %s/%s: %w", SingularKind(kindPlural), namespace, name, err)
 	}
-	if w.Kind == "" {
-		w.Kind = SingularKind(kindPlural)
-	}
 	if o.IsJSON() {
-		return o.PrintJSON(w)
+		out, err := clusteropts.IndentJSON(body)
+		if err != nil {
+			return fmt.Errorf("format %s %s/%s response: %w", SingularKind(kindPlural), namespace, name, err)
+		}
+		return o.WriteStdout(out)
 	}
 	if o.Quiet {
 		return nil
+	}
+	var w Workload
+	if err := clusterclient.DecodeJSON(path, body, &w); err != nil {
+		return err
+	}
+	if w.Kind == "" {
+		w.Kind = SingularKind(kindPlural)
 	}
 	return renderGetTable(w, kindPlural)
 }

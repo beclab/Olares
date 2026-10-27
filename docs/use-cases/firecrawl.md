@@ -1,4 +1,6 @@
 ---
+connectionVersion: "1.12.7"
+connectionLatestPath: /use-cases/firecrawl
 outline: [2, 3]
 description: Set up Firecrawl on Olares as a web page loader for apps such as Open WebUI, or use its API to scrape and crawl websites.
 head:
@@ -6,15 +8,26 @@ head:
     - name: keywords
       content: Olares, Firecrawl, web crawler, web scraping, Firecrawl v2, scrape API, crawl API, Open WebUI, web loader, self-hosted
 app_version: "1.0.21"
-doc_version: "1.0"
-doc_updated: "2026-06-02"
+doc_version: "1.1"
+doc_updated: "2026-09-23"
 ---
 
 # Use Firecrawl as a web page loader
 
+<VersionRouteSelect />
+
 Firecrawl is a headless web data service that turns web pages into clean Markdown, structured JSON, summaries, and metadata. On Olares, apps such as Open WebUI can use Firecrawl to load full web page content after search results are found.
 
 You can also call the Firecrawl API directly to test scraping and crawling.
+
+## Prerequisites
+
+Before you begin, you need:
+
+<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
+- Qwen3.8-27B (llama.cpp) installed from Market, if you plan to use a local model.
+
+<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## Install Firecrawl
 
@@ -30,19 +43,14 @@ Firecrawl usually runs in the background. Other apps call it through its endpoin
 
 ### Get the Firecrawl endpoint
 
-The endpoint is the base address of your Firecrawl service on Olares. You will add API paths such as `/v2/scrape` or `/v2/crawl` to this address.
+<!--@include: ../reusables/ai-service-connections.md#app-endpoint-overview-->
 
-1. Open **Settings**, then navigate to **Applications** > **Firecrawl**.
-2. Under **Entrances**, click **Firecrawl**.
-3. Under **Endpoint settings**, locate the endpoint URL and copy it.
+For Firecrawl:
 
-   ![Firecrawl endpoint](/images/manual/use-cases/alex-firecrawl-endpoint.png#bordered)
+1. Go to Olares **Settings** > **Applications** > **Firecrawl** > **Entrances**.
+2. Select **Firecrawl**, then copy the **Endpoint** URL.
 
-In the examples below, replace the sample endpoint with your own:
-
-```text
-https://717172b4.alexmiles.olares.com
-```
+This Endpoint is the base address of the Firecrawl service. API clients add paths such as `/v2/scrape` or `/v2/crawl`.
 
 ### Configure Open WebUI
 
@@ -106,7 +114,7 @@ If your browser blocks pasted code in the console, follow the browser prompt to 
 Use scrape when you want the content of one page.
 
 ```javascript
-const endpoint = "https://717172b4.alexmiles.olares.com";
+const endpoint = "<your-firecrawl-endpoint>";
 
 const response = await fetch(`${endpoint}/v2/scrape`, {
   method: "POST",
@@ -129,7 +137,7 @@ If the request succeeds, the response includes `data.markdown`. This is the clea
 Use crawl when you want Firecrawl to follow links from the starting page. Start with a small `limit` so the result is easy to inspect.
 
 ```javascript
-const endpoint = "https://717172b4.alexmiles.olares.com";
+const endpoint = "<your-firecrawl-endpoint>";
 
 const response = await fetch(`${endpoint}/v2/crawl`, {
   method: "POST",
@@ -151,7 +159,7 @@ A successful request returns a job ID and a status URL:
 {
   "success": true,
   "id": "019e6988-6e26-7407-b7a4-8045a8d12269",
-  "url": "https://717172b4.alexmiles.olares.com/v2/crawl/019e6988-6e26-7407-b7a4-8045a8d12269"
+  "url": "<your-firecrawl-endpoint>/v2/crawl/<job-id>"
 }
 ```
 
@@ -180,25 +188,32 @@ Structured JSON and summary output require a configured LLM provider. Local Olla
 
 ### Configure model access
 
-1. Open **Settings**, then navigate to **Applications** > **Firecrawl**.
-2. Open **Environment variables**.
-3. Configure the model provider values you plan to use:
+This example uses Qwen3.8-27B (llama.cpp) through its OpenAI-compatible API. Install the model from Market and wait until it is ready.
+
+<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
+
+For Qwen3.8-27B (llama.cpp), use the **OpenAI-Compatible** API format:
+
+<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
+
+To configure Firecrawl:
+
+1. Go to Olares **Settings** > **Applications** > **Firecrawl** > **Environment variables**.
+2. Configure the following values:
 
    | Variable | Description |
    |:---------|:------------|
-   | `OPENAI_API_KEY` | API key for an OpenAI-compatible provider. |
-   | `OPENAI_BASE_URL` | Base URL for an OpenAI-compatible provider. |
-   | `OLLAMA_BASE_URL` | Ollama endpoint URL, if you use Ollama. Go to **Settings** > <br>**Applications** > **Ollama** > **Entrances** > **Ollama API** and copy<br> the endpoint. |
-   | `MODEL_NAME` | Model name used for LLM-based extraction, such as <br>`qwen3.5:35b-a3b-ud-q4_K_L`. |
+   | `OPENAI_API_KEY` | Enter any non-empty value, such as `olares`. |
+   | `OPENAI_BASE_URL` | Enter the Base URL from Router. |
+   | `MODEL_NAME` | Enter `default-chat`. |
 
-4. Click **Apply**.
-5. Open Control Hub, select your Firecrawl project under **Browse**, then restart the `worker`, `nuq-worker`, and `firecrawl` deployments to apply the environment variables.
+3. Click **Apply**.
+4. Open Control Hub, select your Firecrawl project under **Browse**, then restart the `worker`, `nuq-worker`, and `firecrawl` deployments to apply the environment variables.
 
 ### Return structured JSON
 
-
 ```javascript
-const endpoint = "https://717172b4.alexmiles.olares.com";
+const endpoint = "<your-firecrawl-endpoint>";
 
 const response = await fetch(`${endpoint}/v2/scrape`, {
   method: "POST",
@@ -236,7 +251,7 @@ console.log(data.data.json);
 ### Return a summary
 
 ```javascript
-const endpoint = "https://717172b4.alexmiles.olares.com";
+const endpoint = "<your-firecrawl-endpoint>";
 
 const response = await fetch(`${endpoint}/v2/scrape`, {
   method: "POST",

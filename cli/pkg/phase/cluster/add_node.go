@@ -24,7 +24,7 @@ func AddNodePhase(runtime *common.KubeRuntime) *pipeline.Pipeline {
 	var m []module.Module
 	m = append(m,
 		&terminus.GetMasterInfoModule{},
-		&terminus.CheckPreparedModule{Force: true},
+		&terminus.CheckPreparedModule{Force: true, ForJoin: true},
 		&storage.InstallJuiceFsModule{
 			ManifestModule: manifest.ManifestModule{
 				Manifest: manifestMap,

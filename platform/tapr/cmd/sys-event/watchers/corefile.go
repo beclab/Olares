@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/md5"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"math"
 	"net"
@@ -21,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
@@ -188,41 +188,39 @@ func RegenerateCorefile(ctx context.Context, kubeClient kubernetes.Interface, dy
 		return err
 	}
 
-	for _, u := range userList.Items {
-		userzone := u.GetAnnotations()[UserAnnotationZoneKey]
-		if userzone == "" {
-			klog.Info("user ", u.GetName(), " has no zone annotation, skip corefile update")
-			continue
-		}
+	if ingressIp != "" {
+		for _, u := range userList.Items {
 
-		ip, err := getUserLocalIp(&u)
-		if err != nil {
-			klog.Error("get user local ip error, ", err)
-			return err
-		}
-		if ip == nil || ip.String() == "" {
-			klog.Info("user ", u.GetName(), " has no valid local ip, skip corefile update")
-			continue
-		}
+			userzone := u.GetAnnotations()[UserAnnotationZoneKey]
+			if userzone == "" {
+				klog.Info("user ", u.GetName(), " has no zone annotation, skip corefile update")
+				continue
+			}
 
-		if ingressIp == "" {
-			klog.Info("user ", u.GetName(), " has no valid ingress ip, skip corefile update")
-			continue
-		}
+			ip, err := getUserLocalIp(&u)
+			if err != nil {
+				klog.Error("get user local ip error, ", err)
+				return err
+			}
+			if ip == nil || ip.String() == "" {
+				klog.Info("user ", u.GetName(), " has no valid local ip, skip corefile update")
+				continue
+			}
 
-		templatesPlugins = addUserTemplates(userzone, ip.String(), templatesPlugins)
-		inclusterTemplatesPlugins = addUserTemplates(userzone, ingressIp, inclusterTemplatesPlugins)
+			templatesPlugins = addUserTemplates(userzone, ip.String(), templatesPlugins)
+			inclusterTemplatesPlugins = addUserTemplates(userzone, ingressIp, inclusterTemplatesPlugins)
 
-		if masterNodeIp == "" {
-			klog.Info("no master node ip found, skip adding local domain dns record")
-			continue
-		}
+			if masterNodeIp == "" {
+				klog.Info("no master node ip found, skip adding local domain dns record")
+				continue
+			}
 
-		username := u.GetName()
-		userLocalZone := fmt.Sprintf("%s.olares.local", username)
-		localTemplatesPlugins = addUserTemplates(userzone, masterNodeIp, localTemplatesPlugins)
-		localDomainTemplatesPlugins = addUserTemplates(userLocalZone, masterNodeIp, localDomainTemplatesPlugins)
-	}
+			username := u.GetName()
+			userLocalZone := fmt.Sprintf("%s.olares.local", username)
+			localTemplatesPlugins = addUserTemplates(userzone, masterNodeIp, localTemplatesPlugins)
+			localDomainTemplatesPlugins = addUserTemplates(userLocalZone, masterNodeIp, localDomainTemplatesPlugins)
+		} // end of for loop
+	} // end of if ingressIp != ""
 
 	// Degrade on failure: without the app-gateway-data ClusterIP the shared
 	// in-cluster templates are skipped, while the rest of the Corefile still
@@ -245,7 +243,7 @@ func RegenerateCorefile(ctx context.Context, kubeClient kubernetes.Interface, dy
 			// round; the shared enhancement converges on the next reconcile.
 			klog.Errorf("degrade: skip shared incluster templates, list SRR error: %v", err)
 		} else if gatewayDataIP != "" {
-			sharedInclusterTemplatePlugins = buildSharedInclusterTemplates(srrEntrances, gatewayDataIP)
+			sharedInclusterTemplatePlugins = buildSharedInclusterTemplates(srrEntrances, gatewayDataIP, userList.Items)
 		}
 	} else {
 		klog.V(2).Info("skip shared incluster CoreDNS templates: inClusterGatewayEnabled=false")
@@ -350,6 +348,10 @@ func RegenerateCorefile(ctx context.Context, kubeClient kubernetes.Interface, dy
 			corefileSizeWarnBytes,
 			corefileSizeRejectBytes,
 		)
+	}
+	if newCorefileData == corefileData {
+		klog.Info("coredns corefile unchanged, skip configmap update")
+		return nil
 	}
 	corefileConfigMap.Data["Corefile"] = newCorefileData
 
@@ -557,7 +559,8 @@ func getUserIngressIP(ctx context.Context, kubeClient kubernetes.Interface) (str
 		return "", err
 	}
 	if len(pods.Items) == 0 {
-		return "", errors.New("no l4 proxy pod found")
+		klog.Info("no l4 proxy pod found, users are not initialized yet")
+		return "", nil
 	}
 	pod := pods.Items[0]
 
@@ -638,8 +641,13 @@ const (
 
 // matchRegex returns an anchored host regex for one SRR host pattern:
 // - shared exact host:  ^<id>\.shared\.<base>\.$
-// - application logical: ^<id>\.[^.]+\.<base>\.$
-func (e SharedInclusterEntrance) matchRegex() string {
+// - application logical: ^<id>\.(<v1>|<v2>|...)\.<base>\.$
+//
+// The viewer label of an application logical host is limited to the local
+// viewers returned by viewersFor. A viewer label that belongs to another
+// Olares must not resolve to this cluster's gateway; it falls through to the
+// upstream resolver instead. No local viewer means no template.
+func (e SharedInclusterEntrance) matchRegex(viewersFor func(platformDomain string) []string) string {
 	entranceID, platformDomain, hostPatternType, ok := parseLogicalHostPattern(e.HostPattern)
 	if !ok {
 		platformDomain = strings.ToLower(strings.TrimSpace(strings.TrimSuffix(e.PlatformDomain, ".")))
@@ -655,10 +663,47 @@ func (e SharedInclusterEntrance) matchRegex() string {
 	case hostPatternSharedExact:
 		return `"^` + escapedEntranceID + `\.shared\.` + escapedPlatformDomain + `\.$"`
 	case hostPatternViewerWildcard:
-		return `"^` + escapedEntranceID + `\.[^.]+\.` + escapedPlatformDomain + `\.$"`
+		var viewers []string
+		if viewersFor != nil {
+			viewers = viewersFor(platformDomain)
+		}
+		if len(viewers) == 0 {
+			return ""
+		}
+		return `"^` + escapedEntranceID + `\.(` + strings.Join(viewers, "|") + `)\.` + escapedPlatformDomain + `\.$"`
 	default:
 		return ""
 	}
+}
+
+// localSharedViewers returns the sorted, deduplicated viewer labels of the
+// users on this cluster for platformDomain: every user name, plus the first
+// label of a zone "<label>.<platformDomain>". Labels that are not valid DNS
+// labels are dropped, so every returned value is safe inside a regex.
+func localSharedViewers(users []unstructured.Unstructured, platformDomain string) []string {
+	platformDomain = strings.ToLower(strings.TrimSpace(strings.TrimSuffix(platformDomain, ".")))
+	seen := make(map[string]struct{})
+	add := func(label string) {
+		label = strings.ToLower(strings.TrimSpace(label))
+		if label == "" || len(validation.IsDNS1123Label(label)) > 0 {
+			return
+		}
+		seen[label] = struct{}{}
+	}
+	for i := range users {
+		add(users[i].GetName())
+		zone := strings.ToLower(strings.TrimSpace(strings.TrimSuffix(users[i].GetAnnotations()[UserAnnotationZoneKey], ".")))
+		if platformDomain == "" || !strings.HasSuffix(zone, "."+platformDomain) {
+			continue
+		}
+		add(strings.TrimSuffix(zone, "."+platformDomain))
+	}
+	out := make([]string, 0, len(seen))
+	for label := range seen {
+		out = append(out, label)
+	}
+	sort.Strings(out)
+	return out
 }
 
 // buildSharedInclusterTemplates builds CoreDNS `template` plugin instances
@@ -673,20 +718,34 @@ func (e SharedInclusterEntrance) matchRegex() string {
 // answer with the gateway ClusterIP. `fallthrough` is set so unrelated names
 // continue down the chain to the wildcard templates / forward.
 //
-// requirement: only FQDNs derived from SRR hostPatterns may be rewritten.
+// requirement: only FQDNs derived from SRR hostPatterns may be rewritten, and
+// application logical hosts only for viewers that are users of this cluster.
 // behavior: deterministic sorted ordering by match regex; empty input returns nil.
 // test: table-driven unit tests in corefile_incluster_test.go.
-func buildSharedInclusterTemplates(entrances []SharedInclusterEntrance, gatewayDataIP string) []*corefile.Plugin {
+func buildSharedInclusterTemplates(entrances []SharedInclusterEntrance, gatewayDataIP string, users []unstructured.Unstructured) []*corefile.Plugin {
 	ip := net.ParseIP(strings.TrimSpace(gatewayDataIP))
 	if ip == nil || ip.To4() == nil {
 		return nil
 	}
 	gatewayDataIP = ip.String()
 
+	viewersByDomain := make(map[string][]string)
+	viewersFor := func(platformDomain string) []string {
+		if v, ok := viewersByDomain[platformDomain]; ok {
+			return v
+		}
+		v := localSharedViewers(users, platformDomain)
+		if len(v) == 0 {
+			klog.Warningf("skip shared incluster viewer templates for platform domain %s: no local viewer", platformDomain)
+		}
+		viewersByDomain[platformDomain] = v
+		return v
+	}
+
 	seen := make(map[string]struct{})
 	var matches []string
 	for _, ent := range entrances {
-		match := ent.matchRegex()
+		match := ent.matchRegex(viewersFor)
 		if match == "" {
 			continue
 		}
@@ -804,29 +863,25 @@ func sharedInclusterEntrancesFromSRRItems(
 		if err != nil || !found || len(patterns) == 0 {
 			continue
 		}
-		entranceID := ""
-		platformDomain := ""
-		hostPattern := ""
+		// One CoreDNS rewrite per logical hostPattern so friendly + hash
+		// aliases on the same SRR both point at app-gateway-data.
 		for _, pattern := range patterns {
 			id, domain, _, ok := parseLogicalHostPattern(pattern)
 			if !ok {
 				continue
 			}
-			entranceID = id
-			platformDomain = domain
-			hostPattern = strings.ToLower(strings.TrimSpace(strings.TrimSuffix(pattern, ".")))
-			break
+			hostPattern := strings.ToLower(strings.TrimSpace(strings.TrimSuffix(pattern, ".")))
+			if domain == "" || id == "" || hostPattern == "" {
+				continue
+			}
+			entrances = append(entrances, SharedInclusterEntrance{
+				AppID:          appid,
+				EntranceName:   entranceName,
+				EntranceID:     id,
+				PlatformDomain: domain,
+				HostPattern:    hostPattern,
+			})
 		}
-		if platformDomain == "" || entranceID == "" || hostPattern == "" {
-			continue
-		}
-		entrances = append(entrances, SharedInclusterEntrance{
-			AppID:          appid,
-			EntranceName:   entranceName,
-			EntranceID:     entranceID,
-			PlatformDomain: platformDomain,
-			HostPattern:    hostPattern,
-		})
 	}
 	return entrances
 }

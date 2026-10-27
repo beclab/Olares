@@ -11,7 +11,7 @@ doc_updated: "2026-04-28"
 ---
 
 :::warning
-当前文档由 AI 翻译生成，若发现术语或表述不准确，请查看[英文原文](../../use-cases/whisper-webui.md)。
+本文档由 AI 自动翻译，仅供参考。涉及关键操作或信息时，请以[英文原文](../../use-cases/whisper-webui.md)为准。
 :::
 
 # 使用 Whisper-WebUI 转录音频和视频
@@ -343,7 +343,7 @@ hf download Systran/faster-whisper-large-v3 \
 解决此问题：
 
 - 等待首次模型下载完成，然后重试任务。
-- 在 Memory slicing 模式下为 Whisper-WebUI [分配更多 VRAM](/zh/manual/olares/settings/single-gpu.md#adjust-vram-allocation)。
+- 在 Memory slicing 模式下为 Whisper-WebUI [分配更多 VRAM](/zh/manual/olares/settings/gpu-resource.md#恢复应用并分配资源)。
 - 将 GPU 切换到另一种合适的模式。
 - 选择较小的模型。
 

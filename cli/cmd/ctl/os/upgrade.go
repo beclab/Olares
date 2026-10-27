@@ -18,7 +18,19 @@ import (
 func NewCmdUpgradeOs() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "upgrade",
-		Short: "Upgrade Olares to a newer version",
+		Short: "Upgrade Olares OS to a newer version (for olares-cli itself, see `olares-cli update`)",
+		// The two verbs are one letter apart and this is the one people
+		// reach for when they want a newer CLI. It is not: it moves the
+		// whole Olares OS installation on this host. Say so here, where the
+		// mistake is about to be made.
+		Long: `Upgrade the Olares OS installation on this host to a newer version.
+
+This is the operating system, not the CLI. To update olares-cli itself, run
+` + "`olares-cli update`" + `.
+
+The olares-cli bundled with Olares OS moves with the OS, so this does replace
+/usr/local/bin/olares-cli as a side effect — but it does not touch the agent
+skills on disk. Run ` + "`olares-cli skills install`" + ` afterwards.`,
 		Run: func(cmd *cobra.Command, args []string) {
 			if err := pipelines.UpgradeOlaresPipeline(cmd.Context()); err != nil {
 				log.Fatalf("error: %v", err)

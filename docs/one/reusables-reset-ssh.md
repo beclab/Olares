@@ -1,5 +1,9 @@
 ---
 search: false
+head:
+  - - meta
+    - name: keywords
+      content: Olares One, reset SSH password, SSH login, Vault, LarePass
 ---
 ## Reset SSH password
 
@@ -19,16 +23,3 @@ To view the saved password in Vault:
     ![Check the saved login password in Vault](/images/one/ssh-check-password-in-vault.png#bordered)
 <!-- #endregion view-saved-ssh-password -->
 <!-- #endregion reset-ssh-upon-activation -->
-
-<!-- #region reset-ssh-in-settings -->
-### Reset in Olares Settings
-If you prefer to use an SSH password instead of the automatically generated one, you can manually reset the password in Settings.
-
-1. Open Settings. On the **My Olares** page, select **My hardware**.
-2. Select **Reset SSH login password** at the bottom.
-   ![Reset SSH login password](/images/one/ssh-reset-password-in-settings.png#bordered){width=70%}
-
-3. In the dialog, enter a new SSH password that meets all strength requirements, then click **OK**.
-4. Open the LarePass app and scan the QR code shown on the screen.
-5. Click **Confirm** on LarePass to finish. Your reset SSH password will be saved to Vault.
-<!-- #endregion reset-ssh-in-settings -->

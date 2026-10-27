@@ -18,6 +18,7 @@ package ending
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -119,18 +120,35 @@ func (t *TaskResult) IsFailed() bool {
 	return false
 }
 
+// CombineErr reports every host this task failed on.
+//
+// This is the one layer that knows which host each result belongs to, so it owns
+// naming the host. The errors reaching it do not carry that themselves: a
+// timeout, a failed prepare condition or a runtime setup failure are all
+// host-agnostic by the time they are recorded.
 func (t *TaskResult) CombineErr() error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	if len(t.ActionResults) != 0 {
-		var str string
-		for i := range t.ActionResults {
-			if t.ActionResults[i].Status != FAILED {
-				continue
-			}
-			str += fmt.Sprintf("\nfailed - %s: %s", t.ActionResults[i].Host.GetName(), t.ActionResults[i].Error.Error())
+	var msgs []string
+	for i := range t.ActionResults {
+		result := t.ActionResults[i]
+		if result.Status != FAILED {
+			continue
 		}
-		return errors.New(str)
+		// A task rejected before a host was picked (an action that is nil, for
+		// instance) is recorded without one, and must not panic here.
+		host := "unknown host"
+		if result.Host != nil {
+			host = result.Host.GetName()
+		}
+		err := "unknown error"
+		if result.Error != nil {
+			err = result.Error.Error()
+		}
+		msgs = append(msgs, fmt.Sprintf("failed - %s: %s", host, err))
 	}
-	return nil
+	if len(msgs) == 0 {
+		return nil
+	}
+	return errors.New(strings.Join(msgs, "\n"))
 }

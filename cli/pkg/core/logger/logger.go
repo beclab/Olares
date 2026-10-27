@@ -11,9 +11,35 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-var logger *zap.SugaredLogger
+// logger is replaced by InitLog as soon as a runtime exists. Until then it
+// points at a console-only fallback, because a fair amount of the CLI runs
+// before any runtime is built (argument resolution, prechecks, the worker join
+// flow) and logging from there must not be a nil-pointer panic.
+var logger = newConsoleOnlyLogger()
 
 var FatalMessagePrefix = "[FATAL] "
+
+func newConsoleOnlyLogger() *zap.SugaredLogger {
+	core := zapcore.NewCore(
+		zapcore.NewConsoleEncoder(consoleEncoderConfig()),
+		zapcore.Lock(os.Stdout),
+		zap.LevelEnablerFunc(func(lvl zapcore.Level) bool { return lvl > zapcore.DebugLevel }),
+	)
+	return zap.New(core, zap.AddCaller(), zap.AddCallerSkip(1), zap.AddStacktrace(zapcore.FatalLevel)).Sugar()
+}
+
+func consoleEncoderConfig() zapcore.EncoderConfig {
+	return zapcore.EncoderConfig{
+		TimeKey:        "T",
+		MessageKey:     "M",
+		StacktraceKey:  "S",
+		LineEnding:     zapcore.DefaultLineEnding,
+		EncodeLevel:    zapcore.LowercaseLevelEncoder,
+		EncodeTime:     zapcore.ISO8601TimeEncoder,
+		EncodeDuration: zapcore.StringDurationEncoder,
+		EncodeCaller:   zapcore.ShortCallerEncoder,
+	}
+}
 
 func InitLog(jsonLogDir, consoleLogFilePath string, consoleLogTruncate bool) {
 	for _, logDir := range []string{jsonLogDir, path.Dir(consoleLogFilePath)} {
@@ -68,22 +94,12 @@ func InitLog(jsonLogDir, consoleLogFilePath string, consoleLogTruncate bool) {
 		EncodeDuration: zapcore.StringDurationEncoder,
 		EncodeCaller:   zapcore.ShortCallerEncoder,
 	}
-	consoleEncoderConfig := zapcore.EncoderConfig{
-		TimeKey:        "T",
-		MessageKey:     "M",
-		StacktraceKey:  "S",
-		LineEnding:     zapcore.DefaultLineEnding,
-		EncodeLevel:    zapcore.LowercaseLevelEncoder,
-		EncodeTime:     zapcore.ISO8601TimeEncoder,
-		EncodeDuration: zapcore.StringDurationEncoder,
-		EncodeCaller:   zapcore.ShortCallerEncoder,
-	}
-
+	consoleEncoder := zapcore.NewConsoleEncoder(consoleEncoderConfig())
 	consoleDebugging := zapcore.Lock(os.Stdout)
 
 	core := zapcore.NewTee(
-		zapcore.NewCore(zapcore.NewConsoleEncoder(consoleEncoderConfig), consoleDebugging, consolePriority),
-		zapcore.NewCore(zapcore.NewConsoleEncoder(consoleEncoderConfig), zapcore.AddSync(consoleLogFile), consolePriority),
+		zapcore.NewCore(consoleEncoder, consoleDebugging, consolePriority),
+		zapcore.NewCore(consoleEncoder, zapcore.AddSync(consoleLogFile), consolePriority),
 		zapcore.NewCore(zapcore.NewJSONEncoder(fileEncoder), zapcore.AddSync(jsonLogFile), jsonLogFilePriority),
 	)
 	logger = zap.New(core, zap.AddCaller(), zap.AddCallerSkip(1), zap.AddStacktrace(zapcore.FatalLevel)).Sugar()

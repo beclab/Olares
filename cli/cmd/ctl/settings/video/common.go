@@ -16,6 +16,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/beclab/Olares/cli/pkg/bflenvelope"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 	"github.com/beclab/Olares/cli/pkg/credential"
 	"github.com/beclab/Olares/cli/pkg/whoami"
@@ -71,29 +72,17 @@ func prepare(ctx context.Context, f *cmdutil.Factory) (*preparedClient, error) {
 	}, nil
 }
 
-type bflEnvelope struct {
-	Code    int             `json:"code"`
-	Message string          `json:"message"`
-	Data    json.RawMessage `json:"data"`
-}
-
-// doGetEnvelopeRaw decodes the inner data into a json.RawMessage so the
-// caller can either pretty-print it as-is or further process. The video
-// config struct is large and provider-versioned, so we deliberately
-// don't model it field-by-field at the CLI layer.
+// doGetEnvelopeRaw returns the inner data as a json.RawMessage so the
+// caller can either pretty-print it as-is or further process it. The
+// video config struct is large and provider-versioned, so it is not
+// modeled field-by-field at the CLI layer.
 func doGetEnvelopeRaw(ctx context.Context, d Doer, path string) (json.RawMessage, error) {
-	var env bflEnvelope
+	var env bflenvelope.Envelope
 	if err := d.DoJSON(ctx, "GET", path, nil, &env); err != nil {
 		return nil, err
 	}
-	switch env.Code {
-	case 0, 200:
-	default:
-		msg := strings.TrimSpace(env.Message)
-		if msg == "" {
-			return nil, fmt.Errorf("GET %s: upstream returned code %d", path, env.Code)
-		}
-		return nil, fmt.Errorf("GET %s: upstream returned code %d: %s", path, env.Code, msg)
+	if err := bflenvelope.Data("GET", path, env, nil); err != nil {
+		return nil, err
 	}
 	return env.Data, nil
 }

@@ -11,8 +11,10 @@ import (
 
 	"github.com/beclab/Olares/daemon/cmd/terminusd/version"
 	"github.com/beclab/Olares/daemon/internel/apiserver"
+	"github.com/beclab/Olares/daemon/internel/apiserver/handlers"
 	"github.com/beclab/Olares/daemon/internel/ble"
 	"github.com/beclab/Olares/daemon/internel/mdns"
+	"github.com/beclab/Olares/daemon/internel/portal"
 	"github.com/beclab/Olares/daemon/internel/watcher"
 	"github.com/beclab/Olares/daemon/internel/watcher/cert"
 	intranetwatcher "github.com/beclab/Olares/daemon/internel/watcher/intranet"
@@ -22,6 +24,7 @@ import (
 	"github.com/beclab/Olares/daemon/internel/watcher/systemenv"
 	"github.com/beclab/Olares/daemon/internel/watcher/upgrade"
 	"github.com/beclab/Olares/daemon/internel/watcher/usb"
+	"github.com/beclab/Olares/daemon/pkg/cluster/clusterop"
 	"github.com/beclab/Olares/daemon/pkg/cluster/state"
 	"github.com/beclab/Olares/daemon/pkg/commands"
 	"github.com/beclab/Olares/daemon/pkg/utils"
@@ -38,12 +41,14 @@ func main() {
 	port := 18088
 	var showVersion bool
 	var showVendor bool
+	var portalHelperService string
 
 	klog.InitFlags(nil)
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 	pflag.CommandLine.BoolVar(&showVersion, "version", false, "show olaresd version")
 	pflag.CommandLine.BoolVar(&showVendor, "vendor", false, "show the vendor type of olaresd")
 
+	pflag.CommandLine.StringVar(&portalHelperService, "portal-helper-service", portal.DefaultService, "system bus service for captive portal authentication")
 	pflag.Parse()
 
 	if showVersion {
@@ -58,13 +63,48 @@ func main() {
 
 	commands.Init()
 
+	// Clear leftover overlay op locks from a previous crash so status does not
+	// report a permanent activating/deactivating state. Do not reconcile app
+	// settings or cni-dhcp here.
+	handlers.ClearOverlayGatewayOpLocks()
+
+	// Cluster power operations are recorded on disk before they are carried
+	// out. A daemon that cannot record them serves the routes and refuses,
+	// rather than powering off a cluster it will not be able to report on.
+	//
+	// This is also the only place anything is given the ability to act on
+	// this machine: the node-local half of an operation runs through the
+	// modules built into this daemon, and they are handed to the routes here
+	// rather than at package level, so no test binary holds them.
+	//
+	// Both halves are given the same set, which InitClusterOperations then
+	// closes: the master decides an operation exists and dispatches its node
+	// half against these modules, and a node carries that half out against
+	// the same ones.
+	handlers.InstallNodeOperations(clusterop.DefaultRegistry())
+	if err := handlers.InitClusterOperations(commands.CLUSTER_OPERATIONS_DIR, clusterop.NewDeps()); err != nil {
+		klog.Error("cluster operations are unavailable, ", err)
+	}
+
 	mainCtx, cancel := context.WithCancel(context.Background())
+	portalDone := portal.Start(mainCtx, portalHelperService)
+	defer func() { cancel(); <-portalDone }()
+
+	// Set up the shared informers' lifecycle context. The factory itself starts
+	// lazily once the cluster is reachable; readers fall back to live Lists
+	// until the cache has synced.
+	utils.InitInformers(mainCtx)
 
 	apis := apiserver.NewServer(mainCtx, port)
 
 	if err := state.CheckCurrentStatus(mainCtx); err != nil {
 		klog.Error(err)
 	}
+
+	// Bring the overlay gateway back to its desired state after a restart:
+	// keep the CNI DHCP daemon running, restore the parent alternative name
+	// and heal overlay pods that came up without their LAN interface.
+	utils.ConvergeOverlayGateway(mainCtx)
 
 	go wait.UntilWithContext(mainCtx, utils.UpdateNetworkTraffic, time.Second)
 
@@ -102,7 +142,7 @@ func main() {
 
 	state.WatchStatus(mainCtx, []watcher.Watcher{
 		system.NewSystemWatcher(),
-		system.NewBridgeConnectionWatcher(),
+		system.NewOverlayParentWatcher(),
 		// usb.NewUsbWatcher(),
 		usb.NewUmountWatcher(),
 		upgrade.NewUpgradeWatcher(),
@@ -113,8 +153,19 @@ func main() {
 		lpvpndns.NewWatcher(),
 	}, func() {
 		if s != nil {
-			if err := s.Restart(); err != nil {
-				klog.Error(err)
+			startMDNS := true
+			if client, err := utils.GetKubeClient(); err == nil {
+				if _, _, nodeRole, err := utils.GetThisNodeName(mainCtx, client); err == nil && nodeRole != "master" {
+					startMDNS = false
+				}
+			}
+
+			if startMDNS {
+				if err := s.Restart(); err != nil {
+					klog.Error(err)
+				}
+			} else {
+				s.Close()
 			}
 		}
 
@@ -133,17 +184,40 @@ func main() {
 		if state.CurrentState.TerminusState == state.TerminusRunning {
 			found := false
 			if client, err := utils.GetKubeClient(); err == nil {
-				if deployments, err := client.AppsV1().Deployments("").List(mainCtx, metav1.ListOptions{}); err == nil {
-					for _, d := range deployments.Items {
-						if d.Name == "steamheadless" {
+				// Use a name field selector so the apiserver returns only the
+				// steamheadless deployment instead of every deployment in the
+				// cluster, which the status loop otherwise listed and
+				// deserialized on every tick.
+				if deployments, err := client.AppsV1().Deployments("").List(mainCtx, metav1.ListOptions{
+					FieldSelector: "metadata.name=steamheadless",
+				}); err == nil {
+					if len(deployments.Items) > 0 {
+						// check if the overlay gateway is enabled and the steamheadless
+						// is running with the overlay gateway enabled, if not restart the sunshine mdns proxy
+						var overlaygatewayEnabled bool
+
+						if utils.OverlayGatewayDesired() {
+							if _, err := utils.ResolveOverlayParent(mainCtx); err != nil {
+								klog.Error("resolve overlay parent error, ", err)
+							} else {
+								enabled, err := utils.GetApplicationSettings(mainCtx, "steamheadless", "enableOverlayGateway")
+								if err != nil {
+									klog.Error("get application settings error, ", err)
+								} else {
+									if enabled == "true" {
+										overlaygatewayEnabled = true
+									}
+								}
+							}
+						}
+
+						if !overlaygatewayEnabled {
 							found = true
 							if err := sunshine.Restart(); err != nil {
 								klog.Error(err)
 							}
-							break
 						}
 					}
-
 				}
 			}
 

@@ -1,3 +1,7 @@
+---
+noindex: true
+description: The get subcommand retrieves detailed information about a specific Olares user account.
+---
 # `get`
 
 ## Synopsis

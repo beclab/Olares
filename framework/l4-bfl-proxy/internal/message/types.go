@@ -5,6 +5,7 @@ import (
 	"sort"
 	"time"
 
+	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/l4-bfl-proxy/internal/ir"
 	cachetypes "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	"github.com/telepresenceio/watchable"
@@ -45,15 +46,12 @@ type AppInfo struct {
 	// as a marker on AppInfo so future per-app behaviour (logging, metrics,
 	// etc.) can distinguish them; access itself is no longer gated.
 	IsShared bool
+	// EntranceProbePaths maps entrance name → Exact HTTP probe paths collected
+	// from Pods behind the entrance Service (Liveness/Readiness/Startup HTTPGet).
+	EntranceProbePaths map[string][]string
 }
 
-type EntranceInfo struct {
-	Name            string
-	Host            string
-	Port            int32
-	AuthLevel       string
-	WindowPushState bool
-}
+type EntranceInfo = appv1alpha1.Entrance
 
 type PortInfo struct {
 	Name       string

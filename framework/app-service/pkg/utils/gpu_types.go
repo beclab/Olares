@@ -37,6 +37,33 @@ const (
 	MooreSocType   = "moore-soc"   // Moore Threads SoC
 )
 
+// dedicatedGPUMemoryTypes are the modes whose devices own a GPU memory pool
+// separate from system RAM, so an app sizes itself against the manifest's
+// requiredGPUMemory / limitedGPUMemory rather than its pod memory request. The
+// remaining accelerators (nvidia-gb10, apple-m, intel, amd, moore-soc) are
+// unified memory and draw from system RAM.
+//
+// This mirrors gpuMemoryModes in the manifest validator
+// (framework/oac/internal/manifest/resources.go), which is the schema authority
+// deciding for which modes a manifest may — and must — declare a GPU-memory
+// quota. That set lives in an internal package of a separately versioned
+// module, so it cannot be imported here; TestDedicatedGPUMemoryTypesMatchOAC
+// guards the two against drifting apart.
+var dedicatedGPUMemoryTypes = map[string]struct{}{
+	NvidiaCardType: {},
+	AMDGPUType:     {},
+	IntelGPUType:   {},
+}
+
+// HasDedicatedGPUMemory reports whether devices of this mode carry their own
+// VRAM. Callers use it to pick which manifest quantity expresses the app's
+// demand for a device: the GPU-memory request for dedicated cards, the pod
+// memory request for the unified-memory modes.
+func HasDedicatedGPUMemory(mode string) bool {
+	_, ok := dedicatedGPUMemoryTypes[mode]
+	return ok
+}
+
 // canonicalGPUTypes is the ordered set of non-cpu modes the system recognizes
 // as node-labelable. It is the only set scanned for the existence-based
 // per-mode labels, so unrelated keys under the gpu.bytetrade.io/ prefix

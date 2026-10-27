@@ -1,3 +1,7 @@
+---
+noindex: true
+description: activate 子命令用于激活已有的 Olares 账户，你需要至少提供 Olares ID、登录密码和助记词短语才能完成激活。
+---
 # `activate`
 
 ## 命令说明

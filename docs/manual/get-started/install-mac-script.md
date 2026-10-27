@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Step-by-step instructions for installing Olares on macOS systems including prerequisites, installation commands, and activation process.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Mac script, macOS, Docker Desktop, MiniKube, one-line install
 ---
 # Install Olares on Mac via the script
 This guide explains how to install Olares on macOS using the provided installation script.
@@ -24,6 +28,7 @@ We recommend using it only for development or testing purposes.
 
 ## Before you begin
 Ensure you have the following installed:
+<!--@include: ./reusables.md#larepass-prerequisite-->
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 - [MiniKube](https://minikube.sigs.k8s.io/docs/start/?arch=%2Fmacos%2Farm64%2Fstable%2Fhomebrew)
     ::: tip

@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Learn how to subscribe to and publish messages in Olares using NATS CLI, and understand the NATS Subject naming rules and permission model.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, NATS, message broker, publish subscribe, middleware, nats-box CLI, subject permissions
 ---
 # Subscribe and publish messages with NATS
 
@@ -25,7 +29,7 @@ Before connecting, obtain NATS connection details from the Control Hub.
 
 ### Deploy `nats-box`
 
-1. Download the example [`nats-box.yaml`](http://cdn.olares.com/common/nats-box.yaml) file, then upload it to the Olares machine.
+1. Download the example [`nats-box.yaml`](https://cdn.olares.com/common/nats-box.yaml) file, then upload it to the Olares machine.
 2. Navigate to the directory containing the YAML file and deploy `nats-box`:
     ```bash
     kubectl apply -f nats-box.yaml

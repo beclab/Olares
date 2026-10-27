@@ -60,13 +60,13 @@ func RunPhysical(ctx context.Context, c *pkgdashboard.Client, cf *pkgdashboard.C
 //
 //  1. cpu / memory / disk / pods / net_in / net_out — always emitted
 //     from the kapis cluster monitoring fetch.
-//  2. gpu — only when HAMI vGPU is installed AND the GPU list is
-//     non-empty. Aggregates `memoryUsed` / `memoryTotal` (MiB)
-//     across every device, presented in bytes so the SPA-aligned
-//     GiB/TiB unit inference picks the right suffix. HAMI 404 / 5xx
-//     just drops the row (matches the SPA hiding the GPU card when
-//     the card-gauge fetch comes back empty); the failure is
-//     surfaced via Meta.Warnings so JSON consumers can demux.
+//  2. gpu — only when some vendor in the cluster reports VRAM. Adds
+//     every vendor's cards into one total, presented in bytes so the
+//     SPA-aligned GiB/TiB unit inference picks the right suffix. A
+//     vendor whose exporter is down drops out of the sum rather than
+//     blanking the row (matches the SPA hiding the GPU card only when
+//     nothing at all answered); the failure is surfaced via
+//     Meta.Warnings so JSON consumers can demux.
 //  3. fan_cpu / fan_gpu — only when EnsureSystemStatus reports an
 //     Olares One device AND `/user-service/api/mdns/olares-one/cpu-gpu`
 //     responds successfully. Each row holds the live RPM reading
@@ -163,26 +163,117 @@ func BuildPhysicalEnvelope(ctx context.Context, c *pkgdashboard.Client, cf *pkgd
 	return env, nil
 }
 
-// SPA-aligned PromQL for the cluster-overview GPU card. Lifted
-// 1:1 from `Overview2/ClusterResource.vue:cardGaugeConfig` —
-// `avg(sum(...) by (instance))` collapses HAMI's per-instance
-// metrics down to a single cluster-wide value (HAMI's WebUI
-// multiplexes instances and the SPA renders the average; we mirror
-// that to keep the CLI number == SPA card number). Result unit is
-// MiB (raw `hami_memory_used / hami_memory_size` are MiB on the
-// wire); we convert to bytes downstream so format.GetDiskSize can
-// pick the right Gi/Ti suffix.
+// SPA-aligned PromQL for the NVIDIA half of the cluster-overview
+// GPU card. Lifted from `nvidiaSpec.overviewCard` in the SPA's
+// utils/gpuVendor.ts, which the store sums across vendors.
+//
+// `sum(...)` rather than the older `avg(sum(...) by (instance))`:
+// the card is now a cluster-wide total that several vendors add
+// into, and an average has no meaning once cards from different
+// exporters land in the same number. Result unit is MiB (raw
+// `hami_memory_used / hami_memory_size` are MiB on the wire); we
+// convert to bytes here so every vendor is summed in one unit and
+// format.GetDiskSize can pick the right Gi/Ti suffix.
 const (
-	gpuSummaryUsedQuery  = `avg(sum(hami_memory_used) by (instance))`
-	gpuSummaryTotalQuery = `avg(sum(hami_memory_size) by (instance))`
+	gpuSummaryUsedQuery  = `sum(hami_memory_used)`
+	gpuSummaryTotalQuery = `sum(hami_memory_size)`
 )
 
+// gpuSummary is one vendor's contribution to the overview card, in bytes.
+type gpuSummary struct {
+	used  float64
+	total float64
+}
+
 // buildGPUSummaryRow mirrors the SPA's cluster-overview GPU card
-// 1:1. Two stages:
+// (`GpuStore.fetchOverviewCard`): every vendor the cluster carries
+// contributes its VRAM to a single total, so a machine with an
+// Intel card beside an NVIDIA one reports the sum rather than
+// whichever one HAMI happens to know about.
 //
-//  1. Primary: HAMI prom queries (cardGaugeConfig in
-//     Overview2/ClusterResource.vue). `hami_memory_used` covers
-//     ALL VRAM consumption — vGPU containers AND raw CUDA
+// Returns ok=false (no row) when no vendor reported a non-zero
+// total, which is the SPA's own condition for hiding the card.
+func buildGPUSummaryRow(ctx context.Context, c *pkgdashboard.Client, addWarning func(string)) (PhysicalMetric, bool) {
+	var used, total float64
+	for _, s := range fetchGPUSummaries(ctx, c, addWarning) {
+		used += s.used
+		total += s.total
+	}
+	if total <= 0 {
+		return PhysicalMetric{}, false
+	}
+	return PhysicalMetric{
+		Key:         "gpu",
+		Label:       "GPU",
+		Value:       used,
+		Total:       total,
+		Unit:        format.GetSuitableUnit(total, format.UnitTypeMemory),
+		Utilisation: safeRatio(used, total),
+	}, true
+}
+
+// fetchGPUSummaries reads the overview numbers of every vendor the
+// cluster's node labels turn on. Vendors are independent: one
+// exporter being down costs its own cards, not the whole row.
+func fetchGPUSummaries(ctx context.Context, c *pkgdashboard.Client, addWarning func(string)) []gpuSummary {
+	inv, err := pkgdashboard.DetectGPUVendors(ctx, c)
+	if err != nil {
+		// A failed label scan says nothing about what the cluster
+		// carries, so HAMI is still asked rather than dropping the
+		// row over a nodes-endpoint hiccup.
+		addWarning(fmt.Sprintf("gpu_summary (vendors): %v", err))
+		if s, ok := fetchHamiGPUSummary(ctx, c, addWarning); ok {
+			return []gpuSummary{s}
+		}
+		return nil
+	}
+	var out []gpuSummary
+	for _, vendor := range inv.Vendors {
+		spec, isKs := pkgdashboard.KsSpecFor(vendor)
+		if !isKs {
+			// NVIDIA: HAMI is the only source that knows the cards.
+			if s, ok := fetchHamiGPUSummary(ctx, c, addWarning); ok {
+				out = append(out, s)
+			}
+			continue
+		}
+		if s, ok := fetchKsGPUSummary(ctx, c, vendor, spec, addWarning); ok {
+			out = append(out, s)
+		}
+	}
+	return out
+}
+
+// fetchKsGPUSummary reads one KubeSphere-sourced vendor (Intel, AMD).
+// The spec's two reads already normalise to bytes, so the caller can
+// add them to another vendor's without converting.
+func fetchKsGPUSummary(
+	ctx context.Context,
+	c *pkgdashboard.Client,
+	vendor pkgdashboard.GPUVendor,
+	spec pkgdashboard.KsVendorSpec,
+	addWarning func(string),
+) (gpuSummary, bool) {
+	card := spec.OverviewCard
+	table, err := pkgdashboard.FetchGPUMetrics(ctx, c,
+		[]string{card.Used.Metric, card.Total.Metric},
+		pkgdashboard.GPUMetricOptions{Level: pkgdashboard.GPULevelCluster})
+	if err != nil {
+		addWarning(fmt.Sprintf("gpu_summary (%s): %v", vendor, err))
+		return gpuSummary{}, false
+	}
+	total, ok := pkgdashboard.ReadInstant(table, card.Total, nil)
+	if !ok || total <= 0 {
+		return gpuSummary{}, false
+	}
+	used, _ := pkgdashboard.ReadInstant(table, card.Used, nil)
+	return gpuSummary{used: used, total: total}, true
+}
+
+// fetchHamiGPUSummary reads the NVIDIA cards, in bytes. Two stages:
+//
+//  1. Primary: the HAMI prom queries above. `hami_memory_used`
+//     covers ALL VRAM consumption — vGPU containers AND raw CUDA
 //     processes the device-level allocation table doesn't track.
 //     This is what the SPA renders and so the CLI shows the same
 //     number as the dashboard browser tab.
@@ -194,35 +285,21 @@ const (
 //     undercount when no vGPU is allocated (it's the
 //     allocation-table number, not the actual VRAM consumption).
 //
-// Returns ok=false (no row) when:
-//   - HAMI's /v1/gpus returns 404 (no vGPU integration), and
-//   - the prom path also has no series / errored.
-//   - Or both succeeded but reported total = 0 (no devices).
-//
 // 5xx from either source emits a `gpu_summary: ...` warning so
 // agents can branch on len(meta.warnings)>0 without scanning each
 // section.
-func buildGPUSummaryRow(ctx context.Context, c *pkgdashboard.Client, addWarning func(string)) (PhysicalMetric, bool) {
-	usedMiB, totalMiB, promOK := fetchGPUSummaryFromProm(ctx, c, addWarning)
-	if !promOK {
-		// Prom unavailable -> fall back to list aggregation.
-		// The list endpoint may itself be 404 (no HAMI at all)
-		// in which case we just skip the row.
-		usedMiB, totalMiB, _ = fetchGPUSummaryFromList(ctx, c, addWarning)
+func fetchHamiGPUSummary(ctx context.Context, c *pkgdashboard.Client, addWarning func(string)) (gpuSummary, bool) {
+	usedMiB, totalMiB, ok := fetchGPUSummaryFromProm(ctx, c, addWarning)
+	if !ok {
+		// Prom unavailable -> fall back to list aggregation. The list
+		// endpoint may itself be 404 (no HAMI at all), in which case
+		// NVIDIA simply contributes nothing.
+		usedMiB, totalMiB, ok = fetchGPUSummaryFromList(ctx, c, addWarning)
 	}
-	if totalMiB <= 0 {
-		return PhysicalMetric{}, false
+	if !ok || totalMiB <= 0 {
+		return gpuSummary{}, false
 	}
-	usedBytes := usedMiB * 1024 * 1024
-	totalBytes := totalMiB * 1024 * 1024
-	return PhysicalMetric{
-		Key:         "gpu",
-		Label:       "GPU",
-		Value:       usedBytes,
-		Total:       totalBytes,
-		Unit:        format.GetSuitableUnit(totalBytes, format.UnitTypeMemory),
-		Utilisation: safeRatio(usedBytes, totalBytes),
-	}, true
+	return gpuSummary{used: usedMiB * 1024 * 1024, total: totalMiB * 1024 * 1024}, true
 }
 
 // fetchGPUSummaryFromProm runs the SPA-aligned instant-vector

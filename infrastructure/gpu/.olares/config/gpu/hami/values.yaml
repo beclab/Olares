@@ -4,7 +4,7 @@ nameOverride: ""
 fullnameOverride: ""
 namespaceOverride: ""
 imagePullSecrets: []
-version: "v2.6.23"
+version: "v2.6.29"
 
 # Nvidia GPU Parameters
 resourceName: "nvidia.com/gpu"
@@ -215,6 +215,14 @@ devices:
       - mthreads.com/vgpu
   nvidia:
     gpuCorePolicy: default
+  intel:
+    enabled: true
+    # MiB booked per container on top of its memory quota; a pod overrides it
+    # with the gpu.bytetrade.io/vxpu-memory-reserve annotation.
+    memoryReserve: 256
+    customresources:
+      - intel.com/vgpu
+      - intel.com/vgpumem
   ascend:
     enabled: false
     image: ""
@@ -342,8 +350,11 @@ dcgmExporter:
       #   replacement: $1
     #   action: replace
 
-  nodeSelector: {}
-  # node: gpu
+  # Same gate as the NVIDIA device plugin. An empty selector used to land a
+  # DCGM pod on every node, including Intel-only workers that have no NVML
+  # (they start, log ERROR_LIBRARY_NOT_FOUND, and export nothing).
+  nodeSelector:
+    gpu.bytetrade.io/cuda-supported: "true"
 
   tolerations: []
   # - operator: Exists

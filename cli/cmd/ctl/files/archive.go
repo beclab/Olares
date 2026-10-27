@@ -174,8 +174,7 @@ Examples:
 		"override the {node} URL segment for /api/archive/<node>/ (defaults to the first /api/nodes/ entry)")
 	cmd.Flags().BoolVar(&o.passwordStdin, "password-stdin", false,
 		"read the archive password from STDIN (zip / 7z only); avoids leaking through shell history")
-	cmd.Flags().BoolVar(&o.jsonOutput, "json", false,
-		"emit one JSON object per line instead of the human-readable table")
+	addOutputFormatFlagLongOnly(cmd, &o.jsonOutput, "emit one JSON object per line instead of the human-readable table")
 	cmd.Flags().IntVar(&o.maxEntries, "max-entries", 0,
 		"stop after this many entries (0 = no limit); useful for previews of huge archives")
 	return cmd

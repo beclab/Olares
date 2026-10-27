@@ -4,7 +4,11 @@ import (
 	"strings"
 	"testing"
 
+	apimanifest "github.com/beclab/api/manifest"
 	"helm.sh/helm/v3/pkg/kube"
+	appsv1 "k8s.io/api/apps/v1"
+	cliresource "k8s.io/cli-runtime/pkg/resource"
+	corev1 "k8s.io/api/core/v1"
 )
 
 func TestCollectWorkloadNames(t *testing.T) {
@@ -62,6 +66,109 @@ func TestCheckWorkloadReplicas_UnknownEntry(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), `entry "ghost" does not match`) {
 		t.Fatalf("error should flag unknown 'ghost', got: %v", err)
+	}
+}
+
+func TestCheckWorkloadOptions_DeviceDeployment(t *testing.T) {
+	replicas := int32(1)
+	deployment := newDeployment("frigate", corev1.Container{Name: "frigate"})
+	deployment.Object.(*appsv1.Deployment).Spec.Strategy.Type = appsv1.RecreateDeploymentStrategyType
+	options := apimanifest.WorkloadOptions{
+		"frigate": {
+			Replicas: &replicas,
+			Allow: []apimanifest.WorkloadCapability{{
+				Type:       apimanifest.WorkloadAllowDeviceVideo,
+				Containers: []string{"frigate"},
+			}},
+		},
+	}
+	if err := CheckWorkloadOptions(kube.ResourceList{deployment}, options); err != nil {
+		t.Fatalf("valid device workload failed: %v", err)
+	}
+}
+
+func TestCheckWorkloadOptions_RejectsUnknownContainerAndRollingUpdate(t *testing.T) {
+	replicas := int32(1)
+	deployment := newDeployment("frigate", corev1.Container{Name: "frigate"})
+	options := apimanifest.WorkloadOptions{
+		"frigate": {
+			Replicas: &replicas,
+			Allow: []apimanifest.WorkloadCapability{{
+				Type:       apimanifest.WorkloadAllowDeviceVideo,
+				Containers: []string{"missing"},
+			}},
+		},
+	}
+	err := CheckWorkloadOptions(kube.ResourceList{deployment}, options)
+	if err == nil {
+		t.Fatal("expected workloadOptions render validation to fail")
+	}
+	if !strings.Contains(err.Error(), `unknown container "missing"`) || !strings.Contains(err.Error(), "strategy.type=Recreate") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+// deploymentWithReplicas builds a Deployment whose spec.replicas is set, which
+// the shared newDeployment helper deliberately leaves nil.
+func deploymentWithReplicas(name string, replicas int32) *cliresource.Info {
+	info := newDeployment(name)
+	info.Object.(*appsv1.Deployment).Spec.Replicas = &replicas
+	return info
+}
+
+func statefulSetWithReplicas(name string, replicas int32) *cliresource.Info {
+	info := newStatefulSet(name)
+	info.Object.(*appsv1.StatefulSet).Spec.Replicas = &replicas
+	return info
+}
+
+func TestCheckWorkloadReplicasRendered_Follows(t *testing.T) {
+	list := kube.ResourceList{
+		deploymentWithReplicas("web", 0),
+		statefulSetWithReplicas("db", 0),
+		newDaemonSet("node-agent"), // no replicas to track
+	}
+	if err := CheckWorkloadReplicasRendered(list, 0); err != nil {
+		t.Fatalf("workloads that track the injected value must pass: %v", err)
+	}
+}
+
+func TestCheckWorkloadReplicasRendered_Pinned(t *testing.T) {
+	// What `| default 1` produces: the injected 0 is discarded and the
+	// workload renders at 1, so the app cannot be stopped.
+	list := kube.ResourceList{deploymentWithReplicas("web", 1)}
+	err := CheckWorkloadReplicasRendered(list, 0)
+	if err == nil {
+		t.Fatal("expected error when spec.replicas ignores the injected 0")
+	}
+	if !strings.Contains(err.Error(), "rendered as 1") {
+		t.Fatalf("error should report the rendered value, got: %v", err)
+	}
+}
+
+func TestCheckWorkloadReplicasRendered_Unset(t *testing.T) {
+	// A template with no spec.replicas at all. Kubernetes defaults it to 1,
+	// so it is a failure and not something to skip.
+	list := kube.ResourceList{newDeployment("web")}
+	err := CheckWorkloadReplicasRendered(list, 0)
+	if err == nil {
+		t.Fatal("expected error when spec.replicas is absent")
+	}
+	if !strings.Contains(err.Error(), "unset") {
+		t.Fatalf("error should say the field is unset, got: %v", err)
+	}
+}
+
+func TestCheckWorkloadReplicasRendered_StuckAtZero(t *testing.T) {
+	// The opposite mistake: a chart hardcoded to 0 renders correctly for a
+	// stop and can never be started.
+	list := kube.ResourceList{deploymentWithReplicas("web", 0)}
+	err := CheckWorkloadReplicasRendered(list, 1)
+	if err == nil {
+		t.Fatal("expected error when spec.replicas cannot be raised above 0")
+	}
+	if !strings.Contains(err.Error(), "rendered as 0") {
+		t.Fatalf("error should report the rendered value, got: %v", err)
 	}
 }
 

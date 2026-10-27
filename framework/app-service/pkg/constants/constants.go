@@ -3,6 +3,7 @@ package constants
 import (
 	"flag"
 	"os"
+	"strings"
 	"time"
 
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -20,28 +21,40 @@ const (
 	ApplicationMiddlewareLabel         = "applications.app.bytetrade.io/middleware"
 	ApplicationIconLabel               = "applications.app.bytetrade.io/icon"
 	ApplicationEntrancesKey            = "applications.app.bytetrade.io/entrances"
-	ApplicationPortsKey                = "applications.app.bytetrade.io/ports"
-	ApplicationSystemServiceLabel      = "applications.app.bytetrade.io/system_service"
-	ApplicationTitleLabel              = "applications.app.bytetrade.io/title"
-	ApplicationImageLabel              = "applications.app.bytetrade.io/images"
-	ApplicationTargetLabel             = "applications.app.bytetrade.io/target"
-	ApplicationRunAsUserLabel          = "applications.apps.bytetrade.io/runasuser"
-	ApplicationVersionLabel            = "applications.app.bytetrade.io/version"
-	ApplicationSourceLabel             = "applications.app.bytetrade.io/source"
-	ApplicationTailScaleKey            = "applications.app.bytetrade.io/tailscale"
-	ApplicationRequiredGPU             = "applications.app.bytetrade.io/required_gpu"
-	AppPodGPUConsumePolicy             = "gpu.bytetrade.io/app-pod-consume-policy"
-	ApplicationPolicies                = "applications.app.bytetrade.io/policies"
-	ApplicationMobileSupported         = "applications.app.bytetrade.io/mobile_supported"
-	ApplicationClusterDep              = "applications.app.bytetrade.io/need_cluster_scoped_app"
-	ApplicationGroupClusterDep         = "applications.app.bytetrade.io/need_cluster_scoped_group"
-	UserContextAttribute               = "username"
-	KubeSphereClientAttribute          = "ksclient"
-	MarketSource                       = "X-Market-Source"
-	MarketUser                         = "X-Market-User"
-	StudioSource                       = "devbox"
-	ApplicationInstallUserLabel        = "applications.app.bytetrade.io/install_user"
-	BflUserKey                         = "X-Bfl-User"
+	// EntranceTypeDev marks a development-only entrance (e.g. direct pod-IP
+	// access created by background processes). Dev entrances are excluded from
+	// entrance-status tracking since they have no backing Service to resolve.
+	EntranceTypeDev               = "dev"
+	ApplicationPortsKey           = "applications.app.bytetrade.io/ports"
+	ApplicationSystemServiceLabel = "applications.app.bytetrade.io/system_service"
+	ApplicationTitleLabel         = "applications.app.bytetrade.io/title"
+	ApplicationImageLabel         = "applications.app.bytetrade.io/images"
+	ApplicationTargetLabel        = "applications.app.bytetrade.io/target"
+	ApplicationRunAsUserLabel     = "applications.apps.bytetrade.io/runasuser"
+	// UserspacePrepareInitContainerName is the platform-injected init
+	// container that brings userspace hostPath directories to 1000:1000.
+	UserspacePrepareInitContainerName = "olares-prepare-userspace"
+	// UserspaceUID / UserspaceGID are the ownership and access identity
+	// Olares fixes for everything under a user's space. Both the
+	// directories on disk and the app processes converge on this pair.
+	UserspaceUID                int64 = 1000
+	UserspaceGID                int64 = 1000
+	ApplicationVersionLabel           = "applications.app.bytetrade.io/version"
+	ApplicationSourceLabel            = "applications.app.bytetrade.io/source"
+	ApplicationTailScaleKey           = "applications.app.bytetrade.io/tailscale"
+	ApplicationRequiredGPU            = "applications.app.bytetrade.io/required_gpu"
+	AppPodGPUConsumePolicy            = "gpu.bytetrade.io/app-pod-consume-policy"
+	ApplicationPolicies               = "applications.app.bytetrade.io/policies"
+	ApplicationMobileSupported        = "applications.app.bytetrade.io/mobile_supported"
+	ApplicationClusterDep             = "applications.app.bytetrade.io/need_cluster_scoped_app"
+	ApplicationGroupClusterDep        = "applications.app.bytetrade.io/need_cluster_scoped_group"
+	UserContextAttribute              = "username"
+	KubeSphereClientAttribute         = "ksclient"
+	MarketSource                      = "X-Market-Source"
+	MarketUser                        = "X-Market-User"
+	StudioSource                      = "devbox"
+	ApplicationInstallUserLabel       = "applications.app.bytetrade.io/install_user"
+	BflUserKey                        = "X-Bfl-User"
 
 	InstanceIDLabel         = "workflows.argoproj.io/controller-instanceid"
 	WorkflowOwnerLabel      = "workflows.app.bytetrade.io/owner"
@@ -56,22 +69,54 @@ const (
 
 	UserChartsPath = "./userapps"
 
-	EnvoyUID                        int64 = 1555
-	DefaultEnvoyLogLevel                  = "debug"
-	EnvoyImageVersion                     = "beclab/envoy:v1.25.11.1"
-	EnvoyContainerName                    = "olares-envoy-sidecar"
-	EnvoyAdminPort                        = 15000
-	EnvoyAdminPortName                    = "proxy-admin"
-	EnvoyInboundListenerPort              = 15003
-	EnvoyInboundListenerPortName          = "proxy-inbound"
-	EnvoyOutboundListenerPort             = 15001
-	EnvoyOutboundListenerPortName         = "proxy-outbound"
-	EnvoyLivenessProbePort                = 15008
-	EnvoyConfigFileName                   = "envoy.yaml"
-	EnvoyConfigFilePath                   = "/config"
-	EnvoyConfigOnlyOutBoundFileName       = "envoy2.yaml"
-	WsContainerName                       = "olares-ws-sidecar"
-	WsContainerImage                      = "WS_CONTAINER_IMAGE"
+	EnvoyUID int64 = 1555
+	// LinkerdProxyUID is the upstream linkerd-proxy default runAsUser.
+	LinkerdProxyUID int64 = 2102
+	// Linkerd admin / inbound / tap ports (align with linkerd-init inbound-ports-to-ignore).
+	LinkerdTapPort     = 4190
+	LinkerdAdminPort   = 4191
+	LinkerdInboundPort = 4143
+	// Mesh agent UIDs (16xx band; orthogonal to Envoy 1555 / d2 1556 / linkerd 2102 / nginx:alpine 101).
+	MeshInAgentUID  int64 = 1651
+	MeshOutAgentUID int64 = 1652
+	// MeshAgentUIDReservedStart marks 1653+ for future mesh-* sidecars (do not reuse for apps).
+	MeshAgentUIDReservedStart int64 = 1653
+
+	// Mesh-in CT-1 control-plane object names (WI-OC-MESH-IN-CT1-02).
+	MeshInSharedHostsCMName         = "olares-mesh-in-shared-hosts"
+	MeshInSharedHostsFileName       = "shared-hosts.txt"
+	MeshInTLSHostsFileName          = "tls-hosts.txt"
+	MeshInSharedHostsManagedByLabel = "gateway.olares.io/mesh-in-shared-hosts-managed-by"
+	MeshInTLSSecretNamePrefix       = "olares-mesh-in-tls-"
+	MeshInCertsVolumeName           = "olares-mesh-in-certs"
+	MeshInAgentContainerName        = "olares-mesh-in-agent"
+	MeshInCertCacheMax              = 16
+	MeshInCertCacheInactive         = "10m"
+	MeshInCertCacheValid            = "1m"
+	MeshInProxyReadTimeout          = "600s"
+	MeshInProxySendTimeout          = "600s"
+	// MeshInMaxBodySize lifts nginx's built-in 1m request-body cap for Shared
+	// east-west relays (e.g. audio embeddings). 100m covers typical API uploads
+	// while still bounding abuse at this hop; destination apps may set a lower
+	// limit. With proxy_request_buffering off, this does not require buffering
+	// the full body in the 64Mi sidecar.
+	MeshInMaxBodySize               = "100m"
+	LabelTLSReplica                 = "gateway.olares.io/tls-replica"
+	DefaultEnvoyLogLevel            = "debug"
+	EnvoyImageVersion               = "beclab/envoy:v1.25.11.1"
+	EnvoyContainerName              = "olares-envoy-sidecar"
+	EnvoyAdminPort                  = 15000
+	EnvoyAdminPortName              = "proxy-admin"
+	EnvoyInboundListenerPort        = 15003
+	EnvoyInboundListenerPortName    = "proxy-inbound"
+	EnvoyOutboundListenerPort       = 15001
+	EnvoyOutboundListenerPortName   = "proxy-outbound"
+	EnvoyLivenessProbePort          = 15008
+	EnvoyConfigFileName             = "envoy.yaml"
+	EnvoyConfigFilePath             = "/config"
+	EnvoyConfigOnlyOutBoundFileName = "envoy2.yaml"
+	WsContainerName                 = "olares-ws-sidecar"
+	WsContainerImage                = "WS_CONTAINER_IMAGE"
 
 	UploadContainerName  = "olares-upload-sidecar"
 	UploadContainerImage = "UPLOAD_CONTAINER_IMAGE"
@@ -90,8 +135,47 @@ const (
 	NvidiaGPU    = "nvidia.com/gpu"
 	NvidiaGPUMem = "nvidia.com/gpumem"
 	//	NvidiaGB10GPU = "nvidia.com/gb10"
-	AMDAPU = "amd.com/apu"
-	AMDGPU = "amd.com/gpu"
+	AMDAPU    = "amd.com/apu"
+	AMDGPU    = "amd.com/gpu"
+	IntelIGPU = "gpu.intel.com/i915"
+	IntelGPU  = "gpu.intel.com/xe"
+	// IntelVGPU / IntelVGPUMem are the HAMi-scheduled resources the Intel GPU
+	// plugin advertises for discrete cards from 1.12.8 on; IntelGPU is then
+	// only a legacy key the webhook strips.
+	IntelVGPU    = "intel.com/vgpu"
+	IntelVGPUMem = "intel.com/vgpumem"
+
+	// PodRequiredGPUMemory / PodLimitedGPUMemory are pod-template annotations a
+	// chart uses to declare its GPU-memory quota for the auto-resource ("-1")
+	// sentinel. They exist because only nvidia can carry that quota as a
+	// container resource: nvidia.com/gpumem is exempted from the scheduler's
+	// capacity check by HAMi's extender (managedResources.ignoredByScheduler),
+	// and no such exemption exists for the discrete AMD/Intel cards, whose
+	// device plugins advertise a card count and nothing else. A chart that put
+	// amd.com/gpumem in resources would leave the pod Pending on
+	// "Insufficient amd.com/gpumem" forever, and reusing nvidia.com/gpumem is
+	// no better: the gpu-limit webhook strips it from limits for a non-nvidia
+	// mode but never touches requests, and the apiserver then rejects the pod
+	// with "Limit must be set for non overcommitable resources".
+	//
+	// An annotation is inert to the scheduler, so it carries the number without
+	// any of that. The value is a plain Kubernetes quantity ("23Gi"), read the
+	// same way as the manifest's requiredGPUMemory it backfills — unlike
+	// nvidia.com/gpumem, which HAMi defines as a bare MiB count.
+	PodRequiredGPUMemory = "gpu.bytetrade.io/required-gpu-memory"
+	PodLimitedGPUMemory  = "gpu.bytetrade.io/limited-gpu-memory"
+
+	// NodeIntelRegisterKey is the node annotation written by the Intel GPU
+	// device plugin. Its value lists each Intel card as
+	// "<igpu|dgpu>,<cardN>,<i915|xe>,<name>,<architecture>,<codename>,<mem>"
+	// entries joined by ':' (mem is discrete VRAM bytes, 0 for integrated). It
+	// lets the gpu-limit webhook pick gpu.intel.com/i915 vs gpu.intel.com/xe
+	// from the real bound driver instead of guessing from integrated/discrete.
+	NodeIntelRegisterKey = "bytetrade.io/node-intel-register"
+	// NodeAmdRegisterKey is the node annotation written by the AMD GPU device
+	// plugin. The value uses the same tuple format as NodeIntelRegisterKey,
+	// with driver amdgpu (e.g. "dgpu,card1,amdgpu,<name>,<arch>,<codename>,<mem>").
+	NodeAmdRegisterKey = "bytetrade.io/node-amd-register"
 
 	AuthorizationLevelOfPublic   = "public"
 	AuthorizationLevelOfPrivate  = "private"
@@ -127,13 +211,14 @@ const (
 	// AppEnvSyncAnnotation triggers AppEnvController to sync environment values from SystemEnv or UserEnv changes
 	AppEnvSyncAnnotation = "appenv.bytetrade.io/sync-triggered-by"
 
-	AppForceUninstall      = "ForceUninstall"
-	AppForceUninstalled    = "ForceUninstalled"
-	AppUnschedulable       = "Unschedulable"
-	AppHamiSchedulable     = "HamiUnschedulable"
-	AppStopByUser          = "StopByUser"
-	AppStopDueToInitFailed = "InitFailed"
-	AppStopDueToEvicted    = "Evicted"
+	AppForceUninstall         = "ForceUninstall"
+	AppForceUninstalled       = "ForceUninstalled"
+	AppUnschedulable          = "Unschedulable"
+	AppHamiSchedulable        = "HamiUnschedulable"
+	AppStopByUser             = "StopByUser"
+	AppStopDueToInitFailed    = "InitFailed"
+	AppStopDueToStartUpFailed = "StartUpFailed"
+	AppStopDueToEvicted       = "Evicted"
 
 	AppSharedEntrancesLabel = "app.bytetrade.io/shared-entrance"
 	AppMiddlewareLabel      = "app.bytetrade.io/middleware"
@@ -164,6 +249,19 @@ const (
 	ArchLabelKey                       = "kubernetes.io/arch"
 	CudaVersionLabelKey                = "gpu.bytetrade.io/cuda"
 	NodeNvidiaRegistryKey              = "hami.io/node-nvidia-register"
+	// NodeHandshakeKey is the liveness half of the pair HAMi's device plugin
+	// patches onto a node alongside NodeNvidiaRegistryKey. The register
+	// annotation is never cleared once written, so the handshake is the only
+	// thing that says whether the cards it lists are still there.
+	NodeHandshakeKey = "hami.io/node-handshake"
+	// NodeIntelHAMIRegisterKey / NodeIntelHandshakeKey are the same pair for
+	// the Intel discrete cards the Intel GPU plugin publishes in HAMi mode.
+	NodeIntelHAMIRegisterKey = "hami.io/node-intel-register"
+	NodeIntelHandshakeKey    = "hami.io/node-handshake-intel"
+	// NodeIntelCardsKey sits next to NodeIntelHAMIRegisterKey and lists, per
+	// card ID, the DRM card name, PCI address and the support types the card
+	// offers: [{"uuid","card","bdf","supportTypes"}].
+	NodeIntelCardsKey = "gpu.bytetrade.io/node-intel-cards"
 )
 
 var (
@@ -185,7 +283,39 @@ var (
 	CHART_REPO_URL string = "http://chart-repo-service.os-framework:82/"
 
 	OLARES_APP_NAME = "olares-app"
+
+	// RemoteOptionsDomainWhitelist restricts which domains the remote-options
+	// proxy (proxyRemoteOptions) may fetch from. The proxy lets any normal user
+	// have app-service issue an outbound GET, so without a whitelist it becomes
+	// an open proxy / SSRF vector to arbitrary URLs. Validating only against the
+	// remoteOptions URL declared in the app manifest is insufficient, because a
+	// user can bypass that by uploading a custom chart, so we gate on an
+	// explicit domain whitelist instead. Currently only the Olares app CDN is
+	// used, but it is kept as a list for future entries. Override at runtime
+	// with the comma-separated REMOTE_OPTIONS_DOMAIN_WHITELIST env var.
+	RemoteOptionsDomainWhitelist = []string{"app.cdn.olares.com"}
 )
+
+// IsRemoteOptionsHostAllowed reports whether host is permitted by the
+// remote-options domain whitelist. A whitelist entry matches the exact host or
+// any of its subdomains (both compared case-insensitively). An empty whitelist
+// denies everything.
+func IsRemoteOptionsHostAllowed(host string) bool {
+	host = strings.ToLower(strings.TrimSuffix(strings.TrimSpace(host), "."))
+	if host == "" {
+		return false
+	}
+	for _, d := range RemoteOptionsDomainWhitelist {
+		d = strings.ToLower(strings.TrimSuffix(strings.TrimSpace(d), "."))
+		if d == "" {
+			continue
+		}
+		if host == d || strings.HasSuffix(host, "."+d) {
+			return true
+		}
+	}
+	return false
+}
 
 // AppMgrTerminalRetention bounds how long an ApplicationManager is allowed to
 // linger in a safely-deletable terminal state (Uninstalled / InstallingCanceled
@@ -226,6 +356,7 @@ const (
 	ClusterCPUInsufficient    ResourceConditionType = "ClusterCPUInsufficient"
 	ClusterMemoryInsufficient ResourceConditionType = "ClusterMemoryInsufficient"
 	ClusterDiskInsufficient   ResourceConditionType = "ClusterDiskInsufficient"
+	MetricsUnavailable        ResourceConditionType = "MetricsUnavailable"
 
 	// ComputeAllocationFailed is emitted by computeAllocationValidator
 	// when compute.AllocateForInstall cannot place the app's
@@ -255,6 +386,7 @@ const (
 	ClusterCPUInsufficientMessage    string = "Cluster total schedulable CPU is smaller than the app's request. Unable to %s this application."
 	ClusterMemoryInsufficientMessage string = "Cluster total schedulable memory is smaller than the app's request. Unable to %s this application."
 	ClusterDiskInsufficientMessage   string = "Cluster total schedulable ephemeral storage is smaller than the app's request. Unable to %s this application."
+	MetricsUnavailableMessage        string = "Resource metrics are temporarily unavailable. Unable to %s the application. Please try again later."
 )
 
 func (rct ResourceConditionType) String() string {
@@ -288,5 +420,17 @@ func init() {
 	url := os.Getenv("CHART_REPO_URL")
 	if url != "" {
 		CHART_REPO_URL = url
+	}
+
+	if wl := os.Getenv("REMOTE_OPTIONS_DOMAIN_WHITELIST"); wl != "" {
+		domains := make([]string, 0)
+		for _, d := range strings.Split(wl, ",") {
+			if d = strings.TrimSpace(d); d != "" {
+				domains = append(domains, d)
+			}
+		}
+		if len(domains) > 0 {
+			RemoteOptionsDomainWhitelist = domains
+		}
 	}
 }

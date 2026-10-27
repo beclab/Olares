@@ -121,10 +121,6 @@ func flattenLsblkHierarchy(rows []LsblkRow, rootName string) []LsblkFlatRow {
 	return FlattenLsblkHierarchy(rows, rootName)
 }
 
-func hasCUDANode(ctx context.Context, c *Client) (bool, error) {
-	return HasCUDANode(ctx, c)
-}
-
 func fetchGraphicsList(ctx context.Context, c *Client, filters map[string]string) ([]map[string]any, error) {
 	return FetchGraphicsList(ctx, c, filters)
 }

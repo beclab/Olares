@@ -42,6 +42,13 @@ npm run build
 
 This command will build the static site into the `dist` directory.
 
+### Document share previews
+
+Production builds automatically generate a separate share image for each page.
+Images are included in `.vitepress/dist/og/` and deployed with the site.
+See [share image configuration](.vitepress/og/README.md) for the template,
+font licenses, preview URLs, and optional `ogTitle` frontmatter.
+
 ## Versioning and branching strategy
 
 To manage documentation for different product versions effectively, we use the following branching strategy:

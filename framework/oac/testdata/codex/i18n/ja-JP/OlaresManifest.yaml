@@ -1,0 +1,55 @@
+metadata:
+  title: Codex CLI
+  description: ターミナルで動作する OpenAI の軽量コーディングエージェント
+spec:
+  fullDescription: |
+    **概要**
+    Codex CLI は、ターミナル上でローカルに動作する OpenAI の軽量オープンソース・コーディングエージェントです。コードベースを理解し、自然言語で定型タスクを実行し、フローを保ったままより速く出荷できるよう支援します。
+
+    **主な機能**
+    - ストリーミングツール出力、スラッシュコマンド、割り込みとリダイレクト、豊富な diff レビュー付きのターミナルネイティブ TUI。
+    - 自然言語による実ファイル編集、シェル実行、git ワークフロー、テスト実行。
+    - MCP 互換のツール呼び出しと、AGENTS.md / `.codex/skills` による再利用可能なエージェント指示。
+    - ChatGPT Plus / Pro / Business / Edu / Enterprise プラン（OAuth）または OpenAI API キーで動作。
+    - ワークスペースイメージには一般的な言語ランタイムとビルドツールチェーン（Python、Node.js、Go、Rust、OpenJDK 21、Ruby、PHP、Lua）に加え、データベースクライアント（PostgreSQL、MySQL/MariaDB、Redis）、git-lfs、protobuf コンパイラ、Gradle、tmux、dig/ss/nc、shellcheck、clang-format/tidy、graphviz、追加の -dev ヘッダー（libpq、MySQL クライアント、curl、ICU、LDAP）が含まれ、エージェントが root なしで典型的な開発コマンドを実行できます。
+    - 任意の DinD（`ENABLE_DIND`、デフォルトオン）：ターミナル内で `docker` / `docker compose`（特権サイドカー）。
+
+    **初回セットアップ**
+    `Codex CLI` エントランスを開き、`codex` を実行して OAuth ログインフロー（「Sign in with ChatGPT」）を開始するか、アプリ環境変数に `OPENAI_API_KEY` を設定して再起動します。
+
+    **ローカルモデルを使う（Ollama / OpenAI 互換ゲートウェイ）**
+    Codex をローカル Ollama、Olares Router、または任意の OpenAI 互換 `/v1` プロキシに向けるには、これらのアプリ環境変数を設定します — セッションごとの `export`/`unset` は不要。空の値はコンテナから省略され、管理対象の `~/.codex/config.toml` ブロックが削除されるため、Codex は ChatGPT OAuth / 公式 API にフォールバックします。
+
+    - `OPENAI_BASE_URL` = `http://<your-shared-domain>/v1`（Ollama / Router / vLLM アプリの共有エントランス）
+    - `OPENAI_API_KEY` = ゲートウェイが期待するダミーまたは実キー（多くの Ollama プロキシでは例：`ollama`）
+    - `CODEX_MODEL` = `qwen3-coder:30b`（またはそのゲートウェイが公開するモデル）
+
+    **クラウドに戻す**
+    `OPENAI_BASE_URL` と `CODEX_MODEL` をクリアし、実の `OPENAI_API_KEY` を維持または設定（または空のまま `codex login` を実行）して再起動。次回の Pod 起動で管理対象のローカルルーティングブロックが除去されます。
+
+    **Codex がエージェンティック実行機能がないと表示する場合**
+    Codex ターミナルで `codex` を実行する前に、公式スタンドアロン CLI をワークスペース bin に再インストールします：
+
+    `curl -fsSL https://chatgpt.com/codex/install.sh | CODEX_INSTALL_DIR=/opt/data/.local/bin sh`
+
+    これは最新の完全パッケージ（code-mode ホストや他の依存関係を含む）を永続ボリュームにインストールし、バイナリのみのインストールを修復します。
+  upgradeDescription: |
+    **v1.0.17**
+
+    **Codex CLI**
+    - インストールバージョンを **0.147.0** から **0.149.1** に固定。
+    - `init-install-codex` を GitHub musl バイナリ tarball から OpenAI 公式スタンドアロンインストーラ（`https://chatgpt.com/codex/install.sh` ）へ切り替え。`codex` のみでエージェンティック実行機能不足と報告されていた既存インストールはアップグレード時に修復されます。
+
+    **ベースイメージ（`beclab/harveyff-codex-base:0.5.9`、旧 0.5.8）**
+    - ワークスペース／init イメージタグを **0.5.9** へ引き上げ。
+
+    **ローカル／クラウドモデルルーティング**
+    - アプリ環境変数 `OPENAI_BASE_URL` + `CODEX_MODEL` が `~/.codex/config.toml` の**先頭**に管理ブロックを書き込みます（ルートキーは TOML テーブルより前に必要）。空にすると ChatGPT OAuth／公式 API に戻ります。
+
+    **v1.0.12**
+
+    **Codex CLI**
+    - インストールバージョンを **0.146.0** から **0.147.0** に固定（`init-install-codex` は chart の `appVersion` を使用）。
+
+    **ベースイメージ（`beclab/harveyff-codex-base:0.5.8`、旧 0.5.7）**
+    - 焼き込み `@olares/cli` を **1.12.7-cli.0** へアップグレード（1.12.6-cli.2 から）。

@@ -126,6 +126,58 @@ func TestSharedRouteProducerReconcilerBuildsApplicationSRRs(t *testing.T) {
 	}
 }
 
+func TestSharedRouteProducerReconcilerApplicationUsesThirdLevelOverride(t *testing.T) {
+	cluster.PrimePlatformDomainForTest("olares.com")
+	defer cluster.ResetPlatformDomainForTest()
+
+	app := &appv1alpha1.Application{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "router",
+			Namespace: "default",
+			Annotations: map[string]string{
+				AnnotationRouteMode: AnnotationRouteModeGateway,
+			},
+		},
+		Spec: appv1alpha1.ApplicationSpec{
+			Name:      "router",
+			Namespace: "router-shared",
+			Appid:     "f3395cd5",
+			Settings: map[string]string{
+				"defaultThirdLevelDomainConfig": `[{"appName":"router","entranceName":"web","thirdLevelDomain":"router"}]`,
+			},
+			Entrances: []appv1alpha1.Entrance{
+				{Name: "web", Host: "web-svc", Port: 8080},
+				{Name: "api", Host: "api-svc", Port: 9090},
+			},
+		},
+	}
+	webSvc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Name: "web-svc", Namespace: "router-shared"},
+		Spec:       corev1.ServiceSpec{Ports: []corev1.ServicePort{{Port: 8080, Protocol: corev1.ProtocolTCP}}},
+	}
+	apiSvc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Name: "api-svc", Namespace: "router-shared"},
+		Spec:       corev1.ServiceSpec{Ports: []corev1.ServicePort{{Port: 9090, Protocol: corev1.ProtocolTCP}}},
+	}
+
+	c := fake.NewClientBuilder().WithScheme(producerTestScheme(t)).WithObjects(app, webSvc, apiSvc).Build()
+	r := &SharedRouteProducerReconciler{Client: c}
+	if err := r.reconcileApp(context.Background(), app); err != nil {
+		t.Fatalf("reconcileApp: %v", err)
+	}
+
+	webName := ResourceNameForEntranceApp(app.Spec.Appid, "web")
+	got := &srrv1alpha1.SharedRouteRegistry{}
+	if err := c.Get(context.Background(), types.NamespacedName{Namespace: app.Spec.Namespace, Name: webName}, got); err != nil {
+		t.Fatalf("get web SRR: %v", err)
+	}
+	if len(got.Spec.HostPatterns) != 2 ||
+		got.Spec.HostPatterns[0] != "router.*.olares.com" ||
+		got.Spec.HostPatterns[1] != appv1alpha1.EntranceID(app.Spec.Appid, 0, len(app.Spec.Entrances))+".*.olares.com" {
+		t.Fatalf("web hostPatterns = %v, want [router.*.olares.com, hash.*.olares.com]", got.Spec.HostPatterns)
+	}
+}
+
 func TestSharedRouteProducerReconcilerSingleApplicationEntranceUsesBareAppID(t *testing.T) {
 	cluster.PrimePlatformDomainForTest("olares.com")
 	defer cluster.ResetPlatformDomainForTest()

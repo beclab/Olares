@@ -1,5 +1,9 @@
 ---
 search: false
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Wise, aggregated search, content search, knowledge hub, PDF articles ePUB
 ---
 <!-- #region wise-aggregated-search -->
 Once you've collected your content in Wise, you can search for particular content themes or entries using aggregated search in Olares.

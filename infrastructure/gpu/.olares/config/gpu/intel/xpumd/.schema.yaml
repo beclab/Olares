@@ -1,0 +1,10 @@
+# Configuration for helm-values-schema-json tool
+values:
+- values.yaml
+output: values.schema.json
+k8sSchemaVersion: "v1.34.2"
+useHelmDocs: true
+schemaRoot:
+  title: Helm Values Schema
+  description: Schema for Helm values
+  additionalProperties: false

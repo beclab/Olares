@@ -1,6 +1,7 @@
 package appcfg
 
 import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"testing"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
@@ -49,6 +50,11 @@ func TestIsGatewaySharedApp(t *testing.T) {
 
 	t.Run("cluster scoped app with shared entrance", func(t *testing.T) {
 		app := &appv1alpha1.Application{
+			ObjectMeta: metav1.ObjectMeta{
+				Labels: map[string]string{
+					constants.AppSharedLabel: constants.AppSharedTrue,
+				},
+			},
 			Spec: appv1alpha1.ApplicationSpec{
 				Settings: map[string]string{
 					"clusterScoped": "true",
@@ -62,9 +68,64 @@ func TestIsGatewaySharedApp(t *testing.T) {
 	})
 }
 
+func TestIsSharedServerApp(t *testing.T) {
+	t.Run("nil app", func(t *testing.T) {
+		if IsSharedServerApp(nil) {
+			t.Fatal("nil app must not be treated as shared server")
+		}
+	})
+
+	t.Run("plain app", func(t *testing.T) {
+		app := &appv1alpha1.Application{
+			Spec: appv1alpha1.ApplicationSpec{
+				Entrances: []appv1alpha1.Entrance{{Name: "web", Host: "svc"}},
+			},
+		}
+		if IsSharedServerApp(app) {
+			t.Fatal("app without shared label or shared entrance must not be a shared server")
+		}
+	})
+
+	t.Run("shared app without v3 label", func(t *testing.T) {
+		app := &appv1alpha1.Application{
+			ObjectMeta: metav1.ObjectMeta{
+				Labels: map[string]string{constants.AppSharedLabel: constants.AppSharedTrue},
+			},
+		}
+		if IsV3(app) {
+			t.Fatal("fixture must not carry the v3 label")
+		}
+		if !IsSharedServerApp(app) {
+			t.Fatal("shared app must be a shared server regardless of schema version")
+		}
+	})
+
+	t.Run("shared entrances only", func(t *testing.T) {
+		app := &appv1alpha1.Application{
+			Spec: appv1alpha1.ApplicationSpec{
+				SharedEntrances: []appv1alpha1.Entrance{{Name: "api"}},
+			},
+		}
+		if !IsSharedServerApp(app) {
+			t.Fatal("app exposing shared entrances must be a shared server")
+		}
+	})
+
+	t.Run("cluster scoped app", func(t *testing.T) {
+		app := &appv1alpha1.Application{
+			Spec: appv1alpha1.ApplicationSpec{
+				Settings: map[string]string{"clusterScoped": "true"},
+			},
+		}
+		if !IsSharedServerApp(app) {
+			t.Fatal("cluster scoped app must be a shared server")
+		}
+	})
+}
+
 func TestLogicalHostPattern(t *testing.T) {
 	t.Run("single shared entrance without index suffix", func(t *testing.T) {
-		got, err := LogicalHostPattern("demo1234", 0, 1, "olares.com")
+		got, err := LogicalHostPattern("demo1234", 0, 1, "olares.com", true)
 		if err != nil {
 			t.Fatalf("LogicalHostPattern() error = %v", err)
 		}
@@ -75,11 +136,33 @@ func TestLogicalHostPattern(t *testing.T) {
 	})
 
 	t.Run("multiple shared entrances use indexed id", func(t *testing.T) {
-		got, err := LogicalHostPattern("demo1234", 1, 2, "olares.com.")
+		got, err := LogicalHostPattern("demo1234", 1, 2, "olares.com.", false)
 		if err != nil {
 			t.Fatalf("LogicalHostPattern() error = %v", err)
 		}
-		want := appv1alpha1.SharedEntranceID("demo1234", 1, 2) + ".shared.olares.com"
+		want := appv1alpha1.SharedEntranceIDV2("demo1234", 1, 2) + ".shared.olares.com"
+		if got != want {
+			t.Fatalf("LogicalHostPattern() = %q, want %q", got, want)
+		}
+	})
+
+	t.Run("non-com platformDomain still uses SharedMeshDomain", func(t *testing.T) {
+		got, err := LogicalHostPattern("demo1234", 0, 1, "bytetrade.io", true)
+		if err != nil {
+			t.Fatalf("LogicalHostPattern() error = %v", err)
+		}
+		want := appv1alpha1.SharedEntranceID("demo1234", 0, 1) + ".shared." + SharedMeshDomain
+		if got != want {
+			t.Fatalf("LogicalHostPattern() = %q, want %q", got, want)
+		}
+	})
+
+	t.Run("empty platformDomain still succeeds", func(t *testing.T) {
+		got, err := LogicalHostPattern("demo1234", 0, 1, "", true)
+		if err != nil {
+			t.Fatalf("LogicalHostPattern() error = %v", err)
+		}
+		want := appv1alpha1.SharedEntranceID("demo1234", 0, 1) + ".shared." + SharedMeshDomain
 		if got != want {
 			t.Fatalf("LogicalHostPattern() = %q, want %q", got, want)
 		}
@@ -87,41 +170,45 @@ func TestLogicalHostPattern(t *testing.T) {
 
 	t.Run("invalid inputs", func(t *testing.T) {
 		cases := []struct {
-			name           string
-			appid          string
-			entranceIndex  int
-			entranceCount  int
-			platformDomain string
+			name          string
+			appid         string
+			entranceIndex int
+			entranceCount int
 		}{
 			{
-				name:           "empty appid",
-				appid:          "",
-				entranceIndex:  0,
-				entranceCount:  1,
-				platformDomain: "olares.com",
+				name:          "empty appid",
+				appid:         "",
+				entranceIndex: 0,
+				entranceCount: 1,
 			},
 			{
-				name:           "invalid index",
-				appid:          "demo1234",
-				entranceIndex:  1,
-				entranceCount:  1,
-				platformDomain: "olares.com",
-			},
-			{
-				name:           "empty platform domain",
-				appid:          "demo1234",
-				entranceIndex:  0,
-				entranceCount:  1,
-				platformDomain: "",
+				name:          "invalid index",
+				appid:         "demo1234",
+				entranceIndex: 1,
+				entranceCount: 1,
 			},
 		}
 		for _, tc := range cases {
 			t.Run(tc.name, func(t *testing.T) {
-				if _, err := LogicalHostPattern(tc.appid, tc.entranceIndex, tc.entranceCount, tc.platformDomain); err == nil {
-					t.Fatalf("LogicalHostPattern(%q, %d, %d, %q) expected error", tc.appid, tc.entranceIndex, tc.entranceCount,
-						tc.platformDomain)
+				if _, err := LogicalHostPattern(tc.appid, tc.entranceIndex, tc.entranceCount, "olares.com", true); err == nil {
+					t.Fatalf("LogicalHostPattern(%q, %d, %d) expected error", tc.appid, tc.entranceIndex, tc.entranceCount)
 				}
 			})
 		}
 	})
+}
+
+func TestIsSharedMeshExactHost(t *testing.T) {
+	if !IsSharedMeshExactHost("deadbeef.shared.olares.com") {
+		t.Fatal("expected shared mesh exact host")
+	}
+	if IsSharedMeshExactHost("shared.olares.com") {
+		t.Fatal("bare shared zone must not match")
+	}
+	if IsSharedMeshExactHost("deadbeef.shared.olares.cn") {
+		t.Fatal("non-com shared host must not match")
+	}
+	if IsSharedMeshExactHost("*.shared.olares.com") {
+		t.Fatal("wildcard must not match")
+	}
 }

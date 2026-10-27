@@ -9907,6 +9907,13 @@ spec:
               protocol: TCP
       serviceAccountName: opentelemetry-operator
       priorityClassName: "system-cluster-critical"
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node-role.kubernetes.io/control-plane
+                    operator: Exists
       terminationGracePeriodSeconds: 10
       volumes:
         - name: cert

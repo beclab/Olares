@@ -24,9 +24,9 @@ type DownloadingCancelFailedApp struct {
 	imageClient images.ImageManager
 }
 
-func NewDownloadingCancelFailedApp(c client.Client,
+func NewDownloadingCancelFailedApp(deps Deps,
 	manager *appsv1.ApplicationManager) (StatefulApp, StateError) {
-	return appFactory.New(c, manager, 0,
+	return deps.Factory.New(deps, manager, 0,
 		func(c client.Client, manager *appsv1.ApplicationManager, ttl time.Duration) StatefulApp {
 			return &DownloadingCancelFailedApp{
 				baseOperationApp: &baseOperationApp{
@@ -36,7 +36,7 @@ func NewDownloadingCancelFailedApp(c client.Client,
 						client:  c,
 					},
 				},
-				imageClient: images.NewImageManager(c),
+				imageClient: deps.NewImageManager(c),
 			}
 
 		})

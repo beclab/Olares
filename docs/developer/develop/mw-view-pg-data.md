@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Learn how to view and manage PostgreSQL data in Olares using CLI or Bytebase.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, PostgreSQL, Bytebase, middleware, database management, CLI access, view data
 ---
 # View PostgreSQL data
 

@@ -1,15 +1,82 @@
 # Run identity: UID/GID 1000 (packaging + deployment)
 
-> **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) first (which loads the platform **Run identity** model — uid-1000 ownership of userspace volumes + the OPA root-deny rule).
+> **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) first (which loads the platform **Run identity** model — uid-1000 ownership of userspace volumes + the OPA root-deny rule) and answer its two run-identity questions.
 > This doc covers the chart-side delta: how to align a self-built or third-party image with that convention — in the Dockerfile, in `OlaresManifest.yaml`, and in deployment templates.
 
-## Why 1000 matters (chart-side)
+Q1 (what uid the process ends up as) and Q2 (who owns the directories it writes) are **independent**. Answering Q1 never settles Q2 — every Q1 answer still has to face it, including the `PUID`/`PGID` one.
 
-- Userspace paths injected via `.Values.userspace.*` expect the app process to run as **1000**.
-- Setting `spec.runAsUser: true` in `OlaresManifest.yaml` tells Olares to inject `pod.spec.securityContext.runAsUser: 1000` at Pod creation (app-service mutating webhook).
-- If the image runs as root or another uid, or if it creates directories as root before dropping privileges, writes to userspace mounts fail with **Permission denied** or data never persists.
+## Two fields, both called `runAsUser`
 
-## Self-built images (packaging axis)
+They sit under keys both spelled `spec`, and they are different fields.
+
+| | `OlaresManifest.yaml` → `spec.runAsUser` | template → `spec.template.spec.securityContext.runAsUser` |
+|---|---|---|
+| Type | boolean | numeric uid |
+| Consumed by | the app-service mutating webhook | kubelet |
+| Value | 1000 only — the manifest cannot carry another uid | any uid, written by you |
+| Reaches | the primary workload, Pod level only | exactly where you write it; container level overrides Pod level |
+
+Two consequences that bite:
+
+- With the manifest switch on, a **Pod-level** uid other than 1000 is silently rewritten to 1000. Container level is left alone — which is what lets a root initContainer coexist with a uid-1000 Pod.
+- The switch only reaches the workload whose name equals the app name (a Deployment, else a StatefulSet of that name). A Job, CronJob, DaemonSet or a second Deployment receives nothing; write the numeric field into those templates yourself.
+
+## Q1 — what uid does the process end up as
+
+Probe the image before editing the chart:
+
+```bash
+docker inspect <third-party-image> --format '{{.Config.User}}'
+docker run --rm --entrypoint /bin/sh <third-party-image> -c 'exec id'
+```
+
+The inspect result is the image's declared `USER`; empty means the runtime starts as root. The shell probe replaces both the image entrypoint and its baked-in `CMD` arguments. If `/bin/sh` is absent, run `docker run --rm --entrypoint id <image> -u` and repeat with `-g`; if `id` is also absent, inspect the Dockerfile/entrypoint. Do **not** use `docker run <image> id`: the image entrypoint still runs first and may consume or transform the probe.
+
+| Image `USER` | Typical handling |
+|---|---|
+| `1000` (or numeric 1000) | The manifest switch below; usually sufficient |
+| Non-root but **not** 1000 (e.g. `nginx` / uid 101) | Force `securityContext.runAsUser: 1000`. What usually breaks is a root-owned **runtime** path baked into the image, not the app — fix that (see self-built images below); rebuild only as a last resort. Do **not** instead `chown` the userspace mount to the image's uid: the convention is `1000:1000`, and Files and any other app holding the same permission expect it |
+| Root, empty, or `0`; entrypoint supports `PUID`/`PGID` and drops privileges | The `PUID`/`PGID` pattern below |
+| Root, empty, or `0`; process stays root | Rebuild/fork the image to run non-root; current OPA does not detect an implicit image user, but a root application process violates the platform run-identity convention |
+
+### Manifest switch (preferred)
+
+Set `spec.runAsUser: true` in `OlaresManifest.yaml`. Optionally reinforce it in the deployment template, since Kubernetes overrides the Dockerfile `USER`:
+
+```yaml
+spec:
+  template:
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+```
+
+The switch injects a **uid and nothing else** — no `runAsGroup`, no `fsGroup` — so the process gid stays whatever the image declares. Write `runAsGroup: 1000` yourself when the gid matters.
+
+`fsGroup` is not an alternative to Q2. Userspace mounts are `hostPath`, whose mounter reports `Managed: false`, so kubelet applies neither the gid change nor `fsGroupChangePolicy`. It is not "sometimes helpful" — on these mounts it does nothing at all.
+
+### Root entrypoint that drops to `PUID`/`PGID`
+
+Some third-party images deliberately start as root, prepare files or networking, then use `PUID`/`PGID` to launch the application as a non-root user. For these images, forcing Pod-level uid 1000 prevents the entrypoint from completing its initialization.
+
+```yaml
+# OlaresManifest.yaml
+spec:
+  runAsUser: false
+```
+
+```yaml
+# Deployment env; names vary by image
+- name: PUID
+  value: "1000"
+- name: PGID
+  value: "1000"
+```
+
+Omitting `spec.runAsUser` is equivalent for webhook injection. Do not set Pod/container `securityContext.runAsUser: 0`; leave the security context absent so the image entrypoint controls its startup identity. Verify from startup logs or a running container that the final application process drops to uid 1000. If it remains root, rebuild or fork the image instead of treating this exception as permission to run the app as root.
+
+### Self-built images
 
 When authoring a Dockerfile (the Image capability), prefer uid/gid 1000 end-to-end:
 
@@ -19,74 +86,38 @@ RUN chown -R 1000:1000 /var/lib/myapp
 USER 1000
 ```
 
-Verify before pushing:
+An image-time `chown` only survives where nothing mounts over it: a `hostPath` mounted at that path shadows the image's directory along with its ownership, which is why a uid-1000 image can still hit `Permission denied` on its own data dir. Ownership of a mount is settled at runtime, by Q2.
 
-```bash
-docker inspect <registry-ref>:<tag> --format '{{.Config.User}}'
-docker run --rm <registry-ref>:<tag> id    # expect uid=1000
-```
+`chown` the **runtime** paths too, not just the data ones. Pid files, sockets, lock files and scratch dirs under `/run`, `/var/run` or `/tmp` are written before the app does anything useful, so a base image that puts them in a root-owned directory (nginx, php-fpm, supervisor) fails at startup under `USER 1000`. In an image you build, relocate the path in its config or make it writable here; in a third-party image, point a configurable runtime path at `/tmp`, or mount a writable `emptyDir` and prepare its ownership with the initContainer below.
 
-## Third-party images — inspect before editing the chart
+Before pushing, re-run the two probes above against your own ref and expect `uid=1000`.
 
-```bash
-docker inspect <third-party-image> --format '{{.Config.User}}'
-```
+## Q2 — does the app write a userspace mount
 
-| Image `USER` | Typical handling |
-|---|---|
-| `1000` (or numeric 1000) | Set `spec.runAsUser: true`; usually sufficient |
-| Non-root but **not** 1000 (e.g. `nginx` / uid 101) | Try `securityContext.runAsUser: 1000`; if the app breaks, use initContainer `chown` (below) |
-| Root, empty, or `0` | Main container **must not** stay root on non-trusted images — OPA rejects third-party + root. Use chart-side fixes below |
+If it does not, Q1 was the whole job. If it does, someone has to make the directories `1000:1000` before the app writes — whichever Q1 answer applied.
 
-## Chart-side fixes (decision tree)
+On the `PUID`/`PGID` pattern that someone is often the image's own root entrypoint; check its startup log before adding a second mechanism. Every other Q1 answer needs the initContainer below, because the process is already non-root by the time it starts.
 
-```mermaid
-flowchart TD
-  start["Third-party or root image + writes userspace volume"]
-  start --> canNonRoot{"Can main process run as UID 1000?"}
-  canNonRoot -->|yes| solA["A: spec.runAsUser true + optional securityContext"]
-  canNonRoot -->|no — internal init needs root| solC["C: initContainer chown only; main still 1000 if possible"]
-  solA --> needChown{"Volume has root-owned files?"}
-  needChown -->|yes| solB["B: initContainer chown 1000:1000"]
-  needChown -->|no| fsGroup["Optional fsGroup 1000 for new files"]
-  solB --> busyboxImg["Image: beclab/aboveos-busybox:1.37.0"]
-  solC --> busyboxImg
-```
+**Olares does not pre-`chown` the paths it grants.** Declaring `permission.appData` grants the mount; it does not hand you ownership of it. `DirectoryOrCreate` creates the volume root as root, and kubelet creates a missing `subPath` directory as root too, so a uid-1000 app writing to `appData` / `appCache` fails its first write with `Permission denied` without this.
 
-### A — `spec.runAsUser` + optional `securityContext` (preferred)
+### The permissions initContainer
 
-```yaml
-# OlaresManifest.yaml
-spec:
-  runAsUser: true
-```
-
-Optionally reinforce in the deployment template (Kubernetes overrides the Dockerfile `USER`):
-
-```yaml
-spec:
-  template:
-    spec:
-      securityContext:
-        runAsUser: 1000
-        runAsGroup: 1000
-        fsGroup: 1000    # new files on mounted volumes get gid 1000
-```
-
-`fsGroup` helps for **new** mounts; it does not always fix directories already created as root — use B when that happens.
-
-### B — initContainer `chown` (third-party root + wrong volume ownership)
-
-Use Olares' trusted busybox image (same as platform init containers). **Do not** pair a root initContainer on a non-trusted image with a third-party main image — OPA denies that Pod.
+`chown` the mount root and each subdirectory the app needs — **each one non-recursively**:
 
 ```yaml
 spec:
   template:
     spec:
       initContainers:
-      - name: fix-permissions
+      - name: init-permissions
         image: beclab/aboveos-busybox:1.37.0
-        command: ["sh", "-c", "chown -R 1000:1000 /data"]
+        command:
+        - sh
+        - -c
+        - |
+          for d in /data /data/config /data/db; do
+            mkdir -p "$d" && chown 1000:1000 "$d"
+          done
         securityContext:
           runAsUser: 0
         volumeMounts:
@@ -100,39 +131,18 @@ spec:
           mountPath: /data
 ```
 
-Also set `spec.runAsUser: true` in `OlaresManifest.yaml`. Run `chown` for **each** userspace mount the app writes to (combine paths in one command if needed).
+The initContainer and the main container mount the **same volume at the same path** — the directories prepared here are the ones the app then writes. List every userspace mount the app writes to, plus any `subPath` directory under them. Also set `spec.runAsUser: true` in `OlaresManifest.yaml` unless Q1 put you on the `PUID`/`PGID` pattern. `init-permissions` and `fix-permissions` are both names you will meet in existing charts.
 
-> **`chown` of pre-owned subdirs can fail on upgrade.** A root initContainer can `chown` a root-owned directory, but has been observed to fail with `Operation not permitted` when `chown`-ing subdirectories the main container previously created as uid 1000 — as if `CAP_CHOWN` is unavailable. This means:
->
-> - **Fresh install:** the `hostPath` root dir is created empty by `DirectoryOrCreate` (owned by kubelet/root). The busybox initContainer runs as root and can `chown` it because root owns the directory. Works.
-> - **Upgrade:** if the main container previously created subdirectories as uid 1000, the busybox initContainer **fails to** `chown` those uid-1000-owned subdirs — `Operation not permitted` — crash-loops, and the pod stays in `Initializing` indefinitely.
->
-> A plain root container normally keeps `CAP_CHOWN`, so the cap-dropping layer is environment-specific (likely enforced below the cluster at the node / container-runtime level). It is **not** the Olares OPA policy, which only denies untrusted-image + root/`privileged` pods (see [OPA and lint boundaries](#opa-and-lint-boundaries) below) and mutates nothing about capabilities. Treat the rule below as the safe pattern regardless of the exact mechanism.
->
-> **Practical rule:** For `appData` / `appCache` with `permission.appData: true`, Olares already creates the root dir with uid 1000 ownership. If the app creates its own subdirectories at runtime (e.g. `os.makedirs("/data/models")` in Python), the whole tree stays uid 1000 and **no initContainer is needed**. Only reach for initContainer `chown` when the upstream image's entrypoint writes root-owned files before the process drops to uid 1000.
+**Add it now, whatever Olares version you target.** Nothing else prepares these directories: the platform injects a uid only, and install prepares just `appCommon` and its reserved sub-caches — never your app's own `appData` / `appCache` roots or the `subPath` dirs under them. Should a later release grow an equivalent injection, the two are idempotent and safe to overlap.
 
-### C — image must start as root internally
+**Red line: no explicit root `securityContext`** anywhere else in the chart. This initContainer is the only exception, and only because `beclab/` is trusted by both the runtime admission policy and the install gate — see [lint.md](olares-chart-lint.md), which also covers why the two trust different image sets.
 
-If the upstream entrypoint **requires** root for its own initialization, you cannot set `runAsUser: 1000` on the main container without breaking it.
+### Red line: no `chown -R` at runtime
 
-- Use B's initContainer to fix volume ownership **before** the main container starts.
-- If the main container still runs as root with a **non-trusted** image, OPA **will reject** the Pod — loop back to the Image capability and rebuild or fork the image so the main process can run non-root.
+A root initContainer `chown`s a root-owned directory fine, but recursing has been observed to fail with `Operation not permitted` on subdirectories the main container previously created as uid 1000 — which crash-loops the pod and leaves it `Initializing` indefinitely. So a fresh install works and the upgrade of the same chart does not. The cap-dropping layer is environment-specific, below the cluster at the node / container-runtime level; it is **not** the Olares OPA policy, which only denies untrusted-image + root/`privileged` containers and mutates nothing about capabilities.
 
-## OPA and lint boundaries
+The non-recursive form above sidesteps this whatever the layer turns out to be: it touches the mount root and the directories it creates, never the tree the app already owns. Pair it with `set -e` safely.
 
-| Layer | Rule |
-|---|---|
-| **OPA** (runtime) | Non-trusted image + root / `privileged` / `runAsNonRoot: false` → admission denied |
-| **initContainer fix** | Use `beclab/aboveos-busybox:1.37.0` — `beclab/` is trusted; init may run as root |
-| **`chart lint --with-security-context`** | Non-`beclab/` main image must not use root-equivalent securityContext (off by default) |
+This red line is about the **runtime** initContainer. An image-build `RUN chown -R` is fine and often necessary — at build time there are no uid-1000-owned subdirectories to trip over.
 
-## Symptoms → fix
-
-| Symptom | Likely cause | Fix |
-|---|---|---|
-| CrashLoop, `Permission denied` writing data dir | uid ≠ 1000 or dir owned by root | A or B above |
-| Install OK but config/data not persisted | Writes go to container-local path, or EACCES silently ignored | Check mount paths + run identity |
-| Admission denied: untrusted image + root | Third-party main container runs as root | A (force 1000) or B; never root main on third-party |
-| OPA OK but app still can't write | `spec.runAsUser` not set, or volume pre-dates chown | `spec.runAsUser: true` + B |
-
-After any template change, re-run `olares-cli chart lint ./<app>` (the Validate-local (lint) step).
+After any template change, re-run `olares-cli chart lint ./<app>` (the Validate-local (lint) step). When a deployed app misbehaves, the symptom-to-cause routing lives in [`olares-doctor`](../../olares-doctor/SKILL.md), under **Symptom routing** → the crash / permission-error row; the fixes it points back to are the two questions above.

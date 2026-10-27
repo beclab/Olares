@@ -19,68 +19,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// newTypoFixture builds a (root → parent w/ unknownSubcommandRunE) tree
-// that mirrors the real olares-cli wiring (dashboard is a subcommand of
-// the olares-cli root, never the root itself). The shape matters:
-// cobra's default args validator (legacyArgs in cobra v1.9 args.go:24)
-// takes a hard "unknown command" path when an unknown positional lands
-// on a command that has subcommands AND no parent — testing on a bare
-// root would bypass our RunE altogether. See cobra args.go:28-39.
-func newTypoFixture() (*cobra.Command, *cobra.Command) {
-	root := &cobra.Command{Use: "olares-cli"}
-	parent := &cobra.Command{
-		Use:           "dashboard",
-		Short:         "the dashboard subtree",
-		SilenceErrors: true,
-		SilenceUsage:  true,
-		RunE:          unknownSubcommandRunE,
-	}
-	parent.AddCommand(&cobra.Command{Use: "applications", RunE: func(*cobra.Command, []string) error { return nil }})
-	parent.AddCommand(&cobra.Command{Use: "overview", RunE: func(*cobra.Command, []string) error { return nil }})
-	root.AddCommand(parent)
-	return root, parent
-}
-
-func TestUnknownSubcommandRunE_PrintsSuggestionAndFailsOnTypo(t *testing.T) {
-	root, _ := newTypoFixture()
-
-	var stderr bytes.Buffer
-	root.SetErr(&stderr)
-	root.SetOut(io.Discard)
-	root.SetArgs([]string{"dashboard", "application"}) // typo, missing 's'
-
-	err := root.Execute()
-	if err == nil {
-		t.Fatal("Execute should return non-nil error on typo; got nil")
-	}
-	out := stderr.String()
-	if !strings.Contains(out, `unknown subcommand "application"`) {
-		t.Errorf("stderr missing 'unknown subcommand' marker; got: %q", out)
-	}
-	if !strings.Contains(out, "Did you mean this?") || !strings.Contains(out, "applications") {
-		t.Errorf("stderr missing suggestion 'applications'; got: %q", out)
-	}
-}
-
-func TestUnknownSubcommandRunE_NoArgsPrintsHelp(t *testing.T) {
-	root, _ := newTypoFixture()
-
-	var stdout, stderr bytes.Buffer
-	root.SetOut(&stdout)
-	root.SetErr(&stderr)
-	root.SetArgs([]string{"dashboard"}) // bare parent, no subcmd
-
-	if err := root.Execute(); err != nil {
-		t.Fatalf("Execute with no args should succeed (just print help); got %v", err)
-	}
-	if !strings.Contains(stdout.String(), "applications") {
-		t.Errorf("help output should list 'applications'; got: %q", stdout.String())
-	}
-	if stderr.Len() != 0 {
-		t.Errorf("stderr should be empty on no-arg help; got: %q", stderr.String())
-	}
-}
-
 // TestLeafErrorsAreReported pins wrapLeafErrors: every leaf RunE that
 // returns a non-sentinel error MUST surface the message on stderr so
 // users / agents see WHY the process exits non-zero. Without this
@@ -108,12 +46,9 @@ func TestLeafErrorsAreReported(t *testing.T) {
 	}
 }
 
-// TestLeafErrorsSentinelNotDoublePrinted verifies wrapLeafErrors honours
-// pkgdashboard.ErrAlreadyReported: a typo'd subcommand should produce
-// the unknownSubcommandRunE-authored hint on stderr exactly ONCE, not
-// twice. (Before the sentinel was introduced, the wrapper would happily
-// fmt.Fprintln "unknown subcommand" on top of the suggestion text.)
-func TestLeafErrorsSentinelNotDoublePrinted(t *testing.T) {
+// Unknown verbs are reported once by cmd/main.go, so the dashboard wrapper
+// must leave the shared error untouched and print nothing itself.
+func TestUnknownVerbIsLeftForTheEntrypoint(t *testing.T) {
 	cmd := NewDashboardCommand(nil)
 	var stderr bytes.Buffer
 	cmd.SetErr(&stderr)
@@ -122,16 +57,11 @@ func TestLeafErrorsSentinelNotDoublePrinted(t *testing.T) {
 
 	if err := cmd.Execute(); err == nil {
 		t.Fatal("Execute should return non-nil error on typo; got nil")
+	} else if !strings.Contains(err.Error(), `unknown verb "podz"`) {
+		t.Errorf("unexpected typo error: %v", err)
 	}
-	out := stderr.String()
-	if !strings.Contains(out, `unknown subcommand "podz"`) {
-		t.Errorf("stderr missing typo hint; got: %q", out)
-	}
-	// The sentinel's own message must not be appended on top of the
-	// suggestion block. Count only literal occurrences (not substring
-	// matches inside the suggestion text).
-	if c := strings.Count(out, "dashboard: error already reported"); c != 0 {
-		t.Errorf("sentinel string leaked into stderr %d times: %q", c, out)
+	if stderr.Len() != 0 {
+		t.Errorf("dashboard printed the unknown verb before cmd/main.go: %q", stderr.String())
 	}
 }
 

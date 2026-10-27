@@ -1,15 +1,15 @@
 ---
 outline: [2, 3]
-description: Install ComfyUI on Olares, download essential models via ComfyUI Launcher, and generate your first AI image using the default workflow.
+description: Run ComfyUI locally on Olares. Install models in one click, generate AI images with the default workflow, and keep outputs on your device.
 head:
   - - meta
     - name: keywords
-      content: Olares, ComfyUI, Stable Diffusion, AI image generation, self-hosted, ComfyUI Launcher
+      content: Olares, ComfyUI, Stable Diffusion, AI image generation, self-hosted comfyui, comfyui alternative, comfyui workflow, comfyui on olares
 app_version: "1.0.34"
 doc_version: "1.0"
 doc_updated: "2026-05-13"
 ---
-# ComfyUI
+# Run ComfyUI locally for AI image generation
 
 ComfyUI is a powerful, node-based interface for Stable Diffusion that transforms AI image generation into a visual programming experience. By connecting different nodes together like building blocks, you gain precise control over every aspect of the generation process, from prompts and models to post-processing effects.
 

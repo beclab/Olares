@@ -5,6 +5,7 @@ package keychain
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -36,6 +37,92 @@ func TestStorageDir_InvalidDataDirFallsBackToDefault(t *testing.T) {
 	want := filepath.Join(home, ".local", "share", "svc")
 	if got != want {
 		t.Fatalf("StorageDir() = %q, want %q", got, want)
+	}
+}
+
+// TestStorageDir_UsesCacheDirEnv covers the managed-container branch: the
+// platform mounts a writable emptyDir and exports $OLARES_CLI_CACHE_DIR, and
+// the keychain has to land inside it rather than under a HOME the container
+// may not be able to write.
+func TestStorageDir_UsesCacheDirEnv(t *testing.T) {
+	base := t.TempDir()
+	base, _ = filepath.EvalSymlinks(base)
+	t.Setenv("OLARES_CLI_DATA_DIR", "")
+	t.Setenv("OLARES_CLI_CACHE_DIR", base)
+
+	got := StorageDir("svc")
+	want := filepath.Join(base, "keychain", "svc")
+	if got != want {
+		t.Fatalf("StorageDir() = %q, want %q", got, want)
+	}
+}
+
+// The explicit override still wins over the injected cache dir.
+func TestStorageDir_DataDirBeatsCacheDir(t *testing.T) {
+	data := t.TempDir()
+	data, _ = filepath.EvalSymlinks(data)
+	cache := t.TempDir()
+	t.Setenv("OLARES_CLI_DATA_DIR", data)
+	t.Setenv("OLARES_CLI_CACHE_DIR", cache)
+
+	if got, want := StorageDir("svc"), filepath.Join(data, "svc"); got != want {
+		t.Fatalf("StorageDir() = %q, want %q", got, want)
+	}
+}
+
+// A host install sees no cache dir, so nothing about its layout changes.
+func TestStorageDir_NoCacheDirKeepsXDGDefault(t *testing.T) {
+	home := t.TempDir()
+	home, _ = filepath.EvalSymlinks(home)
+	t.Setenv("OLARES_CLI_DATA_DIR", "")
+	t.Setenv("OLARES_CLI_CACHE_DIR", "")
+	t.Setenv("HOME", home)
+
+	if got, want := StorageDir("svc"), filepath.Join(home, ".local", "share", "svc"); got != want {
+		t.Fatalf("StorageDir() = %q, want %q", got, want)
+	}
+}
+
+// An agent sandbox leaves the platform's cache directory mounted and refuses
+// every write to it. The keychain is the rung that fails first and loudest:
+// the master key has to be created before anything can be stored at all, so a
+// store that cannot move off that directory cannot hold the access token the
+// mounted grant was just exchanged for.
+func TestPlatformRoundTrip_UnwritableCacheDir(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root ignores directory permissions")
+	}
+	denied := t.TempDir()
+	if err := os.Chmod(denied, 0o555); err != nil {
+		t.Fatalf("prepare: %v", err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(denied, 0o700) })
+	tmp := t.TempDir()
+	tmp, _ = filepath.EvalSymlinks(tmp)
+	t.Setenv("OLARES_CLI_DATA_DIR", "")
+	t.Setenv("TMPDIR", tmp)
+	t.Setenv("OLARES_CLI_CACHE_DIR", denied)
+
+	const (
+		service = "olares-cli-test"
+		account = "alice@olares.com"
+		secret  = `{"olaresId":"alice@olares.com","accessToken":"abc"}`
+	)
+
+	dir := StorageDir(service)
+	if !strings.HasPrefix(dir, tmp) {
+		t.Fatalf("StorageDir() = %q, want it moved under %q", dir, tmp)
+	}
+
+	if err := platformSet(service, account, secret); err != nil {
+		t.Fatalf("platformSet() error = %v", err)
+	}
+	got, err := platformGet(service, account)
+	if err != nil || got != secret {
+		t.Fatalf("platformGet() = (%q, %v), want the secret back", got, err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "master.key")); err != nil {
+		t.Fatalf("master key was not created in the fallback: %v", err)
 	}
 }
 

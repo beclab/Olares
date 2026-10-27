@@ -3,7 +3,6 @@ package pipelines
 import (
 	"context"
 	"fmt"
-	"os"
 	"path"
 
 	"github.com/beclab/Olares/cli/pkg/common"
@@ -14,8 +13,7 @@ import (
 func AddNodePipeline(ctx context.Context) error {
 	arg := common.NewArgument()
 	if !arg.SystemInfo.IsLinux() {
-		fmt.Println("error: Only Linux nodes can be added to an Olares cluster!")
-		os.Exit(1)
+		return fmt.Errorf("only Linux nodes can be added to an Olares cluster")
 	}
 
 	arg.SetOlaresVersion(version.VERSION)

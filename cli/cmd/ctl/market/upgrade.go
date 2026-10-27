@@ -71,8 +71,10 @@ Examples:
 	}
 	opts.addCommonFlags(cmd)
 	opts.addOutputFlags(cmd)
+	describeLifecycleJSON(cmd)
 	opts.addVersionFlag(cmd)
 	opts.addWatchFlags(cmd)
+	opts.addPodWatchFlags(cmd)
 	return cmd
 }
 
@@ -82,10 +84,8 @@ func runUpgrade(opts *MarketOptions, appName string) error {
 		return opts.failOp("upgrade", appName, err)
 	}
 
-	source := resolveCatalogSource(opts)
-	if strings.TrimSpace(opts.Source) == "" {
-		opts.info("Using source: %s", source)
-	}
+	ctx := context.Background()
+	source := resolveUpgradeSource(ctx, opts, mc, appName)
 
 	version := strings.TrimSpace(opts.Version)
 	if version != "" {
@@ -93,15 +93,14 @@ func runUpgrade(opts *MarketOptions, appName string) error {
 			return opts.failOp("upgrade", appName, err)
 		}
 	} else {
-		v, err := resolveVersionInSource(mc, appName, source)
+		v, err := resolveVersionInSource(mc, appName, source, true)
 		if err != nil {
-			return opts.failOp("upgrade", appName, fmt.Errorf("cannot determine version in source '%s': %w (use --version to specify)", source, err))
+			return opts.failOp("upgrade", appName, err)
 		}
 		version = v
 		opts.info("Using latest version: %s", version)
 	}
 
-	ctx := context.Background()
 	// Pre-flight gate mirroring the SPA's canUpgrade(): refuse early
 	// (with an actionable message) when the state row is missing, in a
 	// non-upgradable state, when the target version is not newer than
@@ -109,9 +108,16 @@ func runUpgrade(opts *MarketOptions, appName string) error {
 	// source — see preflightUpgrade gate 3), or when the catalog row is
 	// marked suspend / remove. Soft-fails on transient catalog probe
 	// errors — see preflightUpgrade for rationale.
-	if err := preflightUpgrade(ctx, opts, mc, appName, version, source); err != nil {
+	//
+	// The row it resolves doubles as the --watch baseline: an upgrade
+	// started from a stopped app lands back on `stopped`, indistinguishable
+	// from this pre-upgrade row except by a strictly-newer statusTime (see
+	// upgradeStoppedTerminal).
+	row, err := preflightUpgrade(ctx, opts, mc, appName, version, source)
+	if err != nil {
 		return opts.failOp("upgrade", appName, err)
 	}
+	baselineStatusTime := parseStatusTime(row.StatusTime)
 
 	opts.info("Upgrading '%s' to version '%s' from '%s' for user '%s'...", appName, version, source, mc.olaresID)
 
@@ -124,5 +130,7 @@ func runUpgrade(opts *MarketOptions, appName string) error {
 	}
 
 	result := newOperationResult(mc, "upgrade", appName, source, version, fmt.Sprintf("upgrade requested for version %s", version), resp)
-	return runWithWatch(opts, mc, result, newWatchTarget(watchUpgrade, appName, source))
+	target := newWatchTarget(watchUpgrade, appName, source)
+	target.baselineStatusTime = baselineStatusTime
+	return runWithWatch(opts, mc, result, target)
 }

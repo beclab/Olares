@@ -9,6 +9,7 @@ import (
 	"github.com/beclab/Olares/cli/internal/keychain"
 	"github.com/beclab/Olares/cli/pkg/auth"
 	"github.com/beclab/Olares/cli/pkg/cliconfig"
+	"github.com/beclab/Olares/cli/pkg/credential"
 )
 
 // NewRemoveCommand: `olares-cli profile remove <name>`
@@ -36,6 +37,9 @@ func NewRemoveCommand() *cobra.Command {
 func runRemove(key string) error {
 	cfg, err := cliconfig.LoadMultiProfileConfig()
 	if err != nil {
+		return err
+	}
+	if err := credential.RequireNotManaged(cfg.FindProfile(key), "remove"); err != nil {
 		return err
 	}
 	removed, ok := cfg.Remove(key)

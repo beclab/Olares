@@ -1,8 +1,12 @@
 // Package lockfile is a tiny wrapper over github.com/gofrs/flock that adds
-// context-cancelable acquisition and a single deterministic lock-directory
-// layout under cliconfig.Home(). It exists so the rest of the codebase
+// context-cancelable acquisition. It exists so the rest of the codebase
 // doesn't import flock directly — keeping the dependency surface small and
 // letting us swap the backend without touching every call site.
+//
+// Lock paths are built by the packages that own them (cliconfig.LockPath),
+// not here: cliconfig has to be able to lock its own file, and a package
+// that knew the config-directory layout could not be imported by the
+// package that defines it.
 //
 // The locks are advisory file locks (flock(2) on darwin/linux, LockFileEx on
 // windows). Two olares-cli processes contending for the same olaresId's
@@ -21,8 +25,6 @@ import (
 	"time"
 
 	"github.com/gofrs/flock"
-
-	"github.com/beclab/Olares/cli/pkg/cliconfig"
 )
 
 // dirPerm matches cliconfig's 0700 — the lock dir lives next to config.json
@@ -67,25 +69,16 @@ func Acquire(ctx context.Context, path string) (release func() error, err error)
 	}
 }
 
-// RefreshLockPath returns the per-olaresId refresh lock path under
-// cliconfig.Home()/locks/. The olaresId is sanitized for filesystem use
-// (slashes / null / colon / control chars are replaced with '_'); '@' and
-// '.' are left intact since they are valid on every supported OS and
-// preserve the original olaresId in directory listings, which is useful for
-// debugging.
-func RefreshLockPath(olaresID string) (string, error) {
-	home, err := cliconfig.Home()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(home, "locks", sanitize(olaresID)+".refresh.lock"), nil
-}
-
-// sanitize replaces any character that's problematic on at least one of our
-// target filesystems with '_'. We deliberately allow '@' and '.' through
-// (they are legal on darwin/linux/windows file names) so the resulting file
-// name is still a recognizable olaresId.
-func sanitize(s string) string {
+// Sanitize turns an arbitrary identifier (typically an olaresId) into a
+// single path element safe to use as a lock file name. Slashes, null and
+// control characters are replaced with '_'; '@' and '.' are left intact
+// since they are valid on every supported OS and preserve the original
+// identifier in directory listings, which is useful for debugging.
+//
+// Production olaresIds look like "alice@olares.com" and need no rewriting.
+// The point is that a malformed override (e.g. from $OLARES_PROFILE) cannot
+// escape the lock directory.
+func Sanitize(s string) string {
 	if s == "" {
 		return "_"
 	}

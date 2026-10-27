@@ -452,7 +452,7 @@ func (t *PatchCoreDNSSVC) Execute(runtime connector.Runtime) error {
 	coreDNSSVCPatchFilePath := filepath.Join(runtime.GetInstallerDir(), "deploy/patch-k3s.yaml")
 	_, err := runtime.GetRunner().Cmd(fmt.Sprintf("%s apply -f %s", kubectlcmd, coreDNSSVCPatchFilePath), false, true)
 	if err != nil {
-		return errors.Wrap(errors.WithStack(err), fmt.Sprintf("failed to patch coredns service", err))
+		return errors.Wrap(errors.WithStack(err), "failed to patch coredns service")
 	}
 	return nil
 }

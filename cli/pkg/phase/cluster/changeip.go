@@ -19,6 +19,7 @@ func ChangeIP(runtime *common.KubeRuntime) *pipeline.Pipeline {
 		modules = []module.Module{
 			&terminus.CheckPreparedModule{},
 			&terminus.CheckInstalledModule{},
+			&terminus.DetectHostnameChangeModule{},
 			&terminus.ChangeIPModule{},
 		}
 	}

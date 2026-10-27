@@ -18,6 +18,7 @@ var (
 	userAnnotationZoneKey        = fmt.Sprintf("%s/zone", annotationGroup)
 	userAnnotationOwnerRole      = fmt.Sprintf("%s/owner-role", annotationGroup)
 	userAnnotationWizardStatus   = fmt.Sprintf("%s/wizard-status", annotationGroup)
+	userAnnotationOlaresName     = fmt.Sprintf("%s/terminus-name", annotationGroup)
 	userAnnotationCPULimitKey    = "bytetrade.io/user-cpu-limit"
 	userAnnotationMemoryLimitKey = "bytetrade.io/user-memory-limit"
 	userIndex                    = "bytetrade.io/user-index"
@@ -56,6 +57,11 @@ func GetUserZone(ctx context.Context, username string) (string, error) {
 // GetUserRole returns user role, an error if there is any.
 func GetUserRole(ctx context.Context, username string) (string, error) {
 	return GetUserAnnotation(ctx, username, userAnnotationOwnerRole)
+}
+
+// GetOlaresName returns user OlaresName, an error if there is any.
+func GetOlaresName(ctx context.Context, username string) (string, error) {
+	return GetUserAnnotation(ctx, username, userAnnotationOlaresName)
 }
 
 // GetUserAnnotation returns user annotation, an error if there is any.

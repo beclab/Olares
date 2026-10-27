@@ -1,6 +1,10 @@
 ---
 outline: [2, 4]
 description: 通过 `OlaresManifest.yaml` 中的 `envs` 声明并校验应用配置，并在模板中通过 `.Values.olaresEnv` 引用变量值。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 声明式环境变量, OlaresManifest, envs, Helm, valueFrom, 变量校验
 ---
 
 # 声明式环境变量

@@ -2,6 +2,7 @@ package storage
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/beclab/Olares/cli/pkg/core/util"
@@ -10,6 +11,7 @@ import (
 	"github.com/beclab/Olares/cli/pkg/common"
 	cc "github.com/beclab/Olares/cli/pkg/core/common"
 	"github.com/beclab/Olares/cli/pkg/core/connector"
+	"github.com/beclab/Olares/cli/pkg/core/logger"
 	"github.com/beclab/Olares/cli/pkg/core/task"
 	"github.com/beclab/Olares/cli/pkg/manifest"
 	"github.com/beclab/Olares/cli/pkg/utils"
@@ -199,6 +201,49 @@ func (t *ConfigJuiceFsMetaDB) Execute(runtime connector.Runtime) error {
 
 	if _, err := runtime.GetRunner().SudoCmd(cmd, false, true); err != nil {
 		return err
+	}
+	return nil
+}
+
+// CleanupStaleJuiceFSMount detaches a dead JuiceFS FUSE mount left behind at
+// the rootfs mount point, so that the next mount attempt can succeed.
+//
+// On shutdown the juicefs client gives its own umount 30 seconds and then
+// force-exits ("umount does not finish in 30 seconds, force exit"), leaving the
+// fuse.juicefs entry in /proc/self/mounts with no process serving it. systemd
+// still reports the unit as cleanly deactivated. Every later access to the path
+// then fails with ENOTCONN, and a fresh `juicefs mount` cannot recover on its
+// own: fusermount3 has to stat the mount point first and gets ENOTCONN too, so
+// juicefs.service crash-loops indefinitely. k3s never starts either, because
+// its ExecStartPre runs `juicefs summary` on the same path.
+//
+// A lazy umount detaches the dead mount immediately while letting any remaining
+// references drain, which is exactly what is needed before remounting. This is
+// a no-op when the mount point is absent, or when juicefs.service is running
+// (so an already-started Olares is never disturbed).
+type CleanupStaleJuiceFSMount struct {
+	common.KubeAction
+}
+
+func (t *CleanupStaleJuiceFSMount) Execute(runtime connector.Runtime) error {
+	mounted, err := isJuiceFSMounted(runtime, OlaresJuiceFSRootDir)
+	if err != nil {
+		return errors.Wrap(err, "failed to read the mount table")
+	}
+	if !mounted {
+		return nil
+	}
+	// Liveness is decided by the unit state, not by touching the path: the
+	// client mounts with --attr-cache 300, so the kernel keeps answering stat()
+	// on the mount root from its attribute cache for minutes after the serving
+	// process is gone. A mount whose unit is not active has nothing behind it.
+	if out, _ := runtime.GetRunner().SudoCmd("systemctl is-active juicefs", false, false); strings.TrimSpace(out) == "active" {
+		return nil
+	}
+	logger.Infof("detaching stale JuiceFS mount at %s (juicefs.service is not active)", OlaresJuiceFSRootDir)
+	if _, err := runtime.GetRunner().SudoCmd(
+		fmt.Sprintf("umount -l %s", OlaresJuiceFSRootDir), false, false); err != nil {
+		return errors.Wrapf(err, "failed to detach the stale JuiceFS mount at %s", OlaresJuiceFSRootDir)
 	}
 	return nil
 }

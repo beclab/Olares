@@ -91,6 +91,7 @@ func (p permManifest) AppName() string               { return "stub" }
 func (p permManifest) AppVersion() string            { return "0.0.0" }
 func (p permManifest) Entrances() []EntranceInfo     { return nil }
 func (p permManifest) OptionsImages() []string       { return nil }
+func (p permManifest) Taxonomy() Taxonomy            { return Taxonomy{} }
 func (p permManifest) PermissionAppData() bool       { return p.appData }
 func (p permManifest) PermissionAppCommon() bool     { return p.appCommon }
 func (p permManifest) PermissionExternalData() bool { return p.externalData }

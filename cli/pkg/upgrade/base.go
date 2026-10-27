@@ -47,7 +47,7 @@ func (u upgraderBase) NeedRestart() bool {
 }
 
 func (u upgraderBase) PrepareForUpgrade() []task.Interface {
-	var tasks []task.Interface
+	tasks := publishMarketPreinstallDeclaration()
 	tasks = append(tasks, upgradeKSCore()...)
 	tasks = append(tasks,
 		&task.LocalTask{
@@ -109,6 +109,14 @@ func (u upgraderBase) UpdateReleaseFile() []task.Interface {
 			Name:   "UpdateReleaseFile",
 			Action: new(terminus.WriteReleaseFile),
 		},
+		&task.LocalTask{
+			Name:   "UpdatePreparedMarker",
+			Action: new(terminus.PrepareFinished),
+		},
+		&task.LocalTask{
+			Name:   "UpdateInstalledMarker",
+			Action: new(terminus.InstallFinished),
+		},
 	}
 }
 
@@ -116,11 +124,15 @@ func (u upgraderBase) UpgradeSystemComponents() []task.Interface {
 	// this task updates the version in the CR
 	// so put this at last to make the whole pipeline
 	// reentrant
-	return []task.Interface{
+	tasks := []task.Interface{
 		&task.LocalTask{
 			Name:   "UpgradeGPUPlugin",
 			Action: new(gpu.InstallPlugin),
 		},
+	}
+	// same Intel GPU stack path as install (labels / drivers / NFD / plugin / xpumd)
+	tasks = append(tasks, upgradeIntelGPUPlugin()...)
+	tasks = append(tasks,
 		&task.LocalTask{
 			Name:   "UpgradeSettings",
 			Action: new(upgradeSettings),
@@ -147,11 +159,12 @@ func (u upgraderBase) UpgradeSystemComponents() []task.Interface {
 		},
 		&task.LocalTask{
 			Name:   "UpgradeL4BFLProxy",
-			Action: &upgradeL4BFLProxy{Tag: "v0.3.35"},
+			Action: &upgradeL4BFLProxy{Tag: "v0.3.48"},
 			Retry:  6,
 			Delay:  15 * time.Second,
 		},
-	}
+	)
+	return tasks
 }
 
 func (u upgraderBase) UpdateOlaresVersion() []task.Interface {
@@ -166,8 +179,8 @@ func (u upgraderBase) UpdateOlaresVersion() []task.Interface {
 func (u upgraderBase) PostUpgrade() []task.Interface {
 	return []task.Interface{
 		&task.LocalTask{
-			Name:   "EnsurePodsUpAndRunningAgain",
-			Action: new(terminus.CheckKeyPodsRunning),
+			Name:   "EnsureSystemComponentsUpAndRunningAgain",
+			Action: new(terminus.CheckSystemComponentsReady),
 			Delay:  15 * time.Second,
 			Retry:  60,
 		},

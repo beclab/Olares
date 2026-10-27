@@ -1,6 +1,7 @@
 ---
 outline: [2, 3]
-description: Use LLMFit on Olares to find the best LLM models for your hardware. It benchmarks your system and scores models on quality, speed, compatibility, and context length.
+title: Match LLMs to your hardware with LLMFit
+description: Run LLMFit on Olares to benchmark your hardware and find compatible LLMs, scored by model quality, speed, fit, and context length.
 head:
   - - meta
     - name: keywords
@@ -61,5 +62,5 @@ If you prefer the terminal-based TUI:
 
 ## Learn more
 
-- [Download and run local AI models via Ollama](ollama.md)
+- [Run local models with Engine Base apps](llm-base-apps.md): Deploy models with Ollama and other inference engines.
 - [Set up Open WebUI](openwebui.md)

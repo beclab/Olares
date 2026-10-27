@@ -254,3 +254,38 @@ func TestJSONPointerEscape(t *testing.T) {
 		}
 	}
 }
+
+func TestIsSharedEntranceWorkload(t *testing.T) {
+	if !isSharedEntranceWorkload(ptr.To(true), nil) {
+		t.Fatal("selector-matched entrance must be true")
+	}
+	if isSharedEntranceWorkload(ptr.To(false), nil) {
+		t.Fatal("explicit non-entrance must be false")
+	}
+	if !isSharedEntranceWorkload(nil, map[string]string{constants.AppSharedEntrancesLabel: "true"}) {
+		t.Fatal("shared-entrance label must mark entrance when selector unset")
+	}
+	if isSharedEntranceWorkload(nil, map[string]string{constants.AppSharedEntrancesLabel: "false"}) {
+		t.Fatal("shared-entrance=false must not mark entrance")
+	}
+	if isSharedEntranceWorkload(nil, nil) {
+		t.Fatal("nil signals must not mark entrance")
+	}
+}
+
+func TestApplyOutboundMeshInGate(t *testing.T) {
+	labels := map[string]string{constants.AppSharedEntrancesLabel: "true"}
+	if applyOutboundMeshInGate(false, true, true, labels) {
+		t.Fatal("no inject candidate must stay false")
+	}
+	if !applyOutboundMeshInGate(true, true, true, nil) {
+		t.Fatal("Shared+Decide entrance must keep mesh-in")
+	}
+	if applyOutboundMeshInGate(true, true, false, nil) {
+		t.Fatal("entrance without DeclaresSharedCaller must clear mesh-in")
+	}
+	deny := map[string]string{"gateway.olares.io/shared-caller-outbound": "false"}
+	if applyOutboundMeshInGate(true, true, true, deny) {
+		t.Fatal("outbound=false must clear mesh-in even with DeclaresSharedCaller")
+	}
+}

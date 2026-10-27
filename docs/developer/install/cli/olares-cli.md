@@ -1,64 +1,92 @@
 ---
 outline: [2, 3]
-description: Alphabetical reference for every olares-cli command that runs on the Olares host. Syntax, structure, and links to per-command pages with options and examples.
+description: Use common Olares CLI commands in the device terminal to check system status, collect logs, reset a password, and manage storage.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, olares-cli, device terminal, system logs, reset password, disk storage, GPU status
 ---
-# Command reference
 
-This page is the alphabetical reference for every `olares-cli` command that runs on the Olares host. Use it to look up syntax, options, and examples for a specific command. For commands that run on behalf of a logged-in user or inside an Olares app, see [Use with AI agents](../../cli-overview.md#where-to-go-next).
+# Common Olares CLI commands
 
-:::warning Applies to Olares 1.12.X
-Use this version of the reference if your Olares version is 1.12.X.
-:::
+Olares OS includes `olares-cli` at `/usr/local/bin/olares-cli`. This page covers the commands you are most likely to run yourself in the Olares device terminal for system maintenance and troubleshooting.
 
-:::info Root privileges required
-Most `olares-cli` commands require root. Use the root user or prepend commands with `sudo`.
-:::
+To manage files, apps, settings, and other Olares features through natural language, see [Use Olares CLI with AI agents](../../cli-install.md).
 
-:::info Using olares-cli with WSL
-If you installed Olares using the WSL (Windows Subsystem for Linux) method, run `olares-cli` inside the WSL environment. From PowerShell:
+## Before you begin
 
-```powershell
-wsl -d Ubuntu
+- [Access the Olares terminal](../../../manual/access-olares-terminal.md) on a device you administer.
+- Run commands with `sudo` when they require system privileges.
+- Run `olares-cli help` or `olares-cli <command> --help` to see the commands and options available in your installed version.
+
+## Check system status
+
+Check whether Olares services are running and view the current installation or upgrade status:
+
+```bash
+olares-cli status
 ```
+
+If the device has an NVIDIA GPU, check its driver and service status:
+
+```bash
+olares-cli gpu status
+```
+
+## Collect system logs
+
+Collect system, Kubernetes, container, kernel, and network diagnostics into an archive:
+
+```bash
+mkdir -p "$HOME/olares-logs"
+sudo olares-cli logs --max-lines 0 --output-dir "$HOME/olares-logs"
+```
+
+The last output line shows the archive path. Logs can contain private system information, so share the archive only through a private support channel.
+
+Learn more: [Collect diagnostic information](../../../manual/collect-diagnostic-information.md).
+
+## Reset a forgotten desktop password
+
+Replace `<username>` with the part of the Olares ID before `@`:
+
+```bash
+olares-cli user reset-password <username> -p <new-password>
+```
+
+If the command returns a permission error, follow [Forgotten desktop login password](../../../manual/help/ts-forget-login-password.md#step-3-reset-the-password) to check the error and choose the next step.
+
+## Reclaim disk space
+
+In Olares 1.12.6 and later, list container images that are not referenced by standard workloads:
+
+```bash
+olares-cli doctor images --unused
+```
+
+Review the results before deleting anything. Custom workloads can still depend on an image in this list.
+
+Learn more: [Free up disk space](../../../manual/free-up-disk-space.md).
+
+## Expand system storage
+
+For an LVM-based Olares installation, check which disks are available to add to the system volume:
+
+```bash
+olares-cli disk list-unmounted
+```
+
+:::warning The selected disk will be erased
+Extending storage destroys all data on the selected disk and merges it into the Olares system volume. Back up the disk before continuing.
 :::
 
-## Syntax
-The Olares CLI uses the following syntax:
+Follow [Expand Olares system storage](../../../manual/best-practices/expand-storage-in-olares.md) to identify the correct disk, perform the extension, and check the result.
 
-> `olares-cli command [subcommand] [argument] [options] `
+## Related guides
 
-where
-- `command`: Specifies the main operation you want to perform. For example, `olares-cli install`.
-- `subcommand`: Further specifies the task for commands that support additional operations. For example, `wizard` or `component`.
-- `argument`: Specifies the target resource or input data for the command, typically an ID, name, or file path. For example, in `olares-cli user activate <Olares ID> [options]`, `<Olares ID>` is the argument.
-- `options`: Optional arguments that modify the behavior of the `command`. Options include flags and options with arguments.
+Some Olares CLI commands are part of longer procedures and should not be run in isolation:
 
-Olares CLI allows you to temporarily override certain Olares default settings. Each option applies only to the command in which it is used.
-
-For example, if you use the `--base-dir` option with `olares-cli download wizard`, it will only affect the wizard downloading process and will not change the base directory for other commands, such as during the "install" phase.
-
-To get detailed help for any command, run `olares-cli help`.
-
-## Available CLI commands
-
-| Operation  | Syntax   | Description     |
-|--|--|--|
-| `backups` | `olares-cli backups <subcommand> [options]` | Manages backup-related operations.  |
-| `change-ip` | `olares-cli change-ip [options]` | Changes the IP address of the Olares OS.  |
-| `disk` | `olares-cli disk <subcommand>` | Manages storage resources in the Olares system. |
-| `download`  | `olares-cli download <subcommand> [options]` | Downloads specific resources. |
-| `gpu` | `olares-cli gpu <subcommand> [options]`  | Manages GPU-related operations. |
-| `info` | `olares-cli info [options]` | Displays general information about the downloaded Olares OS. |
-| `install`  | `olares-cli install [options]`  | Deploys system-level and user-level components of Olares. |
-| `logs` | `olares-cli logs [options]` | Collects logs from Olares system components for debugging and troubleshooting.  |
-| `node`  | `olares-cli node <subcommand> [options]` | Manages node-related operations. |
-| `osinfo`   | `olares-cli osinfo <subcommand> [options]`  | Displays general information about the operating system of the current device. |
-| `precheck`  | `olares-cli precheck [options]` | Verifies whether the system environment meets all requirements for Olares installation.  |
-| `prepare`  | `olares-cli prepare [options]` | Prepares the environment for the installation process, including setting up essential services and configurations of Olares. |
-| `release`   | `olares-cli release [options]` | Packages Olares installation resources for distribution or deployment.  |
-| `start`  | `olares-cli start [options]` | Starts Olares services and components. |
-| `status`  | `olares-cli status [options]` | Queries the local olaresd daemon and prints the current Olares system status. |
-| `stop` | `olares-cli stop [options]` | Stops Olares services and components.  |
-| `uninstall` | `olares-cli uninstall [options]` | Uninstalls Olares completely, or roll back the installation to a specific phase. |
-| `upgrade` | `olares-cli upgrade <subcommand> [options]` | Upgrades Olares and checks upgrade readiness and compatibility.|
-| `user` | `olares-cli user <subcommand> [options]`| Manages users in the Olares system |
+- [Install a specific CUDA version](../../../manual/best-practices/install-specific-cuda-version.md): install or enable GPU support when the automatic setup does not meet your requirements.
+- [Install and activate Olares from the command line](../../../manual/best-practices/activate-olares-using-cli.md): initialize a new device from its device terminal.
+- [Set up a multi-node Olares cluster](../../../manual/best-practices/install-olares-multi-node.md): enable shared storage and add a worker node.
+- [Upgrade a two-node Olares cluster](../../../one/upgrade-multi-node-cluster.md): manually coordinate an upgrade across the master and worker nodes.

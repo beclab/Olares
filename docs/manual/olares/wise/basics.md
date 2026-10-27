@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Get started with Wise in Olares. Learn to collect content, organize your reading library, add notes, track progress, and customize your reading experience.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Wise, reading library, save content, RSS feeds, notes, tags, LarePass extension
 ---
 # Wise basics
 

@@ -1,5 +1,6 @@
 ---
 outline: [2, 3]
+title: Set up multi-user notebooks with JupyterHub
 description: Set up JupyterHub on Olares to provide a multi-user Jupyter notebook environment for data science, research, and collaborative coding.
 head:
   - - meta

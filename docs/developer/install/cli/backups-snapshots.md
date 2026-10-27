@@ -1,4 +1,6 @@
 ---
+noindex: true
+description: The snapshots subcommand lists all available snapshots for a specific backup repository.
 outline: [2, 3]
 ---
 # `snapshots`

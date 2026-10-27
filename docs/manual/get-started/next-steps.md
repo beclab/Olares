@@ -1,5 +1,9 @@
 ---
 description: Guide to getting started with Olares after installation including initial setup, configuration, and essential features.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, getting started, next steps, system apps, LarePass, use cases, explore
 ---
 
 # What's next

@@ -2,6 +2,9 @@ package market
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -9,6 +12,56 @@ import (
 	"github.com/beclab/Olares/cli/cmd/ctl/market/cancel"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
+
+const (
+	// stateResuming mirrors the SPA's APP_STATUS.RESUME.DEFAULT: the
+	// per-user state-row value while a resume is in flight.
+	stateResuming = "resuming"
+	// stateUpgrading mirrors the SPA's APP_STATUS.UPGRADE.DEFAULT: the
+	// per-user state-row value while an upgrade is in flight.
+	stateUpgrading   = "upgrading"
+	stateApplyingEnv = "applyingEnv"
+)
+
+type inFlightCancelGate struct {
+	minVersion string
+	reason     string
+}
+
+// cancelGateByState lists the in-flight states whose cancel support landed
+// later than the rest of the pipeline. Both arrived in 1.12.7: the SPA
+// exposed the cancel button on a resuming app there, and Market's cancel
+// state whitelist gained its "upgrading" entry on the same line. Every other
+// in-flight state (pending / downloading / installing / ...) cancels on any
+// backend and is deliberately absent here.
+var cancelGateByState = map[string]inFlightCancelGate{
+	stateResuming:  {minVersion: "1.12.7", reason: "canceling a resuming app"},
+	stateUpgrading: {minVersion: "1.12.7", reason: "canceling an upgrading app"},
+}
+
+// Market's cancel whitelist has never held applyingEnv, though app-service
+// would accept it; the request is a bare 404 on every backend.
+var errApplyingEnvNotCancelable = errors.New("an app applying an env change cannot be cancelled or uninstalled until it settles — wait for it with 'olares-cli market status --watch'; it ends in 'running' or 'applyEnvFailed'")
+
+// gateInFlightCancel enforces the per-state backend floor from
+// cancelGateByState, and is a no-op for unlisted states. Fail-closed on
+// older / undetectable backends via cmdutil.RequireMinVersion: an older
+// backend answers such a cancel with a bare 404 ("App not found or current
+// state does not allow operation"), so the CLI rejects it up front instead.
+func gateInFlightCancel(ctx context.Context, f *cmdutil.Factory, state string) error {
+	if strings.TrimSpace(state) == stateApplyingEnv {
+		return errApplyingEnvNotCancelable
+	}
+	gate, ok := cancelGateByState[strings.TrimSpace(state)]
+	if !ok {
+		return nil
+	}
+	return cmdutil.RequireMinVersion(ctx, f, cmdutil.MinVersionGate{
+		Verb:       "market cancel",
+		MinVersion: gate.minVersion,
+		Reason:     gate.reason,
+	})
+}
 
 func NewCmdMarketCancel(f *cmdutil.Factory) *cobra.Command {
 	opts := newMarketOptions(f)
@@ -32,6 +85,13 @@ The terminal row carries the *underlying* op (install / upgrade / ...)
 as its opType, not "cancel" — matchOpType is off, no race-tracking
 gate applies.
 
+Cancelling an app that is *resuming* or *upgrading* requires Olares
+>= 1.12.7 (the resume-cancel UX the SPA shipped in 1.12.7, and Market's
+cancel state whitelist gained "upgrading" on the same line; both reuse
+this same DELETE). On an older backend the CLI rejects it; when the
+version is unknown, refresh the active profile with "olares-cli profile
+list --refresh-version". Every other in-flight state is unaffected.
+
 Examples:
   olares-cli market cancel firefox                         # fire-and-forget; returns once backend accepts
   olares-cli market cancel firefox --watch                 # block until row settles (any terminal state except *CancelFailed)
@@ -45,8 +105,39 @@ Examples:
 	}
 	opts.addSourceFlag(cmd, "market source id (1.12.6+ when state row is absent)")
 	opts.addOutputFlags(cmd)
+	describeLifecycleJSON(cmd)
 	opts.addWatchFlags(cmd)
 	return cmd
+}
+
+// explainCancelRejection turns Market's one-size-fits-all 404 into the reason
+// that actually applies. The backend answers "App not found or current state
+// does not allow operation" both for an app it has never heard of and for one
+// whose operation has already settled, and the second is the ordinary outcome
+// of racing a watch: by the time the cancel lands, the install it was meant to
+// stop has finished. Left as-is the sentence sends a reader looking for a
+// misspelt name, or — since the same words appear in the version gate's
+// description — for a backend that is too old.
+//
+// The state row read moments earlier is what separates them: having found the
+// app, "not found" cannot be the half that applied — unless the request went
+// out under a source the row disagrees with, which earns the same 404 on its
+// own. requestedSource is the source actually sent, so an explicit --source
+// that misses leaves the backend's sentence alone rather than sending the
+// reader past their own mistake.
+func explainCancelRejection(err error, appName, requestedSource string, row *installedAppRow) error {
+	var apiErr *APIError
+	if row == nil || !errors.As(err, &apiErr) || apiErr.StatusCode != http.StatusNotFound {
+		return err
+	}
+	if rowSource := strings.TrimSpace(row.Source); rowSource != "" && strings.TrimSpace(requestedSource) != rowSource {
+		return err
+	}
+	state := strings.TrimSpace(row.State)
+	if state == "" {
+		state = "unknown"
+	}
+	return fmt.Errorf("%w\n'%s' was in state '%s' and has no operation left to cancel — it most likely finished, or was already cancelled, before this request landed. Run \"olares-cli market status %s\" to see where it settled", err, appName, state, appName)
 }
 
 func runCancel(opts *MarketOptions, appName string) error {
@@ -88,6 +179,11 @@ func runCancel(opts *MarketOptions, appName string) error {
 			source = strings.TrimSpace(row.Source)
 		}
 		version = strings.TrimSpace(row.Version)
+		// Cancelling a resuming / upgrading app arrived in 1.12.7, and an
+		// applyingEnv app cannot be cancelled at all; see gateInFlightCancel.
+		if err := gateInFlightCancel(ctx, opts.factory, row.State); err != nil {
+			return opts.failOp("cancel", appName, err)
+		}
 	}
 
 	if atLeast126 && source == "" {
@@ -99,7 +195,7 @@ func runCancel(opts *MarketOptions, appName string) error {
 	method, path, body := cancel.Build(atLeast126, appName, source, version)
 	resp, err := mc.doRequest(ctx, method, path, body)
 	if err != nil {
-		return opts.failOp("cancel", appName, err)
+		return opts.failOp("cancel", appName, explainCancelRejection(err, appName, source, row))
 	}
 
 	result := newOperationResult(mc, "cancel", appName, "", "", "cancel requested", resp)

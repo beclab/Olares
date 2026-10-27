@@ -7,11 +7,11 @@ head:
       content: Olares One, Olares, 个人云
 ---
 
-# Olares One 常见问题
-
 :::warning
-本文档由 AI 自动翻译，可能存在表述差异。如需核对，请参考[英文原文](../../one/faq.md)。
+本文档由 AI 自动翻译，仅供参考。涉及关键操作或信息时，请以[英文原文](../../one/faq.md)为准。
 :::
+
+# Olares One 常见问题
 
 查找关于 Olares One 和系统功能的常见问题解答。
 
@@ -45,7 +45,7 @@ Olares One 即使在负载下也能安静运行。在实验室测试中，设备
 ### 功耗是多少？
 
 设备待机时消耗 30W。负载下，GPU 功耗取决于你选择的模式：
-* **静音模式**：GPU 95W
+* **静音模式**：GPU 50W
 * **性能模式**：GPU 175W
 
 当 CPU 单独满负荷运行时，功耗达到 120W。在组合最大负载下，系统平衡功耗分配，CPU 运行在 55W，GPU 运行在 175W。散热设计可维持这些性能水平。
@@ -71,9 +71,16 @@ Olares OS 通过一键部署和工作流集成简化了本地 AI，这与标准 
 ### 是否可以升级或扩展硬件？
 
 可以。你可以通过多个内部插槽和扩展端口修改硬件：
-* **存储**：主板包含两个 PCIe SSD 插槽，一个 PCIe 4.0 和一个 PCIe 5.0。预装的 2TB SSD 占用 PCIe 4.0 插槽。第二个插槽可用于通过 LVM 扩展系统存储，或用于双启动配置。
+* **存储**：主板包含两个 PCIe SSD 插槽，一个 PCIe 4.0 和一个 PCIe 5.0。预装的 2TB SSD 占用 PCIe 5.0 插槽。空闲的 PCIe 4.0 插槽可用于通过 LVM 扩展系统存储，或用于双启动配置。
 * **内存**：RAM 容量可升级至最大 128GB。
-* **外接显卡和显示器**：Thunderbolt 5 端口支持 eGPU 外接显卡扩展坞。它还支持扩展坞同时连接最多两个外部显示器，最高可达 8K 分辨率，视频输出由 RTX 5090 Mobile 处理。
+* **外接显卡**：可以连接兼容的雷电外置显卡设备。详情请参阅[可以给 Olares One 连接 eGPU 吗？](#可以给-olares-one-连接-egpu-吗)
+* **外接显示器**：Thunderbolt 5 端口支持通过扩展坞同时连接最多两台外接显示器，最高支持 8K 分辨率。视频输出由内置 RTX 5090 Mobile 处理。
+
+### 可以给 Olares One 连接 eGPU 吗？
+
+可以。你可以连接已安装 GPU 的雷电外置显卡设备，也可以通过独立供电的 eGPU dock 或 eGPU enclosure 使用兼容的桌面版 NVIDIA 显卡。不同硬件组合在 Olares OS 和 Windows 11 上的兼容状态及设置方法并不相同。
+
+请参阅[将 eGPU 连接到 Olares One](egpu.md)，查看已知兼容状态、当前限制和设置方法。
 
 ### 有没有办法通过 HDMI 查看 Olares OS 界面？
 
@@ -90,6 +97,17 @@ Olares OS 通过一键部署和工作流集成简化了本地 AI，这与标准 
 ### Olares One 是否设计为"始终在线"运行？
 
 是的。Olares One 作为个人 AI 云运行，可可靠支持 24/7 连续运行，适用于大语言模型（LLM）托管等场景。
+
+### Olares One 支持带外管理吗？
+
+Olares One 对常见带外管理功能的支持情况如下：
+
+- **自动开机**：支持。接通电源或停电后恢复供电时，Olares One 可以自动开机。
+  - 使用 Olares OS 时，需要 Olares OS 1.12.6 或更高版本以及 EC 固件 1.03 或更高版本。操作方法请参阅[管理硬件设置](hardware-settings.md#设置自动开机)。
+  - 使用 Ubuntu 时，需要通过命令行完成配置。操作方法请参阅 [Ubuntu Server](install-ubuntu-server.md#配置自动开机) 或 [Ubuntu Desktop](install-ubuntu-desktop.md#配置自动开机) 安装指南中的**配置自动开机**章节。
+- **网络唤醒（WOL）**：运行 Olares OS、Ubuntu 或 Windows 的 Olares One 支持此功能，需要 EC 固件不低于 1.01，并使用有线网络连接。同一局域网内的配置和唤醒方法，请参阅[为 Olares One 设置网络唤醒](wake-on-lan.md)。其中 Windows 步骤适用于从睡眠状态唤醒。
+- **远程 KVM**：不支持。
+- **IPMI**：不支持。
 
 ### 使用 Olares One 是否有额外费用？
 

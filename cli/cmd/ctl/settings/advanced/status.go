@@ -111,6 +111,7 @@ func renderStatusTable(w io.Writer, raw json.RawMessage) error {
 		"memory",
 		"disk",
 		"gpu_info",
+		"gpu_list",
 		"updateTime",
 	}
 	printed := map[string]struct{}{}

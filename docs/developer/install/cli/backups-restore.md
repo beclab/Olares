@@ -1,4 +1,6 @@
 ---
+noindex: true
+description: The restore subcommand allows you to restore data from a specified backup repository and snapshot to a target directory.
 outline: [2, 3]
 ---
 # `restore`

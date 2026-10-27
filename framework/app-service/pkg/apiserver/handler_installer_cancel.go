@@ -60,13 +60,15 @@ func (h *Handler) cancel(req *restful.Request, resp *restful.Response) {
 		return
 	}
 	now := metav1.Now()
+	cancelMsg, cancelReason := cancelStatus(cancelType, cancelState)
 	status := v1alpha1.ApplicationManagerStatus{
 		OpType:     v1alpha1.CancelOp,
 		OpID:       opID,
 		LastState:  am.Status.LastState,
 		State:      cancelState,
 		Progress:   "0.00",
-		Message:    cancelType,
+		Message:    cancelMsg,
+		Reason:     cancelReason,
 		StatusTime: &now,
 		UpdateTime: &now,
 	}
@@ -80,4 +82,70 @@ func (h *Handler) cancel(req *restful.Request, resp *restful.Response) {
 		Response: api.Response{Code: 200},
 		Data:     api.InstallationResponseData{UID: app, OpID: opID},
 	})
+}
+
+// cancelStatus maps (cancelType, targetCancelingState) to the
+// (Message, Reason) tuple written to ApplicationManagerStatus when
+// handling POST /apps/{name}/cancel. It mirrors the per-operation
+// wording the reconcile-driven *App.Cancel() path writes via
+// constants.<X>CanceledByTimeout / <X>CancelBySystem, so downstream
+// consumers see consistent vocabulary regardless of how the cancel was
+// triggered, and can branch on Reason (a stable camelCase tag) without
+// parsing Message (a human-readable sentence).
+//
+// cancelType comes straight from the ?type= query parameter. The
+// handler normalises empty -> "operate" before calling; anything other
+// than the documented "timeout" value (including the canonical
+// "operate") maps to the *ByUser variants.
+//
+// Note: the Reason written here is also what propagates into the
+// subsequent Stopping state — baseStatefulApp.finishCancelToStopping
+// passes reason="" to updateStatus, whose preserve-on-empty semantics
+// then carry this same tag forward. That's intentional: the (state,
+// reason) tuple on Stopping should still reveal which kind of cancel
+// led there, not just the generic "stopping" state name.
+//
+// Test invariant: controllers/state_flow_lineages_test.go's
+// mirrorCancelStatus MUST stay in lockstep with this switch — drift
+// will surface as a dump mismatch in TestStateFlow_Lineages_Payloads.
+func cancelStatus(cancelType string, cancelState v1alpha1.ApplicationManagerState) (message, reason string) {
+	isTimeout := cancelType == "timeout"
+	switch cancelState {
+	case v1alpha1.PendingCanceling, v1alpha1.InstallingCanceling:
+		if isTimeout {
+			return constants.InstallCanceledByTimeout, constants.InstallCancelBySystem
+		}
+		return constants.InstallCanceledByUser, constants.InstallCancelByUser
+	case v1alpha1.DownloadingCanceling:
+		if isTimeout {
+			return constants.DownloadCanceledByTimeout, constants.DownloadCancelBySystem
+		}
+		return constants.DownloadCanceledByUser, constants.DownloadCancelByUser
+	case v1alpha1.InitializingCanceling:
+		if isTimeout {
+			return constants.InitializeCanceledByTimeout, constants.InitializeCancelBySystem
+		}
+		return constants.InitializeCanceledByUser, constants.InitializeCancelByUser
+	case v1alpha1.ResumingCanceling:
+		if isTimeout {
+			return constants.ResumeCanceledByTimeout, constants.ResumeCancelBySystem
+		}
+		return constants.ResumeCanceledByUser, constants.ResumeCancelByUser
+	case v1alpha1.UpgradingCanceling:
+		if isTimeout {
+			return constants.UpgradeCanceledByTimeout, constants.UpgradeCancelBySystem
+		}
+		return constants.UpgradeCanceledByUser, constants.UpgradeCancelByUser
+	case v1alpha1.ApplyingEnvCanceling:
+		if isTimeout {
+			return constants.ApplyEnvCanceledByTimeout, constants.ApplyEnvCancelBySystem
+		}
+		return constants.ApplyEnvCanceledByUser, constants.ApplyEnvCancelByUser
+	}
+	// Defensive: unreachable today because the calling switch on the
+	// source state only produces the seven *Canceling values handled
+	// above. If a new cancelable state is added, fall back to the raw
+	// cancelType / state name so the AM still gets *some* message and
+	// reason while the test suite surfaces the gap.
+	return cancelType, cancelState.String()
 }

@@ -1,3 +1,10 @@
+---
+description: During installation, Olares injects extended field into the APP, using the configuration from OlaresManifest.yaml.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Helm extensions, OlaresManifest.yaml, deployment variables, app dependencies, Values
+---
 # Extensions field to Helm in Olares
 
 During installation, Olares injects extended field into the APP, using the configuration from [OlaresManifest.yaml](manifest.md).

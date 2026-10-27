@@ -72,16 +72,25 @@ func BuildBaseHelmValues(ctx context.Context, kubeConfig *rest.Config, appConfig
 	}
 	values["nodes"] = nodeInfo
 
-	deviceName, err := utils.GetDeviceName()
-	if err != nil {
-		return values, err
-	}
-	values["deviceName"] = deviceName
-
 	kClient, err := kubernetes.NewForConfig(kubeConfig)
 	if err != nil {
 		return values, err
 	}
+
+	isOnMinikube, err := utils.IsRunningOnMinikube(ctx, kClient)
+	if err != nil {
+		return values, err
+	}
+	if isOnMinikube {
+		values["deviceName"] = "selfhosted"
+	} else {
+		deviceName, err := utils.GetDeviceName()
+		if err != nil {
+			return values, err
+		}
+		values["deviceName"] = deviceName
+	}
+
 	nodes, err := kClient.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return values, err
@@ -117,8 +126,11 @@ func BuildBaseHelmValues(ctx context.Context, kubeConfig *rest.Config, appConfig
 	// manifest-declared values so Helm template rendering matches what the
 	// final cluster will see.
 	if appConfig.HasWorkloadReplicas() {
-		values["workloads"] = buildWorkloadsValues(appConfig.WorkloadReplicas, -1)
+		replicas := appConfig.EffectiveWorkloadReplicas()
+		values["workloads"] = buildWorkloadsValues(&replicas, -1)
 	}
+
+	values["exposePorts"] = buildExposePortsValues(appConfig.Ports)
 
 	if dryRun {
 		// Placeholder values for keys that require HelmOps context, have side
@@ -159,6 +171,30 @@ func BuildBaseHelmValues(ctx context.Context, kubeConfig *rest.Config, appConfig
 	}
 
 	return values, nil
+}
+
+// buildExposePortsValues renders .Values.exposePorts, the host port the
+// platform exposes for each manifest `ports[]` entry, keyed by port name:
+//
+//	{
+//	  "<port-name>": <exposePort>,
+//	  ...
+//	}
+//
+// An exposePort left out of the manifest is allocated by SetExposePorts,
+// so without this the chart cannot know it. A workload that advertises its
+// own address needs that number rather than its container port: a WebRTC
+// SFU writing ICE candidates, a game server announcing itself to clients.
+//
+// Install and upgrade allocate before rendering, so the value is final
+// there. The image-download dry-run renders before allocation and sees 0
+// for any port the manifest did not pin.
+func buildExposePortsValues(ports []appcfg.ServicePort) map[string]interface{} {
+	out := make(map[string]interface{}, len(ports))
+	for _, p := range ports {
+		out[p.Name] = p.ExposePort
+	}
+	return out
 }
 
 // buildWorkloadsValues renders the .Values.workloads sub-tree from the
@@ -206,10 +242,11 @@ func (h *HelmOps) SetValues(isInstallOp bool) (values map[string]interface{}, er
 	// Apps without WorkloadReplicas leave this key unset and follow the
 	// legacy single-phase flow.
 	if h.app.HasWorkloadReplicas() {
+		replicas := h.app.EffectiveWorkloadReplicas()
 		if isInstallOp || h.options.SkipWaitForStartUp {
-			values["workloads"] = buildWorkloadsValues(h.app.WorkloadReplicas, 0)
+			values["workloads"] = buildWorkloadsValues(&replicas, 0)
 		} else {
-			values["workloads"] = buildWorkloadsValues(h.app.WorkloadReplicas, -1)
+			values["workloads"] = buildWorkloadsValues(&replicas, -1)
 		}
 	}
 	err = h.AddEnvironmentVariables(values, false)
@@ -433,11 +470,15 @@ func addEnvironmentVariables(ctx context.Context, kubeConfig *rest.Config, appCo
 		return err
 	}
 
+	envNames := make([]string, 0, len(appEnv.Envs))
 	for _, env := range appEnv.Envs {
 		values[constants.OlaresEnvHelmValuesKey].(map[string]interface{})[env.EnvName] = env.GetEffectiveValue()
+		envNames = append(envNames, env.EnvName)
 	}
 
-	klog.Infof("Added environment variables to Helm values: %+v", values[constants.OlaresEnvHelmValuesKey])
+	// Names only: an env declared type=password carries what the user typed at install.
+	klog.Infof("Added %d environment variables to Helm values for %s/%s: %v",
+		len(envNames), appConfig.Namespace, appConfig.AppName, envNames)
 	return nil
 }
 

@@ -2,35 +2,35 @@
 // Settings -> VPN page. Four flavors of endpoints ride here:
 //
 //  1. Headscale proxy at /headscale/...                  (raw upstream JSON;
-//                                                        no BFL envelope)
+//     no BFL envelope)
 //  2. public-domain-policy at /api/launcher-public-...   (the one path
-//                                                        user-service
-//                                                        actually unwraps
-//                                                        — body is the
-//                                                        inner data)
+//     user-service
+//     actually unwraps
+//     — body is the
+//     inner data)
 //  3. Subroutes / SSH toggles at /api/acl/{ssh,subroutes}
-//                                                        (BFL envelope on
-//                                                        the read; the
-//                                                        SPA only "sees"
-//                                                        the inner shape
-//                                                        because of its
-//                                                        global axios
-//                                                        response
-//                                                        interceptor.
-//                                                        CLI callers must
-//                                                        unwrap manually
-//                                                        — see ssh.go's
-//                                                        decodeSSHStatus.
-//                                                        POST returns an
-//                                                        opaque success
-//                                                        body we don't
-//                                                        consume.)
+//     (BFL envelope on
+//     the read; the
+//     SPA only "sees"
+//     the inner shape
+//     because of its
+//     global axios
+//     response
+//     interceptor.
+//     CLI callers must
+//     unwrap manually
+//     — see ssh.go's
+//     decodeSSHStatus.
+//     POST returns an
+//     opaque success
+//     body we don't
+//     consume.)
 //  4. Per-app ACL at /api/acl/app/status                 (BFL envelope on
-//                                                        both ends; GET
-//                                                        treats code!=0
-//                                                        as "no ACL
-//                                                        configured" not
-//                                                        a hard error)
+//     both ends; GET
+//     treats code!=0
+//     as "no ACL
+//     configured" not
+//     a hard error)
 //
 // common.go centralizes the per-area Doer + output plumbing in the same
 // shape as the other settings subpackages. We deliberately don't reach
@@ -49,6 +49,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/beclab/Olares/cli/pkg/bflenvelope"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 	"github.com/beclab/Olares/cli/pkg/credential"
 	"github.com/beclab/Olares/cli/pkg/whoami"
@@ -115,46 +116,18 @@ func printJSON(w io.Writer, v interface{}) error {
 	return enc.Encode(v)
 }
 
-// bflEnvelope is the BFL response wrapper that comes back on the per-app
-// ACL endpoints. Most other vpn paths either hit Headscale directly (raw
-// JSON, no envelope) or a user-service route that already unwraps the
-// envelope before responding (public-domain-policy, ssh status). The
-// per-app ACL editor is the odd one out — both the GET and the POST
-// round-trip the envelope verbatim.
-type bflEnvelope struct {
-	Code    int             `json:"code"`
-	Message string          `json:"message"`
-	Data    json.RawMessage `json:"data"`
-}
-
 // doMutateEnvelope is the POST/PUT/DELETE counterpart of plain DoJSON
-// for routes that surface a BFL envelope on the response. Treats
-// `code: 0` and `code: 200` as success; anything else surfaces the
-// upstream message verbatim. Used today only by the per-app ACL editor;
-// the existing ssh/subroutes/public-domain-policy writes pass nil out
-// because user-service unwraps the envelope server-side for those
-// paths.
+// for routes that surface a BFL envelope on the response. Most other vpn
+// paths either hit Headscale directly (raw JSON, no envelope) or a
+// user-service route that unwraps the envelope before responding
+// (public-domain-policy, ssh status), which is why the ssh / subroutes /
+// public-domain-policy writes pass a nil out.
 func doMutateEnvelope(ctx context.Context, d Doer, method, path string, body, out interface{}) error {
-	var env bflEnvelope
+	var env bflenvelope.Envelope
 	if err := d.DoJSON(ctx, method, path, body, &env); err != nil {
 		return err
 	}
-	switch env.Code {
-	case 0, 200:
-	default:
-		msg := strings.TrimSpace(env.Message)
-		if msg == "" {
-			msg = fmt.Sprintf("server returned code=%d", env.Code)
-		}
-		return fmt.Errorf("%s %s: %s", method, path, msg)
-	}
-	if out == nil || len(env.Data) == 0 {
-		return nil
-	}
-	if err := json.Unmarshal(env.Data, out); err != nil {
-		return fmt.Errorf("%s %s: decode data: %w", method, path, err)
-	}
-	return nil
+	return bflenvelope.Data(method, path, env, out)
 }
 
 func nonEmpty(s string) string {
@@ -184,4 +157,3 @@ func joinNonEmpty(ss []string, sep string) string {
 	}
 	return out
 }
-

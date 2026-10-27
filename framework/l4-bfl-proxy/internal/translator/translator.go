@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 
+	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/l4-bfl-proxy/internal/ir"
 	"github.com/beclab/l4-bfl-proxy/internal/message"
 	"github.com/telepresenceio/watchable"
@@ -14,16 +15,28 @@ import (
 )
 
 const (
-	vpnCIDR               = "100.64.0.0/16"
-	autheliaClusterPrefix = "authelia_backend"
-	autheliaHostFormat    = "authelia-backend.user-system-%s.svc.cluster.local"
-	fileserverHostFormat  = "files-%s.user-system-%s.svc.cluster.local"
-	autheliaPort          = uint32(9091)
-	autheliaPathPrefix    = "/api/authz/ext-authz/"
+	vpnCIDR                  = "100.64.0.0/16"
+	autheliaClusterPrefix    = "authelia_backend"
+	autheliaHostFormat       = "authelia-backend.user-system-%s.svc.cluster.local"
+	fileserverHostFormat     = "files-%s.user-system-%s.svc.cluster.local"
+	autheliaPort             = uint32(9091)
+	autheliaVerifyPathPrefix = "/api/verify/"
+
+	// probeUARegex matches webhook.getProbeUA shape: {uuid}/{md5hex}.
+	probeUARegex = `^[0-9a-fA-F-]+/[0-9a-fA-F]+$`
 
 	settingsCustomDomain                 = "customDomain"
 	settingsCustomDomainThirdLevelDomain = "third_level_domain"
 	settingsCustomDomainThirdPartyDomain = "third_party_domain"
+
+	// entranceTypeDev marks a development entrance, which gets an extra
+	// `<appid>-<port>.<zone>` alias routed to the same upstream.
+	entranceTypeDev = "dev"
+
+	// systemServicePriority makes system-service virtual hosts (auth/desktop/
+	// wizard) outrank apps and custom domains when a domain is claimed by more
+	// than one virtual host in the same route config.
+	systemServicePriority = 100
 )
 
 var nodeLocationPrefixes = []string{
@@ -458,10 +471,11 @@ func (t *Translator) buildUserVirtualHosts(user *message.UserInfo, zone string, 
 			Name:       fmt.Sprintf("profile_root_%s", user.Name),
 			PathPrefix: "/",
 			Cluster:    profileCluster,
-			RequestHeaders: map[string]string{
-				"X-BFL-USER": user.Name,
-			},
+			// Outbound X-BFL-USER is set by Authelia on ExtAuth allow (session user);
+			// do not stamp zone owner here.
+			ExtAuth: buildAppExtAuthConfig(user),
 		}},
+		Priority: systemServicePriority,
 	}
 	vhosts = append(vhosts, profileVHost)
 
@@ -489,7 +503,7 @@ func (t *Translator) buildUserVirtualHosts(user *message.UserInfo, zone string, 
 func (t *Translator) buildAppVirtualHosts(user *message.UserInfo, app *message.AppInfo, zone string, isEphemeral bool, clusterSet map[string]*ir.ClusterIR) []*ir.VirtualHostIR {
 	var vhosts []*ir.VirtualHostIR
 
-	var appDomainConfigs []defaultThirdLevelDomainConfig
+	var appDomainConfigs []appv1alpha1.DefaultThirdLevelDomainConfig
 	if raw, ok := app.Settings["defaultThirdLevelDomainConfig"]; ok && raw != "" {
 		err := json.Unmarshal([]byte(raw), &appDomainConfigs)
 		if err != nil {
@@ -505,7 +519,7 @@ func (t *Translator) buildAppVirtualHosts(user *message.UserInfo, app *message.A
 			continue
 		}
 
-		prefix := resolveEntrancePrefix(app.Entrances, index, app.Appid, appDomainConfigs)
+		prefix := appv1alpha1.ResolveEntranceIDWithDefaultThirdLevelDomainOverride(app.Entrances, index, app.Appid, appDomainConfigs)
 
 		hostname := fmt.Sprintf("%s.%s", prefix, zone)
 		if isEphemeral {
@@ -528,11 +542,37 @@ func (t *Translator) buildAppVirtualHosts(user *message.UserInfo, app *message.A
 			}
 		}
 
-		clusterName := fmt.Sprintf("app_%s_%s_%s", user.Name, app.Name, entrance.Name)
-		upstreamHost := fmt.Sprintf("%s.%s.svc.cluster.local", entrance.Host, app.Namespace)
-		clusterSet[clusterName] = &ir.ClusterIR{
-			Name: clusterName, Host: upstreamHost, Port: uint32(entrance.Port), UseDNS: true,
+		// A "dev" entrance additionally answers on `<appid>-<port>.<zone>`
+		// (plus its .olares.local alias), routed to the same upstream as the
+		// entrance's primary hostname.
+		if entrance.Type == entranceTypeDev {
+			devPrefix := fmt.Sprintf("%s-%d", app.Appid, entrance.Port)
+			devHostname := fmt.Sprintf("%s.%s", devPrefix, zone)
+
+			domains = append(domains, devHostname)
+			if devLocal := toLocalDomain(devHostname); devLocal != devHostname {
+				domains = append(domains, devLocal)
+			}
 		}
+
+		clusterName := fmt.Sprintf("app_%s_%s_%s", user.Name, app.Name, entrance.Name)
+		cluster := &ir.ClusterIR{
+			Name:   clusterName,
+			Host:   fmt.Sprintf("%s.%s.svc.cluster.local", entrance.Host, app.Namespace),
+			Port:   uint32(entrance.Port),
+			UseDNS: true,
+		}
+		// A "dev" entrance's Host is already the backing pod IP (set by
+		// proxylistener), so route straight to it as a STATIC cluster rather
+		// than a Kubernetes service DNS name. Dev apps often have no
+		// stable/ready service endpoint, which makes a STRICT_DNS cluster
+		// resolve to nothing and return 503 no_healthy_upstream; hitting the
+		// pod IP directly avoids that.
+		if entrance.Type == entranceTypeDev {
+			cluster.Host = entrance.Host
+			cluster.UseDNS = false
+		}
+		clusterSet[clusterName] = cluster
 
 		_, enableOIDC := app.Settings["oidc.client.id"]
 
@@ -544,6 +584,9 @@ func (t *Translator) buildAppVirtualHosts(user *message.UserInfo, app *message.A
 			Language:              user.Language,
 			UserZone:              zone,
 			UserName:              user.Name,
+			// Only the (files,settings apps) vhost needs Envoy-level CORS
+			IsFileserver: fileserverPatchApps[prefix],
+			Priority:     systemAppPriority(app.Name),
 		}
 
 		var routes []*ir.HTTPRouteIR
@@ -552,22 +595,46 @@ func (t *Translator) buildAppVirtualHosts(user *message.UserInfo, app *message.A
 			routes = append(routes, t.buildFileserverRoutes(user, clusterSet)...)
 		}
 
+		if user.DenyAll &&
+			app.IsSysApp &&
+			app.Appid == "olares-app" &&
+			entrance.Name == "headscale" {
+			publicRoute := func(name, path, method, target string, upgrade bool) *ir.HTTPRouteIR {
+				return &ir.HTTPRouteIR{
+					Name:             fmt.Sprintf("headscale_%s_%s", user.Name, name),
+					PathExact:        path,
+					Cluster:          target,
+					HeaderMatches:    []ir.HeaderMatchIR{{Name: ":method", Exact: method}},
+					ExtAuth:          buildAppExtAuthConfig(user),
+					WebSocketUpgrade: upgrade,
+					BypassSourceCIDR: true,
+				}
+			}
+			routes = append(routes,
+				publicRoute("key_get", "/key", "GET", clusterName, false),
+				publicRoute("ts2021_get", "/ts2021", "GET", clusterName, true),
+				publicRoute("ts2021_post", "/ts2021", "POST", clusterName, true),
+				publicRoute("refresh_post", "/api/refresh", "POST", clusterName, false),
+				publicRoute("refresh_options", "/api/refresh", "OPTIONS", clusterName, false),
+			)
+		}
+
 		defaultRoute := &ir.HTTPRouteIR{
-			Name:       fmt.Sprintf("default_%s_%s_%s", user.Name, app.Name, entrance.Name),
-			PathPrefix: "/",
-			Cluster:    clusterName,
-			RequestHeaders: map[string]string{
-				"X-BFL-USER": user.Name,
-			},
+			Name:             fmt.Sprintf("default_%s_%s_%s", user.Name, app.Name, entrance.Name),
+			PathPrefix:       "/",
+			Cluster:          clusterName,
 			WebSocketUpgrade: true,
 		}
 
-		// Shared (v3) apps are cluster-wide and open to all users, so the
-		// whole app is gated behind the viewing user's Authelia instance.
-		if app.IsShared {
-			defaultRoute.ExtAuth = buildSharedAppExtAuthConfig(user)
-		}
+		defaultRoute.ExtAuth = buildAppExtAuthConfig(user)
 
+		// F3: Exact probe paths with signed UA bypass ExtAuth (oes parity).
+		// Emit before the catch-all so Envoy matches them first.
+		routes = append(routes, buildProbeBypassRoutes(
+			fmt.Sprintf("%s_%s_%s", user.Name, app.Name, entrance.Name),
+			clusterName,
+			app.EntranceProbePaths[entrance.Name],
+		)...)
 		routes = append(routes, defaultRoute)
 
 		vhost.Routes = routes
@@ -577,14 +644,58 @@ func (t *Translator) buildAppVirtualHosts(user *message.UserInfo, app *message.A
 	return vhosts
 }
 
-// buildSharedAppExtAuthConfig returns the Authelia ext_auth config used to gate
-// shared (v3) apps behind the viewing user's per-user Authelia instance. It is
-// intentionally independent from the fileserver ext_auth wiring so the two can
-// evolve separately.
-func buildSharedAppExtAuthConfig(user *message.UserInfo) *ir.ExtAuthConfigIR {
+// buildProbeBypassRoutes emits Exact path routes that skip ExtAuth only when
+// User-Agent matches the webhook probe signature format. Requests to the same
+// path without a valid UA fall through to the default authenticated route.
+func buildProbeBypassRoutes(namePrefix, cluster string, paths []string) []*ir.HTTPRouteIR {
+	if len(paths) == 0 {
+		return nil
+	}
+	seen := map[string]struct{}{}
+	var routes []*ir.HTTPRouteIR
+	for _, path := range paths {
+		path = strings.TrimSpace(path)
+		if path == "" || path == "/" {
+			continue
+		}
+		if !strings.HasPrefix(path, "/") {
+			path = "/" + path
+		}
+		if _, ok := seen[path]; ok {
+			continue
+		}
+		seen[path] = struct{}{}
+		routes = append(routes, &ir.HTTPRouteIR{
+			Name:      fmt.Sprintf("probe_%s_%s", namePrefix, sanitizeProbePath(path)),
+			PathExact: path,
+			Cluster:   cluster,
+			HeaderMatches: []ir.HeaderMatchIR{{
+				Name:      "user-agent",
+				SafeRegex: probeUARegex,
+			}},
+			// ExtAuth nil → keep VH-level ext_authz Disabled (auth bypass).
+			// No outbound zone-owner X-BFL-USER stamp (Authelia owns identity headers).
+		})
+	}
+	return routes
+}
+
+func sanitizeProbePath(path string) string {
+	path = strings.TrimPrefix(path, "/")
+	path = strings.ReplaceAll(path, "/", "_")
+	path = strings.ReplaceAll(path, ".", "_")
+	if path == "" {
+		return "root"
+	}
+	return path
+}
+
+// buildAppExtAuthConfig returns Authelia ext_auth for app routes.
+// All non-public routes use Legacy /api/verify/ (filter default; no path split).
+func buildAppExtAuthConfig(user *message.UserInfo) *ir.ExtAuthConfigIR {
 	return &ir.ExtAuthConfigIR{
 		Cluster:    fmt.Sprintf("%s_%s", autheliaClusterPrefix, user.Name),
-		PathPrefix: autheliaPathPrefix,
+		PathPrefix: autheliaVerifyPathPrefix,
 		RequestHeaders: []string{
 			"X-Original-URL",
 			"X-Original-Method",
@@ -602,7 +713,7 @@ func (t *Translator) buildFileserverRoutes(user *message.UserInfo, clusterSet ma
 	autheliaClName := fmt.Sprintf("%s_%s", autheliaClusterPrefix, user.Name)
 	extAuthCfg := &ir.ExtAuthConfigIR{
 		Cluster:    autheliaClName,
-		PathPrefix: autheliaPathPrefix,
+		PathPrefix: autheliaVerifyPathPrefix,
 		RequestHeaders: []string{
 			"X-Original-URL",
 			"X-Original-Method",
@@ -613,6 +724,19 @@ func (t *Translator) buildFileserverRoutes(user *message.UserInfo, clusterSet ma
 		},
 	}
 
+	// Pass 1: node-scoped routes for every node. These carry the node name in
+	// the path (e.g. /api/resources/external/<node>/ or the regex share form
+	// ^/api/resources/share/<node>_.*) and are the MORE SPECIFIC matches.
+	//
+	// They MUST all be emitted before the master's generic catch-all prefixes
+	// (pass 2), because Envoy evaluates routes top-to-bottom and stops at the
+	// first match. A generic master prefix like /api/resources/external/ is a
+	// strict prefix of /api/resources/external/<node>/, so if it came first it
+	// would swallow every non-master node's request and misroute it to the
+	// master node. The old single-pass loop emitted the master routes right
+	// after the master node's own scoped routes, which — since FileserverNodes
+	// is sorted by name and the master usually sorts first — placed them ahead
+	// of later nodes' scoped routes and caused exactly that misrouting.
 	for _, node := range user.FileserverNodes {
 		proxyCluster := fmt.Sprintf("files_%s_%s", user.Name, node.NodeName)
 		proxyHost := fmt.Sprintf(fileserverHostFormat, node.NodeName, user.Name)
@@ -626,7 +750,6 @@ func (t *Translator) buildFileserverRoutes(user *message.UserInfo, clusterSet ma
 				PathPrefix: fmt.Sprintf("%s%s/", pfx, node.NodeName),
 				Cluster:    proxyCluster,
 				RequestHeaders: map[string]string{
-					"X-BFL-USER":       user.Name,
 					"X-Terminus-Node":  node.NodeName,
 					"X-Provider-Proxy": proxyHost,
 				},
@@ -641,7 +764,6 @@ func (t *Translator) buildFileserverRoutes(user *message.UserInfo, clusterSet ma
 				PathRegex: fmt.Sprintf("^%s%s_.*", pfx, node.NodeName),
 				Cluster:   proxyCluster,
 				RequestHeaders: map[string]string{
-					"X-BFL-USER":       user.Name,
 					"X-Terminus-Node":  node.NodeName,
 					"X-Provider-Proxy": proxyHost,
 				},
@@ -649,22 +771,28 @@ func (t *Translator) buildFileserverRoutes(user *message.UserInfo, clusterSet ma
 				WebSocketUpgrade: true,
 			})
 		}
+	}
 
-		if node.IsMaster {
-			for _, pfx := range masterLocationPrefixes {
-				routes = append(routes, &ir.HTTPRouteIR{
-					Name:       fmt.Sprintf("files_master_%s_%s", user.Name, sanitizeName(pfx)),
-					PathPrefix: pfx,
-					Cluster:    proxyCluster,
-					RequestHeaders: map[string]string{
-						"X-BFL-USER":       user.Name,
-						"X-Terminus-Node":  node.NodeName,
-						"X-Provider-Proxy": proxyHost,
-					},
-					ExtAuth:          extAuthCfg,
-					WebSocketUpgrade: true,
-				})
-			}
+	// Pass 2: master node generic catch-all prefixes (no node name), emitted
+	// last so the node-scoped routes above always take precedence.
+	for _, node := range user.FileserverNodes {
+		if !node.IsMaster {
+			continue
+		}
+		proxyCluster := fmt.Sprintf("files_%s_%s", user.Name, node.NodeName)
+		proxyHost := fmt.Sprintf(fileserverHostFormat, node.NodeName, user.Name)
+		for _, pfx := range masterLocationPrefixes {
+			routes = append(routes, &ir.HTTPRouteIR{
+				Name:       fmt.Sprintf("files_master_%s_%s", user.Name, sanitizeName(pfx)),
+				PathPrefix: pfx,
+				Cluster:    proxyCluster,
+				RequestHeaders: map[string]string{
+					"X-Terminus-Node":  node.NodeName,
+					"X-Provider-Proxy": proxyHost,
+				},
+				ExtAuth:          extAuthCfg,
+				WebSocketUpgrade: true,
+			})
 		}
 	}
 
@@ -688,21 +816,41 @@ func (t *Translator) buildSystemVirtualHost(user *message.UserInfo, def systemSe
 		domains = append(domains, localHost)
 	}
 
+	route := &ir.HTTPRouteIR{
+		Name:             fmt.Sprintf("nonapp_%s_root_%s", def.Name, user.Name),
+		PathPrefix:       "/",
+		Cluster:          clusterName,
+		WebSocketUpgrade: true,
+	}
+	// desktop is system human HTTP and must use Authelia /api/verify/.
+	// wizard is pre-auth activation UI — no ExtAuth (cookie chicken-egg).
+	// auth is the IdP itself — do not attach ExtAuth (loop risk).
+	//
+	// auth/wizard have no ExtAuth, so Authelia Bridge never receives the
+	// ExtAuth HeadersToAdd owner stamp. Stamp zone-owner X-BFL-USER on those
+	// routes only (after early client-header strip) so /api/firstfactor and
+	// similar IdP APIs can resolve the user. desktop keeps no IR stamp:
+	// ExtAuth supplies the bridge header; outbound session identity comes
+	// from Authelia on allow.
+	if def.Name == "auth" || def.Name == "wizard" {
+		route.RequestHeaders = map[string]string{
+			"X-BFL-USER": user.Name,
+		}
+	}
+	if def.Name == "desktop" {
+		route.ExtAuth = buildAppExtAuthConfig(user)
+	}
+
 	return &ir.VirtualHostIR{
 		Name:     fmt.Sprintf("nonapp_%s_%s", def.Name, user.Name),
 		Domains:  domains,
 		Language: user.Language,
 		UserZone: zone,
 		UserName: user.Name,
-		Routes: []*ir.HTTPRouteIR{{
-			Name:       fmt.Sprintf("nonapp_%s_root_%s", def.Name, user.Name),
-			PathPrefix: "/",
-			Cluster:    clusterName,
-			RequestHeaders: map[string]string{
-				"X-BFL-USER": user.Name,
-			},
-			WebSocketUpgrade: true,
-		}},
+		// System services (auth/desktop/wizard) outrank apps and custom domains
+		// when claiming a domain, so a misconfigured app cannot hijack them.
+		Priority: systemServicePriority,
+		Routes:   []*ir.HTTPRouteIR{route},
 	}
 }
 
@@ -736,20 +884,20 @@ func (t *Translator) buildCustomDomainVirtualHosts(user *message.UserInfo, app *
 		}
 
 		customRoute := &ir.HTTPRouteIR{
-			Name:       fmt.Sprintf("custom_%s_%s_%s_root", user.Name, app.Name, entrance.Name),
-			PathPrefix: "/",
-			Cluster:    clusterName,
-			RequestHeaders: map[string]string{
-				"X-BFL-USER": user.Name,
-			},
+			Name:             fmt.Sprintf("custom_%s_%s_%s_root", user.Name, app.Name, entrance.Name),
+			PathPrefix:       "/",
+			Cluster:          clusterName,
 			WebSocketUpgrade: true,
 		}
 
-		// Shared (v3) apps stay gated behind Authelia even when reached via a
-		// custom domain, so the auth requirement can't be bypassed.
-		if app.IsShared {
-			customRoute.ExtAuth = buildSharedAppExtAuthConfig(user)
-		}
+		customRoute.ExtAuth = buildAppExtAuthConfig(user)
+
+		routes := buildProbeBypassRoutes(
+			fmt.Sprintf("custom_%s_%s_%s", user.Name, app.Name, entrance.Name),
+			clusterName,
+			app.EntranceProbePaths[entrance.Name],
+		)
+		routes = append(routes, customRoute)
 
 		vhost := &ir.VirtualHostIR{
 			Name:     fmt.Sprintf("custom_%s_%s_%s", user.Name, app.Name, entrance.Name),
@@ -757,7 +905,7 @@ func (t *Translator) buildCustomDomainVirtualHosts(user *message.UserInfo, app *
 			Language: user.Language,
 			UserZone: user.Zone,
 			UserName: user.Name,
-			Routes:   []*ir.HTTPRouteIR{customRoute},
+			Routes:   routes,
 		}
 		vhosts = append(vhosts, vhost)
 	}
@@ -821,23 +969,6 @@ func (t *Translator) buildStreamListeners(resources *message.Resources, clusterS
 	return listeners
 }
 
-type defaultThirdLevelDomainConfig struct {
-	EntranceName     string `json:"entranceName"`
-	ThirdLevelDomain string `json:"thirdLevelDomain"`
-}
-
-func resolveEntrancePrefix(entrances []*message.EntranceInfo, index int, appid string, configs []defaultThirdLevelDomainConfig) string {
-	if len(entrances) == 1 {
-		return appid
-	}
-	for _, cfg := range configs {
-		if cfg.EntranceName == entrances[index].Name && cfg.ThirdLevelDomain != "" {
-			return cfg.ThirdLevelDomain
-		}
-	}
-	return fmt.Sprintf("%s%d", appid, index)
-}
-
 func toLocalDomain(hostname string) string {
 	tokens := strings.Split(hostname, ".")
 	if len(tokens) < 2 {
@@ -869,4 +1000,11 @@ func sanitizeName(s string) string {
 		s = s[:40]
 	}
 	return s
+}
+
+func systemAppPriority(appName string) int {
+	if appName == "olares-app" {
+		return systemServicePriority
+	}
+	return 0
 }

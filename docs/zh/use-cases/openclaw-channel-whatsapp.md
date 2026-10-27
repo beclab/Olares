@@ -10,7 +10,11 @@ doc_version: "1.0"
 doc_updated: "2026-06-09"
 ---
 
-# 与 WhatsApp 集成
+:::warning
+本文档由 AI 自动翻译，仅供参考。涉及关键操作或信息时，请以[英文原文](../../use-cases/openclaw-channel-whatsapp.md)为准。
+:::
+
+# 将 OpenClaw 与 WhatsApp 集成
 
 将 OpenClaw 智能体连接到 WhatsApp，实现远程交互。
 

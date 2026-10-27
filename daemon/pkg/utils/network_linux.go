@@ -16,47 +16,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/beclab/Olares/daemon/internel/wifi"
 	"github.com/vishvananda/netlink"
 	"k8s.io/klog/v2"
 )
 
 func ConnectWifi(ctx context.Context, ssid, password string) error {
-	if ssid == "" {
-		return errors.New("ssid is empty")
-	}
-
-	nmcli, err := findCommand(ctx, "nmcli")
-	if err != nil {
-		return err
-	}
-
-	args := []string{
-		"d",
-		"wifi",
-		"connect",
-		ssid,
-	}
-
-	if password != "" {
-		args = append(args, "password", password)
-	}
-
-	cmd := exec.CommandContext(ctx, nmcli, args...)
-	cmd.Env = os.Environ()
-	output, err := cmd.CombinedOutput()
-	klog.Info(string(output))
-
-	if err != nil {
-		klog.Error("exec cmd error, ", err, ", nmcli", " ", strings.Join(args, " "))
-		return err
-	}
-
-	if strings.Contains(string(output), "Error") {
-		err = errors.New(string(output))
-		return err
-	}
-
-	return nil
+	return wifi.Connect(ctx, wifi.ConnectRequest{SSID: ssid, Password: password})
 }
 
 func EnableWifi(ctx context.Context) error {
@@ -79,55 +45,87 @@ func EnableWifi(ctx context.Context) error {
 }
 
 func GetWifiDevice(ctx context.Context) (map[string]Device, error) {
-	return deviceStatus(ctx, func(d *Device) bool { return d.Type == "wifi" })
+	return deviceStatus(ctx, func(d *Device) bool { return d.Type == "wifi" }, true)
+}
+
+// managedByOthers reports whether the device is managed by another component
+// (CNI, tunnels, tailscale, ...) and should be skipped by NetworkManager logic.
+func managedByOthers(name string) bool {
+	for _, devPrefix := range []string{"cali", "kube", "tun", "tailscale"} {
+		if strings.HasPrefix(name, devPrefix) {
+			return true
+		}
+	}
+	return false
 }
 
 func GetAllDevice(ctx context.Context) (map[string]Device, error) {
 	return deviceStatus(ctx, func(d *Device) bool {
-		managedByOthers := []string{"cali", "kube", "tun", "tailscale"}
-		for _, devPrefix := range managedByOthers {
-			if strings.HasPrefix(d.Name, devPrefix) {
-				return false
-			}
-		}
+		return !managedByOthers(d.Name)
+	}, true)
+}
 
-		return true
-	})
+// setDeviceManaged switches a single device to managed via nmcli.
+func setDeviceManaged(ctx context.Context, name string) error {
+	nmcli, err := findCommand(ctx, "nmcli")
+	if err != nil {
+		klog.Error("find nmcli error, ", err)
+		return err
+	}
+
+	cmd := exec.CommandContext(ctx, nmcli, "device", "set", name, "managed", "yes")
+	cmd.Env = os.Environ()
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		klog.Error("exec cmd error, ", err, ", nmcli device set ", name, " managed yes")
+		return err
+	}
+	if strings.Contains(string(output), "Error") {
+		err = errors.New(string(output))
+		klog.Error("exec cmd error, ", err, ", nmcli device set ", name, " managed yes")
+		return err
+	}
+	return nil
 }
 
 func ManagedAllDevices(ctx context.Context) (map[string]Device, error) {
 	return deviceStatus(ctx, func(d *Device) bool {
-		managedByOthers := []string{"cali", "kube", "tun", "tailscale"}
-		for _, devPrefix := range managedByOthers {
-			if strings.HasPrefix(d.Name, devPrefix) {
-				return false
-			}
+		if managedByOthers(d.Name) {
+			return false
 		}
 		if d.State == "unmanaged" {
-			nmcli, err := findCommand(ctx, "nmcli")
-			if err != nil {
-				klog.Error("find nmcli error, ", err)
-				return false
-			}
-
-			cmd := exec.CommandContext(ctx, nmcli, "device", "set", d.Name, "managed", "yes")
-			cmd.Env = os.Environ()
-			output, err := cmd.CombinedOutput()
-			if err != nil {
-				klog.Error("exec cmd error, ", err, ", nmcli device set ", d.Name, " managed yes")
-				return false
-			}
-			if strings.Contains(string(output), "Error") {
-				err = errors.New(string(output))
-				klog.Error("exec cmd error, ", err, ", nmcli device set ", d.Name, " managed yes")
+			if err := setDeviceManaged(ctx, d.Name); err != nil {
 				return false
 			}
 		}
 		return true
-	})
+	}, true)
 }
 
-func deviceStatus(ctx context.Context, filter func(d *Device) bool) (map[string]Device, error) {
+// ManagedDeviceStatus enumerates network devices with a single
+// `nmcli device status` call and, in the same pass, switches any unmanaged
+// device to managed. It deliberately skips the per-device `nmcli device show`
+// / `nmcli connection show` fan-out (i.e. it does not populate IP/gateway/DNS/
+// method fields), because the frequent state-polling path only needs
+// Name/Type/State/Connection. This replaces the previous back-to-back
+// ManagedAllDevices + GetAllDevice calls, which together spawned ~(4 + 8M)
+// bash/nmcli processes per poll (M = device count) and kept NetworkManager
+// busy.
+func ManagedDeviceStatus(ctx context.Context) (map[string]Device, error) {
+	return deviceStatus(ctx, func(d *Device) bool {
+		if managedByOthers(d.Name) {
+			return false
+		}
+		if d.State == "unmanaged" {
+			if err := setDeviceManaged(ctx, d.Name); err != nil {
+				return false
+			}
+		}
+		return true
+	}, false)
+}
+
+func deviceStatus(ctx context.Context, filter func(d *Device) bool, details bool) (map[string]Device, error) {
 	nmcli, err := findCommand(ctx, "nmcli")
 	if err != nil {
 		return nil, err
@@ -161,10 +159,12 @@ func deviceStatus(ctx context.Context, filter func(d *Device) bool) (map[string]
 		}
 
 		if filter == nil || filter(&d) {
-			err = showDeviceByNM(ctx, d.Name, &d)
-			if err != nil {
-				klog.Error("failed to get device details for ", d.Name, ": ", err)
-				continue
+			if details {
+				err = showDeviceByNM(ctx, d.Name, &d)
+				if err != nil {
+					klog.Error("failed to get device details for ", d.Name, ": ", err)
+					continue
+				}
 			}
 
 			statuss[d.Name] = d
@@ -511,339 +511,14 @@ func GetEthernetConnection(ctx context.Context) (iface, ifUUID, connection strin
 }
 
 const (
-	bridgeConnectionName   = "br-olares"
-	bridgeSlavePrefix      = "br-olares-slave-"
-	originalConnectionName = "original-connection"
+	bridgeConnectionName = "br-olares"
+	bridgeSlavePrefix    = "br-olares-slave-"
 )
 
-func ResetBridgeConnection(ctx context.Context) error {
-	nmcli, err := findCommand(ctx, "nmcli")
-	if err != nil {
-		return err
-	}
-
-	// find the bridge slave connections
-	// it should be only one bridge slave connection
-	var slaveConnections []string
-	cmd := exec.CommandContext(ctx, nmcli, "-g", "NAME", "connection", "show")
-	cmd.Env = os.Environ()
-	output, err := cmd.Output()
-	if err != nil {
-		klog.Error("failed to execute nmcli: %w", err)
-	} else {
-		lines := bytes.Split(output, []byte("\n"))
-		for _, line := range lines {
-			cname := strings.TrimSpace(string(line))
-			if cname == bridgeConnectionName {
-				continue
-			}
-
-			if strings.HasPrefix(cname, bridgeSlavePrefix) {
-				slaveConnections = append(slaveConnections, cname)
-			}
-		}
-	}
-	if len(slaveConnections) > 1 {
-		klog.Warningf("unexpected number of bridge slave connections: %d", len(slaveConnections))
-	}
-
-	// shutdown the bridge connection
-	klog.Infof("turn off the bridge connection [%s]", bridgeConnectionName)
-	cmd = exec.CommandContext(ctx, nmcli, "connection", "down", bridgeConnectionName)
-	cmd.Env = os.Environ()
-	_, err = cmd.Output()
-	if err != nil {
-		klog.Error("failed to execute nmcli: %w", err)
-	}
-
-	// turn on the original connection
-	klog.Infof("turn on the original connection [%s]", originalConnectionName)
-	cmd = exec.CommandContext(ctx, nmcli, "connection", "modify", originalConnectionName, "connection.autoconnect", "yes")
-	cmd.Env = os.Environ()
-	_, err = cmd.Output()
-	if err != nil {
-		klog.Error("failed to execute nmcli: %w", err)
-	}
-
-	cmd = exec.CommandContext(ctx, nmcli, "connection", "up", originalConnectionName)
-	cmd.Env = os.Environ()
-	_, err = cmd.Output()
-	if err != nil {
-		klog.Error("failed to execute nmcli: %w", err)
-	}
-
-	// delete the bridge slave connections
-	for _, cname := range slaveConnections {
-		klog.Infof("delete the bridge slave connection [%s]", cname)
-		cmd = exec.CommandContext(ctx, nmcli, "connection", "delete", cname)
-		cmd.Env = os.Environ()
-		_, err = cmd.Output()
-		if err != nil {
-			klog.Error("failed to execute nmcli: %w", err)
-		}
-	}
-
-	// delete the bridge connection
-	klog.Infof("delete the bridge connection [%s]", bridgeConnectionName)
-	cmd = exec.CommandContext(ctx, nmcli, "connection", "delete", bridgeConnectionName)
-	cmd.Env = os.Environ()
-	_, err = cmd.Output()
-	if err != nil {
-		return fmt.Errorf("failed to execute nmcli: %w", err)
-	}
-
-	return nil
-}
-
-func CreateBridgeConnection(ctx context.Context) error {
-	nmcli, err := findCommand(ctx, "nmcli")
-	if err != nil {
-		return err
-	}
-
-	// backup the original connection
-	iface, ifUUID, _, err := GetEthernetConnection(ctx)
-	if err != nil {
-		klog.Error("get ethernet connection error, ", err)
-		return err
-	}
-
-	// clear unexpected bridge connections
-	cmd := exec.CommandContext(ctx, nmcli, "-g", "NAME", "connection", "show")
-	cmd.Env = os.Environ()
-	output, err := cmd.Output()
-	if err != nil {
-		klog.Error("failed to execute nmcli: %w", err)
-	} else {
-		lines := bytes.Split(output, []byte("\n"))
-		for _, line := range lines {
-			cname := strings.TrimSpace(string(line))
-			if cname == bridgeConnectionName || strings.HasPrefix(cname, bridgeSlavePrefix) {
-				klog.Infof("clear unexpected bridge connection: %s", cname)
-				cmd = exec.CommandContext(ctx, nmcli, "connection", "delete", cname)
-				cmd.Env = os.Environ()
-				_, err = cmd.Output()
-				if err != nil {
-					klog.Error("failed to execute nmcli: %w", err)
-				}
-			}
-		}
-	}
-
-	// modify the original connection
-	klog.Infof("backup the original connection [%s] to [%s]", ifUUID, originalConnectionName)
-	cmd = exec.CommandContext(ctx, nmcli, "connection", "modify", ifUUID, "con-name", originalConnectionName)
-	cmd.Env = os.Environ()
-	_, err = cmd.Output()
-	if err != nil {
-		klog.Error("failed to execute nmcli: %w", err)
-		return fmt.Errorf("failed to execute nmcli: %w", err)
-	}
-
-	// find the interface MAC address
-	mdata, err := os.ReadFile(fmt.Sprintf("/sys/class/net/%s/address", iface))
-	if err != nil {
-		klog.Error("read interface MAC address error, ", err)
-		return err
-	}
-
-	mac := strings.TrimSpace(string(mdata))
-	if mac == "" {
-		klog.Error("interface MAC address is empty")
-		return err
-	}
-
-	// create the bridge connection
-	/*
-		sudo nmcli connection add type bridge con-name br-olares ifname br-olares \
-		connection.autoconnect yes bridge.stp no \
-		ethernet.cloned-mac-address "$PHY_MAC" \
-		ipv4.method auto ipv6.method ignore
-	*/
-	klog.Infof("create bridge connection [%s]", bridgeConnectionName)
-	cmd = exec.CommandContext(ctx, nmcli,
-		"connection", "add", "type", "bridge", "con-name", bridgeConnectionName, "ifname", bridgeConnectionName,
-		"connection.autoconnect", "yes", "bridge.stp", "no",
-		"ethernet.cloned-mac-address", mac,
-		"ipv4.method", "auto",
-		"ipv6.method", "ignore",
-	)
-	cmd.Env = os.Environ()
-	_, err = cmd.Output()
-	if err != nil {
-		klog.Error("failed to execute nmcli: %w", err)
-		return fmt.Errorf("failed to execute nmcli: %w", err)
-	}
-
-	// create the bridge slave connections
-	/*
-				sudo nmcli connection add type ethernet con-name "$SLAVE_CON" ifname "$PHY" \
-		  		master br-olares slave-type bridge connection.autoconnect yes
-	*/
-	slaveConnectionName := fmt.Sprintf("%s%s", bridgeSlavePrefix, iface)
-	klog.Infof("create bridge slave connection [%s]", slaveConnectionName)
-	cmd = exec.CommandContext(ctx, nmcli,
-		"connection", "add", "type", "ethernet", "con-name", slaveConnectionName, "ifname", iface,
-		"master", bridgeConnectionName, "slave-type", "bridge", "connection.autoconnect", "yes",
-	)
-	cmd.Env = os.Environ()
-	_, err = cmd.Output()
-	if err != nil {
-		klog.Error("failed to execute nmcli: %w", err)
-		// clean up the connection
-		klog.Info("clean up the connection")
-		cmd = exec.CommandContext(ctx, nmcli, "connection", "delete", bridgeConnectionName)
-		cmd.Env = os.Environ()
-		_, err = cmd.Output()
-		if err != nil {
-			klog.Error("failed to execute nmcli: %w", err)
-		}
-
-		cmd = exec.CommandContext(ctx, nmcli, "connection", "delete", slaveConnectionName)
-		cmd.Env = os.Environ()
-		_, err = cmd.Output()
-		if err != nil {
-			klog.Error("failed to execute nmcli: %w", err)
-		}
-
-		return fmt.Errorf("failed to execute nmcli: %w", err)
-	}
-
-	// turn on the bridge connection
-	// modify all ethernet connections to disable auto connect first
-	cmd = exec.CommandContext(ctx, nmcli, "-g", "NAME,TYPE", "connection", "show")
-	cmd.Env = os.Environ()
-	output, err = cmd.Output()
-	if err != nil {
-		klog.Error("failed to execute nmcli: %w", err)
-	} else {
-		lines := bytes.Split(output, []byte("\n"))
-		for _, line := range lines {
-			fields := bytes.SplitN(line, []byte(":"), 2)
-			if len(fields) < 2 {
-				continue
-			}
-			cname := strings.TrimSpace(string(fields[0]))
-			ctype := strings.TrimSpace(string(fields[1]))
-			if cname != slaveConnectionName && strings.Contains(ctype, "ethernet") {
-				klog.Infof("disable auto connect for connection [%s]", cname)
-				cmd = exec.CommandContext(ctx, nmcli, "connection", "modify", cname, "connection.autoconnect", "no")
-				cmd.Env = os.Environ()
-				_, err = cmd.Output()
-				if err != nil {
-					klog.Error("failed to execute nmcli: %w", err)
-				}
-			}
-		}
-	}
-
-	klog.Infof("turn on the bridge connection [%s]", bridgeConnectionName)
-	cmd = exec.CommandContext(ctx, "sh", "-c",
-		fmt.Sprintf("%s connection modify %s connection.autoconnect yes && %s connection down %s && %s connection up %s",
-			nmcli, slaveConnectionName, nmcli, originalConnectionName, nmcli, bridgeConnectionName))
-	cmd.Env = os.Environ()
-	_, err = cmd.Output()
-	if err != nil {
-		klog.Error("failed to execute nmcli: %w", err)
-		// clean up the connection
-		klog.Info("failed to turn on the bridge connection, reset the bridge connection")
-		err = ResetBridgeConnection(ctx)
-		if err != nil {
-			klog.Error("failed to reset bridge connection: %w", err)
-		}
-	}
-
-	return nil
-}
-
-func CheckOverlayGatewayStatus(ctx context.Context) error {
-	// TODO: implement check  overlay gateway enabling status
-	/*
-		bridge link
-		ip -4 addr show dev br-olares
-	*/
-	return nil
-}
-
-func FindBridgeConnection(ctx context.Context) (*BridgeConnection, error) {
-	nmcli, err := findCommand(ctx, "nmcli")
-	if err != nil {
-		return nil, err
-	}
-
-	cmd := exec.CommandContext(ctx, nmcli, "-g", "name,type,active", "connection", "show")
-	cmd.Env = os.Environ()
-	output, err := cmd.Output()
-	if err != nil {
-		return nil, err
-	}
-
-	lines := bytes.Split(output, []byte("\n"))
-	if len(lines) < 1 {
-		return nil, nil
-	}
-
-	var slaveConnectionName string
-	bridgeConnection := &BridgeConnection{}
-	bridgeConnectionActive := true
-	for _, line := range lines {
-		fields := bytes.Split(line, []byte(":"))
-		if len(fields) < 3 {
-			continue
-		}
-		name := strings.TrimSpace(string(fields[0]))
-		ctype := strings.TrimSpace(string(fields[1]))
-		active := strings.TrimSpace(string(fields[2]))
-
-		switch {
-		case name == bridgeConnectionName:
-			bridgeConnection.BridgeName = name
-			if active == "no" {
-				bridgeConnectionActive = false
-			}
-
-			// check the bridge connection binding an IP address
-			cmd = exec.CommandContext(ctx, nmcli, "-g", "IP4.ADDRESS", "connection", "show", name)
-			cmd.Env = os.Environ()
-			output, err := cmd.Output()
-			if err != nil {
-				return nil, err
-			}
-
-			lines := bytes.Split(output, []byte("\n"))
-			if len(lines) < 1 {
-				bridgeConnectionActive = false
-				continue
-			}
-
-			ipv4 := strings.TrimSpace(string(lines[0]))
-			if ipv4 == "" {
-				bridgeConnectionActive = false
-				continue
-			}
-			ipv4 = strings.Split(ipv4, "/")[0]
-			bridgeConnection.Ipv4Address = ipv4
-		case strings.Contains(ctype, "ethernet") && strings.HasPrefix(name, bridgeSlavePrefix):
-			// should be only one slave connection
-			slaveConnectionName = name
-			if active == "no" {
-				bridgeConnectionActive = false
-			}
-		default:
-		}
-	}
-
-	if bridgeConnection.BridgeName != "" {
-		// found the bridge connection
-		bridgeConnection.SlaveName = slaveConnectionName
-		bridgeConnection.Active = bridgeConnectionActive
-		return bridgeConnection, nil
-	}
-
-	return nil, nil
-}
-
-func ListenNetworkCarrierChanges(ctx context.Context, downCallback func()) error {
+// ListenNetworkCarrierChanges runs downCallback whenever the named device loses
+// carrier or is set down. The device is the current overlay parent, resolved by
+// the caller through the alternative name.
+func ListenNetworkCarrierChanges(ctx context.Context, device string, downCallback func()) error {
 	updates := make(chan netlink.LinkUpdate)
 
 	if err := netlink.LinkSubscribe(updates, ctx.Done()); err != nil {
@@ -853,19 +528,39 @@ func ListenNetworkCarrierChanges(ctx context.Context, downCallback func()) error
 
 	for {
 		select {
-		case update := <-updates:
-			if update.Attrs().Name == bridgeConnectionName {
-				isLowerUp := (update.Flags & 0x10000) != 0
-				isUp := (update.Flags & 1) != 0
-
-				if !isLowerUp || !isUp {
-					klog.Infof("network change detected: %s, state: %s", update.Attrs().Name, update.Link.Attrs().OperState.String())
-					downCallback()
-				}
+		case update, ok := <-updates:
+			if handleCarrierLinkUpdate(ctx, device, update, ok, downCallback) {
+				klog.Info("stop listening network changes")
+				return nil
 			}
 		case <-ctx.Done():
 			klog.Info("stop listening network changes")
 			return nil
 		}
 	}
+}
+
+// handleCarrierLinkUpdate processes one LinkUpdate. Returns true when the
+// watcher should stop (channel closed or context cancelled). A closed channel
+// yields a zero-value LinkUpdate whose Link is nil; callers must not call
+// Attrs() on it.
+func handleCarrierLinkUpdate(ctx context.Context, device string, update netlink.LinkUpdate, ok bool, downCallback func()) (stop bool) {
+	if !ok || ctx.Err() != nil {
+		return true
+	}
+	if update.Link == nil {
+		return false
+	}
+	attrs := update.Attrs()
+	if attrs == nil || attrs.Name != device {
+		return false
+	}
+
+	isLowerUp := (update.Flags & 0x10000) != 0
+	isUp := (update.Flags & 1) != 0
+	if !isLowerUp || !isUp {
+		klog.Infof("network change detected: %s, state: %s", attrs.Name, attrs.OperState.String())
+		downCallback()
+	}
+	return false
 }

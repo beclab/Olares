@@ -3,7 +3,6 @@ package market
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -12,10 +11,15 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 
+	"github.com/beclab/Olares/cli/pkg/clierr"
+	"github.com/beclab/Olares/cli/pkg/clusterclient"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
-var errReported = errors.New("(already reported)")
+// errReported marks a command whose OperationResult has already been
+// printed. cmd/main.go recognises the shared sentinel and exits without
+// appending an error line of its own.
+var errReported = clierr.ErrAlreadyReported
 
 // MarketOptions is the per-command shared option bag. Identity (--user) and
 // transport (--host, --kubeconfig) flags from the legacy `app` tree are gone:
@@ -71,6 +75,12 @@ type MarketOptions struct {
 	Watch         bool
 	WatchTimeout  time.Duration
 	WatchInterval time.Duration
+
+	// FailOnCrashLoop ends an install / upgrade watch as soon as one of the
+	// app's containers is in a state it will not leave on its own.
+	FailOnCrashLoop bool
+
+	podProbe podProber
 }
 
 // newMarketOptions seeds MarketOptions with the factory the parent command
@@ -128,6 +138,54 @@ func (o *MarketOptions) addCommonFlags(cmd *cobra.Command) {
 // delete) don't render tables, so --no-headers on them was a no-op
 // footgun in scripts (`market stop firefox --no-headers` silently
 // ignored the flag).
+// lifecycleJSONShape names the fields of the document every mutating
+// verb prints under -o json. It lives in --help rather than in the agent
+// skills for the same reason flag descriptions do: a shape transcribed
+// somewhere else is a second copy, and it drifts on the next field.
+//
+// The last paragraph is the part that is not derivable from the struct.
+// `status` and `finalState` are both present and answer different
+// questions: one is about the command, the other about the app, and
+// which state counts as a good one is not the same for every verb.
+const lifecycleJSONShape = `-o json prints one OperationResult document:
+
+  app          the app acted on; targetApp on a clone
+  operation    the verb that ran
+  status       accepted (request taken, server still working),
+               success (--watch saw it settle), or failed
+  message      what happened, and why on a failure
+  source       the market source resolved for this operation
+  version      the version installed, upgraded to, or acted on
+  user         the acting user
+  state        the row's state when the command returned
+  progress     a percentage the backend reports; unreliable, do not gate on it
+  finalState   --watch only: the state the row settled at
+  finalOpType  --watch only: the operation that state belongs to
+
+.status is the verdict on the command and .finalState is where the app
+landed; they are not interchangeable. A --watch run reports success once
+the row settles the way this verb intended, so that is what a script
+should test, along with the exit code. Read .finalState when you need
+the state itself — but what a good one looks like differs by verb, and
+"running" is only it for install, upgrade and restart. A successful stop
+settles at stopped and a successful uninstall at uninstalled, so a check
+written against "running" calls both of them failures.
+
+Without --watch, neither final* field is present and .status is
+accepted, meaning the server took the request — not that the app is up.`
+
+// describeLifecycleJSON appends the shape above to a verb's help, before
+// its examples if it has any -- a reader looking for the field list
+// should not have to scroll past a dozen command lines to reach it.
+func describeLifecycleJSON(cmd *cobra.Command) {
+	long := strings.TrimRight(cmd.Long, "\n")
+	if index := strings.Index(long, "\nExamples:"); index >= 0 {
+		cmd.Long = strings.TrimRight(long[:index], "\n") + "\n\n" + lifecycleJSONShape + "\n" + long[index:] + "\n"
+		return
+	}
+	cmd.Long = long + "\n\n" + lifecycleJSONShape + "\n"
+}
+
 func (o *MarketOptions) addOutputFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVarP(&o.Output, "output", "o", "table", "output format: table, json")
 	cmd.Flags().BoolVarP(&o.Quiet, "quiet", "q", false, "suppress output; exit code indicates success/failure")
@@ -202,7 +260,8 @@ func (o *MarketOptions) addEntranceTitleFlag(cmd *cobra.Command) {
 }
 
 func (o *MarketOptions) addDeleteDataFlag(cmd *cobra.Command) {
-	cmd.Flags().BoolVar(&o.DeleteData, "delete-data", false, "delete persistent data when uninstalling")
+	cmd.Flags().BoolVar(&o.DeleteData, "delete-data", false,
+		"also delete the app's private data dir (drive/Data/<app>) when uninstalling; the node-local cache (cache/<node>/<app>) is cleared either way. Paths under drive/Home granted via the manifest's permission.userData are NEVER deleted — they belong to the user, not the app; remove them yourself with `olares-cli files rm`")
 }
 
 func (o *MarketOptions) addTitleFlag(cmd *cobra.Command) {
@@ -235,6 +294,41 @@ func (o *MarketOptions) addWatchFlags(cmd *cobra.Command) {
 		"maximum total wall-clock to wait when --watch is set (e.g. 15m, 1h); no-op without --watch. Bump for image-pull-heavy installs (Stable Diffusion / Ollama: 30m–1h)")
 	cmd.Flags().DurationVar(&o.WatchInterval, "watch-interval", 2*time.Second,
 		"polling interval against /market/state when --watch is set (e.g. 1s for tight CI feedback, 5s for slow networks); no-op without --watch")
+}
+
+// explainNoSourceFlag is for the verbs that act on whichever installed row
+// matches the name, so callers reaching for -s learn to drop it.
+func explainNoSourceFlag(cmd *cobra.Command) {
+	cmdutil.ExplainMissingFlag(cmd,
+		fmt.Sprintf("'%s' takes no --source; it acts on the installed app whichever source it came from, so drop the flag", cmd.Name()),
+		"s", "source")
+}
+
+// addPodWatchFlags is for install / upgrade only: their watch is the one
+// that can sit on an in-flight row while the app's pods crash.
+func (o *MarketOptions) addPodWatchFlags(cmd *cobra.Command) {
+	cmd.Flags().BoolVar(&o.FailOnCrashLoop, "fail-on-crashloop", false,
+		"with --watch, fail as soon as an app container is in CrashLoopBackOff / CreateContainerConfigError / RunContainerError instead of waiting for the market row; the operation itself keeps running")
+}
+
+// podProber returns the probe --watch uses to read the app's pods, or nil
+// when the profile cannot build one; the watch then follows the market row
+// alone.
+func (o *MarketOptions) podProber() podProber {
+	if o.podProbe != nil || o.factory == nil {
+		return o.podProbe
+	}
+	ctx := context.Background()
+	rp, err := o.factory.ResolveProfile(ctx)
+	if err != nil {
+		return nil
+	}
+	hc, err := o.factory.HTTPClient(ctx)
+	if err != nil {
+		return nil
+	}
+	o.podProbe = newClusterPodProber(clusterclient.NewClient(hc, rp))
+	return o.podProbe
 }
 
 // prepare resolves the active profile and returns a ready-to-use MarketClient

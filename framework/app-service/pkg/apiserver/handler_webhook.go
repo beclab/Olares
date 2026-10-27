@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"strings"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
@@ -16,8 +17,8 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
-	"github.com/beclab/Olares/framework/app-service/pkg/utils/registry"
 	"github.com/beclab/Olares/framework/app-service/pkg/webhook"
+	"github.com/beclab/Olares/framework/app-service/pkg/webhook/clicredential"
 	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	wfv1alpha1 "github.com/argoproj/argo-workflows/v3/pkg/apis/workflow/v1alpha1"
@@ -32,7 +33,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/ptr"
@@ -101,27 +101,29 @@ func (h *Handler) mutate(ctx context.Context, req *admissionv1.AdmissionRequest,
 		Allowed: true,
 		UID:     req.UID,
 	}
-
 	if pod.Spec.HostNetwork && !strings.HasPrefix(req.Namespace, "user-space-") {
 		klog.Errorf("Pod with uid=%s namespace=%s has HostNetwork enabled, that's DENIED", proxyUUID, req.Namespace)
 		return h.sidecarWebhook.AdmissionError(req.UID, errors.New("HostNetwork Enabled Unsupported"))
 	}
 	var (
-		injectPolicy, injectWs, injectUpload bool
-		injectSharedPod                      *bool
-		appMgr                               *v1alpha1.ApplicationManager
-		appCfg                               *appcfg_mod.ApplicationConfig
-		perms                                []appcfg.ProviderPermission
+		injectPolicy, injectMeshInAgent, injectMeshOutAgent bool
+		injectSharedPod                                     *bool
+		appMgr                                              *v1alpha1.ApplicationManager
+		appCfg                                              *appcfg_mod.ApplicationConfig
+		perms                                               []appcfg.ProviderPermission
 	)
-	if injectPolicy, injectWs, injectUpload, injectSharedPod, perms, appCfg, appMgr, err = h.sidecarWebhook.MustInject(ctx, &pod, req.Namespace); err != nil {
+	if injectPolicy, injectMeshInAgent, injectMeshOutAgent, injectSharedPod, perms, appCfg, appMgr, err = h.sidecarWebhook.MustInject(ctx, &pod, req.Namespace); err != nil {
 		return h.sidecarWebhook.AdmissionError(req.UID, err)
 	}
-	klog.Infof("injectPolicy=%v, injectWs=%v, injectUpload=%v, injectSharedPod=%v, perms=%v", injectPolicy, injectWs, injectUpload, injectSharedPod, perms)
+	klog.Infof("injectPolicy=%v, injectMeshInAgent=%v, injectMeshOutAgent=%v, injectSharedPod=%v, perms=%v", injectPolicy, injectMeshInAgent, injectMeshOutAgent, injectSharedPod, perms)
 
 	shared := appCfg != nil && appCfg.IsShared()
-	nothingToInject := !injectPolicy && !injectWs && !injectUpload && injectSharedPod == nil && len(perms) == 0
+	nothingToInject := !injectPolicy && !injectMeshInAgent && !injectMeshOutAgent && injectSharedPod == nil && len(perms) == 0
 
-	if shared {
+	// Shared apps historically skipped CreatePatch (label-only) to avoid oes on
+	// pure callees. Composite Shared callers with mesh-in/mesh-out must use
+	// CreatePatch; ShouldSkipOesForSharedCaller still drops oes when appropriate.
+	if shared && !sharedAppNeedsSidecarPatch(injectMeshInAgent, injectMeshOutAgent) {
 		if injectSharedPod != nil {
 			patchBytes, err := patchSharedEntranceLabel(req, &pod, *injectSharedPod)
 			if err != nil {
@@ -139,11 +141,22 @@ func (h *Handler) mutate(ctx context.Context, req *admissionv1.AdmissionRequest,
 	}
 
 	if nothingToInject {
+		// Still harden linkerd admin probes when proxy was injected by an earlier webhook.
+		patchBytes, patched, err := h.sidecarWebhook.PatchLinkerdAdminProbesOnly(ctx, req, &pod)
+		if err != nil {
+			klog.Errorf("Failed to harden linkerd probes uuid=%s namespace=%s err=%v", proxyUUID, req.Namespace, err)
+			return h.sidecarWebhook.AdmissionError(req.UID, err)
+		}
+		if patched {
+			h.sidecarWebhook.PatchAdmissionResponse(resp, patchBytes)
+			klog.Infof("Hardened linkerd-proxy probes for pod uuid=%s namespace=%s (nothing else to inject)", proxyUUID, req.Namespace)
+			return resp
+		}
 		klog.Infof("Skipping sidecar injection for pod with uuid=%s namespace=%s", proxyUUID, req.Namespace)
 		return resp
 	}
 
-	patchBytes, err := h.sidecarWebhook.CreatePatch(ctx, &pod, req, proxyUUID, injectPolicy, injectWs, injectUpload, injectSharedPod, appMgr, appCfg, perms)
+	patchBytes, err := h.sidecarWebhook.CreatePatch(ctx, &pod, req, proxyUUID, injectPolicy, injectMeshInAgent, injectMeshOutAgent, injectSharedPod, appMgr, appCfg, perms)
 	if err != nil {
 		klog.Errorf("Failed to create patch for pod uuid=%s name=%s namespace=%s err=%v", proxyUUID, pod.Name, req.Namespace, err)
 		return h.sidecarWebhook.AdmissionError(req.UID, err)
@@ -155,8 +168,14 @@ func (h *Handler) mutate(ctx context.Context, req *admissionv1.AdmissionRequest,
 	return resp
 }
 
+// sharedAppNeedsSidecarPatch reports whether a Shared app must run CreatePatch
+// (mesh-in / mesh-out) instead of the label-only shared-entrance path.
+func sharedAppNeedsSidecarPatch(injectMeshInAgent, injectMeshOutAgent bool) bool {
+	return injectMeshInAgent || injectMeshOutAgent
+}
+
 // patchSharedEntranceLabel applies only the shared-entrance pod label, without
-// sidecar injection. Used for v3 apps where CreatePatch would also inject envoy.
+// sidecar injection. Used for Shared callees that do not declare outbound mesh-in.
 func patchSharedEntranceLabel(req *admissionv1.AdmissionRequest, pod *corev1.Pod, inject bool) ([]byte, error) {
 	if inject {
 		if pod.Labels == nil {
@@ -250,6 +269,47 @@ func (h *Handler) validate(ctx context.Context, req *admissionv1.AdmissionReques
 	return resp
 }
 
+// tlsReplicaMountValidate is the validating admission entrypoint that blocks
+// tls-replica private-key bypass mounts. Decode/unmarshal failures fail closed.
+func (h *Handler) tlsReplicaMountValidate(req *restful.Request, resp *restful.Response) {
+	admissionReqBody, ok := h.sidecarWebhook.GetAdmissionRequestBody(req, resp)
+	if !ok {
+		return
+	}
+	var admissionReq, admissionResp admissionv1.AdmissionReview
+	if _, _, err := webhook.Deserializer.Decode(admissionReqBody, nil, &admissionReq); err != nil {
+		klog.Errorf("Failed to decode tls-replica-mount admission request body err=%v", err)
+		admissionResp.Response = h.sidecarWebhook.AdmissionError("", err)
+	} else {
+		admissionResp.Response = h.validateTLSReplicaMount(req.Request.Context(), admissionReq.Request)
+	}
+	admissionResp.TypeMeta = admissionReq.TypeMeta
+	admissionResp.Kind = admissionReq.Kind
+	if err := resp.WriteAsJson(&admissionResp); err != nil {
+		klog.Errorf("Failed to write tls-replica-mount admission response err=%v", err)
+	}
+}
+
+func (h *Handler) validateTLSReplicaMount(ctx context.Context, req *admissionv1.AdmissionRequest) *admissionv1.AdmissionResponse {
+	if req == nil {
+		return h.sidecarWebhook.AdmissionError("", errNilAdmissionRequest)
+	}
+	var pod corev1.Pod
+	if err := json.Unmarshal(req.Object.Raw, &pod); err != nil {
+		klog.Errorf("Failed to unmarshal pod for tls-replica-mount validate namespace=%s err=%v", req.Namespace, err)
+		return h.sidecarWebhook.AdmissionError(req.UID, err)
+	}
+	allowed, code := h.sidecarWebhook.ValidateTLSReplicaMount(ctx, &pod, req.Namespace)
+	respObj := &admissionv1.AdmissionResponse{
+		Allowed: allowed,
+		UID:     req.UID,
+	}
+	if !allowed {
+		respObj.Result = &metav1.Status{Message: code}
+	}
+	return respObj
+}
+
 func (h *Handler) gpuLimitInject(req *restful.Request, resp *restful.Response) {
 	klog.Infof("Received mutating webhook[gpu-limit inject] request: Method=%v, URL=%v", req.Request.Method, req.Request.URL)
 	admissionRequestBody, ok := h.sidecarWebhook.GetAdmissionRequestBody(req, resp)
@@ -322,6 +382,7 @@ func (h *Handler) gpuLimitMutate(ctx context.Context, req *admissionv1.Admission
 		Allowed: true,
 		UID:     req.UID,
 	}
+	var attachmentPatch []byte
 
 	// cleanupAndReturn emits remove patches for any GPU-related fields the
 	// gpu-limit webhook may have injected on a prior install/upgrade. We
@@ -341,12 +402,12 @@ func (h *Handler) gpuLimitMutate(ctx context.Context, req *admissionv1.Admission
 		if len(patchBytes) > 0 {
 			klog.Infof("[gpu-limit] emitting cleanup patch namespace=%s name=%s kind=%s patch=%s",
 				req.Namespace, req.Name, req.Kind.Kind, string(patchBytes))
-			h.sidecarWebhook.PatchAdmissionResponse(resp, patchBytes)
+			h.sidecarWebhook.PatchAdmissionResponse(resp, combineJSONPatches(attachmentPatch, patchBytes))
 		}
 		return resp
 	}
 
-	_, appcfg, _, err := h.sidecarWebhook.GetAppConfig(req.Namespace)
+	_, appcfg, _, _, err := h.sidecarWebhook.GetAppConfig(req.Namespace)
 	if err != nil {
 		klog.Error(err)
 		return resp
@@ -355,6 +416,13 @@ func (h *Handler) gpuLimitMutate(ctx context.Context, req *admissionv1.Admission
 	if appcfg == nil {
 		klog.Error("get appcfg is empty")
 		return resp
+	}
+	attachmentPatch, err = h.createAttachmentPatch(ctx, req, tpl, appcfg)
+	if err != nil {
+		return h.sidecarWebhook.AdmissionError(req.UID, err)
+	}
+	if len(attachmentPatch) > 0 {
+		h.sidecarWebhook.PatchAdmissionResponse(resp, attachmentPatch)
 	}
 
 	appName := appcfg.AppName
@@ -369,7 +437,14 @@ func (h *Handler) gpuLimitMutate(ctx context.Context, req *admissionv1.Admission
 		return cleanupAndReturn()
 	}
 	GPUType := computeReq.Mode
-	if computeReq.RequiredGPU == 0 {
+	// A zero RequiredGPU means "app dropped its GPU need" ONLY for nvidia
+	// discrete/HAMi mode (installed with requiredGpu>0, then upgraded to 0),
+	// so we clean up the previously-injected GPU keys. The unified-memory
+	// modes (nvidia-gb10/amd/intel/apple-m/moore-soc) legitimately carry
+	// RequiredGPU==0 by design (their manifests must not declare requiredGpu),
+	// and must still fall through to be injected (gb10 -> nvidia.com/gpu) or
+	// get their nodeSelector, so they must NOT be cleaned up here.
+	if computeReq.RequiredGPU == 0 && GPUType == utils.NvidiaCardType {
 		return cleanupAndReturn()
 	}
 
@@ -409,23 +484,33 @@ func (h *Handler) gpuLimitMutate(ctx context.Context, req *admissionv1.Admission
 		},
 	}
 
+	capability := compute.CapabilityFor(GPUType)
 	var hamiGpuMemory *string
-	if compute.IsHAMIMode(GPUType) {
+	if capability.HAMI {
 		hamiGpuMemory = hamiGPUMemoryLimit(computeReq)
+	}
+	gpuResourceKey, err := h.resolveIntelDriverResource(ctx, GPUType)
+	if err != nil {
+		klog.Errorf("resolve intel driver resource error %v", err)
+		return h.sidecarWebhook.AdmissionError(req.UID, err)
 	}
 	patchBytes, err := webhook.CreatePatchForDeployment(
 		tpl,
 		injectAll,
 		injectContainer,
-		h.getGPUResourceTypeKey(GPUType),
-		hamiGpuMemory,
+		webhook.GPUResources{
+			Resource:       gpuResourceKey,
+			MemoryResource: capability.MemoryResource,
+			Memory:         hamiGpuMemory,
+			RuntimeClass:   capability.RuntimeClass,
+		},
 		envs,
 	)
 	if err != nil {
 		klog.Errorf("create patch error %v", err)
 		return h.sidecarWebhook.AdmissionError(req.UID, err)
 	}
-	if !compute.IsHAMIMode(GPUType) && GPUType != utils.CPUType {
+	if !compute.UsesGPUExtendedResource(GPUType) && GPUType != utils.CPUType {
 		allocations, err := compute.FindAllocationsForApp(ctx, h.ctrlClient, appName, appcfg.OwnerName)
 		if err != nil {
 			klog.Errorf("find compute allocation for app %s failed %v", appName, err)
@@ -438,6 +523,9 @@ func (h *Handler) gpuLimitMutate(ctx context.Context, req *admissionv1.Admission
 			// klog.Error(err)
 			// return h.sidecarWebhook.AdmissionError(req.UID, err)
 		}
+		if existing := tpl.Spec.NodeSelector[corev1.LabelHostname]; existing != "" && existing != allocations[0].NodeName {
+			return h.sidecarWebhook.AdmissionError(req.UID, fmt.Errorf("attachment node %s conflicts with compute allocation node %s", existing, allocations[0].NodeName))
+		}
 		patchBytes, err = appendNodeSelectorPatch(patchBytes, tpl, allocations[0].NodeName)
 		if err != nil {
 			klog.Errorf("append node selector patch error %v", err)
@@ -446,7 +534,7 @@ func (h *Handler) gpuLimitMutate(ctx context.Context, req *admissionv1.Admission
 	}
 	klog.Info("patchBytes:", string(patchBytes))
 	if len(patchBytes) > 0 {
-		h.sidecarWebhook.PatchAdmissionResponse(resp, patchBytes)
+		h.sidecarWebhook.PatchAdmissionResponse(resp, combineJSONPatches(attachmentPatch, patchBytes))
 	}
 	return resp
 }
@@ -471,16 +559,92 @@ func hamiGPUMemoryLimit(req compute.Requirement) *string {
 	return ptr.To(resource.NewQuantity(gpuMemValue, resource.DecimalSI).String())
 }
 
-// FIXME: should not hardcode
 func (h *Handler) getGPUResourceTypeKey(gpuType string) string {
-	switch gpuType {
-	case utils.NvidiaCardType:
-		return constants.NvidiaGPU
-	case utils.GB10ChipType:
-		return constants.NvidiaGPU
-	case utils.CPUType:
+	if gpuType == utils.CPUType {
 		klog.Info("CPU type is selected, no GPU resource will be injected")
-		return ""
+	}
+	return compute.CapabilityFor(gpuType).ExtendedResource
+}
+
+// resolveIntelDriverResource picks the correct Intel extended resource
+// (gpu.intel.com/i915 vs gpu.intel.com/xe) for the integrated Intel mode by
+// reading the real bound driver from the cluster's node register annotations
+// (bytetrade.io/node-intel-register), because an iGPU can be bound to either
+// driver. Discrete Intel cards are scheduled by HAMi as intel.com/vgpu
+// regardless of the driver.
+//
+// For other modes it delegates to getGPUResourceTypeKey. When no matching
+// card is found in the cluster, it falls back to the legacy mapping so
+// behaviour degrades gracefully rather than dropping the resource. Listing the
+// nodes is a hard dependency, so a list failure is returned as an error rather
+// than silently resolved to a possibly-wrong resource.
+func (h *Handler) resolveIntelDriverResource(ctx context.Context, mode string) (string, error) {
+	if mode != utils.IntelType {
+		return h.getGPUResourceTypeKey(mode), nil
+	}
+	wantKind := utils.IntelGPUKindIntegrated
+
+	var nodes corev1.NodeList
+	if err := h.ctrlClient.List(ctx, &nodes); err != nil {
+		return "", fmt.Errorf("[gpu-limit] list nodes for intel driver resolution (mode %s) failed: %w", mode, err)
+	}
+
+	resource, distinct := selectIntelDriverResource(nodes.Items, wantKind)
+	if resource == "" {
+		klog.Warningf("[gpu-limit] no intel %s (mode %s) card found in cluster register; falling back to legacy mapping", wantKind, mode)
+		return h.getGPUResourceTypeKey(mode), nil
+	}
+
+	if len(distinct) > 1 {
+		klog.Warningf("[gpu-limit] intel %s cards use multiple drivers %v across the cluster; a single extended resource can't express both, picking deterministically -> %s", wantKind, distinct, resource)
+	}
+
+	return resource, nil
+}
+
+// selectIntelDriverResource scans node register entries for cards of the given
+// kind (igpu/dgpu) and returns the extended resource for the chosen driver plus
+// the sorted set of distinct drivers seen (len>1 means a mixed cluster). The
+// driver is picked by a fixed priority (xe then i915) so the decision is stable
+// across scheduling passes. It returns ("", nil) when no matching card exists.
+func selectIntelDriverResource(nodes []corev1.Node, wantKind string) (string, []string) {
+	seen := make(map[string]struct{})
+	for i := range nodes {
+		entries, err := utils.IntelRegisterFromNode(&nodes[i])
+		if err != nil {
+			klog.Warningf("[gpu-limit] node %s has malformed %s annotation: %v", nodes[i].Name, constants.NodeIntelRegisterKey, err)
+			continue
+		}
+		for _, e := range entries {
+			if e.Kind == wantKind {
+				seen[e.Driver] = struct{}{}
+			}
+		}
+	}
+
+	if len(seen) == 0 {
+		return "", nil
+	}
+
+	distinct := make([]string, 0, len(seen))
+	// Fixed priority so both the returned resource and the reported set order
+	// are deterministic.
+	for _, drv := range []string{utils.IntelDriverXe, utils.IntelDriverI915} {
+		if _, ok := seen[drv]; ok {
+			distinct = append(distinct, drv)
+		}
+	}
+
+	return intelDriverResource(distinct[0]), distinct
+}
+
+// intelDriverResource maps a bound Intel kernel driver to its extended resource.
+func intelDriverResource(driver string) string {
+	switch driver {
+	case utils.IntelDriverI915:
+		return constants.IntelIGPU
+	case utils.IntelDriverXe:
+		return constants.IntelGPU
 	default:
 		return ""
 	}
@@ -743,8 +907,9 @@ func (h *Handler) cronWorkflowMutate(ctx context.Context, req *admissionv1.Admis
 		if err != nil {
 			continue
 		}
-		newImage, _ := utils.ReplacedImageRef(registry.GetMirrors(), ref.String(), false)
-		wf.Spec.WorkflowSpec.Templates[i].Container.Image = newImage
+		// Keep the registry namespace so the scheduled node's containerd can
+		// apply that registry's mirrors, credentials, TLS and fallback settings.
+		wf.Spec.WorkflowSpec.Templates[i].Container.Image = ref.String()
 	}
 	original := req.Object.Raw
 	current, err := json.Marshal(wf)
@@ -826,69 +991,266 @@ func (h *Handler) handleRunAsUserMutate(ctx context.Context, req *admissionv1.Ad
 	return resp
 }
 
+// runAsUserInject pins a user application's pod to the userspace
+// identity and makes sure the directories it mounts are owned by that
+// identity.
+//
+// The decision is made per namespace rather than per workload. Resolving
+// the pod's owner chain only ever reached the app's main Deployment or
+// StatefulSet -- the two workloads that carry the runasuser label -- so
+// a second Deployment, a Job, a CronJob, a DaemonSet or a bare Pod in
+// the same application silently ran as root. The namespace, by
+// contrast, identifies the application no matter which workload created
+// the pod.
+//
+// Identity and directory preparation are injected together, and never
+// separately: a pod whose process dropped to 1000 while its directories
+// stayed root:root cannot write anything, so giving up on both at once
+// is the only safe way to give up.
+//
+// A namespace that belongs to no application is not a failure: it is
+// most of the cluster, and it skips. An unreadable namespace is, and it
+// denies. Resolution reads the API server directly, so a read that fails
+// leaves us unable to tell whether this pod needed the identity, and
+// admitting it unchanged would start it as root against directories that
+// a later pod of the same app will expect to own.
 func (h *Handler) runAsUserInject(ctx context.Context, pod *corev1.Pod, namespace string) (*corev1.Pod, error) {
-	if len(pod.OwnerReferences) == 0 || pod == nil {
+	if pod == nil {
 		return pod, nil
 	}
-	var err error
-	var kind, name string
-	ownerRef := pod.OwnerReferences[0]
-	switch ownerRef.Kind {
-	case "ReplicaSet":
-		key := types.NamespacedName{Namespace: namespace, Name: ownerRef.Name}
-		var rs appsv1.ReplicaSet
-		err = h.ctrlClient.Get(ctx, key, &rs)
-		if err != nil {
-			klog.Infof("get replicaset err=%v", err)
-			return nil, err
-		}
-		if len(rs.OwnerReferences) > 0 && rs.OwnerReferences[0].Kind == deployment {
-			kind = deployment
-			name = rs.OwnerReferences[0].Name
-		}
-	case statefulSet:
-		kind = statefulSet
-		name = ownerRef.Name
-	}
-	if kind == "" {
-		return pod, nil
-	}
-	labels := make(map[string]string)
-	switch kind {
-	case deployment:
-		var deploy appsv1.Deployment
-		key := types.NamespacedName{Name: name, Namespace: namespace}
-		err = h.ctrlClient.Get(ctx, key, &deploy)
-		if err != nil {
-			return nil, err
-		}
-		labels = deploy.Labels
-
-	case statefulSet:
-		var sts appsv1.StatefulSet
-		key := types.NamespacedName{Name: name, Namespace: namespace}
-		err = h.ctrlClient.Get(ctx, key, &sts)
-		if err != nil {
-			return nil, err
-		}
-		labels = sts.Labels
-	}
-	userID := int64(1000)
-	if appName, ok := labels[applicationNameKey]; ok && !userspace.IsSysApp(appName) &&
-		labels[constants.ApplicationRunAsUserLabel] == "true" {
-		if pod.Spec.SecurityContext == nil {
-			pod.Spec.SecurityContext = &corev1.PodSecurityContext{
-				RunAsUser: &userID,
-			}
-		} else {
-			if pod.Spec.SecurityContext.RunAsUser == nil || *pod.Spec.SecurityContext.RunAsUser != 1000 {
-				pod.Spec.SecurityContext.RunAsUser = &userID
-			}
-		}
+	// The user's own space and the system namespaces host platform
+	// workloads (bfl and friends) that must not be reshaped.
+	if strings.HasPrefix(namespace, constants.OwnerNamespacePrefix+"-") ||
+		strings.HasPrefix(namespace, "user-system-") {
 		return pod, nil
 	}
 
+	_, cfg, _, _, err := h.sidecarWebhook.GetAppConfig(namespace)
+	if err != nil {
+		if errors.Is(err, api.ErrApplicationManagerNotFound) {
+			return pod, nil
+		}
+		klog.Errorf("runasuser: resolve app config for namespace=%s err=%v", namespace, err)
+		return nil, err
+	}
+	if cfg == nil || !cfg.RunAsUser {
+		return pod, nil
+	}
+
+	applyUserspaceIdentity(pod)
+
+	if err := h.injectUserspacePrepare(ctx, pod, cfg); err != nil {
+		klog.Errorf("runasuser: prepare-userspace inject failed ns=%s app=%s err=%v", namespace, cfg.AppName, err)
+		return nil, err
+	}
 	return pod, nil
+}
+
+func (h *Handler) handleCliCredential(req *restful.Request, resp *restful.Response) {
+	klog.Infof("Received olares-cli credential mutate webhook request: Method=%v, URL=%v", req.Request.Method, req.Request.URL)
+	admissionRequestBody, ok := h.sidecarWebhook.GetAdmissionRequestBody(req, resp)
+	if !ok {
+		klog.Errorf("Failed to get admission request body")
+		return
+	}
+	var admissionReq, admissionResp admissionv1.AdmissionReview
+	proxyUUID := uuid.New()
+	if _, _, err := webhook.Deserializer.Decode(admissionRequestBody, nil, &admissionReq); err != nil {
+		klog.Errorf("Failed to decoding admission request body err=%v", err)
+		admissionResp.Response = h.sidecarWebhook.AdmissionError("", err)
+	} else {
+		admissionResp.Response = h.handleCliCredentialMutate(req.Request.Context(), admissionReq.Request, proxyUUID)
+	}
+	admissionResp.TypeMeta = admissionReq.TypeMeta
+	admissionResp.Kind = admissionReq.Kind
+
+	requestForNamespace := "unknown"
+	if admissionReq.Request != nil {
+		requestForNamespace = admissionReq.Request.Namespace
+	}
+
+	err := resp.WriteAsJson(&admissionResp)
+	if err != nil {
+		klog.Infof("handleCliCredentialMutate: write response failed namespace=%s, err=%v", requestForNamespace, err)
+		return
+	}
+	klog.Infof("Done handleCliCredentialMutate admission request with uuid=%s, namespace=%s", proxyUUID, requestForNamespace)
+}
+
+func (h *Handler) handleCliCredentialMutate(ctx context.Context, req *admissionv1.AdmissionRequest, proxyUUID uuid.UUID) *admissionv1.AdmissionResponse {
+	if req == nil {
+		klog.Error("Failed to get admission Request, err =", errNilAdmissionRequest)
+		return h.sidecarWebhook.AdmissionError("", errNilAdmissionRequest)
+	}
+	resp := &admissionv1.AdmissionResponse{
+		Allowed: true,
+		UID:     req.UID,
+	}
+	var pod corev1.Pod
+	err := json.Unmarshal(req.Object.Raw, &pod)
+	if err != nil {
+		klog.Errorf("Failed to unmarshal request object raw with uuid=%s namespace=%s", proxyUUID, req.Namespace)
+		return h.sidecarWebhook.AdmissionError(req.UID, err)
+	}
+	curPod, err := h.cliCredentialInject(&pod, req.Namespace)
+	if err != nil {
+		klog.Infof("run cliCredentialInject err=%v", err)
+		return h.sidecarWebhook.AdmissionError(req.UID, err)
+	}
+	current, err := json.Marshal(curPod)
+	if err != nil {
+		return h.sidecarWebhook.AdmissionError(req.UID, err)
+	}
+	admissionResp := admission.PatchResponseFromRaw(req.Object.Raw, current)
+	patchBytes, err := json.Marshal(admissionResp.Patches)
+	if err != nil {
+		return h.sidecarWebhook.AdmissionError(req.UID, err)
+	}
+	h.sidecarWebhook.PatchAdmissionResponse(resp, patchBytes)
+	return resp
+}
+
+// cliCredentialInject mounts the long-lived Olares credential for apps that
+// declared permission.loginOlaresCLI. It is a separate admission path from
+// runAsUserInject: an app can ask for the credential without running as
+// uid 1000, and the other way around.
+func (h *Handler) cliCredentialInject(pod *corev1.Pod, namespace string) (*corev1.Pod, error) {
+	if pod == nil {
+		return pod, nil
+	}
+	if strings.HasPrefix(namespace, constants.OwnerNamespacePrefix+"-") ||
+		strings.HasPrefix(namespace, "user-system-") {
+		return pod, nil
+	}
+
+	_, cfg, _, _, err := h.sidecarWebhook.GetAppConfig(namespace)
+	if err != nil {
+		if errors.Is(err, api.ErrApplicationManagerNotFound) {
+			return pod, nil
+		}
+		klog.Errorf("clicredential: resolve app config for namespace=%s err=%v", namespace, err)
+		return nil, err
+	}
+	if cfg == nil || !cfg.LoginOlaresCLI {
+		return pod, nil
+	}
+
+	// The Secret is provisioned before the chart is installed or upgraded, so
+	// a pod reaching admission for an app that asked for the credential should
+	// always find it. Mounting it unconditionally (rather than checking the
+	// Secret first) keeps the pod from silently coming up logged out: without
+	// the Secret kubelet holds the pod in ContainerCreating, which is visible,
+	// instead of starting an app whose login never happened.
+	clicredential.Inject(pod)
+	return pod, nil
+}
+
+// applyUserspaceIdentity pins the pod-level identity to 1000:1000.
+//
+// Only pod-level fields are written. Container-level securityContext
+// wins over them in kubernetes, so the fix-permissions init containers
+// that charts declare with runAsUser: 0 keep working untouched, and the
+// platform needs no exemption list to keep them running.
+func applyUserspaceIdentity(pod *corev1.Pod) {
+	uid := constants.UserspaceUID
+	gid := constants.UserspaceGID
+	if pod.Spec.SecurityContext == nil {
+		pod.Spec.SecurityContext = &corev1.PodSecurityContext{}
+	}
+	sc := pod.Spec.SecurityContext
+	sc.RunAsUser = &uid
+	// Without this the process keeps the image's gid, so the files it
+	// creates land as 1000:<image gid> and stop matching the 1000:1000
+	// directories the prepare container just handed it.
+	sc.RunAsGroup = &gid
+	// FSGroup is deliberately left alone. kubelet does not manage
+	// hostPath ownership, so it would not help the directories this is
+	// all about, and setting it would make kubelet walk every PVC in the
+	// pod on each start -- the whole-tree chown this design removes.
+}
+
+func (h *Handler) podArchInject(req *restful.Request, resp *restful.Response) {
+	klog.Infof("Received mutating webhook[pod-arch inject] request: Method=%v, URL=%v", req.Request.Method, req.Request.URL)
+	admissionRequestBody, ok := h.sidecarWebhook.GetAdmissionRequestBody(req, resp)
+	if !ok {
+		return
+	}
+	var admissionReq, admissionResp admissionv1.AdmissionReview
+	proxyUUID := uuid.New()
+	if _, _, err := webhook.Deserializer.Decode(admissionRequestBody, nil, &admissionReq); err != nil {
+		klog.Errorf("Failed to decode admission request body err=%v", err)
+		admissionResp.Response = h.sidecarWebhook.AdmissionError("", err)
+	} else {
+		admissionResp.Response = h.podArchMutate(req.Request.Context(), admissionReq.Request, proxyUUID)
+	}
+	admissionResp.TypeMeta = admissionReq.TypeMeta
+	admissionResp.Kind = admissionReq.Kind
+
+	requestForNamespace := "unknown"
+	if admissionReq.Request != nil {
+		requestForNamespace = admissionReq.Request.Namespace
+	}
+	err := resp.WriteAsJson(&admissionResp)
+	if err != nil {
+		klog.Errorf("Failed to write response[pod-arch inject] admin review in namespace=%s err=%v", requestForNamespace, err)
+		return
+	}
+	klog.Infof("Done[pod-arch inject] with uuid=%s in namespace=%s", proxyUUID, requestForNamespace)
+}
+
+// podArchMutate injects a kubernetes.io/arch nodeSelector into the pod when its
+// owning app's OlaresManifest declares exactly one spec.supportArch. Apps that
+// declare zero or multiple architectures are left untouched, as are pods whose
+// namespace has no resolvable app config or that already pin an arch selector.
+func (h *Handler) podArchMutate(ctx context.Context, req *admissionv1.AdmissionRequest, proxyUUID uuid.UUID) *admissionv1.AdmissionResponse {
+	if req == nil {
+		klog.Error("Failed to get admission request err=admission request is nil")
+		return h.sidecarWebhook.AdmissionError("", errNilAdmissionRequest)
+	}
+	resp := &admissionv1.AdmissionResponse{
+		Allowed: true,
+		UID:     req.UID,
+	}
+	var pod corev1.Pod
+	if err := json.Unmarshal(req.Object.Raw, &pod); err != nil {
+		klog.Errorf("Failed to unmarshal request object raw to pod with uuid=%s namespace=%s", proxyUUID, req.Namespace)
+		return h.sidecarWebhook.AdmissionError(req.UID, err)
+	}
+
+	_, appCfg, _, _, _ := h.sidecarWebhook.GetAppConfig(req.Namespace)
+	if appCfg == nil {
+		return resp
+	}
+	// len==0: covers apps installed before the SupportArch field existed, whose
+	// ApplicationManager.Spec.Config has no supportArch — leave them
+	// unpinned for backward compatibility. len==2: dual-arch (amd64+arm64),
+	// no single node arch to select.
+	if len(appCfg.SupportArch) == 0 || len(appCfg.SupportArch) == 2 {
+		return resp
+	}
+
+	arch := appCfg.SupportArch[0]
+	if _, ok := pod.Spec.NodeSelector[constants.ArchLabelKey]; ok {
+		// Respect an explicit arch nodeSelector already set by the chart.
+		return resp
+	}
+	if pod.Spec.NodeSelector == nil {
+		pod.Spec.NodeSelector = make(map[string]string)
+	}
+	pod.Spec.NodeSelector[constants.ArchLabelKey] = arch
+
+	current, err := json.Marshal(&pod)
+	if err != nil {
+		return h.sidecarWebhook.AdmissionError(req.UID, err)
+	}
+	admissionResp := admission.PatchResponseFromRaw(req.Object.Raw, current)
+	patchBytes, err := json.Marshal(admissionResp.Patches)
+	if err != nil {
+		return h.sidecarWebhook.AdmissionError(req.UID, err)
+	}
+	h.sidecarWebhook.PatchAdmissionResponse(resp, patchBytes)
+	klog.Infof("Injected arch nodeSelector=%s for pod uuid=%s namespace=%s", arch, proxyUUID, req.Namespace)
+	return resp
 }
 
 func (h *Handler) appLabelInject(req *restful.Request, resp *restful.Response) {
@@ -942,7 +1304,7 @@ func (h *Handler) appLabelMutate(ctx context.Context, req *admissionv1.Admission
 		UID:     req.UID,
 	}
 
-	_, appCfg, _, _ := h.sidecarWebhook.GetAppConfig(req.Namespace)
+	_, appCfg, _, _, _ := h.sidecarWebhook.GetAppConfig(req.Namespace)
 	if appCfg == nil {
 		klog.Error("get appcfg is empty")
 		return resp
@@ -958,7 +1320,24 @@ func (h *Handler) appLabelMutate(ctx context.Context, req *admissionv1.Admission
 		return resp
 	}
 
-	patchBytes, err := makePatches(req, appCfg)
+	fixedMAC := false
+	if req.Kind.Kind == "Deployment" {
+		var d appsv1.Deployment
+		if err := json.Unmarshal(req.Object.Raw, &d); err != nil {
+			return h.sidecarWebhook.AdmissionError(req.UID, err)
+		}
+		pod := &corev1.Pod{ObjectMeta: d.Spec.Template.ObjectMeta, Spec: d.Spec.Template.Spec}
+		if pod.Labels == nil {
+			pod.Labels = map[string]string{}
+		}
+		pod.Labels[constants.ApplicationNameLabel], pod.Labels[constants.ApplicationOwnerLabel] = appCfg.AppName, appCfg.OwnerName
+		enabled, err := h.sidecarWebhook.ShouldInjectMacvlanInit(ctx, pod, req.Namespace)
+		if err != nil {
+			return h.sidecarWebhook.AdmissionError(req.UID, err)
+		}
+		fixedMAC = enabled
+	}
+	patchBytes, err := makePatches(req, appCfg, fixedMAC)
 	if err != nil {
 		klog.Errorf("make patches err=%v", patchBytes)
 		return h.sidecarWebhook.AdmissionError(req.UID, err)
@@ -969,7 +1348,7 @@ func (h *Handler) appLabelMutate(ctx context.Context, req *admissionv1.Admission
 	return resp
 }
 
-func makePatches(req *admissionv1.AdmissionRequest, appCfg *appcfg.ApplicationConfig) ([]byte, error) {
+func makePatches(req *admissionv1.AdmissionRequest, appCfg *appcfg.ApplicationConfig, fixedMAC ...bool) ([]byte, error) {
 	original := req.Object.Raw
 	var patchBytes []byte
 	var tpl *corev1.PodTemplateSpec
@@ -1007,6 +1386,12 @@ func makePatches(req *admissionv1.AdmissionRequest, appCfg *appcfg.ApplicationCo
 		tpl.ObjectMeta.Labels[constants.ApplicationRawAppNameLabel] = appCfg.RawAppName
 		if gpuPolicy != "" {
 			tpl.ObjectMeta.Labels[constants.AppPodGPUConsumePolicy] = gpuPolicy
+		}
+		if len(fixedMAC) != 0 && fixedMAC[0] {
+			if deploy.Spec.Replicas != nil && *deploy.Spec.Replicas > 1 {
+				return nil, fmt.Errorf("fixed MAC requires a single-replica Deployment")
+			}
+			deploy.Spec.Strategy = appsv1.DeploymentStrategy{Type: appsv1.RecreateDeploymentStrategyType}
 		}
 		current, err := json.Marshal(deploy)
 		if err != nil {
@@ -1275,9 +1660,63 @@ func (h *Handler) macvlanInitInject(req *restful.Request, resp *restful.Response
 	klog.Infof("Done[macvlan-init inject] with uuid=%s in namespace=%s", proxyUUID, requestForNamespace)
 }
 
+// macvlanAnnotationValidate is the validating entrypoint for direct
+// underlay-macvlan annotations. It is invoked only when the admission
+// configuration's CEL match condition sees the underlay selection.
+func (h *Handler) macvlanAnnotationValidate(req *restful.Request, resp *restful.Response) {
+	klog.Infof("Received validating webhook[macvlan annotation] request: Method=%v, URL=%v", req.Request.Method, req.Request.URL)
+	admissionRequestBody, ok := h.sidecarWebhook.GetAdmissionRequestBody(req, resp)
+	if !ok {
+		return
+	}
+	var admissionReq, admissionResp admissionv1.AdmissionReview
+	proxyUUID := uuid.New()
+	if _, _, err := webhook.Deserializer.Decode(admissionRequestBody, nil, &admissionReq); err != nil {
+		klog.Errorf("Failed to decode macvlan annotation admission request err=%v", err)
+		admissionResp.Response = h.sidecarWebhook.AdmissionError("", err)
+	} else {
+		admissionResp.Response = h.macvlanAnnotationValidateMutate(req.Request.Context(), admissionReq.Request, proxyUUID)
+	}
+	admissionResp.TypeMeta = admissionReq.TypeMeta
+	admissionResp.Kind = admissionReq.Kind
+	if err := resp.WriteAsJson(&admissionResp); err != nil {
+		klog.Errorf("Failed to write macvlan annotation admission response err=%v", err)
+	}
+}
+
+func (h *Handler) macvlanAnnotationValidateMutate(ctx context.Context, req *admissionv1.AdmissionRequest, proxyUUID uuid.UUID) *admissionv1.AdmissionResponse {
+	if req == nil {
+		return h.sidecarWebhook.AdmissionError("", errNilAdmissionRequest)
+	}
+	var pod corev1.Pod
+	if err := json.Unmarshal(req.Object.Raw, &pod); err != nil {
+		klog.Errorf("Failed to unmarshal macvlan annotation pod uuid=%s err=%v", proxyUUID, err)
+		return h.sidecarWebhook.AdmissionError(req.UID, err)
+	}
+	pod.Namespace = req.Namespace
+	allowed := &admissionv1.AdmissionResponse{Allowed: true, UID: req.UID}
+	if req.Operation == admissionv1.Update && len(req.OldObject.Raw) > 0 {
+		var oldPod corev1.Pod
+		if err := json.Unmarshal(req.OldObject.Raw, &oldPod); err != nil {
+			klog.Errorf("Failed to unmarshal previous macvlan annotation pod uuid=%s err=%v", proxyUUID, err)
+			return h.sidecarWebhook.AdmissionError(req.UID, err)
+		}
+		if !webhook.MacvlanSelectionAnnotationsChanged(&oldPod, &pod) {
+			return allowed
+		}
+	}
+	dryRun := req.DryRun != nil && *req.DryRun
+	if err := h.sidecarWebhook.ValidateMacvlanAnnotation(ctx, &pod, req.Namespace, dryRun); err != nil {
+		klog.Errorf("Rejected macvlan network selection pod=%s/%s uuid=%s err=%v", req.Namespace, pod.Name, proxyUUID, err)
+		return h.sidecarWebhook.AdmissionError(req.UID, err)
+	}
+	return allowed
+}
+
 // macvlanInitMutate is the core mutation logic for the macvlan-init webhook.
-// It is a no-op for pods without the macvlan-init label or whose owning
-// Application does not opt into enableOverlayGateway.
+// Pods whose Application enabled the Overlay Gateway get the platform network
+// selection and init containers; every other pod that declares a network
+// selection of its own has it removed but is still admitted.
 func (h *Handler) macvlanInitMutate(ctx context.Context, req *admissionv1.AdmissionRequest, proxyUUID uuid.UUID) *admissionv1.AdmissionResponse {
 	if req == nil {
 		klog.Error("Failed to get admission request err=admission request is nil")
@@ -1294,32 +1733,60 @@ func (h *Handler) macvlanInitMutate(ctx context.Context, req *admissionv1.Admiss
 		return h.sidecarWebhook.AdmissionError(req.UID, err)
 	}
 
-	// Defense-in-depth: ObjectSelector already filters by this label, but
-	// re-check here in case the webhook is invoked from a misconfigured caller.
-	if pod.Labels[constants.ApplicationMacvlanInitLabel] != "true" {
-		return resp
-	}
 	ns := req.Namespace
+	dryRun := req.DryRun != nil && *req.DryRun
+	appName := pod.Labels[constants.ApplicationNameLabel]
 
+	// Authorization is decided by the application's Overlay Gateway switch
+	// alone; the label and any chart-authored annotation only decide whether
+	// this handler is reached.
 	shouldInject, err := h.sidecarWebhook.ShouldInjectMacvlanInit(ctx, &pod, ns)
 	if err != nil {
 		klog.Errorf("Failed to evaluate macvlan-init injection for pod=%s/%s err=%v", req.Namespace, pod.Name, err)
-		// FailurePolicy is Ignore at the webhook-config level; here we
-		// still report an error so the API server records it, but the
-		// pod will be allowed.
 		return h.sidecarWebhook.AdmissionError(req.UID, err)
 	}
 	if !shouldInject {
+		if !webhook.HasMacvlanSelectionAnnotations(&pod) {
+			return resp
+		}
+		patchBytes, removed, err := h.sidecarWebhook.StripMacvlanAnnotations(req, &pod)
+		if err != nil {
+			klog.Errorf("Failed to strip macvlan network selection from pod=%s/%s err=%v", req.Namespace, pod.Name, err)
+			return h.sidecarWebhook.AdmissionError(req.UID, err)
+		}
+		if len(patchBytes) > 0 {
+			h.sidecarWebhook.PatchAdmissionResponse(resp, patchBytes)
+		}
+		klog.Warningf("macvlan-init: stripped network selection %v from pod=%s/%s app=%q uuid=%s (Overlay Gateway not enabled)", removed, req.Namespace, pod.Name, appName, proxyUUID)
+		reason, message := webhook.EventReasonOverlayGatewayDisabled,
+			fmt.Sprintf("Application %q declares a LAN network attachment, but Overlay Gateway is not enabled for it; the attachment was removed. Enable Overlay Gateway in the application settings to allow it.", appName)
+		if len(removed) == 1 && removed[0] == "v1.multus-cni.io/default-network" {
+			reason, message = webhook.EventReasonDefaultNetworkNotAllowed,
+				fmt.Sprintf("Application %q tried to replace the pod default network; the override was removed.", appName)
+		}
+		h.sidecarWebhook.RecordMacvlanEvent(ctx, &pod, ns, reason, message, dryRun)
 		return resp
 	}
 
-	patchBytes, err := h.sidecarWebhook.CreateMacvlanInitPatch(req, &pod)
+	previousSelection := pod.Annotations["k8s.v1.cni.cncf.io/networks"]
+	_, hadDefaultNetwork := pod.Annotations["v1.multus-cni.io/default-network"]
+	patchBytes, err := h.sidecarWebhook.CreateMacvlanInitPatchWithContext(ctx, req, &pod)
 	if err != nil {
 		klog.Errorf("Failed to create macvlan-init patch for pod=%s/%s err=%v", req.Namespace, pod.Name, err)
 		return h.sidecarWebhook.AdmissionError(req.UID, err)
 	}
 	if len(patchBytes) > 0 {
 		h.sidecarWebhook.PatchAdmissionResponse(resp, patchBytes)
+	}
+	if hadDefaultNetwork {
+		klog.Warningf("macvlan-init: removed default network override from pod=%s/%s app=%q uuid=%s", req.Namespace, pod.Name, appName, proxyUUID)
+		h.sidecarWebhook.RecordMacvlanEvent(ctx, &pod, ns, webhook.EventReasonDefaultNetworkNotAllowed,
+			fmt.Sprintf("Application %q tried to replace the pod default network; the override was removed.", appName), dryRun)
+	}
+	if previousSelection != "" && previousSelection != pod.Annotations["k8s.v1.cni.cncf.io/networks"] {
+		klog.Warningf("macvlan-init: rebuilt chart-authored network selection for pod=%s/%s app=%q uuid=%s", req.Namespace, pod.Name, appName, proxyUUID)
+		h.sidecarWebhook.RecordMacvlanEvent(ctx, &pod, ns, webhook.EventReasonOverlayNetworkRebuilt,
+			fmt.Sprintf("Application %q wrote its own LAN network selection; it was replaced by the platform-managed selection.", appName), dryRun)
 	}
 	klog.Infof("macvlan-init: injected init container for pod=%s/%s uuid=%s", req.Namespace, pod.Name, proxyUUID)
 	return resp

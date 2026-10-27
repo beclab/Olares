@@ -78,6 +78,24 @@ func BuildListEnvelope(ctx context.Context, c *pkgdashboard.Client, cf *pkgdashb
 	if advisoryNote != "" {
 		env.Meta.Note = advisoryNote
 	}
+
+	// Intel and AMD cards never appear in HAMI's list — it only enumerates
+	// CUDA devices — so they are collected separately from KubeSphere and
+	// appended. Their failures are warnings rather than errors: a broken
+	// Intel read should not blank out the NVIDIA cards sitting beside it.
+	ksItems, ksWarnings := ksListItems(ctx, c, cf, now)
+	if len(ksWarnings) > 0 {
+		env.Meta.Warnings = append(env.Meta.Warnings, ksWarnings...)
+	}
+
+	if err != nil && len(ksItems) > 0 {
+		// HAMI is down or absent but another vendor answered. Report what we
+		// have and keep the HAMI failure visible as a warning instead of
+		// discarding a working vendor's cards.
+		env.Meta.Warnings = append(env.Meta.Warnings, fmt.Sprintf("hami: %v", err))
+		env.Items = ksItems
+		return env
+	}
 	if err != nil {
 		if he, ok := pkgdashboard.IsHTTPError(err); ok && he.Status == http.StatusNotFound {
 			env.Meta.Empty = true
@@ -103,7 +121,7 @@ func BuildListEnvelope(ctx context.Context, c *pkgdashboard.Client, cf *pkgdashb
 		env.Meta.ErrorKind = pkgdashboard.ClassifyTransportErr(err)
 		return env
 	}
-	if len(list) == 0 {
+	if len(list) == 0 && len(ksItems) == 0 {
 		env.Meta.Empty = true
 		env.Meta.EmptyReason = "no_gpu_detected"
 		return env
@@ -145,7 +163,104 @@ func BuildListEnvelope(ctx context.Context, c *pkgdashboard.Client, cf *pkgdashb
 		}
 		env.Items = append(env.Items, pkgdashboard.Item{Raw: raw, Display: disp})
 	}
+	env.Items = append(env.Items, ksItems...)
 	return env
+}
+
+// ksListItems collects the device rows of every KubeSphere-sourced vendor
+// the cluster carries. Returns the items plus one warning per vendor that
+// failed, so a partial answer still reaches the user.
+func ksListItems(ctx context.Context, c *pkgdashboard.Client, cf *pkgdashboard.CommonFlags, now time.Time) ([]pkgdashboard.Item, []string) {
+	inv, err := pkgdashboard.DetectGPUVendors(ctx, c)
+	if err != nil {
+		return nil, []string{fmt.Sprintf("gpu vendor detection: %v", err)}
+	}
+	var (
+		items    []pkgdashboard.Item
+		warnings []string
+	)
+	for _, vendor := range inv.Vendors {
+		spec, ok := pkgdashboard.KsSpecFor(vendor)
+		if !ok {
+			continue
+		}
+		table, err := pkgdashboard.FetchGPUMetrics(ctx, c, pkgdashboard.DeviceMetricNames(spec),
+			pkgdashboard.GPUMetricOptions{Level: pkgdashboard.GPULevelCluster})
+		if err != nil {
+			warnings = append(warnings, fmt.Sprintf("%s: %v", vendor, err))
+			continue
+		}
+		for _, row := range pkgdashboard.JoinDeviceRows(vendor, spec, table) {
+			items = append(items, ksRowItem(vendor, spec, row, cf))
+		}
+	}
+	return items, warnings
+}
+
+// ksRowItem renders one card into the shared list shape. Every vendor fills
+// the same columns so the table stays one table; a column this vendor cannot
+// report shows "-" rather than a zero that would read as a real measurement.
+func ksRowItem(vendor pkgdashboard.GPUVendor, spec pkgdashboard.KsVendorSpec, row pkgdashboard.DeviceRow, cf *pkgdashboard.CommonFlags) pkgdashboard.Item {
+	raw := map[string]any{}
+	for k, v := range row {
+		raw[k] = v
+	}
+	hidden := map[string]bool{}
+	for _, col := range spec.HiddenColumns {
+		hidden[col] = true
+	}
+
+	disp := map[string]any{
+		"gpu_id":    rowText(row, "uuid"),
+		"model":     rowText(row, "type"),
+		"host_node": rowText(row, "nodeName"),
+		"vendor":    string(vendor),
+		"mode":      "-",
+		"health":    gpuHealthLabel(row["health"]),
+	}
+	disp["core_util"] = percentOrDash(row, "coreUtilizedPercent")
+	disp["vram_usage"] = percentOrDash(row, "memoryUtilizedPercent")
+	if v, ok := pkgdashboard.RowFloat(row, "memoryTotal"); ok {
+		disp["vram_total"] = gpuVRAMHuman(v)
+	} else {
+		disp["vram_total"] = "-"
+	}
+	if v, ok := pkgdashboard.RowFloat(row, "memoryUsed"); ok {
+		disp["vram_used"] = gpuVRAMHuman(v)
+	} else {
+		disp["vram_used"] = "-"
+	}
+	if v, ok := pkgdashboard.RowFloat(row, "power"); ok {
+		disp["power"] = fmt.Sprintf("%.2f W", v)
+	} else {
+		disp["power"] = "-"
+	}
+	if v, ok := pkgdashboard.RowFloat(row, "temperature"); ok && !hidden["temperature"] {
+		disp["temperature"] = renderTemperature(v, cf.TempUnit)
+	} else {
+		disp["temperature"] = "-"
+	}
+	return pkgdashboard.Item{Raw: raw, Display: disp}
+}
+
+// rowText reads an identity field, falling back to "-" so a label the
+// exporter omitted does not render as an empty cell.
+func rowText(row pkgdashboard.DeviceRow, field string) string {
+	v, ok := row[field]
+	if !ok || v == nil || v == "" {
+		return "-"
+	}
+	return fmt.Sprintf("%v", v)
+}
+
+// percentOrDash formats a percentage column, distinguishing "not reported"
+// from a genuine zero.
+func percentOrDash(row pkgdashboard.DeviceRow, field string) string {
+	v, ok := pkgdashboard.RowFloat(row, field)
+	if !ok {
+		return "-"
+	}
+	return percentDirect(v)
 }
 
 // WriteListTable renders the per-GPU summary table. Column order

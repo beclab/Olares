@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 使用树莓派安装配置 Olares 的完整步骤，包括硬件要求、安装命令和系统设置。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 树莓派, Raspberry Pi, ARM, Raspbian
 ---
 # 在树莓派上安装 Olares
 本文介绍如何在树莓派设备上安装 Olares。
@@ -19,6 +23,10 @@ description: 使用树莓派安装配置 Olares 的完整步骤，包括硬件�
    :::warning 必须使用 SSD
    使用机械硬盘 (HDD) 会导致安装失败。
    :::
+
+## 开始之前
+
+<!--@include: ./reusables.md#larepass-prerequisite-->
 
 ## 配置环境
 1. 配置 Raspbian 环境，启用必要功能：

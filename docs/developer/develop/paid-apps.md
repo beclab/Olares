@@ -1,6 +1,10 @@
 ---
 outline: [2, 3] 
 description: Learn how to publish paid apps in Olares Market and manage sales using the Merchant app.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, paid apps, Olares Market, Merchant app, app monetization, blockchain, RSA keys
 ---
 # Publish paid applications
 

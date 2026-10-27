@@ -37,16 +37,22 @@ Verb families:
   catalog (read-only)   list, categories, get         browse /market/data
   runtime (read-only)   status                        read /market/state
   lifecycle (mutating)  install, upgrade, uninstall,  POST/PUT/DELETE on
-                        clone, stop, resume, cancel    /apps/{name}/*
-  charts (mutating)     upload, delete                 SPA Local Sources
+                        clone, stop, resume, restart,  /apps/{name}/*
+                        cancel
+  charts                upload, download, delete       SPA Local Sources
+                        (download is read-only)
 
 Universal flags:
 
   -o, --output {table,json}   every verb. JSON output is parseable.
   -q, --quiet                 every verb. Suppress output; exit code wins.
   -s, --source <id>           source-aware verbs (catalog + install /
-                              upgrade / clone / upload / delete).
-                              Valid ids: market.olares, cli, upload, studio.
+                              upgrade / clone / download).
+                              Which ids exist is per cluster, so read them
+                              off "market list -a" rather than from here.
+                              Common ones: market.olares (public catalog),
+                              market.test (staging catalog), and the local
+                              chart buckets upload / cli / studio.
   -a, --all-sources           list, categories, status.
       --no-headers            list, categories (row-oriented browse only;
                               "get" prints a key:value detail view that
@@ -67,10 +73,6 @@ cli/skills/olares-market/SKILL.md.`,
 	}
 	cmd.SilenceErrors = true
 	cmd.SilenceUsage = true
-	cmd.PersistentPreRun = func(c *cobra.Command, args []string) {
-		c.SilenceErrors = true
-		c.SilenceUsage = true
-	}
 
 	cmd.AddCommand(NewCmdMarketList(f))
 	cmd.AddCommand(NewCmdMarketCategories(f))
@@ -82,7 +84,9 @@ cli/skills/olares-market/SKILL.md.`,
 	cmd.AddCommand(NewCmdMarketCancel(f))
 	cmd.AddCommand(NewCmdMarketStop(f))
 	cmd.AddCommand(NewCmdMarketResume(f))
+	cmd.AddCommand(NewCmdMarketRestart(f))
 	cmd.AddCommand(NewCmdMarketUpload(f))
+	cmd.AddCommand(NewCmdMarketDownload(f))
 	cmd.AddCommand(NewCmdMarketDelete(f))
 	cmd.AddCommand(NewCmdMarketStatus(f))
 	return cmd

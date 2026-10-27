@@ -5,20 +5,19 @@ head:
   - - meta
     - name: keywords
       content: Olares, OpenClaw, Olares CLI skills, ClawHub, agent
-app_version: "1.0.3"
-doc_version: "1.0"
-doc_updated: "2026-05-29"
+app_version: "1.0.17"
+doc_version: "1.1"
+doc_updated: "2026-07-31"
 ---
 
 # Manage Olares with your OpenClaw agent
 
-Install the Olares CLI skills in OpenClaw so your agent can manage files and applications on your Olares device. For example, ask it to list files, read logs, or install apps from Olares Market.
+OpenClaw comes with Olares CLI [Agent Skills](/developer/cli-agent-skills.md) built in, so your agent can manage files and applications on your Olares device out of the box. For example, ask it to list files, read logs, or install apps from Olares Market.
 
 ## Learning objectives
 
 In this guide, you will learn how to:
-- Authenticate with the Olares CLI in the OpenClaw CLI.
-- Install Olares skills from ClawHub.
+- Authenticate the Olares CLI with your Olares ID.
 - Chat with your agent in natural language to perform actions on your Olares device, such as installing apps from Market.
 
 ## Prerequisites
@@ -28,63 +27,59 @@ In this guide, you will learn how to:
 
 ## Step 1: Authenticate with the Olares CLI
 
-To authorize your agent to perform system actions, you must first log in to the Olares CLI using your account credentials.
+Before your agent can run Olares CLI Agent Skills on your behalf, authenticate the Olares CLI with your Olares ID.
 
 1. Open the OpenClaw CLI from the Launchpad.
-2. Log in to your Olares account. Replace `<your-olares-id>` with your Olares ID:
+2. Run the following command to confirm that both `olares-cli` and its skills are properly installed and enabled:
+
+   ```bash
+   olares-cli -v
+   ```
+
+   Example output:
+
+   ```
+   olares-cli version 1.12.6
+   Git commit: d30eca705df2fb614bf2bbea95daa2e6998adeeb
+   Build time: 2026-07-06T06:33:00Z
+   ```
+
+3. Run the following command to log in to your Olares account. Replace `<your-olares-id>` with your actual Olares ID.
 
    ```bash
    olares-cli profile login --olares-id <your-olares-id>
    ```
 
-   For example:
+   Example:
 
    ```bash
    olares-cli profile login --olares-id laresprime@olares.com
    ```
 
-3. Follow the prompt to enter your Olares login password. For security, the password you enter is hidden.
-4. Verify your login status.
+4. When prompted, enter your Olares login password. The password is hidden as you type.
+5. If two-factor authentication is enabled on your Olares, the CLI prompts you for a two-factor code for this Olares ID. Enter the 6-digit code from LarePass, and then press **Enter**.
+6. Run the following command to verify that the profile is created and logged in:
 
    ```bash
    olares-cli profile list
    ```
 
-   Example output:
+   Example output (`*` marks the current profile):
 
    ```text
-   NAME                   OLARES-ID              STATUS
-   *  laresprime@olares.com  laresprime@olares.com   logged-in
+      NAME                   OLARES-ID              STATUS     VERSION
+   *  laresprime@olares.com  laresprime@olares.com  logged-in  1.12.6
    ```
 
-## Step 2: Install Olares skills
+## Step 2: Direct your agent to execute tasks
 
-Give your agent the ability to manage your device by installing Olares skills from ClawHub.
-
-1. Open the Control UI, and then select **Skills** from the left sidebar.
-2. Under **ClawHub**, in the search box, enter `olares` to find the Olares skills.
-
-   ![Olares skills in ClawHub](/images/manual/use-cases/openclaw-install-olares-skills1.png#bordered)
-
-3. Install the **Olares Shared** skill first because it's the foundation for the other Olares skills.
-4. Install the remaining Olares skills, such as **Olares Files** and **Olares Market**.
-5. Go to the chat page, and then run `/reset` to start a new session so the agent picks up the newly installed skills. If you've configured channels such as Discord, also run `/reset` in each channel conversation.
-
-:::info Retry on 429 errors
-If you see a 429 error when downloading a skill, wait a moment and try again.
-:::
-
-## Step 3: Direct your agent to execute tasks
-
-Open the Control UI and send your request to the agent in natural language.
+Open the Control UI,  start a new session, and send your request to the agent in natural language.
 
 For example, ask it to install an app from Olares Market:
 
 ```text
-Install Firefox
+Install Firefox from Olares Market and tell me when it is ready
 ```
-
-![Install an app](/images/manual/use-cases/openclaw-olares-cli-install-app.png#bordered)
 
 ## Learn more
 

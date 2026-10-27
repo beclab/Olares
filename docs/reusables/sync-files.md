@@ -1,5 +1,9 @@
 ---
 search: false
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Files, sync files, local sync, library, LarePass desktop
 ---
 <!-- Reusable sync-files content. Include by named region. -->
 

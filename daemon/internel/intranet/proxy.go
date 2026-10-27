@@ -157,9 +157,11 @@ func (p *proxyServer) Next(c echo.Context) *middleware.ProxyTarget {
 	if strings.HasSuffix(requestHost, "-olares.local") {
 		// intranet request, and host parttern is appid-<username>-olares.local for windows and linux client
 		tokens := strings.Split(requestHost, "-")
-		if len(tokens) < 3 {
-			klog.Error("invalid intranet request host, ", requestHost)
-			return nil
+		if len(tokens) > 3 {
+			// pattern maybe is app-id-xxx-<username>-olares.local,
+			// so we need to join the tokens before <username> as app-id
+			appid := strings.Join(tokens[:len(tokens)-2], "-")
+			tokens = append([]string{appid}, tokens[len(tokens)-2:]...)
 		}
 		requestHost = strings.Join(tokens, ".")
 		c.Request().Host = requestHost
@@ -169,7 +171,7 @@ func (p *proxyServer) Next(c echo.Context) *middleware.ProxyTarget {
 	}
 	if err != nil {
 		klog.Error("parse proxy target error, ", err)
-		return nil
+		return &middleware.ProxyTarget{URL: &url.URL{}}
 	}
 	return &middleware.ProxyTarget{URL: proxyPass}
 }
@@ -207,6 +209,10 @@ type proxyInfo struct {
 
 func (p *proxyServer) customDialContext(d *net.Dialer) func(ctx context.Context, network, addr string) (net.Conn, error) {
 	return func(ctx context.Context, network, addr string) (net.Conn, error) {
+		if network == "" || addr == "" {
+			return nil, fmt.Errorf("network and addr must be specified")
+		}
+
 		_, port, _ := net.SplitHostPort(addr)
 		// Force proxying to localhost
 		klog.Info("addr: ", addr, " port: ", port, " network: ", network)
@@ -228,6 +234,10 @@ func (p *proxyServer) customDialContext(d *net.Dialer) func(ctx context.Context,
 		}
 
 		proxyDial := func(ctx context.Context, netDialer *net.Dialer, network, addr string) (net.Conn, error) {
+			if netDialer == nil {
+				return nil, fmt.Errorf("netDialer must be specified")
+			}
+
 			conn, err := netDialer.DialContext(ctx, network, addr)
 			if err != nil {
 				return nil, err

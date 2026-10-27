@@ -8,6 +8,15 @@ import (
 	"testing"
 )
 
+func TestEmptyListMessageSuggestsAllSources(t *testing.T) {
+	got := emptyListMessage("", "default")
+	for _, want := range []string{"No apps found in source 'default'", "olares-cli market list -a"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("message %q missing %q", got, want)
+		}
+	}
+}
+
 // TestIsInstalledState locks down the "is this row one of the user's
 // apps?" filter used by runListInstalled (the implementation of
 // `market list --mine`), aligned VERBATIM to the SPA's "My Terminus"

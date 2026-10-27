@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/beclab/Olares/cli/cmd/ctl/settings/internal/preflight"
+	"github.com/beclab/Olares/cli/pkg/bflenvelope"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 	"github.com/beclab/Olares/cli/pkg/whoami"
 )
@@ -144,12 +145,12 @@ func decodeSubroutesStatus(raw json.RawMessage) ([]string, error) {
 	if len(trimmed) == 0 || string(trimmed) == "null" {
 		return nil, nil
 	}
-	var env bflEnvelope
+	var env bflenvelope.Envelope
 	if err := json.Unmarshal(trimmed, &env); err == nil && envelopeLooksWrapped(trimmed, env) {
 		switch env.Code {
 		case 0, 200:
 		default:
-			msg := strings.TrimSpace(env.Message)
+			msg := strings.TrimSpace(env.Message.Text)
 			if msg == "" {
 				msg = fmt.Sprintf("server returned code=%d", env.Code)
 			}

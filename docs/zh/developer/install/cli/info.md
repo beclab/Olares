@@ -1,3 +1,7 @@
+---
+noindex: true
+description: info 命令用于显示当前安装的 Olares 版本信息。
+---
 # `info`
 
 ## 命令说明

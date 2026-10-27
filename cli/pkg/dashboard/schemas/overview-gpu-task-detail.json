@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "dashboard.overview.gpu.task.detail",
-  "description": "Per-task detail from /hami/api/vgpu/v1/container?name=&podUid=&sharemode=. HAMI returns the detail object FLAT at the top level (no `data` envelope). `items[0].raw` / `items[0].display` mirror the upstream document one-to-one — fields include name, status, podUid, nodeName, deviceShareModes[], devicesCoreUtilizedPercent[], devicesMemUtilized[], allocatedDevices, deviceIds[], createTime, startTime, endTime, namespace, resourcePool, flavor, priority, appName. Soft-gated like gpu.list (admin / CUDA hints land in meta.note). Empty envelopes carry 'no_vgpu_integration' (HAMI 404), 'vgpu_unavailable' (HAMI 5xx — meta.error / meta.http_status), or 'no_gpu_detected' (HAMI 200 but empty body).",
+  "description": "Per-task detail from /hami/api/vgpu/v1/container?name=&podUid=&sharemode=. HAMI returns the detail object FLAT at the top level (no `data` envelope). `items[0].raw` / `items[0].display` mirror the upstream document one-to-one — fields include name, status, podUid, nodeName, deviceShareModes[], devicesCoreUtilizedPercent[], devicesMemUtilized[], allocatedDevices, deviceIds[], createTime, startTime, endTime, namespace, resourcePool, flavor, priority, appName. Soft-gated like gpu.list (admin / GPU-node hints land in meta.note). Empty envelopes carry 'no_vgpu_integration' (HAMI 404), 'vgpu_unavailable' (HAMI 5xx — meta.error / meta.http_status), or 'no_gpu_detected' (HAMI 200 but empty body).",
   "type": "object",
   "required": ["kind", "meta", "items"],
   "properties": {

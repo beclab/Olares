@@ -1,16 +1,21 @@
 ---
+connectionVersion: "1.12.7"
+connectionLatestPath: /use-cases/nofx
 outline: deep
+title: Set up an autonomous trading agent with NOFX
 description: Run NOFX, an open-source autonomous AI trading agent, on Olares. Fund an AI wallet, connect an exchange, configure a strategy, and let the agent trade.
 head:
   - - meta
     - name: keywords
       content: Olares, NOFX, AI trading, autonomous agent, crypto, Hyperliquid, self-hosted
-app_version: "1.0.5"
-doc_version: "1.1"
-doc_updated: "2026-05-09"
+app_version: "1.0.12"
+doc_version: "1.2"
+doc_updated: "2026-09-23"
 ---
 
 # Set up an autonomous AI trading agent with NOFX
+
+<VersionRouteSelect />
 
 NOFX is an open-source autonomous AI trading agent. Unlike traditional AI tools that require you to configure models, manage API keys, and wire up data sources, NOFX senses the market, picks a model, and pulls the data on its own. You set the strategy, and the agent handles the rest.
 
@@ -206,46 +211,21 @@ Yes, you can use a local model, but ensure it meets the following requirements:
 - It must support OpenAI-compatible API calls.
 - It needs strong instruction-following capabilities, a sufficient context window, and fast inference speeds. Otherwise, the model might fail to output valid trading instructions.
 
-To configure a local model:
-1. On the **Config** page, click **+ MODELS_CONFIG**.
-2. Click **Other API Providers**, and then select **OpenAI**.
-3. In the **API Key** field, enter any text string.
-4. In the **Base URL** field, enter your local model endpoint URL. Ensure the URL ends with `/v1`.
+Before connecting a local model, you need:
 
-   Olares offers two ways to serve local models. For either way, get the shared entrance URL:
+<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
+- Qwen3.8-27B (llama.cpp) installed from Market.
 
-   <Tabs>
-   <template #Ollama>
+<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
+5. Open NOFX, and click **+ MODELS_CONFIG** on the **Config** page.
+6. Click **Other API Providers**, and then select **OpenAI**.
+7. Specify the following settings:
 
-   One app that hosts multiple models behind a single shared endpoint.
+   - **API Key**: Enter any text string such as `local`.
+   - **Base URL**: Enter the **Base URL** copied from Router. Ensure the URL ends with `/v1`.
+   - **Model Name (Optional)**: Enter `default-chat`.
 
-   a. Open Settings, and then go to **Applications** > **Ollama**.
-
-   b. In **Shared entrances**, select **Ollama API** to view the shared endpoint URL.
-
-      ![Ollama shared entrance in Settings](/images/manual/use-cases/ollama-shared.png#bordered){width=80%}
-
-   c. Copy the shared endpoint. For example, `http://d54536a50.shared.olares.com`.
-   
-   d. Append `/v1` to this endpoint URL, that is `http://d54536a50.shared.olares.com/v1`.
-   </template>
-   <template #Single-model-apps>
-
-   Each app packages one specific model and exposes its own shared endpoint. Take **Qwen3.5 9B Q4_K_M (Ollama)** for example.
-
-   a. Open Settings, and then go to **Applications** > **Qwen3.5 9B Q4_K_M (Ollama)**.
-   
-   b. In **Shared entrances**, select **Qwen3.5 9B Q4_K_M** to view the endpoint URL.
-
-      ![Qwen3.5 9B shared entrance](/images/manual/use-cases/anythingllm-qwen359b-shared-entrance.png#bordered){width=80%}
-
-   c. Copy the shared endpoint URL. For example, `http://bd5355000.shared.olares.com`.
-   
-   d. Append `/v1` to this endpoint URL, that is `http://bd5355000.shared.olares.com/v1`.
-   </template>
-   </Tabs>
-
-5. Click **Save Configuration**.
+8. Click **Save Configuration**.
 
 ### Model didn't output structured JSON decision
 

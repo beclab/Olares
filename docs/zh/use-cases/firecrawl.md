@@ -1,4 +1,6 @@
 ---
+connectionVersion: "1.12.7"
+connectionLatestPath: /zh/use-cases/firecrawl
 outline: [2, 3]
 description: 在 Olares 上设置 Firecrawl，作为 Open WebUI 等应用的网页加载器，或使用其 API 抓取和爬取网站。
 head:
@@ -6,19 +8,30 @@ head:
     - name: keywords
       content: Olares, Firecrawl, web crawler, web scraping, Firecrawl v2, scrape API, crawl API, Open WebUI, web loader, self-hosted
 app_version: "1.0.21"
-doc_version: "1.0"
-doc_updated: "2026-06-02"
+doc_version: "1.1"
+doc_updated: "2026-09-23"
 ---
 
 :::warning
-本页面内容经 AI 翻译生成，仅供参考。具体细节请以[英文原文](../../use-cases/firecrawl.md)为准。
+本文档由 AI 自动翻译，仅供参考。涉及关键操作或信息时，请以[英文原文](../../use-cases/firecrawl.md)为准。
 :::
 
 # 使用 Firecrawl 作为网页加载器
 
+<VersionRouteSelect />
+
 Firecrawl 是一个无头网页数据服务，可将网页转换为干净的 Markdown、结构化 JSON、摘要和元数据。在 Olares 上，Open WebUI 等应用可以使用 Firecrawl 在找到搜索结果后加载完整的网页内容。
 
 你也可以直接调用 Firecrawl API 来测试抓取和爬取功能。
+
+## 前提条件
+
+开始前，你需要：
+
+<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
+- 如需使用本地模型，从应用市场安装 Qwen3.8-27B (llama.cpp)。
+
+<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## 安装 Firecrawl
 
@@ -34,19 +47,14 @@ Firecrawl 通常在后台运行。其他应用在需要获取和清理网页内�
 
 ### 获取 Firecrawl 端点
 
-端点是 Firecrawl 服务在 Olares 上的基础地址。你将在此地址后添加 `/v2/scrape` 或 `/v2/crawl` 等 API 路径。
+<!--@include: ../reusables/ai-service-connections.md#app-endpoint-overview-->
 
-1. 打开 **Settings**，然后导航至 **Applications** > **Firecrawl**。
-2. 在 **Entrances** 下，点击 **Firecrawl**。
-3. 在 **Endpoint settings** 下，找到端点 URL 并复制它。
+对于 Firecrawl：
 
-   ![Firecrawl 端点](/images/manual/use-cases/alex-firecrawl-endpoint.png#bordered)
+1. 前往 Olares **Settings** > **Applications** > **Firecrawl** > **Entrances**。
+2. 选择 **Firecrawl**，然后复制 **Endpoint** URL。
 
-在以下示例中，将示例端点替换为你自己的：
-
-```text
-https://717172b4.alexmiles.olares.com
-```
+该 Endpoint 是 Firecrawl 服务的基础地址。API 客户端会在其后添加 `/v2/scrape` 或 `/v2/crawl` 等路径。
 
 ### 配置 Open WebUI
 
@@ -110,7 +118,7 @@ https://717172b4.alexmiles.olares.com
 当你想要单个页面的内容时，使用 scrape。
 
 ```javascript
-const endpoint = "https://717172b4.alexmiles.olares.com";
+const endpoint = "<your-firecrawl-endpoint>";
 
 const response = await fetch(`${endpoint}/v2/scrape`, {
   method: "POST",
@@ -133,7 +141,7 @@ console.log(data);
 当你希望 Firecrawl 从起始页面跟踪链接时，使用 crawl。开始时使用较小的 `limit`，以便结果易于检查。
 
 ```javascript
-const endpoint = "https://717172b4.alexmiles.olares.com";
+const endpoint = "<your-firecrawl-endpoint>";
 
 const response = await fetch(`${endpoint}/v2/crawl`, {
   method: "POST",
@@ -155,7 +163,7 @@ console.log(data);
 {
   "success": true,
   "id": "019e6988-6e26-7407-b7a4-8045a8d12269",
-  "url": "https://717172b4.alexmiles.olares.com/v2/crawl/019e6988-6e26-7407-b7a4-8045a8d12269"
+  "url": "<your-firecrawl-endpoint>/v2/crawl/<job-id>"
 }
 ```
 
@@ -184,25 +192,32 @@ Firecrawl 可以使用配置的 LLM 来总结页面或返回结构化 JSON。
 
 ### 配置模型访问
 
-1. 打开 **Settings**，然后导航至 **Applications** > **Firecrawl**。
-2. 打开 **Environment variables**。
-3. 配置你计划使用的模型提供商值：
+本示例通过 OpenAI 兼容 API 使用 Qwen3.8-27B (llama.cpp)。从 Market 安装该模型，并等待模型就绪。
+
+<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
+
+对于 Qwen3.8-27B (llama.cpp)，使用 **OpenAI-Compatible** API 格式：
+
+<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
+
+配置 Firecrawl：
+
+1. 前往 Olares **Settings** > **Applications** > **Firecrawl** > **Environment variables**。
+2. 配置以下参数：
 
    | 变量 | 描述 |
    |:---------|:------------|
-   | `OPENAI_API_KEY` | OpenAI 兼容提供商的 API 密钥。 |
-   | `OPENAI_BASE_URL` | OpenAI 兼容提供商的基础 URL。 |
-   | `OLLAMA_BASE_URL` | 如果你使用 Ollama，则为 Ollama 端点 URL。前往 **Settings** > <br>**Applications** > **Ollama** > **Entrances** > **Ollama API** 并复制端点。 |
-   | `MODEL_NAME` | 用于基于 LLM 提取的模型名称，例如 <br>`qwen3.5:35b-a3b-ud-q4_K_L`。 |
+   | `OPENAI_API_KEY` | 输入任意非空值，例如 `olares`。 |
+   | `OPENAI_BASE_URL` | 输入 Router 中显示的 Base URL。 |
+   | `MODEL_NAME` | 填写 `default-chat`。 |
 
-4. 点击 **Apply**。
-5. 打开 Control Hub，在 **Browse** 下选择你的 Firecrawl 项目，然后重启 `worker`、`nuq-worker` 和 `firecrawl` 部署以应用环境变量。
+3. 点击 **Apply**。
+4. 打开 Control Hub，在 **Browse** 下选择你的 Firecrawl 项目，然后重启 `worker`、`nuq-worker` 和 `firecrawl` 部署以应用环境变量。
 
 ### 返回结构化 JSON
 
-
 ```javascript
-const endpoint = "https://717172b4.alexmiles.olares.com";
+const endpoint = "<your-firecrawl-endpoint>";
 
 const response = await fetch(`${endpoint}/v2/scrape`, {
   method: "POST",
@@ -240,7 +255,7 @@ console.log(data.data.json);
 ### 返回摘要
 
 ```javascript
-const endpoint = "https://717172b4.alexmiles.olares.com";
+const endpoint = "<your-firecrawl-endpoint>";
 
 const response = await fetch(`${endpoint}/v2/scrape`, {
   method: "POST",

@@ -4,13 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net"
 	"net/http"
-	"net/url"
 	"os"
 	"strconv"
 	"strings"
-	"time"
 
 	"k8s.io/apimachinery/pkg/fields"
 
@@ -24,7 +21,6 @@ import (
 	sysv1alpha1 "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
 	iamv1alpha2 "github.com/beclab/api/iam/v1alpha2"
 
-	srvconfig "github.com/containerd/containerd/services/server/config"
 	authv1 "k8s.io/api/authentication/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -40,9 +36,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// CalicoTunnelAddrAnnotation annotation key for calico tunnel address.
-const CalicoTunnelAddrAnnotation = "projectcalico.org/IPv4IPIPTunnelAddr"
-const DefaultRegistry = "https://registry-1.docker.io"
+const (
+	// CalicoTunnelAddrAnnotation annotation key for calico tunnel address.
+	CalicoTunnelAddrAnnotation = "projectcalico.org/IPv4IPIPTunnelAddr"
+
+	minikubeLabelPrefix = "minikube.k8s.io/"
+	// docker or  podman driver's providerID prefix
+	minikubeKICProvider = "kic://"
+)
 
 // GetAllNodesPodCIDRs returns all node pod's cidr.
 func GetAllNodesPodCIDRs() (cidrs []string) {
@@ -156,71 +157,6 @@ func IsNodeReady(node *corev1.Node) bool {
 	}
 	return false
 }
-
-func GetMirrorsEndpoint() (ep []string) {
-	config := &srvconfig.Config{}
-	err := srvconfig.LoadConfig("/etc/containerd/config.toml", config)
-	if err != nil {
-		klog.Infof("load mirrors endpoint failed err=%v", err)
-		return
-	}
-	plugins := config.Plugins["io.containerd.grpc.v1.cri"]
-	r := plugins.GetPath([]string{"registry", "mirrors", "docker.io", "endpoint"})
-	if r == nil {
-		return
-	}
-	for _, e := range r.([]interface{}) {
-		ep = append(ep, e.(string))
-	}
-	return ep
-}
-
-// ReplacedImageRef return replaced image ref and true if mirror is support http
-func ReplacedImageRef(mirrorsEndpoint []string, oldImageRef string, checkConnection bool) (string, bool) {
-	if len(mirrorsEndpoint) == 0 {
-		return oldImageRef, false
-	}
-	plainHTTP := false
-	for _, ep := range mirrorsEndpoint {
-		if ep != "" && ep != DefaultRegistry {
-			url, err := url.Parse(ep)
-			if err != nil {
-				continue
-			}
-			if url.Scheme == "http" {
-				plainHTTP = true
-			}
-			if checkConnection {
-				host := url.Host
-				if !hasPort(url.Host) {
-					if url.Scheme == "https" {
-						host = net.JoinHostPort(url.Host, "443")
-					} else {
-						host = net.JoinHostPort(url.Host, "80")
-					}
-				}
-				conn, err := net.DialTimeout("tcp", host, 2*time.Second)
-				if err != nil {
-					continue
-				}
-				if conn != nil {
-					conn.Close()
-				}
-			}
-
-			parts := strings.Split(oldImageRef, "/")
-			klog.Infof("parts: %s", parts)
-			if parts[0] == "docker.io" {
-				parts[0] = url.Host
-			}
-			klog.Infof("parts2: %s", parts)
-			return strings.Join(parts, "/"), plainHTTP
-		}
-	}
-	return oldImageRef, false
-}
-
-func hasPort(s string) bool { return strings.LastIndex(s, ":") > strings.LastIndex(s, "]") }
 
 func FindOwnerUser(ctrlClient client.Client, user *iamv1alpha2.User) (*iamv1alpha2.User, error) {
 	creator := user.Annotations[users.AnnotationUserCreator]
@@ -433,45 +369,46 @@ type SystemStatusResponse struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
 	Data    struct {
-		TerminusdState            string `json:"terminusdState"`
-		TerminusState             string `json:"terminusState"`
-		TerminusName              string `json:"terminusName"`
-		TerminusVersion           string `json:"terminusVersion"`
-		InstalledTime             int64  `json:"installedTime"`
-		InitializedTime           int64  `json:"initializedTime"`
-		OlaresdVersion            string `json:"olaresdVersion"`
-		DeviceName                string `json:"device_name"`
-		HostName                  string `json:"host_name"`
-		OsType                    string `json:"os_type"`
-		OsArch                    string `json:"os_arch"`
-		OsInfo                    string `json:"os_info"`
-		OsVersion                 string `json:"os_version"`
-		CpuInfo                   string `json:"cpu_info"`
-		GpuInfo                   string `json:"gpu_info"`
-		Memory                    string `json:"memory"`
-		Disk                      string `json:"disk"`
-		WifiConnected             bool   `json:"wifiConnected"`
-		WiredConnected            bool   `json:"wiredConnected"`
-		HostIp                    string `json:"hostIp"`
-		ExternalIp                string `json:"externalIp"`
-		InstallingState           string `json:"installingState"`
-		InstallingProgress        string `json:"installingProgress"`
-		UninstallingState         string `json:"uninstallingState"`
-		UninstallingProgress      string `json:"uninstallingProgress"`
-		UpgradingTarget           string `json:"upgradingTarget"`
-		UpgradingRetryNum         int    `json:"upgradingRetryNum"`
-		UpgradingState            string `json:"upgradingState"`
-		UpgradingStep             string `json:"upgradingStep"`
-		UpgradingProgress         string `json:"upgradingProgress"`
-		UpgradingError            string `json:"upgradingError"`
-		UpgradingDownloadState    string `json:"upgradingDownloadState"`
-		UpgradingDownloadStep     string `json:"upgradingDownloadStep"`
-		UpgradingDownloadProgress string `json:"upgradingDownloadProgress"`
-		UpgradingDownloadError    string `json:"upgradingDownloadError"`
-		CollectingLogsState       string `json:"collectingLogsState"`
-		CollectingLogsError       string `json:"collectingLogsError"`
-		DefaultFrpServer          string `json:"defaultFrpServer"`
-		FrpEnable                 string `json:"frpEnable"`
+		TerminusdState            string   `json:"terminusdState"`
+		TerminusState             string   `json:"terminusState"`
+		TerminusName              string   `json:"terminusName"`
+		TerminusVersion           string   `json:"terminusVersion"`
+		InstalledTime             int64    `json:"installedTime"`
+		InitializedTime           int64    `json:"initializedTime"`
+		OlaresdVersion            string   `json:"olaresdVersion"`
+		DeviceName                string   `json:"device_name"`
+		HostName                  string   `json:"host_name"`
+		OsType                    string   `json:"os_type"`
+		OsArch                    string   `json:"os_arch"`
+		OsInfo                    string   `json:"os_info"`
+		OsVersion                 string   `json:"os_version"`
+		CpuInfo                   string   `json:"cpu_info"`
+		GpuInfo                   string   `json:"gpu_info"`
+		GPUList                   []string `json:"gpu_list"`
+		Memory                    string   `json:"memory"`
+		Disk                      string   `json:"disk"`
+		WifiConnected             bool     `json:"wifiConnected"`
+		WiredConnected            bool     `json:"wiredConnected"`
+		HostIp                    string   `json:"hostIp"`
+		ExternalIp                string   `json:"externalIp"`
+		InstallingState           string   `json:"installingState"`
+		InstallingProgress        string   `json:"installingProgress"`
+		UninstallingState         string   `json:"uninstallingState"`
+		UninstallingProgress      string   `json:"uninstallingProgress"`
+		UpgradingTarget           string   `json:"upgradingTarget"`
+		UpgradingRetryNum         int      `json:"upgradingRetryNum"`
+		UpgradingState            string   `json:"upgradingState"`
+		UpgradingStep             string   `json:"upgradingStep"`
+		UpgradingProgress         string   `json:"upgradingProgress"`
+		UpgradingError            string   `json:"upgradingError"`
+		UpgradingDownloadState    string   `json:"upgradingDownloadState"`
+		UpgradingDownloadStep     string   `json:"upgradingDownloadStep"`
+		UpgradingDownloadProgress string   `json:"upgradingDownloadProgress"`
+		UpgradingDownloadError    string   `json:"upgradingDownloadError"`
+		CollectingLogsState       string   `json:"collectingLogsState"`
+		CollectingLogsError       string   `json:"collectingLogsError"`
+		DefaultFrpServer          string   `json:"defaultFrpServer"`
+		FrpEnable                 string   `json:"frpEnable"`
 	} `json:"data"`
 }
 
@@ -516,4 +453,42 @@ func GetPendingKind(ctrlClient client.Client, pod *corev1.Pod) (string, error) {
 		}
 	}
 	return pendingKind, nil
+}
+
+func IsMinikubeNode(node *corev1.Node) bool {
+	if node == nil {
+		return false
+	}
+	for k := range node.Labels {
+		if strings.HasPrefix(k, minikubeLabelPrefix) {
+			return true
+		}
+	}
+	if strings.HasPrefix(node.Spec.ProviderID, minikubeKICProvider) {
+		return true
+	}
+	if strings.Contains(strings.ToLower(node.Name), "minikube") {
+		return true
+	}
+	return false
+}
+
+func IsRunningOnMinikube(ctx context.Context, client kubernetes.Interface) (bool, error) {
+	if nodeName := os.Getenv("NODE_NAME"); nodeName != "" {
+		node, err := client.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
+		if err != nil {
+			return false, err
+		}
+		return IsMinikubeNode(node), nil
+	}
+	nodes, err := client.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return false, err
+	}
+	for i := range nodes.Items {
+		if IsMinikubeNode(&nodes.Items[i]) {
+			return true, nil
+		}
+	}
+	return false, nil
 }

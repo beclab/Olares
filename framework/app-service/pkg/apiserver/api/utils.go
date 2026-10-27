@@ -48,6 +48,13 @@ func HandleConflict(response *restful.Response, req *restful.Request, err error)
 	handle(http.StatusConflict, response, req, err)
 }
 
+// HandleUnprocessableEntity reports a syntactically valid request that cannot
+// be applied because it conflicts with the current application or cluster
+// state.
+func HandleUnprocessableEntity(response *restful.Response, req *restful.Request, err error) {
+	handle(http.StatusUnprocessableEntity, response, req, err)
+}
+
 func HandleFailedCheck(response *restful.Response, checkType string, checkResult any) {
 	response.WriteHeaderAndEntity(http.StatusOK, FailedCheckResponse{Code: http.StatusUnprocessableEntity, Data: FailedCheckResponseData{Type: checkType, Data: checkResult}})
 }

@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "repo": "fixture/tiny-model",
+  "revision": "1111111111111111111111111111111111111111",
+  "entries": [
+    {
+      "path": "tiny.bin",
+      "type": "file",
+      "size": 5,
+      "sha256": "36d25d3d80f8431614deece844a6def69fb24b92310156ce7847ba1d9595db57"
+    }
+  ]
+}

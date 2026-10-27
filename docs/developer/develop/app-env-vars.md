@@ -1,6 +1,10 @@
 ---
 outline: [2, 4]
 description: Declare and validate app configuration via envs in `OlaresManifest.yaml`, and reference values in templates through `.Values.olaresEnv`.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, declarative environment variables, OlaresManifest.yaml, app configuration, .Values.olaresEnv
 ---
 # Declarative environment variables
 

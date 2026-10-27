@@ -9,6 +9,7 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 
@@ -20,10 +21,11 @@ import (
 const apiPrefix = "/app-store/api/v2"
 
 // APIResponse is the canonical envelope the app-store v2 backend wraps every
-// response in (success/message/data). We keep it identical to the shape the
+// response in (success/code/message/data). We keep it identical to the shape the
 // SPA's axios layer parses so the CLI's diagnostics can use the same fields.
 type APIResponse struct {
 	Success bool            `json:"success"`
+	Code    string          `json:"code,omitempty"`
 	Message string          `json:"message"`
 	Data    json.RawMessage `json:"data,omitempty"`
 }
@@ -32,7 +34,7 @@ type APIResponse struct {
 // `<MarketURL>/app-store/api/v2`. It is the moral counterpart of `files`'s
 // `download.Client`: a thin HTTP wrapper that delegates auth to the caller's
 // http.Client (Factory's refreshingTransport injects `X-Authorization` and
-// transparently refreshes on 401/403) and otherwise just maps Go method
+// transparently refreshes on 401/403/459) and otherwise just maps Go method
 // calls to JSON requests.
 //
 // Two HTTP clients are stored:
@@ -49,7 +51,7 @@ type MarketClient struct {
 	source       string
 
 	// olaresID is captured for OperationResult.User (diagnostics /
-	// scripting) and for reformatting 401/403 messages with the user's
+	// scripting) and for reformatting 401/403/459 messages with the user's
 	// own ID in the CTA.
 	olaresID string
 }
@@ -127,6 +129,142 @@ func (c *MarketClient) doMultipart(ctx context.Context, path, filename string, d
 	return c.executeRequest(c.uploadClient, req)
 }
 
+// ChartPackage is an open stream of a chart .tgz served by
+// GET /apps/{name}/package. Body is the caller's to close.
+type ChartPackage struct {
+	Body io.ReadCloser
+
+	// Filename is the name the backend suggested through
+	// Content-Disposition (`<chart>-<version>.tgz`), empty when the header
+	// is absent or unparseable.
+	Filename string
+
+	// Size is the announced Content-Length, or -1 when the response was
+	// chunked.
+	Size int64
+}
+
+// downloadStream issues a GET whose success body is bytes rather than the
+// app-store JSON envelope, so it cannot go through executeRequest: that
+// helper reads the whole body into memory and insists on parsing it as
+// APIResponse. Failures still arrive as the envelope, and are decoded here
+// with the same wording so a 404 reads the same whichever verb hit it.
+//
+// The caller closes the returned body.
+func (c *MarketClient) downloadStream(ctx context.Context, path string, query url.Values) (*http.Response, error) {
+	endpoint := c.baseURL + path
+	if len(query) > 0 {
+		endpoint += "?" + query.Encode()
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+	// The error path answers JSON, the success path octet-stream.
+	req.Header.Set("Accept", "application/octet-stream, application/json")
+
+	// The no-timeout client, for the same reason uploads use it: a chart is
+	// large enough that the standard 30s deadline can cut a healthy transfer
+	// off partway through.
+	resp, err := c.uploadClient.Do(req)
+	if err != nil {
+		var inv *credential.ErrTokenInvalidated
+		if errors.As(err, &inv) {
+			return nil, inv
+		}
+		var nli *credential.ErrNotLoggedIn
+		if errors.As(err, &nli) {
+			return nil, nli
+		}
+		return nil, fmt.Errorf("request failed: %w", err)
+	}
+
+	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden || resp.StatusCode == 459 {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, errorBodyLimit))
+		resp.Body.Close()
+		return nil, reformatMarketAuthErr(resp.StatusCode, body, c.olaresID)
+	}
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, errorBodyLimit))
+		resp.Body.Close()
+		return nil, &APIError{StatusCode: resp.StatusCode, Message: envelopeMessage(body, resp.StatusCode)}
+	}
+	// A 200 carrying the JSON envelope means the backend answered a
+	// different question than the one asked. Writing that to a .tgz would
+	// produce a file that only fails later, at `helm install` time.
+	if ct := resp.Header.Get("Content-Type"); strings.Contains(strings.ToLower(ct), "application/json") {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, errorBodyLimit))
+		resp.Body.Close()
+		return nil, fmt.Errorf("expected chart bytes but got a JSON response: %s", envelopeMessage(body, http.StatusOK))
+	}
+	return resp, nil
+}
+
+// errorBodyLimit caps how much of a failure body is read for the message.
+// The edge proxy can answer an HTML page, and a whole one in a terminal
+// buries the line that matters.
+const errorBodyLimit = 8 << 10
+
+// APIError is a non-2xx answer from the app-store API, carrying the status
+// alongside the message so a caller can tell apart two failures the backend
+// spells identically. Market answers both "no such app" and "that app is not
+// in a state this operation accepts" with one 404 and one sentence, and only
+// the caller knows which of the two it was in a position to ask for.
+//
+// Error() reproduces the string this was formatted as before the type
+// existed, so callers matching on the text keep working; prefer errors.As.
+type APIError struct {
+	StatusCode int
+	Message    string
+}
+
+func (e *APIError) Error() string {
+	return fmt.Sprintf("API error (HTTP %d): %s", e.StatusCode, e.Message)
+}
+
+// envelopeMessage extracts the human-readable part of an app-store error
+// body: the envelope's `message` when it parses, the trimmed body when it
+// doesn't, and the bare status when there is nothing at all.
+func envelopeMessage(body []byte, status int) string {
+	var apiResp APIResponse
+	if err := json.Unmarshal(body, &apiResp); err == nil {
+		if msg := strings.TrimSpace(apiResp.Message); msg != "" {
+			return msg
+		}
+	}
+	if msg := strings.TrimSpace(string(body)); msg != "" {
+		return msg
+	}
+	return fmt.Sprintf("HTTP %d", status)
+}
+
+// DownloadChart opens GET /apps/{name}/package for reading. An empty version
+// lets the backend pick the current one; an empty source falls back to the
+// client's default, and then to the backend's (`upload`).
+//
+// The returned ChartPackage owns an open connection — close its Body.
+func (c *MarketClient) DownloadChart(ctx context.Context, appName, source, version string) (*ChartPackage, error) {
+	if source == "" {
+		source = c.source
+	}
+	query := url.Values{}
+	if source != "" {
+		query.Set("source", source)
+	}
+	if version != "" {
+		query.Set("version", version)
+	}
+	resp, err := c.downloadStream(ctx, "/apps/"+url.PathEscape(appName)+"/package", query)
+	if err != nil {
+		return nil, err
+	}
+	return &ChartPackage{
+		Body:     resp.Body,
+		Filename: parseContentDispositionFilename(resp.Header.Get("Content-Disposition")),
+		Size:     resp.ContentLength,
+	}, nil
+}
+
 func (c *MarketClient) executeRequest(hc *http.Client, req *http.Request) (*APIResponse, error) {
 	resp, err := hc.Do(req)
 	if err != nil {
@@ -154,7 +292,7 @@ func (c *MarketClient) executeRequest(hc *http.Client, req *http.Request) (*APIR
 		return nil, fmt.Errorf("failed to read response: %w", err)
 	}
 
-	// 401/403 reaches us only when the factory's refreshingTransport
+	// 401/403/459 reaches us only when the factory's refreshingTransport
 	// already attempted a refresh+retry and STILL got rejected (the
 	// server is consistently saying no — usually a server-side state
 	// drift the user can't recover from). Reformat with the standard
@@ -162,7 +300,7 @@ func (c *MarketClient) executeRequest(hc *http.Client, req *http.Request) (*APIR
 	// `files ls`/`files cat`. The body may not be JSON (the edge proxy
 	// can short-circuit to a plaintext page), so the JSON parse below
 	// is best-effort.
-	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
+	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden || resp.StatusCode == 459 {
 		return nil, reformatMarketAuthErr(resp.StatusCode, respBody, c.olaresID)
 	}
 
@@ -182,29 +320,14 @@ func (c *MarketClient) executeRequest(hc *http.Client, req *http.Request) (*APIR
 		if message == "" {
 			message = fmt.Sprintf("HTTP %d", resp.StatusCode)
 		}
-		return &apiResp, fmt.Errorf("API error (HTTP %d): %s", resp.StatusCode, message)
+		return &apiResp, &APIError{StatusCode: resp.StatusCode, Message: message}
 	}
 
 	return &apiResp, nil
 }
 
-// reformatMarketAuthErr mirrors reformatHTTPErr in cmd/ctl/files/download.go:
-// turn 401/403 into the same `olares-cli profile login --olares-id <id>` CTA
-// users see from the files verbs, so the troubleshooting story is consistent.
 func reformatMarketAuthErr(status int, respBody []byte, olaresID string) error {
-	body := strings.TrimSpace(string(respBody))
-	if len(body) > 200 {
-		body = body[:200]
-	}
-	if olaresID != "" {
-		if body != "" {
-			return fmt.Errorf("server rejected the access token (HTTP %d: %s); please run: olares-cli profile login --olares-id %s",
-				status, body, olaresID)
-		}
-		return fmt.Errorf("server rejected the access token (HTTP %d); please run: olares-cli profile login --olares-id %s",
-			status, olaresID)
-	}
-	return fmt.Errorf("server rejected the access token (HTTP %d); please re-run `olares-cli profile login`", status)
+	return credential.FormatHTTPAuthError(status, respBody, olaresID)
 }
 
 func (c *MarketClient) GetMarketData(ctx context.Context) (*APIResponse, error) {
@@ -270,18 +393,24 @@ func (c *MarketClient) InstallApp(ctx context.Context, appName, version, source,
 	})
 }
 
-func (c *MarketClient) CloneApp(ctx context.Context, appName, source, title string, envs []AppEnvVar, entrances []AppEntrance, templateClone bool) (*APIResponse, error) {
+// CloneApp issues POST /apps/{name}/clone. selectedGpuType pins the compute
+// mode on Olares 1.12.6+ (CloneRequest.SelectedGpuType, omitempty), mirroring
+// InstallApp: callers pass "" on 1.12.5 so the wire stays byte-identical, and
+// the 1.12.6 path passes either the --compute-mode value or the mode resolved
+// from a computeModeSelect 422 retry.
+func (c *MarketClient) CloneApp(ctx context.Context, appName, source, title, selectedGpuType string, envs []AppEnvVar, entrances []AppEntrance, templateClone bool) (*APIResponse, error) {
 	if source == "" {
 		source = c.source
 	}
 	return c.doRequest(ctx, http.MethodPost, "/apps/"+appName+"/clone", CloneRequest{
-		Source:        source,
-		AppName:       appName,
-		Title:         title,
-		Sync:          true,
-		Envs:          envs,
-		Entrances:     entrances,
-		TemplateClone: templateClone,
+		Source:          source,
+		AppName:         appName,
+		Title:           title,
+		Sync:            true,
+		Envs:            envs,
+		Entrances:       entrances,
+		SelectedGpuType: selectedGpuType,
+		TemplateClone:   templateClone,
 	})
 }
 

@@ -5,6 +5,8 @@
 
 Download a file or directory tree from the per-user files-backend.
 
+> **Not** the download-server task centre (`olares-cli knowledge download …`) — for URL/yt-dlp/aria2 *tasks*, use [`olares-knowledge`](../../olares-knowledge/SKILL.md).
+
 ## Safety constraints
 
 - **Without `--resume` or `--overwrite`, the command refuses to clobber an existing local file** — confirm intent with the user before suggesting `--overwrite`.
@@ -29,7 +31,7 @@ olares-cli files download drive/Home/Documents/ ./out/ --parallel 4
 
 ## Agent notes
 
-- **`Stat` always lists the parent directory** and finds the leaf in the items array — this is a workaround for [quirk #2](../SKILL.md#2-get-apiresourcesfile-no-trailing-slash-returns-http-500). You never need to suggest "just GET the file URL"; the CLI already handles it.
+- **`Stat` always lists the parent directory** and finds the leaf in the items array — this handles the [raw GET backend quirk](../SKILL.md#backend-quirks-that-change-decisions). You never need to suggest "just GET the file URL"; the CLI already handles it.
 - **Single-file resume** uses server-driven `Range: bytes=<localSize>-` — there is no sidecar progress file. A Ctrl-C + re-run keeps making forward progress as long as the local file is preserved.
 - **Directory downloads parallelize FILES, not chunks** — each file's bytes still stream sequentially. `--parallel N` bounds concurrent file fetches.
 - Empty subdirectories are mirrored locally so the tree matches even when a directory has no files.

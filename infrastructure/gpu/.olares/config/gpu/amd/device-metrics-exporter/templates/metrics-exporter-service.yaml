@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-amd-metrics-exporter-svc
+  labels:
+  {{- include "metrics-exporter.appLabelWithReleaseName" . | nindent 4 }}
+  {{- if .Values.service.annotations }}
+  annotations:
+    {{- toYaml .Values.service.annotations | nindent 4 }}
+  {{- end }}
+spec:
+  selector:
+    {{- include "metrics-exporter.appLabelWithReleaseName" . | indent 6 }}
+  internalTrafficPolicy: Local
+  type: {{ .Values.service.type }}
+  {{- if eq .Values.service.type "NodePort" }}
+  externalTrafficPolicy: Local
+  ports:
+    - protocol: "TCP"
+      name: http
+      port: {{ .Values.service.NodePort.port }}
+      nodePort: {{ .Values.service.NodePort.nodePort }}
+  {{- end }}
+  {{- if eq .Values.service.type "ClusterIP" }}
+  ports:
+    - protocol: "TCP"
+      name: http
+      port: {{ .Values.service.ClusterIP.port }}
+  {{- end }}

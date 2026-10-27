@@ -130,7 +130,7 @@ func FetchAndCacheVersion(
 	if cfg == nil {
 		return res, nil
 	}
-	changed, err := cfg.SetBackendVersion(olaresID, v.Original(), res.RefreshedAt)
+	changed, err := cliconfig.SetBackendVersion(ctx, olaresID, v.Original(), res.RefreshedAt)
 	if err != nil {
 		return nil, err
 	}

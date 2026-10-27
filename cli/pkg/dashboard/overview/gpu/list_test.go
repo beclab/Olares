@@ -10,7 +10,7 @@ import (
 )
 
 // TestRunList_HappyPath pins the table-rendered GPU list shape
-// against an admin profile + CUDA node + 2-device HAMI fixture.
+// against an admin profile + NVIDIA node + 2-device HAMI fixture.
 // The Display columns must match the SPA's column order
 // (GPU_ID/MODEL/MODE/HOST/HEALTH/CORE_UTIL/VRAM/VRAM_USAGE/POWER/TEMP).
 func TestRunList_HappyPath(t *testing.T) {

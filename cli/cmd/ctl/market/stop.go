@@ -58,8 +58,10 @@ Examples:
 		},
 	}
 	opts.addOutputFlags(cmd)
+	describeLifecycleJSON(cmd)
 	opts.addCascadeFlag(cmd)
 	opts.addWatchFlags(cmd)
+	explainNoSourceFlag(cmd)
 	return cmd
 }
 

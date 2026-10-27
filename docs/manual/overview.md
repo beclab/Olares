@@ -1,11 +1,22 @@
 ---
-description: Learn about Olares, an open-source sovereign cloud OS for local AI. Discover how to self-host services, run AI applications, manage files, and collaborate securely with enterprise-grade features.
+description: Documentation for Olares, the open-source personal cloud OS that runs AI agents and LLMs on your own hardware.
 aside: false
+head:
+  - - meta
+    - name: keywords
+      content: Olares, documentation, personal cloud OS, AI agents, LLMs, self-hosting
 ---
 # Olares documentation
 
 ## What is Olares?
-Olares is an open-source personal cloud operating system designed to empower you to own and manage your digital assets locally. Instead of relying on public cloud services, you can deploy powerful open-source alternatives locally on Olares, such as Ollama for hosting LLMs, ComfyUI for image generation, and Vane (formerly Perplexica) for private, AI-driven search and reasoning. Imagine the power of the cloud, but with you in complete command.
+
+Olares is an open-source personal cloud OS you operate in plain language, built to run AI agents and LLMs on hardware you own.
+
+Use this documentation to install and activate Olares, manage apps, files, identity, and access, and extend your setup with the CLI, Agent Skills, and real-world workflows.
+
+## Olares OS, LarePass, and Olares Space
+
+**Olares OS** runs on your device and hosts your apps, files, and AI services. **LarePass** is the client you use to create and protect your Olares ID, activate Olares, and access it securely from your devices. **Olares Space** is the web service for managing your Olares devices and optional cloud-assisted features such as custom domains, backup storage, and billing.
 
 ## Set up Olares
 
@@ -15,12 +26,22 @@ Get Olares running, whether you install the OS yourself or use a dedicated devic
   <a class="doc-map-card" href="./get-started/">
     <span class="doc-map-icon"><span class="material-symbols-outlined">rocket_launch</span></span>
     <span class="doc-map-title">Get started</span>
-    <span class="doc-map-desc">Create your Olares ID and install Olares on your device</span>
+    <span class="doc-map-desc">Choose an installation method and set up Olares on your own hardware</span>
+  </a>
+  <a class="doc-map-card" href="./larepass/">
+    <span class="doc-map-icon"><span class="material-symbols-outlined">smartphone</span></span>
+    <span class="doc-map-title">Download LarePass</span>
+    <span class="doc-map-desc">Get the mobile or desktop client used to set up and access Olares</span>
   </a>
   <a class="doc-map-card" href="../one/">
     <span class="doc-map-icon"><span class="material-symbols-outlined">memory</span></span>
     <span class="doc-map-title">Olares One</span>
-    <span class="doc-map-desc">Set up and get the most out of the Olares One personal AI device</span>
+    <span class="doc-map-desc">Get the dedicated hardware device that runs your personal AI cloud out of the box</span>
+  </a>
+  <a class="doc-map-card" href="./best-practices/activate-olares-using-cli">
+    <span class="doc-map-icon"><span class="material-symbols-outlined">menu_book</span></span>
+    <span class="doc-map-title">Advanced setup</span>
+    <span class="doc-map-desc">Complete advanced setup tasks for command-line installation, clusters, storage, and host hardware</span>
   </a>
 </div>
 
@@ -29,42 +50,37 @@ Get Olares running, whether you install the OS yourself or use a dedicated devic
 Manage your cloud, applications, files, identity, and access from day to day.
 
 <div class="doc-map">
+  <a class="doc-map-card" href="../developer/cli-agent-skills">
+    <span class="doc-map-icon"><span class="material-symbols-outlined">smart_toy</span></span>
+    <span class="doc-map-title">Manage Olares with AI</span>
+    <span class="doc-map-desc">Describe what you want in plain language and let an AI agent operate Olares through Agent Skills</span>
+  </a>
   <a class="doc-map-card" href="./olares/">
     <span class="doc-map-icon"><span class="material-symbols-outlined">apps</span></span>
     <span class="doc-map-title">Olares applications</span>
-    <span class="doc-map-desc">Daily guides for Desktop, Market, Files, Vault, Control Hub, and Settings</span>
+    <span class="doc-map-desc">Daily guides for Desktop, Market, Files, Vault, Control Hub, Settings, and other system apps</span>
   </a>
-  <a class="doc-map-card" href="./larepass/">
-    <span class="doc-map-icon"><span class="material-symbols-outlined">smartphone</span></span>
-    <span class="doc-map-title">LarePass</span>
-    <span class="doc-map-desc">Manage your accounts, devices, VPN, files, and passwords</span>
-  </a>
-  <a class="doc-map-card" href="./space/">
+  <a class="doc-map-card" href="./space/manage-accounts">
     <span class="doc-map-icon"><span class="material-symbols-outlined">cloud</span></span>
     <span class="doc-map-title">Olares Space</span>
-    <span class="doc-map-desc">Manage Olares, custom domains, backups, and billing</span>
-  </a>
-  <a class="doc-map-card" href="./best-practices/">
-    <span class="doc-map-icon"><span class="material-symbols-outlined">menu_book</span></span>
-    <span class="doc-map-title">Tutorials</span>
-    <span class="doc-map-desc">Advanced, step-by-step guides for custom domains, clusters, storage, and more</span>
+    <span class="doc-map-desc">Log in to Olares Space and manage your accounts, devices, and custom domains</span>
   </a>
 </div>
 
 ## Build and go further
 
-Go further with the Olares CLI and real-world examples from the community.
+Explore how Olares works, build for the platform, and discover real-world workflows.
 
 <div class="doc-map">
-  <a class="doc-map-card" href="../developer/cli-overview">
-    <span class="doc-map-icon"><span class="material-symbols-outlined">terminal</span></span>
-    <span class="doc-map-title">Olares CLI</span>
-    <span class="doc-map-desc">Operate Olares from the command line, and power AI agents with its Agent Skills</span>
-  </a>
   <a class="doc-map-card" href="../use-cases/">
     <span class="doc-map-icon"><span class="material-symbols-outlined">lightbulb</span></span>
     <span class="doc-map-title">Use cases</span>
-    <span class="doc-map-desc">Explore real-world setups and third-party app walkthroughs</span>
+    <span class="doc-map-desc">Explore real-world setups for local AI, agentic apps, media, and self-hosted workflows</span>
+  </a>
+  <a class="doc-map-card" href="../developer/concepts/">
+    <span class="doc-map-icon"><span class="material-symbols-outlined">developer_mode</span></span>
+    <span class="doc-map-title">Developer guide</span>
+    <span class="doc-map-desc">Explore Olares architecture, build and distribute apps, and contribute to the platform</span>
   </a>
 </div>
 
@@ -73,7 +89,12 @@ Go further with the Olares CLI and real-world examples from the community.
 Find answers when you're stuck, and join the community to share setups and stay up to date.
 
 <div class="doc-map">
-  <a class="doc-map-card" href="./help/olares">
+  <a class="doc-map-card" href="./release-notes">
+    <span class="doc-map-icon"><span class="material-symbols-outlined">fiber_new</span></span>
+    <span class="doc-map-title">What's new in docs</span>
+    <span class="doc-map-desc">Track new guides, updates, and deprecations after each Olares release</span>
+  </a>
+  <a class="doc-map-card" href="./help/">
     <span class="doc-map-icon"><span class="material-symbols-outlined">help</span></span>
     <span class="doc-map-title">Help &amp; troubleshooting</span>
     <span class="doc-map-desc">Find answers in FAQs, known issues, and technical support</span>

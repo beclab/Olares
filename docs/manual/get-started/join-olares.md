@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Learn how to join an existing Olares cluster as a new member using a wizard link and one-time password shared by your admin.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, join Olares cluster, member activation, wizard URL, one-time password, LarePass
 ---
 
 # Join an Olares cluster

@@ -134,7 +134,7 @@ func (f *Factory) Credential() (*credential.CredentialProvider, error) {
 			return
 		}
 		f.credential = credential.NewCredentialProvider(
-			credential.NewEnvProvider(),
+			credential.NewManagedProvider(),
 			def,
 		)
 	})
@@ -174,6 +174,34 @@ func (f *Factory) Refresher() *credential.Refresher {
 	return f.refresher
 }
 
+// ValidAccessToken returns an access token fresh enough for an immediate
+// request, refreshing via /api/refresh if the cached token is within
+// preflightSkew of expiry. Used by callers that bypass HTTPClient's transport
+// (e.g. the exec WebSocket handshake) and therefore can't rely on the reactive
+// 401-refresh path. On a missing/non-JWT exp claim the token is returned as-is
+// (a 401 at use time will surface the login CTA).
+func (f *Factory) ValidAccessToken(ctx context.Context) (string, error) {
+	rp, err := f.ResolveProfile(ctx)
+	if err != nil {
+		return "", err
+	}
+	cell := f.sharedTokenCell(rp.AccessToken)
+	tok := cell.snapshot()
+	if tok == "" {
+		tok = rp.AccessToken
+	}
+	expired, err := auth.IsExpired(tok, time.Now(), preflightSkew)
+	if err != nil || !expired {
+		return tok, nil
+	}
+	newAT, rerr := f.Refresher().Refresh(ctx, rp.OlaresID, rp.AuthURL, tok, rp.InsecureSkipVerify)
+	if rerr != nil {
+		return "", rerr
+	}
+	cell.update(newAT)
+	return newAT, nil
+}
+
 // HTTPClient returns the standard http.Client used for short JSON requests.
 // Its RoundTripper:
 //   - injects the active access_token via X-Authorization on every request,
@@ -183,8 +211,8 @@ func (f *Factory) Refresher() *credential.Refresher {
 //   - returns the original error / 401 if refresh itself fails or the body
 //     can't be replayed.
 //
-// The 30s overall timeout matches the previous behavior. For streaming
-// uploads (large multipart bodies) use HTTPClientWithoutTimeout.
+// The 30s overall timeout matches the previous behavior. For streaming or
+// otherwise long-running requests use HTTPClientWithoutTimeout.
 func (f *Factory) HTTPClient(ctx context.Context) (*http.Client, error) {
 	rp, err := f.ResolveProfile(ctx)
 	if err != nil {
@@ -199,10 +227,10 @@ func (f *Factory) HTTPClient(ctx context.Context) (*http.Client, error) {
 	return f.client, nil
 }
 
-// HTTPClientWithoutTimeout returns an http.Client with no overall timeout,
-// suitable for streaming uploads / long-running multipart requests. It
-// shares the same access_token cell as HTTPClient so a refresh triggered
-// through either client is immediately visible to the other.
+// HTTPClientWithoutTimeout returns an http.Client with no overall timeout.
+// Request contexts remain the cancellation boundary. It shares the same
+// access_token cell as HTTPClient so a refresh triggered through either client
+// is immediately visible to the other.
 func (f *Factory) HTTPClientWithoutTimeout(ctx context.Context) (*http.Client, error) {
 	rp, err := f.ResolveProfile(ctx)
 	if err != nil {

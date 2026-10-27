@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 了解如何在 Olares 中安装 RabbitMQ，并通过 RabbitMQ Dashboard 管理 RabbitMQ 资源。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, RabbitMQ, 消息队列, RabbitMQ 仪表盘, 可视化管理
 ---
 # 查看 RabbitMQ 数据
 

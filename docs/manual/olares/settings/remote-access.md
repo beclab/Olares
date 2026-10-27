@@ -1,6 +1,10 @@
 ---
 outline: [2,3]
 description: Learn how to configure VPN on Olares using Settings, covering VPN enforcement, SSH access, and ACL ports.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Settings, VPN access, LarePass VPN, remote access, SSH, ACL ports
 ---
 # Configure VPN access to Olares
 

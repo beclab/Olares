@@ -2,6 +2,7 @@ package translator
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/beclab/l4-bfl-proxy/internal/ir"
@@ -582,6 +583,80 @@ func makeSharedAppWithCustom() *message.AppInfo {
 	return a
 }
 
+func TestBuildAppVirtualHosts_HeadscalePublicRoutes(t *testing.T) {
+	tr := &Translator{cfg: &Config{}}
+	user := &message.UserInfo{Name: "alice", Language: "en", DenyAll: true}
+	app := &message.AppInfo{
+		Name:      "olares-app",
+		Appid:     "olares-app",
+		IsSysApp:  true,
+		Namespace: "user-space-alice",
+		Entrances: []*message.EntranceInfo{{Name: "headscale", Host: "headscale-svc", Port: 80}},
+	}
+
+	vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", false, make(map[string]*ir.ClusterIR))
+	require.Len(t, vhosts, 1)
+	require.Len(t, vhosts[0].Routes, 6)
+
+	want := []struct {
+		path    string
+		method  string
+		cluster string
+	}{
+		{"/key", "GET", "app_alice_olares-app_headscale"},
+		{"/ts2021", "GET", "app_alice_olares-app_headscale"},
+		{"/ts2021", "POST", "app_alice_olares-app_headscale"},
+		{"/api/refresh", "POST", "app_alice_olares-app_headscale"},
+		{"/api/refresh", "OPTIONS", "app_alice_olares-app_headscale"},
+	}
+	assert.Equal(t, "headscale_alice_key_get", vhosts[0].Routes[0].Name)
+	for i, expected := range want {
+		route := vhosts[0].Routes[i]
+		assert.Equal(t, expected.path, route.PathExact)
+		assert.Equal(t, expected.method, route.HeaderMatches[0].Exact)
+		assert.Equal(t, expected.cluster, route.Cluster)
+		assert.True(t, route.BypassSourceCIDR)
+		require.NotNil(t, route.ExtAuth)
+		assert.Equal(t, "authelia_backend_alice", route.ExtAuth.Cluster)
+		assert.Equal(t, autheliaVerifyPathPrefix, route.ExtAuth.PathPrefix)
+	}
+	assert.Equal(t, "/", vhosts[0].Routes[5].PathPrefix)
+	assert.False(t, vhosts[0].Routes[5].BypassSourceCIDR)
+	require.NotNil(t, vhosts[0].Routes[5].ExtAuth)
+
+	user.DenyAll = false
+	vhosts = tr.buildAppVirtualHosts(user, app, "alice.example.com", false, make(map[string]*ir.ClusterIR))
+	require.Len(t, vhosts, 1)
+	require.Len(t, vhosts[0].Routes, 1)
+	assert.False(t, vhosts[0].Routes[0].BypassSourceCIDR)
+	require.NotNil(t, vhosts[0].Routes[0].ExtAuth)
+}
+
+func TestBuildAppVirtualHosts_HeadscalePrefixDoesNotGrantPublicRoutes(t *testing.T) {
+	tr := &Translator{cfg: &Config{}}
+	user := &message.UserInfo{Name: "alice", Language: "en", DenyAll: true, LocalDomainIP: "192.168.1.100"}
+	app := &message.AppInfo{
+		Name:      "third-party-app",
+		Appid:     "third-party-app",
+		Namespace: "user-space-alice",
+		Entrances: []*message.EntranceInfo{{Name: "web", Host: "third-party-svc", Port: 8080}},
+		Settings: map[string]string{
+			"defaultThirdLevelDomainConfig": `[{"entranceName":"web","thirdLevelDomain":"headscale"}]`,
+		},
+	}
+
+	vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", false, make(map[string]*ir.ClusterIR))
+	require.Len(t, vhosts, 1)
+	require.Len(t, vhosts[0].Routes, 1)
+	assert.Equal(t, "headscale.alice.example.com", vhosts[0].Domains[0])
+	assert.False(t, vhosts[0].Routes[0].BypassSourceCIDR)
+	require.NotNil(t, vhosts[0].Routes[0].ExtAuth)
+
+	tr.applyDenyAllRestrictions(user, vhosts, nil)
+	assert.Contains(t, vhosts[0].SourceCIDRs, vpnCIDR)
+	assert.Contains(t, vhosts[0].SourceCIDRs, "192.168.1.100/32")
+}
+
 // Any user (admin or normal) reaches the real upstream of a v3 / shared app.
 func TestBuildAppVirtualHosts_SharedApp_OpenToAllUsers(t *testing.T) {
 	for _, name := range []string{"admin", "alice"} {
@@ -600,7 +675,7 @@ func TestBuildAppVirtualHosts_SharedApp_OpenToAllUsers(t *testing.T) {
 
 			require.NotNil(t, r.ExtAuth, "shared apps must be gated behind Authelia ext_auth")
 			assert.Equal(t, fmt.Sprintf("authelia_backend_%s", name), r.ExtAuth.Cluster)
-			assert.Equal(t, autheliaPathPrefix, r.ExtAuth.PathPrefix)
+			assert.Equal(t, autheliaVerifyPathPrefix, r.ExtAuth.PathPrefix)
 			assert.False(t, r.ExtAuth.Disabled)
 		})
 	}
@@ -618,10 +693,11 @@ func TestBuildCustomDomainVirtualHosts_SharedApp_ExtAuth(t *testing.T) {
 	r := vhosts[0].Routes[0]
 	require.NotNil(t, r.ExtAuth, "shared apps must stay gated even on a custom domain")
 	assert.Equal(t, "authelia_backend_alice", r.ExtAuth.Cluster)
-	assert.Equal(t, autheliaPathPrefix, r.ExtAuth.PathPrefix)
+	assert.Equal(t, autheliaVerifyPathPrefix, r.ExtAuth.PathPrefix)
 }
 
-// v1/v2 (non-shared) apps continue to reach their upstream cluster directly.
+// v1/v2 (non-shared) apps reach their upstream cluster and are gated behind
+// the viewing user's Authelia instance just like shared apps.
 func TestBuildAppVirtualHosts_NonSharedApp(t *testing.T) {
 	tr := &Translator{cfg: &Config{}}
 	user := &message.UserInfo{Name: "alice", Language: "en"}
@@ -640,9 +716,174 @@ func TestBuildAppVirtualHosts_NonSharedApp(t *testing.T) {
 	vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", false, clusterSet)
 	require.Len(t, vhosts, 1)
 	require.Len(t, vhosts[0].Routes, 1)
-	assert.Nil(t, vhosts[0].Routes[0].DirectResponse)
-	assert.Nil(t, vhosts[0].Routes[0].ExtAuth, "non-shared apps must not be gated behind ext_auth")
+	r := vhosts[0].Routes[0]
+	assert.Nil(t, r.DirectResponse)
+	require.NotNil(t, r.ExtAuth, "non-shared apps must also be gated behind Authelia ext_auth")
+	assert.Equal(t, "authelia_backend_alice", r.ExtAuth.Cluster)
+	assert.Equal(t, autheliaVerifyPathPrefix, r.ExtAuth.PathPrefix)
+	assert.False(t, r.ExtAuth.Disabled)
 	assert.NotEmpty(t, clusterSet)
+}
+
+func TestBuildAppVirtualHosts_PublicKeepsExtAuthOmitsOutboundXBFLUser(t *testing.T) {
+	tr := &Translator{cfg: &Config{}}
+	user := &message.UserInfo{Name: "alice", Language: "en"}
+	clusterSet := make(map[string]*ir.ClusterIR)
+	app := &message.AppInfo{
+		Name:      "pub",
+		Appid:     "pub",
+		Namespace: "pub-alice",
+		Owner:     "alice",
+		Entrances: []*message.EntranceInfo{
+			{Name: "web", Host: "pub-svc", Port: 8080, AuthLevel: "public"},
+		},
+	}
+	vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", false, clusterSet)
+	require.Len(t, vhosts, 1)
+	require.Len(t, vhosts[0].Routes, 1)
+	r := vhosts[0].Routes[0]
+	require.NotNil(t, r.ExtAuth, "public must still mount ExtAuth (Bypass at Authelia)")
+	assert.Equal(t, "authelia_backend_alice", r.ExtAuth.Cluster)
+	assert.Nil(t, r.RequestHeaders, "outbound zone-owner X-BFL-USER stamp must be omitted")
+}
+
+func TestBuildProbeBypassRoutes_ExactPathAndUA(t *testing.T) {
+	routes := buildProbeBypassRoutes("alice_app_web", "cluster", []string{"/healthz", "/ready", "/", "healthz", "/healthz"})
+	require.Len(t, routes, 2, "dedupe and drop root path")
+	assert.Equal(t, "/healthz", routes[0].PathExact)
+	assert.Equal(t, "/ready", routes[1].PathExact)
+	for _, r := range routes {
+		assert.Nil(t, r.ExtAuth, "probe bypass must not re-enable ExtAuth")
+		assert.Nil(t, r.RequestHeaders, "probe must not stamp outbound X-BFL-USER")
+		require.Len(t, r.HeaderMatches, 1)
+		assert.Equal(t, "user-agent", r.HeaderMatches[0].Name)
+		assert.Equal(t, probeUARegex, r.HeaderMatches[0].SafeRegex)
+	}
+}
+
+func TestBuildAppVirtualHosts_ProbeBypassBeforeDefault(t *testing.T) {
+	tr := &Translator{cfg: &Config{}}
+	user := &message.UserInfo{Name: "alice", Language: "en"}
+	clusterSet := make(map[string]*ir.ClusterIR)
+	app := &message.AppInfo{
+		Name:      "v1app",
+		Appid:     "v1app",
+		Namespace: "v1app-alice",
+		Owner:     "alice",
+		EntranceProbePaths: map[string][]string{
+			"web": {"/healthz"},
+		},
+		Entrances: []*message.EntranceInfo{
+			{Name: "web", Host: "v1app-svc", Port: 8080},
+		},
+	}
+	vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", false, clusterSet)
+	require.Len(t, vhosts, 1)
+	require.GreaterOrEqual(t, len(vhosts[0].Routes), 2)
+	assert.Equal(t, "/healthz", vhosts[0].Routes[0].PathExact)
+	assert.Nil(t, vhosts[0].Routes[0].ExtAuth)
+	last := vhosts[0].Routes[len(vhosts[0].Routes)-1]
+	assert.Equal(t, "/", last.PathPrefix)
+	require.NotNil(t, last.ExtAuth)
+	assert.Equal(t, autheliaVerifyPathPrefix, last.ExtAuth.PathPrefix)
+}
+
+// A "dev" entrance answers on both its normal hostname and a
+// `<appid>-<port>.<zone>` alias, both routed to the same upstream cluster.
+func TestBuildAppVirtualHosts_DevEntranceAlias(t *testing.T) {
+	tr := &Translator{cfg: &Config{}}
+	user := &message.UserInfo{Name: "alice", Language: "en"}
+	clusterSet := make(map[string]*ir.ClusterIR)
+
+	app := &message.AppInfo{
+		Name:      "devapp",
+		Appid:     "28f57292",
+		Namespace: "devapp-alice",
+		Owner:     "alice",
+		Entrances: []*message.EntranceInfo{
+			// A dev entrance's Host is the backing pod IP (set by proxylistener).
+			{Name: "web", Host: "10.244.1.23", Port: 9999, Type: "dev"},
+		},
+	}
+	vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", false, clusterSet)
+	require.Len(t, vhosts, 1)
+
+	assert.Contains(t, vhosts[0].Domains, "28f57292.alice.example.com", "primary hostname must remain")
+	assert.Contains(t, vhosts[0].Domains, "28f57292-9999.alice.example.com", "dev alias must be added")
+
+	// The alias shares the single upstream cluster of the entrance, which points
+	// straight at the pod IP as a STATIC cluster.
+	require.Len(t, vhosts[0].Routes, 1)
+	cl := clusterSet[vhosts[0].Routes[0].Cluster]
+	require.NotNil(t, cl)
+	assert.Equal(t, "10.244.1.23", cl.Host, "dev entrance must route straight to the pod IP in Host")
+	assert.False(t, cl.UseDNS, "dev entrance must be a STATIC cluster")
+	assert.Equal(t, uint32(9999), cl.Port)
+}
+
+// A non-dev entrance uses the Kubernetes service DNS host (STRICT_DNS).
+func TestBuildAppVirtualHosts_NonDevEntranceUsesDNS(t *testing.T) {
+	tr := &Translator{cfg: &Config{}}
+	user := &message.UserInfo{Name: "alice", Language: "en"}
+	clusterSet := make(map[string]*ir.ClusterIR)
+
+	app := &message.AppInfo{
+		Name:      "app",
+		Appid:     "28f57292",
+		Namespace: "app-alice",
+		Owner:     "alice",
+		Entrances: []*message.EntranceInfo{
+			{Name: "web", Host: "app-svc", Port: 9999},
+		},
+	}
+	vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", false, clusterSet)
+	require.Len(t, vhosts, 1)
+	require.Len(t, vhosts[0].Routes, 1)
+
+	cl := clusterSet[vhosts[0].Routes[0].Cluster]
+	require.NotNil(t, cl)
+	assert.Equal(t, "app-svc.app-alice.svc.cluster.local", cl.Host)
+	assert.True(t, cl.UseDNS)
+}
+
+// An entrance with an empty Host has no usable upstream and is skipped.
+func TestBuildAppVirtualHosts_EmptyHostSkipped(t *testing.T) {
+	tr := &Translator{cfg: &Config{}}
+	user := &message.UserInfo{Name: "alice", Language: "en"}
+	clusterSet := make(map[string]*ir.ClusterIR)
+
+	app := &message.AppInfo{
+		Name:      "devapp",
+		Appid:     "1f47cd9b",
+		Namespace: "devapp-alice",
+		Owner:     "alice",
+		Entrances: []*message.EntranceInfo{
+			{Name: "web", Host: "", Port: 8080, Type: "dev"},
+		},
+	}
+	vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", false, clusterSet)
+	assert.Empty(t, vhosts, "entrance with empty host must be skipped")
+	assert.Empty(t, clusterSet)
+}
+
+// A non-dev entrance must NOT get the `<appid>-<port>.<zone>` alias.
+func TestBuildAppVirtualHosts_NonDevEntranceNoAlias(t *testing.T) {
+	tr := &Translator{cfg: &Config{}}
+	user := &message.UserInfo{Name: "alice", Language: "en"}
+	clusterSet := make(map[string]*ir.ClusterIR)
+
+	app := &message.AppInfo{
+		Name:      "app",
+		Appid:     "28f57292",
+		Namespace: "app-alice",
+		Owner:     "alice",
+		Entrances: []*message.EntranceInfo{
+			{Name: "web", Host: "app-svc", Port: 9999},
+		},
+	}
+	vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", false, clusterSet)
+	require.Len(t, vhosts, 1)
+	assert.NotContains(t, vhosts[0].Domains, "28f57292-9999.alice.example.com")
 }
 
 // Custom domains for shared apps are also open to every user.
@@ -662,4 +903,129 @@ func TestBuildCustomDomainVirtualHosts_SharedApp_OpenToAllUsers(t *testing.T) {
 			assert.Equal(t, []string{"shareme.example.io"}, vhosts[0].Domains)
 		})
 	}
+}
+
+// ---------------------------------------------------------------------------
+// buildFileserverRoutes
+// ---------------------------------------------------------------------------
+
+// Regression: a non-master node's scoped prefix (e.g.
+// /api/resources/external/olares-work/) overlaps with the master node's
+// generic catch-all prefix (/api/resources/external/). Envoy matches routes
+// top-to-bottom and stops at the first match, so every node-scoped route MUST
+// be emitted before the generic master routes — otherwise the master prefix
+// swallows the request and misroutes it to the master node.
+func TestBuildFileserverRoutes_NodeScopedBeforeMasterGeneric(t *testing.T) {
+	tr := &Translator{cfg: &Config{}}
+
+	// "olares" sorts first and is the master; "olares-work" is a worker node.
+	// (buildFileserverRoutes relies on FileserverNodes being pre-sorted, which
+	// is what triggered the original bug — the master's generic routes landed
+	// ahead of the worker's scoped routes.)
+	user := &message.UserInfo{
+		Name: "testip162",
+		FileserverNodes: []*message.FileserverNodeInfo{
+			{NodeName: "olares", IsMaster: true},
+			{NodeName: "olares-work", IsMaster: false},
+		},
+	}
+
+	clusterSet := make(map[string]*ir.ClusterIR)
+	routes := tr.buildFileserverRoutes(user, clusterSet)
+
+	indexOfPrefix := func(prefix string) int {
+		for i, r := range routes {
+			if r.PathPrefix == prefix {
+				return i
+			}
+		}
+		return -1
+	}
+
+	nodeExternal := indexOfPrefix("/api/resources/external/olares-work/")
+	masterExternal := indexOfPrefix("/api/resources/external/")
+	require.GreaterOrEqual(t, nodeExternal, 0, "olares-work node route must exist")
+	require.GreaterOrEqual(t, masterExternal, 0, "master generic route must exist")
+	assert.Less(t, nodeExternal, masterExternal,
+		"node-scoped /api/resources/external/olares-work/ must be ordered before the generic /api/resources/external/")
+
+	// The node-scoped route must target the worker node's cluster, and the
+	// generic master route the master node's cluster.
+	assert.Equal(t, "files_testip162_olares-work", routes[nodeExternal].Cluster)
+	assert.Equal(t, "files_testip162_olares", routes[masterExternal].Cluster)
+	assert.Equal(t, "olares-work", routes[nodeExternal].RequestHeaders["X-Terminus-Node"])
+	_, hasOutboundBFL := routes[nodeExternal].RequestHeaders["X-BFL-USER"]
+	assert.False(t, hasOutboundBFL, "fileserver must not stamp outbound zone-owner X-BFL-USER")
+	require.NotNil(t, routes[nodeExternal].ExtAuth)
+	assert.Equal(t, autheliaVerifyPathPrefix, routes[nodeExternal].ExtAuth.PathPrefix)
+	require.NotNil(t, routes[masterExternal].ExtAuth)
+	assert.Equal(t, autheliaVerifyPathPrefix, routes[masterExternal].ExtAuth.PathPrefix)
+	_, hasMasterBFL := routes[masterExternal].RequestHeaders["X-BFL-USER"]
+	assert.False(t, hasMasterBFL, "fileserver master route must not stamp outbound X-BFL-USER")
+
+	// Every node-scoped prefix that overlaps a master prefix must precede ALL
+	// master generic routes. Compute the first master-route index and assert
+	// no node-scoped route appears after it.
+	firstMaster := len(routes)
+	for i, r := range routes {
+		if strings.HasPrefix(r.Name, "files_master_") {
+			firstMaster = i
+			break
+		}
+	}
+	for i, r := range routes {
+		if strings.HasPrefix(r.Name, "files_node_") {
+			assert.Less(t, i, firstMaster,
+				"node-scoped route %q must come before any master generic route", r.Name)
+		}
+	}
+}
+
+func TestBuildSystemVirtualHost_DesktopWizardVerify_AuthSkipped(t *testing.T) {
+	tr := &Translator{cfg: &Config{}}
+	user := &message.UserInfo{Name: "alice", Language: "en", Namespace: "user-space-alice"}
+	clusterSet := make(map[string]*ir.ClusterIR)
+
+	desktop := tr.buildSystemVirtualHost(user, systemServiceDef{Name: "desktop", SvcFormat: "edge-desktop.%s.svc.cluster.local"}, "alice.example.com", false, user.Namespace, clusterSet)
+	require.Len(t, desktop.Routes, 1)
+	require.NotNil(t, desktop.Routes[0].ExtAuth)
+	assert.Equal(t, autheliaVerifyPathPrefix, desktop.Routes[0].ExtAuth.PathPrefix)
+	assert.Nil(t, desktop.Routes[0].RequestHeaders, "desktop must not stamp outbound zone-owner X-BFL-USER")
+
+	wizard := tr.buildSystemVirtualHost(user, systemServiceDef{Name: "wizard", SvcFormat: "wizard.%s.svc.cluster.local"}, "alice.example.com", false, user.Namespace, clusterSet)
+	assert.Nil(t, wizard.Routes[0].ExtAuth, "wizard must not attach ExtAuth (pre-auth activation)")
+	require.NotNil(t, wizard.Routes[0].RequestHeaders)
+	assert.Equal(t, "alice", wizard.Routes[0].RequestHeaders["X-BFL-USER"],
+		"wizard must stamp zone-owner X-BFL-USER for Authelia Bridge (no ExtAuth)")
+
+	auth := tr.buildSystemVirtualHost(user, systemServiceDef{Name: "auth", SvcFormat: "authelia-svc.%s.svc.cluster.local"}, "alice.example.com", false, user.Namespace, clusterSet)
+	assert.Nil(t, auth.Routes[0].ExtAuth, "auth IdP must not attach ExtAuth")
+	require.NotNil(t, auth.Routes[0].RequestHeaders)
+	assert.Equal(t, "alice", auth.Routes[0].RequestHeaders["X-BFL-USER"],
+		"auth must stamp zone-owner X-BFL-USER for Authelia Bridge (no ExtAuth)")
+}
+
+func TestBuildUserVirtualHosts_ProfileRootVerify(t *testing.T) {
+	tr := &Translator{cfg: &Config{}}
+	user := &message.UserInfo{
+		Name:      "alice",
+		Language:  "en",
+		Namespace: "user-space-alice",
+		SSL:       &message.SSLConfig{Zone: "alice.example.com"},
+	}
+	clusterSet := make(map[string]*ir.ClusterIR)
+	vhosts := tr.buildUserVirtualHosts(user, user.SSL.Zone, false, clusterSet)
+	require.NotEmpty(t, vhosts)
+	var profile *ir.VirtualHostIR
+	for _, vh := range vhosts {
+		if vh.Name == "profile_alice" {
+			profile = vh
+			break
+		}
+	}
+	require.NotNil(t, profile, "profile VH required")
+	require.Len(t, profile.Routes, 1)
+	require.NotNil(t, profile.Routes[0].ExtAuth, "zone root profile must attach ExtAuth")
+	assert.Equal(t, autheliaVerifyPathPrefix, profile.Routes[0].ExtAuth.PathPrefix)
+	assert.Nil(t, profile.Routes[0].RequestHeaders, "profile must not stamp outbound zone-owner X-BFL-USER")
 }

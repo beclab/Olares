@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Learn how to integrate your app with Elasticsearch service in Olares.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Elasticsearch integration, integrate with Elasticsearch, Olares middleware, app integration
 ---
 # Integrate with Elasticsearch
 

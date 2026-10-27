@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Guide to installing Olares on Windows using WSL (Windows Subsystem for Linux) including setup requirements and activation steps.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Windows script, WSL 2, PowerShell, Windows 10 11, WSL install
 ---
 # Install Olares on Windows via the script
 This guide explains how to install Olares on Windows (WSL 2) using the provided installation script.
@@ -36,6 +40,10 @@ We recommend using it only for development or testing purposes.
 :::tip Windows verification
 You can also confirm your GPU in **Task Manager > Performance**. To verify the driver is accessible in WSL, run `nvidia-smi` in your WSL terminal.
 :::
+
+## Before you begin
+
+<!--@include: ./reusables.md#larepass-prerequisite-->
 
 ## Set up system environment
 1. Enable the required Windows features for virtualization.

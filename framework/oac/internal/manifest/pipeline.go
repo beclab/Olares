@@ -31,6 +31,7 @@ type Manifest interface {
 	AppVersion() string
 	Entrances() []EntranceInfo
 	OptionsImages() []string
+	Taxonomy() Taxonomy
 	PermissionAppData() bool
 	PermissionAppCommon() bool
 	PermissionExternalData() bool

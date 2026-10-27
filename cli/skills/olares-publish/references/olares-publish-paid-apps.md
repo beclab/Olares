@@ -1,7 +1,7 @@
 # Paid apps: price.yaml, on-chain RSA, Merchant
 
 > **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) first and follow its paid-listing flow order.
-> A paid app is a **public-Market** app plus pricing + license enforcement. Everything in the public-distribution path still applies; this file adds only the paid extras. Official docs: [Publish paid applications](https://docs.olares.com/developer/develop/paid-apps.html).
+> A paid app is a **public-Market** app plus pricing + license enforcement. Everything in the public-distribution path still applies; this file adds only the paid extras. Official docs: [Publish paid applications](https://www.olares.com/docs/developer/develop/paid-apps).
 
 ## What "paid" adds to a normal market app
 
@@ -104,7 +104,7 @@ To change RSA keys, product info, pricing, or receiving wallet:
 1. Regenerate keys / edit the OAC, submit an `UPDATE` PR (the submit route), wait for merge.
 2. Reopen Merchant; when prompted, click **Update / Re-install** to apply the latest config.
 
-## Agent boundaries
+## Safety and escalation
 
 - **Do NOT** run `did-cli rsa set` (the on-chain, gas-costing write), touch the mnemonic, or handle `rsa-private.pem` for the user — these are secret-bearing / chain-mutating actions. Guide the user to run them. (`did-cli rsa get` / `owner` are read-only and safe.)
 - **Do** author `price.yaml`, wire `VERIFIABLE_CREDENTIAL` into the template + manifest, and validate the chart like any market app.

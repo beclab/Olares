@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Complete guide to installing Olares on Raspberry Pi including hardware requirements, installation process, and system activation steps.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Raspberry Pi, ARM, Raspbian, Pi 4B, Pi 5, single board computer
 ---
 # Install Olares on Raspberry Pi
 This guide explains how to install Olares on a Raspberry Pi.
@@ -19,6 +23,10 @@ Currently, Olares on Raspberry Pi has certain limitations. We recommend using it
   :::warning SSD required
   The installation will fail if an HDD (mechanical hard drive) is used instead of an SSD.
   :::
+
+## Before you begin
+
+<!--@include: ./reusables.md#larepass-prerequisite-->
 
 ## Set up system environment
 1. Configure the Raspbian environment to enable necessary features:

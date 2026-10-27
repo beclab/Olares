@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Understand Control Hub UI to manage applications, monitor resources, configure networking, and maintain system settings in Olares.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Control Hub, Kubernetes, workloads, resources, terminal
 ---
 
 # Manage Olares with Control Hub

@@ -6,7 +6,6 @@ import (
 
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/helm"
-	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 	appsv1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
@@ -24,12 +23,12 @@ type PendingApp struct {
 	*baseOperationApp
 }
 
-func NewPendingApp(ctx context.Context, c client.Client,
+func NewPendingApp(ctx context.Context, deps Deps,
 	manager *appsv1.ApplicationManager, ttl time.Duration) (StatefulApp, StateError) {
 
 	// Application's meta.name == ApplicationMannager's meta.name
 	var app appsv1.Application
-	err := c.Get(ctx, types.NamespacedName{Name: manager.Name}, &app)
+	err := deps.Client.Get(ctx, types.NamespacedName{Name: manager.Name}, &app)
 	if err != nil && !apierrors.IsNotFound(err) {
 		klog.Error("get application error: ", err)
 		return nil, NewStateError(err.Error())
@@ -40,14 +39,14 @@ func NewPendingApp(ctx context.Context, c client.Client,
 		return nil, NewErrorUnknownState(
 			func() func(ctx context.Context) error {
 				return func(ctx context.Context) error {
-					return removeUnknownApplication(c, manager.Name)(ctx)
+					return removeUnknownApplication(deps.Client, manager.Name)(ctx)
 				}
 			},
 			nil, // TODO: clean up, delete all, application and application manager
 		)
 	}
 
-	return appFactory.New(c, manager, ttl,
+	return deps.Factory.New(deps, manager, ttl,
 		func(c client.Client, manager *appsv1.ApplicationManager, ttl time.Duration) StatefulApp {
 			return &PendingApp{
 				baseOperationApp: &baseOperationApp{
@@ -62,25 +61,17 @@ func NewPendingApp(ctx context.Context, c client.Client,
 }
 
 func (p *PendingApp) Exec(ctx context.Context) (StatefulInProgressApp, error) {
-	if success, err := appFactory.addLimitedStatefulApp(ctx,
-		// limit
+	if success, err := p.deps.Factory.addLimitedStatefulApp(ctx,
+		// limit: at most 1 concurrent Downloading app cluster-wide.
+		// The count goes through the Deps.CountDownloading seam: production
+		// reads a live clientset (utils.GetClient), while tests override it to
+		// count via the injected controller-runtime fake client so this branch
+		// can be driven without a live kubeconfig.
 		func() (bool, error) {
-			clientset, err := utils.GetClient()
+			count, err := p.deps.CountDownloading(ctx)
 			if err != nil {
-				klog.Errorf("failed to get clientset %v", err)
+				klog.Errorf("count downloading application managers error: %v", err)
 				return false, err
-			}
-			apps, err := clientset.AppV1alpha1().ApplicationManagers().List(ctx, metav1.ListOptions{})
-			if err != nil {
-				klog.Errorf("list application managers error: %v", err)
-				return false, err
-			}
-
-			count := 0
-			for _, app := range apps.Items {
-				if app.Status.State == appsv1.Downloading {
-					count++
-				}
 			}
 
 			return count < 1, nil
@@ -93,6 +84,8 @@ func (p *PendingApp) Exec(ctx context.Context) (StatefulInProgressApp, error) {
 			p.manager.Status.StatusTime = &now
 			p.manager.Status.UpdateTime = &now
 			p.manager.Status.OpGeneration += 1
+			p.manager.Status.Reason = appsv1.Downloading.String()
+			p.manager.Status.Message = "start to download"
 			err := p.client.Update(ctx, p.manager)
 			if err != nil {
 				klog.Error("update app manager status error, ", err, ", ", p.manager.Name)
@@ -112,7 +105,12 @@ func (p *PendingApp) Exec(ctx context.Context) (StatefulInProgressApp, error) {
 }
 
 func (p *PendingApp) Cancel(ctx context.Context) error {
-	err := p.updateStatus(context.TODO(), p.manager, appsv1.PendingCanceled, nil, constants.OperationCanceledByUserTpl, appsv1.PendingCanceled.String())
+	// Move to the canceling state and let PendingCancelingApp perform the
+	// actual cleanup (stop the in-progress op, delete the namespace) before it
+	// settles on PendingCanceled. This mirrors every other operating state's
+	// cancel path (Operating -> *Canceling -> *Canceled) and matches the
+	// declared StateTransitions[Pending] = {Downloading, PendingCanceling}.
+	err := p.updateStatus(context.TODO(), p.manager, appsv1.PendingCanceling, nil, constants.InstallCanceledByTimeout, constants.InstallCancelBySystem)
 	if err != nil {
 		klog.Infof("Failed to update applicationmanagers status name=%s err=%v", p.manager.Name, err)
 	}

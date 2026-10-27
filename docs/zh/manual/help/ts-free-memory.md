@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 排查暂停应用后内存未释放的问题。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 内存不足, 释放内存, 暂停应用, 共享应用, Market, Dashboard
 ---
 
 # 暂停应用后内存不足或未释放

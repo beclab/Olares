@@ -15,6 +15,7 @@ import (
 	sysv1alpha1 "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
 	iamv1alpha2 "github.com/beclab/api/iam/v1alpha2"
 	"github.com/beclab/l4-bfl-proxy/internal/message"
+	"github.com/beclab/l4-bfl-proxy/internal/tlsutil"
 	toolscache "k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -43,16 +44,13 @@ const (
 	settingsCustomDomain                 = "customDomain"
 	settingsCustomDomainThirdLevelDomain = "third_level_domain"
 	settingsCustomDomainThirdPartyDomain = "third_party_domain"
+	settingsCustomDomainCert             = "cert"
+	settingsCustomDomainKey              = "key"
 	applicationAuthLevelPublic           = "public"
 
-	nameSSLConfigMapName                     = "zone-ssl-config"
-	applicationThirdPartyDomainCertKeySuffix = "-domain-ssl-config"
-	appEntranceCertConfigMapLabel            = "app.bytetrade.io/custom-domain-cert"
-	appEntranceCertConfigMapCertKey          = "cert"
-	appEntranceCertConfigMapKeyKey           = "key"
-	appEntranceCertConfigMapZoneKey          = "zone"
-	userEnvLanguage                          = "olares-user-language"
-	defaultUserLanguage                      = "en-US"
+	nameSSLConfigMapName = "zone-ssl-config"
+	userEnvLanguage      = "olares-user-language"
+	defaultUserLanguage  = "en-US"
 )
 
 type Config struct {
@@ -105,6 +103,11 @@ func (p *Provider) SetupWithManager(ctx context.Context) error {
 		return fmt.Errorf("get pod informer: %w", err)
 	}
 
+	svcInformer, err := p.cache.GetInformer(ctx, &corev1.Service{})
+	if err != nil {
+		return fmt.Errorf("get service informer: %w", err)
+	}
+
 	userEnvInformer, err := p.cache.GetInformer(ctx, &sysv1alpha1.UserEnv{})
 	if err != nil {
 		return fmt.Errorf("get userEnv informer: %w", err)
@@ -122,7 +125,7 @@ func (p *Provider) SetupWithManager(ctx context.Context) error {
 			if !ok {
 				return false
 			}
-			return isSSLConfigMap(cm, p.cfg.UserNamespacePrefix) || isCustomDomainCertConfigMap(cm)
+			return isSSLConfigMap(cm, p.cfg.UserNamespacePrefix)
 		},
 		Handler: baseHandler,
 	}); err != nil {
@@ -161,11 +164,21 @@ func (p *Provider) SetupWithManager(ctx context.Context) error {
 			if !ok {
 				return false
 			}
-			return isFileServerPod(pod)
+			return isFileServerPod(pod) || podHasHTTPProbe(pod)
 		},
 		Handler: baseHandler,
 	}); err != nil {
 		return fmt.Errorf("add pod event handler: %w", err)
+	}
+
+	if _, err = svcInformer.AddEventHandler(toolscache.FilteringResourceEventHandler{
+		FilterFunc: func(obj interface{}) bool {
+			_, ok := obj.(*corev1.Service)
+			return ok
+		},
+		Handler: baseHandler,
+	}); err != nil {
+		return fmt.Errorf("add service event handler: %w", err)
 	}
 
 	if _, err = userEnvInformer.AddEventHandler(toolscache.FilteringResourceEventHandler{
@@ -449,6 +462,7 @@ func (p *Provider) buildAppInfos(username string, appList []*appv1alpha1.Applica
 
 		effectiveEntrances := app.EffectiveEntrances(username)
 		entrances := make([]*message.EntranceInfo, 0, len(effectiveEntrances))
+		probePaths := make(map[string][]string)
 		for _, e := range effectiveEntrances {
 			entrances = append(entrances, &message.EntranceInfo{
 				Name:            e.Name,
@@ -456,7 +470,13 @@ func (p *Provider) buildAppInfos(username string, appList []*appv1alpha1.Applica
 				Port:            e.Port,
 				AuthLevel:       e.AuthLevel,
 				WindowPushState: e.WindowPushState,
+				Type:            e.Type,
 			})
+			if e.Host != "" && app.Spec.Namespace != "" {
+				if paths := p.listProbePathsForService(context.Background(), app.Spec.Namespace, e.Host); len(paths) > 0 {
+					probePaths[e.Name] = paths
+				}
+			}
 		}
 
 		ports := make([]*message.PortInfo, 0, len(app.Spec.Ports))
@@ -480,7 +500,7 @@ func (p *Provider) buildAppInfos(username string, appList []*appv1alpha1.Applica
 			owner = username
 		}
 
-		result = append(result, &message.AppInfo{
+		info := &message.AppInfo{
 			Name:      app.Spec.Name,
 			Appid:     app.Spec.Appid,
 			IsSysApp:  app.Spec.IsSysApp,
@@ -490,7 +510,11 @@ func (p *Provider) buildAppInfos(username string, appList []*appv1alpha1.Applica
 			Ports:     ports,
 			Settings:  settings,
 			IsShared:  isSharedApp(app),
-		})
+		}
+		if len(probePaths) > 0 {
+			info.EntranceProbePaths = probePaths
+		}
+		result = append(result, info)
 	}
 	return result
 }
@@ -499,10 +523,6 @@ func (p *Provider) listUsers(ctx context.Context, userList []iamv1alpha2.User, r
 	var result []*message.UserInfo
 
 	// Fetch cluster-wide data once; reused for every user below.
-	allCerts, err := p.getCustomDomainCerts(ctx)
-	if err != nil {
-		return nil, err
-	}
 	fsGlobal, err := p.getFileserverGlobalData(ctx)
 	if err != nil {
 		return nil, err
@@ -584,8 +604,19 @@ func (p *Provider) listUsers(ctx context.Context, userList []iamv1alpha2.User, r
 		denyAllStatus = getAnnotation(annoUser, userDenyAllPolicy)
 		allowedDomains = getPublicAccessDomain(zone, publicAppIDs, publicCustomDomainApps, denyAllStatus)
 
-		if userCustomDomains, ok := customDomainAppsWithUsers[annoUser.Name]; ok && len(userCustomDomains) > 0 {
-			serverNameDomains = append(serverNameDomains, userCustomDomains...)
+		customDomainCerts := customDomainCertsForUser(user.Name, rawAppsMap[user.Name])
+		validCustomDomains := make(map[string]bool, len(customDomainCerts))
+		for _, c := range customDomainCerts {
+			validCustomDomains[c.Domain] = true
+		}
+		// Only advertise custom domains that have a loadable TLS key pair.
+		// Otherwise buildUserFilterChains would attach them to the zone cert.
+		if userCustomDomains, ok := customDomainAppsWithUsers[annoUser.Name]; ok {
+			for _, d := range userCustomDomains {
+				if validCustomDomains[d] {
+					serverNameDomains = append(serverNameDomains, d)
+				}
+			}
 		}
 
 		var accessLevel uint64
@@ -614,6 +645,10 @@ func (p *Provider) listUsers(ctx context.Context, userList []iamv1alpha2.User, r
 			}
 			return nil, err
 		}
+		if err := tlsutil.ValidateKeyPair(sslConfig.CertData, sslConfig.KeyData); err != nil {
+			klog.Warningf("provider: user %s SSL cert/key invalid, skipping HTTPS: %v", user.Name, err)
+			continue
+		}
 		fileserverNodes, err := p.getFileserverNodesForUser(ctx, user.Name, fsGlobal)
 		if err != nil {
 			return nil, err
@@ -639,7 +674,7 @@ func (p *Provider) listUsers(ctx context.Context, userList []iamv1alpha2.User, r
 			Language:          language,
 			Apps:              p.buildAppInfos(user.Name, rawAppsMap[user.Name]),
 			SSL:               sslConfig,
-			CustomDomainCerts: allCerts[user.Name],
+			CustomDomainCerts: customDomainCerts,
 			FileserverNodes:   fileserverNodes,
 			MasterNodeCIDR:    masterNodeCIDR,
 		}
@@ -649,38 +684,52 @@ func (p *Provider) listUsers(ctx context.Context, userList []iamv1alpha2.User, r
 	return result, nil
 }
 
-func (p *Provider) getCustomDomainCerts(ctx context.Context) (map[string][]*message.CertInfo, error) {
-	var cmList corev1.ConfigMapList
-	if err := p.cache.List(ctx, &cmList, client.MatchingLabels{
-		appEntranceCertConfigMapLabel: "true",
-	}); err != nil {
-		return nil, fmt.Errorf("list custom domain cert configmaps: %w", err)
-	}
-
-	certs := make(map[string][]*message.CertInfo)
-	for _, cm := range cmList.Items {
-		owner := strings.TrimPrefix(cm.Namespace, "user-space-")
-		domain := cm.Data[appEntranceCertConfigMapZoneKey]
-		certData := cm.Data[appEntranceCertConfigMapCertKey]
-		keyData := cm.Data[appEntranceCertConfigMapKeyKey]
-		if domain == "" || certData == "" || keyData == "" {
-			continue
+// customDomainCertsForUser derives the user's custom-domain TLS certs from the
+// per-user `customDomain` settings on their apps, instead of from standalone
+// cert ConfigMaps. Sourcing the cert (and therefore the filter-chain SNI) from
+// the same JSON that drives the routing virtual host guarantees the two never
+// desync: a domain the app no longer configures (empty third_party_domain) or
+// one whose cert has not been issued yet (empty cert/key) produces no cert and
+// thus no filter chain, so it can never 421 nor steal another user's SNI.
+// Invalid PEM placeholders (e.g. cert/key = "test") are also skipped so they
+// cannot NACK the whole Envoy SDS secret batch.
+//
+// Certs are de-duped by domain (first wins) and sorted by domain for stable
+// output. CreatedAt is the app's creation time, feeding the xDS de-dup
+// tie-break when two users legitimately claim the same domain.
+func customDomainCertsForUser(username string, appList []*appv1alpha1.Application) []*message.CertInfo {
+	var certs []*message.CertInfo
+	seen := make(map[string]bool)
+	for _, app := range appList {
+		customDomainMap := getSettingsKeyMap(app, username, settingsCustomDomain)
+		for _, entranceCustomDomain := range customDomainMap {
+			domain := entranceCustomDomain[settingsCustomDomainThirdPartyDomain]
+			certData := entranceCustomDomain[settingsCustomDomainCert]
+			keyData := entranceCustomDomain[settingsCustomDomainKey]
+			if domain == "" || certData == "" || keyData == "" {
+				continue
+			}
+			if err := tlsutil.ValidateKeyPair(certData, keyData); err != nil {
+				klog.Warningf("provider: user %s custom domain %q has invalid TLS cert/key, skipping: %v",
+					username, domain, err)
+				continue
+			}
+			if seen[domain] {
+				continue
+			}
+			seen[domain] = true
+			certs = append(certs, &message.CertInfo{
+				Domain:    domain,
+				CertData:  certData,
+				KeyData:   keyData,
+				CreatedAt: app.CreationTimestamp.Time,
+			})
 		}
-		certs[owner] = append(certs[owner], &message.CertInfo{
-			Domain:    domain,
-			CertData:  certData,
-			KeyData:   keyData,
-			CreatedAt: cm.CreationTimestamp.Time,
-		})
 	}
-	for owner := range certs {
-		ownerCerts := certs[owner]
-		sort.Slice(ownerCerts, func(i, j int) bool {
-			return ownerCerts[i].Domain < ownerCerts[j].Domain
-		})
-	}
-
-	return certs, nil
+	sort.Slice(certs, func(i, j int) bool {
+		return certs[i].Domain < certs[j].Domain
+	})
+	return certs
 }
 
 func (p *Provider) getSSLConfig(ctx context.Context, username string) (*message.SSLConfig, error) {
@@ -725,7 +774,7 @@ func getUserLanguage(userEnv *sysv1alpha1.UserEnv) string {
 // also recorded as the per-domain "owner" so the rest of the pipeline
 // associates this user's frontends with their own server_name list.
 func (p *Provider) listApplicationDetails(username string, appList []*appv1alpha1.Application) ([]string, []string, []string, map[string][]string) {
-	publicApps := []string{"headscale"}
+	var publicApps []string
 	var publicCustomDomainApps []string
 	var customDomainApps []string
 	customDomainAppsWithUsers := make(map[string][]string)
@@ -904,12 +953,87 @@ func isSSLConfigMap(cm *corev1.ConfigMap, namespacePrefix string) bool {
 	return strings.HasPrefix(cm.Namespace, namespacePrefix) && cm.Name == nameSSLConfigMapName
 }
 
-func isCustomDomainCertConfigMap(cm *corev1.ConfigMap) bool {
-	return strings.Contains(cm.Name, applicationThirdPartyDomainCertKeySuffix)
-}
-
 func isFileServerPod(pod *corev1.Pod) bool {
 	return pod.Labels["app"] == "files"
+}
+
+func podHasHTTPProbe(pod *corev1.Pod) bool {
+	return len(httpProbePathsFromPod(pod)) > 0
+}
+
+func httpProbePathsFromPod(pod *corev1.Pod) []string {
+	if pod == nil {
+		return nil
+	}
+	var paths []string
+	for _, c := range pod.Spec.Containers {
+		if c.LivenessProbe != nil && c.LivenessProbe.HTTPGet != nil {
+			paths = append(paths, c.LivenessProbe.HTTPGet.Path)
+		}
+		if c.ReadinessProbe != nil && c.ReadinessProbe.HTTPGet != nil {
+			paths = append(paths, c.ReadinessProbe.HTTPGet.Path)
+		}
+		if c.StartupProbe != nil && c.StartupProbe.HTTPGet != nil {
+			paths = append(paths, c.StartupProbe.HTTPGet.Path)
+		}
+	}
+	return paths
+}
+
+// listProbePathsForService collects Exact HTTP probe paths from Pods selected by the Service.
+// Data source matches historic oes getHTTProbePath / deenvy entrance_probe.
+func (p *Provider) listProbePathsForService(ctx context.Context, namespace, svcName string) []string {
+	if p == nil || p.cache == nil || namespace == "" || svcName == "" {
+		return nil
+	}
+	var svc corev1.Service
+	if err := p.cache.Get(ctx, client.ObjectKey{Namespace: namespace, Name: svcName}, &svc); err != nil {
+		if !apierrors.IsNotFound(err) {
+			klog.V(2).Infof("provider: get service %s/%s for probe paths failed: %v", namespace, svcName, err)
+		}
+		return nil
+	}
+	if len(svc.Spec.Selector) == 0 {
+		return nil
+	}
+	var pods corev1.PodList
+	if err := p.cache.List(ctx, &pods, client.InNamespace(namespace), client.MatchingLabels(svc.Spec.Selector)); err != nil {
+		klog.V(2).Infof("provider: list pods for probe paths %s/%s failed: %v", namespace, svcName, err)
+		return nil
+	}
+	seen := map[string]struct{}{}
+	var out []string
+	for i := range pods.Items {
+		for _, path := range uniqueHTTPProbePaths(httpProbePathsFromPod(&pods.Items[i])) {
+			if _, ok := seen[path]; ok {
+				continue
+			}
+			seen[path] = struct{}{}
+			out = append(out, path)
+		}
+	}
+	sort.Strings(out)
+	return out
+}
+
+func uniqueHTTPProbePaths(raw []string) []string {
+	seen := map[string]struct{}{}
+	var out []string
+	for _, p := range raw {
+		p = strings.TrimSpace(p)
+		if p == "" || p == "/" {
+			continue
+		}
+		if !strings.HasPrefix(p, "/") {
+			p = "/" + p
+		}
+		if _, ok := seen[p]; ok {
+			continue
+		}
+		seen[p] = struct{}{}
+		out = append(out, p)
+	}
+	return out
 }
 
 func isUserEnvLanguage(userEnv *sysv1alpha1.UserEnv) bool {

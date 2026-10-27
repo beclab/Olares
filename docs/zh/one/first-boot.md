@@ -6,11 +6,11 @@ head:
       content: Olares, Olares One, 首次启动, 初始设置, 首次使用
 ---
 
-# 首次启动
-
 :::warning
-当前文档由 AI 翻译生成，若发现术语或表述不准确，请查看[英文原文](../../one/first-boot.md)。
+本文档由 AI 自动翻译，仅供参考。涉及关键操作或信息时，请以[英文原文](../../one/first-boot.md)为准。
 :::
+
+# 首次启动
 
 本指南将引导你完成 Olares One 的首次设置。
 
@@ -64,12 +64,16 @@ head:
 1. 在 LarePass 应用中，在你刚刚找到的设备上点击 **立即安装**。
 2. 安装完成后，点击 **立即激活** 以初始化系统。
 3. 选择离你位置最近的反向代理节点，然后点击 **确认**。反向代理节点充当远程访问的安全网关。选择最近的节点可确保最快的连接速度和最佳稳定性。
-4. 设置 Olares 的登录密码。
-5. 复制或记下你的个人桌面 URL。你需要此 URL 来访问你的 Olares 服务。
+4. 选择 Olares 语言。Olares 支持英语、简体中文、德语、西班牙语、意大利语、法语和日语。
+   :::info
+   这里选择的是 Olares 语言，不会改变当前 LarePass 的界面语言。后续激活流程仍使用 LarePass 当前语言。激活完成后，Olares 桌面会使用此处选择的语言。
+   :::
+5. 设置 Olares 的登录密码。
+6. 复制或记下你的个人桌面 URL。你需要此 URL 来访问你的 Olares 服务。
 
     ![获取 URL](/images/one/obtain-url.png#bordered)
 
-6. 点击 **知道了** 关闭提示。
+7. 点击 **知道了** 关闭提示。
 
 ## 步骤 4：登录 Olares Desktop
 1. 在计算机上打开 Web 浏览器，访问你的桌面 URL。
@@ -116,7 +120,7 @@ Olares OS 预装了系统应用。你还可以浏览 **Market** 下载最适合�
 
 <!--@include: ../manual/help/olares.md#custom-domain-->
 
-详细信息，请参阅[为你的 Olares 设置自定义域名](/manual/best-practices/set-custom-domain.md)。
+详细信息，请参阅[为你的 Olares 设置自定义域名](/zh/manual/best-practices/set-custom-domain.md)。
 
 ## 资源
 - [使用本地网络访问 Olares](access-olares-via-vpn.md)

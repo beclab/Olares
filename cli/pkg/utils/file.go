@@ -24,6 +24,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/beclab/Olares/cli/pkg/core/logger"
 
@@ -43,6 +44,21 @@ func IsExist(path string) bool {
 		return false
 	}
 	return true
+}
+
+// StateFileVersion reads the Olares version recorded in a phase marker file
+// such as .prepared ("<version>") or .installed ("<version> <kubetype>"),
+// returning an empty string when the file is missing or empty.
+func StateFileVersion(path string) string {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return ""
+	}
+	fields := strings.Fields(string(data))
+	if len(fields) == 0 {
+		return ""
+	}
+	return fields[0]
 }
 
 func CreateDir(path string) error {

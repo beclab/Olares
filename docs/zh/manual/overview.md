@@ -1,12 +1,22 @@
 ---
-description: Olares 是为本地 AI 打造的开源私有云操作系统，支持自托管服务、AI 应用部署、文件管理和安全协作，让你完全掌控数据。
+description: Olares 文档：在自有硬件上运行 AI Agent 和大模型的开源个人云操作系统。
 aside: false
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Olares 文档, 个人云操作系统, AI Agent, 大模型, 安装激活, 使用指南
 ---
 # Olares 文档
 
 ## Olares 是什么？
 
-Olares 是一款开源个人云操作系统，让你能够在本地拥有并管理自己的数字资产。你无需再依赖公有云服务，而可以在 Olares 上本地部署强大的开源平替服务或应用，例如使用 Ollama 托管大语言模型、使用 ComfyUI 生成图像，以及使用 Vane（原 Perplexica）打造本地化、注重隐私的 AI 搜索与问答体验。你可以坐拥云计算的强大威力，同时将其完全置于自己掌控之下。
+Olares 是一款可以用自然语言操作的开源个人云操作系统，让你在自己的硬件上运行 AI Agent 和大模型。
+
+你可以通过本文档完成 Olares 的安装与激活，管理应用、文件、身份和访问方式，并借助 CLI、Agent Skills 和真实场景示例进一步扩展 Olares。
+
+## Olares OS、LarePass 与 Olares Space
+
+**Olares OS** 运行在你的设备上，用于托管应用、文件和 AI 服务。**LarePass** 是用于创建和保护 Olares ID、激活 Olares，以及从不同设备安全访问 Olares 的客户端。**Olares Space** 是用于管理 Olares 设备，以及自定义域名、云端备份空间和账单等可选云端服务的网页端服务。
 
 ## 开始使用 Olares
 
@@ -16,12 +26,22 @@ Olares 是一款开源个人云操作系统，让你能够在本地拥有并管�
   <a class="doc-map-card" href="./get-started/">
     <span class="doc-map-icon"><span class="material-symbols-outlined">rocket_launch</span></span>
     <span class="doc-map-title">快速开始</span>
-    <span class="doc-map-desc">创建 Olares ID，并在设备上安装 Olares</span>
+    <span class="doc-map-desc">选择安装方式，在自己的硬件上完成 Olares 设置</span>
+  </a>
+  <a class="doc-map-card" href="./larepass/">
+    <span class="doc-map-icon"><span class="material-symbols-outlined">smartphone</span></span>
+    <span class="doc-map-title">下载 LarePass</span>
+    <span class="doc-map-desc">获取用于设置和访问 Olares 的移动端或桌面端客户端</span>
   </a>
   <a class="doc-map-card" href="../one/">
     <span class="doc-map-icon"><span class="material-symbols-outlined">memory</span></span>
     <span class="doc-map-title">Olares One</span>
-    <span class="doc-map-desc">设置并充分发挥 Olares One 个人 AI 设备的潜力</span>
+    <span class="doc-map-desc">获取开箱即用的个人 AI 云专属硬件设备</span>
+  </a>
+  <a class="doc-map-card" href="./best-practices/activate-olares-using-cli">
+    <span class="doc-map-icon"><span class="material-symbols-outlined">menu_book</span></span>
+    <span class="doc-map-title">高级设置</span>
+    <span class="doc-map-desc">完成命令行安装、集群、存储扩展和主机硬件等高级设置任务</span>
   </a>
 </div>
 
@@ -30,42 +50,37 @@ Olares 是一款开源个人云操作系统，让你能够在本地拥有并管�
 管理你的云、应用、文件、身份与日常访问。
 
 <div class="doc-map">
+  <a class="doc-map-card" href="../developer/cli-agent-skills">
+    <span class="doc-map-icon"><span class="material-symbols-outlined">smart_toy</span></span>
+    <span class="doc-map-title">用 AI 管理 Olares</span>
+    <span class="doc-map-desc">用自然语言描述需求，让 AI Agent 通过 Agent Skills 操作 Olares</span>
+  </a>
   <a class="doc-map-card" href="./olares/">
     <span class="doc-map-icon"><span class="material-symbols-outlined">apps</span></span>
     <span class="doc-map-title">Olares 应用</span>
-    <span class="doc-map-desc">桌面、应用市场、文件、Vault、Control Hub 与设置的日常使用指南</span>
+    <span class="doc-map-desc">桌面、应用市场、文件、Vault、Control Hub、设置等系统应用的日常使用指南</span>
   </a>
-  <a class="doc-map-card" href="./larepass/">
-    <span class="doc-map-icon"><span class="material-symbols-outlined">smartphone</span></span>
-    <span class="doc-map-title">LarePass</span>
-    <span class="doc-map-desc">管理账户、设备、VPN、文件与密码</span>
-  </a>
-  <a class="doc-map-card" href="./space/">
+  <a class="doc-map-card" href="./space/manage-accounts">
     <span class="doc-map-icon"><span class="material-symbols-outlined">cloud</span></span>
     <span class="doc-map-title">Olares Space</span>
-    <span class="doc-map-desc">管理 Olares、自定义域名、备份与账单</span>
-  </a>
-  <a class="doc-map-card" href="./best-practices/">
-    <span class="doc-map-icon"><span class="material-symbols-outlined">menu_book</span></span>
-    <span class="doc-map-title">教程</span>
-    <span class="doc-map-desc">自定义域名、多节点集群、存储扩展等进阶分步指南</span>
+    <span class="doc-map-desc">登录 Olares Space，管理账号、设备和自定义域名</span>
   </a>
 </div>
 
 ## 深入与扩展
 
-通过 Olares CLI 和社区中的真实示例进一步扩展 Olares。
+了解 Olares 的工作原理，为平台开发应用，并探索真实使用场景。
 
 <div class="doc-map">
-  <a class="doc-map-card" href="../developer/cli-overview">
-    <span class="doc-map-icon"><span class="material-symbols-outlined">terminal</span></span>
-    <span class="doc-map-title">Olares CLI</span>
-    <span class="doc-map-desc">通过命令行操作 Olares，并用 Agent Skills 赋能 AI 智能体</span>
-  </a>
   <a class="doc-map-card" href="../use-cases/">
     <span class="doc-map-icon"><span class="material-symbols-outlined">lightbulb</span></span>
     <span class="doc-map-title">应用示例</span>
-    <span class="doc-map-desc">探索真实场景与第三方应用的操作指南</span>
+    <span class="doc-map-desc">探索本地 AI、Agent 应用、媒体与自托管等真实场景的操作指南</span>
+  </a>
+  <a class="doc-map-card" href="../developer/concepts/">
+    <span class="doc-map-icon"><span class="material-symbols-outlined">developer_mode</span></span>
+    <span class="doc-map-title">开发者文档</span>
+    <span class="doc-map-desc">了解 Olares 架构，开发和分发应用，并参与项目贡献</span>
   </a>
 </div>
 
@@ -74,7 +89,12 @@ Olares 是一款开源个人云操作系统，让你能够在本地拥有并管�
 遇到问题时查找答案，并加入社区与其他用户交流。
 
 <div class="doc-map">
-  <a class="doc-map-card" href="./help/olares">
+  <a class="doc-map-card" href="./release-notes">
+    <span class="doc-map-icon"><span class="material-symbols-outlined">fiber_new</span></span>
+    <span class="doc-map-title">文档更新动态</span>
+    <span class="doc-map-desc">跟踪每次 Olares 发版后的新增指南、更新内容与下架说明</span>
+  </a>
+  <a class="doc-map-card" href="./help/">
     <span class="doc-map-icon"><span class="material-symbols-outlined">help</span></span>
     <span class="doc-map-title">帮助与故障排查</span>
     <span class="doc-map-desc">查阅常见问题、已知问题与技术支持</span>

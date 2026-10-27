@@ -289,11 +289,11 @@ func GetKubeletConfiguration(runtime connector.Runtime, kubeConf *common.KubeCon
 		"failSwapOn":                      false,
 		"kubeReserved": map[string]string{
 			"cpu":    "200m",
-			"memory": "250Mi",
+			"memory": utils.KubeReservedMemory(utils.NodeRunsControlPlane(runtime)),
 		},
 		"systemReserved": map[string]string{
 			"cpu":    "200m",
-			"memory": "250Mi",
+			"memory": utils.SystemReservedMemory(runtime, kubeConf.Arg.EnablePodSwap),
 		},
 		"evictionHard": map[string]string{
 			"memory.available":  "5%",
@@ -301,13 +301,6 @@ func GetKubeletConfiguration(runtime connector.Runtime, kubeConf *common.KubeCon
 			"nodefs.available":  "5%",
 			"imagefs.available": "5%",
 		},
-		"evictionSoft": map[string]string{
-			"memory.available": "10%",
-		},
-		"evictionSoftGracePeriod": map[string]string{
-			"memory.available": "2m",
-		},
-		"evictionMaxPodGracePeriod":        120,
 		"evictionPressureTransitionPeriod": "30s",
 		"featureGates":                     FeatureGatesDefaultConfiguration,
 		"runtimeRequestTimeout":            "5m",

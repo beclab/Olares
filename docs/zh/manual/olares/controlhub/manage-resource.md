@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 了解如何使用控制面板查看和管理 Olares 集群相关的资源配置，包括命名空间、Secrets、ConfigMaps、服务、存储、网络策略、任务和 CRD 
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 控制面板, 资源配置, 命名空间, Secret, ConfigMap, PVC, CRD
 ---
 # 管理资源配置
 

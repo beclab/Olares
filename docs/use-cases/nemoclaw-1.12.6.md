@@ -1,0 +1,348 @@
+---
+connectionVersion: "1.12.6"
+connectionLatestPath: /use-cases/nemoclaw
+noindex: true
+search: false
+outline: [2, 3]
+description: Run NemoClaw on Olares with Qwen3.6-27B as a local LLM. Set up an always-on AI agent backed by the NVIDIA OpenShell runtime, with no cloud API required.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, NemoClaw, NVIDIA, OpenShell, OpenClaw, local LLM, AI assistant, Discord, web search, ClawHub, skills, plugins
+app_version: "1.0.8"
+doc_version: "1.2"
+doc_updated: "2026-07-29"
+---
+
+# Run NemoClaw with a local LLM — Olares 1.12.6
+
+<VersionRouteSelect />
+
+NemoClaw is an open-source reference stack from NVIDIA that runs OpenClaw with the NVIDIA OpenShell runtime bundled.
+
+This guide walks you through running NemoClaw on Olares with the Qwen3.6-27B (llama.cpp) model app as the backend LLM.
+
+:::warning Alpha software
+NemoClaw is an early preview release from NVIDIA and is not recommended for production use. For official updates and community feedback, see [NVIDIA/NemoClaw](https://github.com/NVIDIA/NemoClaw).
+:::
+
+## Learning objectives
+
+In this guide, you will learn how to:
+
+- Install and configure NemoClaw with a local LLM.
+- Start your first chat with the agent.
+- Connect the agent to Discord for remote chat.
+- Enable real-time web search.
+
+## Prerequisites
+
+Before you begin, you need:
+
+- Admin privileges to install apps from Market and edit application settings.
+- The following model:
+
+  | Model type | Model | How to get it |
+  | :--- | :--- | :--- |
+  | Chat | Qwen3.6-27B (llama.cpp) | Install from Market|
+
+## Get model connection details
+
+<!--@include: ../reusables/ai-service-connections-1.12.6.md#model-connection-overview-->
+
+NemoClaw needs the model name and its shared endpoint URL during installation.
+
+For Qwen3.6-27B (llama.cpp), NemoClaw uses the OpenAI-compatible API format:
+
+1. Open the model app from Launchpad. Its Model Console opens automatically.
+2. Wait until **Model** shows **READY** and **Engine** shows **RUNNING**.
+3. Under **Service status**, make sure **Apps in Olares** is selected. Copy the **Model name** and **Base URL** exactly as shown.
+
+## Install NemoClaw
+
+1. Open Market and search for "NemoClaw".
+
+   ![NemoClaw in Market](/images/manual/use-cases/nemoclaw.png#bordered)
+
+2. Click **Get**, then **Install**.
+3. When prompted, set the environment variables:
+
+   - **NEMOCLAW_ENDPOINT_URL**: Paste the Base URL copied from the Qwen3.6-27B Model Console. Use it exactly as displayed.
+   - **NEMOCLAW_MODEL**: Enter the Model name copied from the Model Console. In this example, it is `unsloth/Qwen3.6-27B-GGUF:Q4_K_M`.
+
+   ![Set environment variables for NemoClaw](/images/manual/use-cases/nemoclaw-set-environment-variables.png#bordered){width=70%}
+
+   :::tip
+   You can change these environment variables later in **Settings** > **Applications** > **NemoClaw** > **Manage environment variables**.
+   :::
+
+4. Click **Confirm** and wait for installation to complete.
+
+   Installation takes about 15 minutes, depending on your network. During this time, NemoClaw installs the NVIDIA OpenShell runtime and runs the initial agent onboarding.
+
+   :::warning
+   Keep the model app running during installation. The initial onboarding requires the model to be reachable, and the installation won't complete if the model stops or becomes unavailable.
+   :::
+
+When the installation finishes, two shortcuts appear on Launchpad:
+
+- **NemoClaw CLI**: The terminal interface for running NemoClaw and OpenClaw commands.
+- **OpenClaw Web UI**: The browser-based dashboard for OpenClaw.
+
+## Start your first chat
+
+NemoClaw lets you chat with your agent in either the OpenClaw Web UI or the OpenClaw TUI inside the NemoClaw CLI. Because the model and endpoint were configured during installation, you can skip the manual onboarding and go straight to a session.
+
+<tabs>
+<template #In-OpenClaw-Web-UI>
+1. Open the OpenClaw Web UI app from Launchpad. You will be taken directly to the Chat interface.
+
+2. Send a test message, such as `Hi`.
+
+   The first response can take about 30 seconds while the model loads into memory. Subsequent replies are much faster. Once the model is loaded, you can ask the agent about itself to confirm the configuration. For example:
+
+   ```text
+   How are you, and what model are you running on?
+   ```
+
+   ![NemoClaw chat in OpenClaw Web UI](/images/manual/use-cases/nemoclaw-openclaw-chat-test.png#bordered)
+
+</template>
+
+<template #In-NemoClaw-CLI>
+
+1. Open the NemoClaw CLI app from Launchpad.
+2. Run the following command to connect to the sandbox:
+
+   ```bash
+   nemoclaw my-assistant connect
+   ```
+
+   Wait until the terminal shows the sandbox prompt.
+
+   ![Sandbox connected](/images/manual/use-cases/nemoclaw-connect.png#bordered)
+
+3. Launch the OpenClaw TUI:
+
+   ```bash
+   openclaw tui
+   ```
+
+   ![Launch the OpenClaw TUI in the sandbox shell](/images/manual/use-cases/nemoclaw-tui.png#bordered)
+
+4. Send a test message, such as `Hi`.
+
+   The first response can take about 30 seconds while the model loads into memory. Subsequent replies are much faster. Once the model is loaded, you can ask the agent about itself to confirm the configuration. For example:
+
+   ```text
+   How are you, and what model are you running on?
+   ```
+
+   ![NemoClaw chat session](/images/manual/use-cases/nemoclaw-chat-test.png#bordered)
+
+</template>
+</tabs>
+
+## Integrate with Discord
+
+To chat with your NemoClaw agent remotely, connect it to a Discord bot. You need a Discord account and a server where you have permission to add bots.
+
+### Step 1: Create a Discord bot
+
+1. Log in to the [Discord Developer Portal](https://discord.com/developers/applications) with your Discord account.
+2. Click **New Application**.
+
+   ![New application in Discord developer portal](/images/manual/use-cases/new-app.png#bordered){width=90%}
+
+3. Enter a name for the new app, agree to the terms, and click **Create**.
+
+   ![Create an application window](/images/manual/use-cases/create-app.png#bordered){width=40%}
+
+4. From the left sidebar, select **Bot**.
+5. Scroll down to the **Privileged Gateway Intents** section and enable the following settings:
+
+   - Presence Intent
+   - Server Members Intent
+   - Message Content Intent
+
+6. Click **Save Changes**.
+7. Scroll up to the **Token** section, click **Reset Token**, and copy the generated token. You need this token in Step 3.
+
+   ![Reset token](/images/manual/use-cases/reset-token.png#bordered)
+
+### Step 2: Invite the bot to your server
+
+1. From the left sidebar, select **OAuth2** and find the **OAuth2 URL Generator** section.
+
+    a. In **Scopes**, select **Bot** and **applications.commands**.
+
+    ![OAuth2 URL Generator](/images/manual/use-cases/oauth21.png#bordered)
+
+    b. Scroll down to **Bot Permissions** and configure them as shown. You can adjust these later.
+
+    ![Bot permissions](/images/manual/use-cases/bot-permissions1.png#bordered)
+
+2. Copy the **Generated URL** at the bottom.
+3. Paste the URL into a new browser tab, select your Discord server from **Add to server**, click **Continue**, and click **Authorize**.
+
+   The bot is authorized and added to your server.
+
+   ![Bot added to server](/images/manual/use-cases/bot-added.png#bordered)
+
+### Step 3: Configure the Discord channel
+
+NemoClaw runs OpenClaw inside a sandboxed runtime, so you must configure the channel from within the runtime shell.
+
+1. Open the NemoClaw CLI app from Launchpad.
+2. Connect to the runtime sandbox:
+
+   ```bash
+   nemoclaw my-assistant connect
+   ```
+
+   Wait until the terminal shows the sandbox prompt, such as `sandbox@my-assistant:~$`.
+
+3. Run the channel configuration wizard:
+
+   ```bash
+   openclaw config --section channels
+   ```
+
+4. Follow the prompts to add Discord:
+   | Settings | Option |
+   |:---------|:-------|
+   | Where will the Gateway run | Local (this machine) |
+   | Channels | Configure/link |
+   | Select a channel | Discord (Bot API) |
+   | How do you want to provide this Discord bot token? | Enter Discord bot token, and paste the token from Step 1. |
+   | Configure Discord channels access | Yes |
+   | Discord channels access | Open (allow all channels) |
+
+5. When finished, when prompted to select a channel, select **Finished**.
+
+6. When prompted to configure DM (Direct Message) access policies, select **Pairing**.
+
+:::info Discord channel stuck in `startup-not-ready`
+If the Discord channel shows `startup-not-ready` in the OpenClaw Web UI, restart the gateway. See [Common issues](nemoclaw-common-issues.md#discord-channel-stuck-in-startup-not-ready-state) for the steps.
+:::
+
+### Step 4: Authorize your Discord account
+
+For security, the bot doesn't respond to unauthorized users. You must pair your Discord account with the bot.
+
+1. Open Discord and send a direct message to your bot.
+
+   The bot replies with a pairing code and a command.
+
+   ![Pairing code from the bot DM](/images/manual/use-cases/nemoclaw-discord-pairing-code.png#bordered)
+
+2. Switch back to the NemoClaw CLI sandbox shell and use the command provided by the bot to approve the pairing. For example:
+
+   ```bash
+   openclaw pairing approve discord FY6PAVY8
+   ```
+   When you see the following, it means the Discord is authorized:
+   ```text
+   Approved discord sender 1277468602303385654.
+   ```
+
+3. After approval, you can chat with your agent directly in Discord.
+
+   ![Chat with the agent in Discord](/images/manual/use-cases/nemoclaw-discord-chat.png#bordered)
+
+## Enable web search
+
+By default, the agent answers only from its training data. To let it fetch real-time internet information, you can use a web search provider. The following uses SearXNG as an example, which you can install as a self-hosted instance from Olares Market.
+
+### Get the SearXNG endpoint
+
+Install SearXNG from Market before continuing.
+
+<!--@include: ../reusables/ai-service-connections-1.12.6.md#app-endpoint-overview-->
+
+For SearXNG:
+
+1. Go to Olares **Settings** > **Applications** > **SearXNG** > **Entrances**.
+2. Select **SearXNG**, then copy the **Endpoint** URL.
+
+### Configure web search
+
+1. Open the NemoClaw CLI app from Launchpad.
+2. Connect to the runtime sandbox:
+
+   ```bash
+   nemoclaw my-assistant connect
+   ```
+
+3. Run the web tool configuration wizard:
+
+   ```bash
+   openclaw config --section web
+   ```
+
+4. Configure as follows:
+
+   | Settings | Option |
+   |:---------|:-------|
+   | Where will the Gateway run | Local (this machine) |
+   | Enable web_search | Yes |
+   | Search provider | SearXNG |
+   | SearXNG Base URL | Paste the SearXNG Endpoint copied from Olares Settings |
+   | Enable web_fetch (keyless HTTP fetch) | Yes |
+
+5. To verify, ask your agent a question that requires real-time information. For example:
+
+   ```text
+   What are today's top tech news headlines?
+   ```
+
+   The agent should fetch and cite live web results.
+   ![Web search results](/images/manual/use-cases/nemoclaw-web-search-result.png#bordered){width=90%}
+
+## Install skills
+
+Skills add capabilities to your agent, such as managing Olares files and apps or integrating with Google Workspace.
+
+1. Open the OpenClaw Web UI from Launchpad.
+2. Go to **Skills**.
+3. Search for the skill in ClawHub and click **Install**.
+4. Open the chat page in the OpenClaw Web UI and run `/reset` to start a new session so the agent picks up the newly installed skill. If you've configured channels such as Discord, also run `/reset` in each channel conversation.
+
+   :::tip
+   You can also install skills from the NemoClaw CLI sandbox using `openclaw config --section skills`.
+   :::
+
+For walkthroughs of common skills, see:
+
+- [Manage Olares with Olares CLI](nemoclaw-olares-cli.md): Let the agent operate files and apps on your Olares device through natural language.
+- [Integrate with Google Workspace](nemoclaw-google-workspace.md): Connect Gmail, Calendar, and Drive via the gog skill.
+
+For more on managing skills, see [Manage skills and plugins](openclaw-skills.md).
+
+## Install plugins
+
+Plugins extend OpenClaw with additional channels and integrations.
+
+1. Open the NemoClaw CLI app from Launchpad.
+2. Connect to the runtime sandbox:
+
+   ```bash
+   nemoclaw my-assistant connect
+   ```
+
+3. Install the BlueBubbles plugin:
+
+   ```bash
+   openclaw plugins install @openclaw/bluebubbles
+   ```
+
+For other plugins, use the standard `openclaw plugins list` and `openclaw plugins install <name>` commands inside the runtime. For details, see [Manage skills and plugins](openclaw-skills.md).
+
+## Common issues
+
+For a list of common issues and workarounds, see [Common issues](nemoclaw-common-issues.md).
+
+## Learn more
+
+- [NVIDIA NemoClaw](https://build.nvidia.com/nemoclaw): Official reference stack and documentation from NVIDIA.
+- [OpenClaw](openclaw-1.12.6.md): Set up OpenClaw features such as persona setup.

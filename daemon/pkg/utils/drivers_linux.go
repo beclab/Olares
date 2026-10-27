@@ -437,7 +437,7 @@ func UmountOrRecordBrokenMounts(ctx context.Context, baseDir string) error {
 			if r := checkMount(m.Path, time.Second); r.Broken {
 
 				switch m.Type {
-				case "cifs", "nfs":
+				case "cifs", "nfs", "nfs4":
 					// record the broken mount record, and notify via the files API
 					currentBrokenMounts = append(currentBrokenMounts, m.Path)
 				default:
@@ -474,6 +474,10 @@ func IsBrokenMount(path string) bool {
 	defer brokenMountsMu.RUnlock()
 
 	return slices.Contains(brokenMounts, path)
+}
+
+func IsManagedMount(mountPath string) bool {
+	return strings.HasPrefix(mountPath, commands.MOUNT_BASE_DIR) && !strings.HasPrefix(mountPath, path.Join(commands.MOUNT_BASE_DIR, "ai")+"/")
 }
 
 // apt install cifs-utils
@@ -518,17 +522,24 @@ func MountSambaDriver(ctx context.Context, mountBaseDir string, smbPath string, 
 		}
 	}
 
-	opts = append(opts, "uid=1000", "gid=1000", "cache=none", "fsc", "noserverino")
-	err = mounter.Mount(smbPath, mntPath, "cifs", opts)
+	tryOpts := append(opts, "uid=1000", "gid=1000", "cache=none", "fsc", "noserverino")
+	err = mounter.Mount(smbPath, mntPath, "cifs", tryOpts)
 	if err != nil {
-		klog.Error("mount path as rw error, ", err)
-
-		// retry to mount as read-only
-		opts = append(opts, "ro")
-		err = mounter.Mount(smbPath, mntPath, "cifs", opts)
+		// maybe it's an older version cifs, option "fsc" is not supported, retry without it
+		klog.Warning("mount path as rw error, ", err, ", retry without fsc option")
+		tryOpts := append(opts, "uid=1000", "gid=1000", "cache=none", "noserverino")
+		err = mounter.Mount(smbPath, mntPath, "cifs", tryOpts)
 		if err != nil {
-			if e := os.Remove(mntPath); e != nil {
-				klog.Error("remove dir error, ", e, ", ", mntPath)
+
+			klog.Error("mount path as rw error, ", err)
+
+			// retry to mount as read-only
+			tryOpts = append(tryOpts, "ro")
+			err = mounter.Mount(smbPath, mntPath, "cifs", tryOpts)
+			if err != nil {
+				if e := os.Remove(mntPath); e != nil {
+					klog.Error("remove dir error, ", e, ", ", mntPath)
+				}
 			}
 		}
 	}
@@ -612,7 +623,7 @@ func MountedSambaPath(ctx context.Context) ([]mountedPath, error) {
 	var paths []mountedPath
 	for _, m := range list {
 		if m.Type == "cifs" {
-			paths = append(paths, mountedPath{m.Path, SMB, IsBrokenMount(m.Path), "", "", "", m.Device, isReadOnly(&m)})
+			paths = append(paths, mountedPath{m.Path, SMB, IsBrokenMount(m.Path), "", "", "", m.Device, isReadOnly(&m), IsManagedMount(m.Path)})
 		}
 	}
 
@@ -646,16 +657,16 @@ func MountedPath(ctx context.Context) ([]mountedPath, error) {
 			idx = slices.IndexFunc(usbs, func(u storageDevice) bool { return u.DevPath == m.Device })
 			return idx >= 0
 		}():
-			paths = append(paths, mountedPath{m.Path, USB, false, usbs[idx].IDSerial, usbs[idx].IDSerialShort, usbs[idx].PartitionUUID, "", false})
+			paths = append(paths, mountedPath{m.Path, USB, false, usbs[idx].IDSerial, usbs[idx].IDSerialShort, usbs[idx].PartitionUUID, "", false, IsManagedMount(m.Path)})
 		case func() bool {
 			idx = slices.IndexFunc(hdds, func(u storageDevice) bool { return u.DevPath == m.Device })
 			return idx >= 0
 		}():
-			paths = append(paths, mountedPath{m.Path, HDD, false, hdds[idx].IDSerial, hdds[idx].IDSerialShort, hdds[idx].PartitionUUID, "", false})
+			paths = append(paths, mountedPath{m.Path, HDD, false, hdds[idx].IDSerial, hdds[idx].IDSerialShort, hdds[idx].PartitionUUID, "", false, IsManagedMount(m.Path)})
 		case m.Type == "cifs":
-			paths = append(paths, mountedPath{m.Path, SMB, IsBrokenMount(m.Path), "", "", "", m.Device, isReadOnly(&m)})
-		case m.Type == "nfs":
-			paths = append(paths, mountedPath{m.Path, NFS, IsBrokenMount(m.Path), "", "", "", m.Device, isReadOnly(&m)})
+			paths = append(paths, mountedPath{m.Path, SMB, IsBrokenMount(m.Path), "", "", "", m.Device, isReadOnly(&m), IsManagedMount(m.Path)})
+		case m.Type == "nfs", m.Type == "nfs4":
+			paths = append(paths, mountedPath{m.Path, NFS, IsBrokenMount(m.Path), "", "", "", m.Device, isReadOnly(&m), IsManagedMount(m.Path)})
 		}
 
 	}

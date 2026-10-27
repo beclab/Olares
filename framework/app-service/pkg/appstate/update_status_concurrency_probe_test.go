@@ -63,7 +63,7 @@ func TestProbe_UpdateStatusConcurrentLostUpdate(t *testing.T) {
 	// contributed exactly one OpGeneration increment. Before the fix, all N
 	// calls "succeeded" yet OpGeneration ended at ~2 because the non-atomic
 	// read-modify-write clobbered concurrent increments.
-	got := getAM(t, &baseStatefulApp{client: c}, "conc")
+	got := getAM(t, c, "conc")
 	if got.Status.OpGeneration != int64(successes) {
 		t.Errorf("OpGeneration=%d, want %d (== successful updates; increments were lost)", got.Status.OpGeneration, successes)
 	}

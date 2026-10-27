@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"strings"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/security"
@@ -74,13 +75,19 @@ func (r *EvictionManagerController) Reconcile(ctx context.Context, req ctrl.Requ
 		}
 		return ctrl.Result{}, err
 	}
-	nss := append(security.UnderLayerNamespaces, security.GPUSystemNamespaces...)
+	nss := append([]string{}, security.UnderLayerNamespaces...)
+	nss = append(nss, security.OSSystemNamespaces...)
+	nss = append(nss, security.GPUSystemNamespaces...)
+	nss = append(nss, security.OSNetworkNamespaces...)
+	nss = append(nss, security.OSProtectedNamespaces...)
+	nss = append(nss, security.OSMeshNamespaces...)
+	nss = append(nss, security.OSGatewayNamespaces...)
 	ignoredNs := sets.NewString(nss...)
 
 	podName := pod.GetName()
 	podNamespace := pod.GetNamespace()
 
-	if podNamespace == "" || ignoredNs.Has(podNamespace) {
+	if podNamespace == "" || ignoredNs.Has(podNamespace) || strings.HasPrefix(podNamespace, "user-space") || strings.HasPrefix(podNamespace, "user-system") {
 		return ctrl.Result{}, nil
 	}
 

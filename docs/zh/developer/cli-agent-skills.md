@@ -1,64 +1,92 @@
 ---
 outline: [2, 3]
-description: 从 Cursor、Claude Code 等 AI 运行时，或 Hermes Agent、OpenClaw 等 Olares 应用中安装和使用 Olares CLI 的 Agent Skills。涵盖各个技能、先装 shared 的顺序，以及完整用法。
+description: 了解 Olares CLI Agent Skills 如何帮助 AI Agent 管理 Olares、包含哪些技能，以及如何安装和更新。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Olares CLI, Agent Skills, olares-shared, 技能清单, AI Agent 集成
 ---
 
-# 安装与使用 Agent Skills
+# Olares CLI Agent Skills
 
-`olares-cli` 的用户模式和集群内模式主要是给 AI Agent 用的，而不是让人逐条敲命令。为此，`olares-cli` 附带了一组 Agent Skills，每组命令对应一个。每个技能会告诉 Agent 各命令的作用、哪些参数重要、如何鉴权，以及遇到常见错误怎么处理。
+Olares CLI 内置了一组 Agent Skills（技能），用来告诉 AI Agent 如何通过 `olares-cli` 管理 Olares。本页列出可用技能，并介绍如何安装、更新和查看技能内容。
 
-## 了解 Agent Skills
+如果是第一次配置 Olares CLI，请按照[通过 AI Agent 使用 Olares CLI](./cli-install.md)完成安装、登录和第一个 AI Agent 任务。
 
-每个 Agent Skill 就是一份 `SKILL.md`，AI 运行时会把它当作工具定义加载进来。当 Agent 收到“列出我 Olares Home 文件夹里的文件”这类请求时，它会对照已加载的技能，找到对应的命令（`olares-cli files ls /drive/Home`），然后代你运行。
+## Agent Skills 清单
 
-这些技能都放在 Olares 仓库的 [`cli/skills/`](https://github.com/beclab/Olares/tree/main/cli/skills) 目录下，每个技能由一份 `SKILL.md` 和一个 `references/` 文件夹组成。`SKILL.md` 负责把请求引导到正确的命令，并讲清楚通用概念和常见错误怎么处理。`references/` 则给每个较复杂的子命令单独准备一个文件，用来补充那些 `--help` 里查不到、又不方便塞进 `SKILL.md` 的细节。
-
-## 可用的 Agent Skills
-
-| Skill | 说明 |
+| 技能 | 说明 |
 |-------|------|
-| `olares-shared` | profile 模型、登录流程、令牌存储、自动刷新和鉴权错误恢复。<br>其他所有技能的基础。 |
-| `olares-files` | 列出、上传、下载、编辑、分享、挂载 SMB，以及管理 Sync 仓库。 |
-| `olares-market` | 浏览、安装、升级、卸载，以及上传本地 chart。 |
-| `olares-settings` | 读取和修改网页端开放的设置。 |
-| `olares-dashboard` | 总览和应用指标，JSON 结构稳定。 |
-| `olares-cluster` | 读取和修改 Pod、工作负载、节点、Job、CronJob，以及中间件密码。 |
+| `olares-shared` | 判断 Olares 请求该交给哪个技能，并说明 `profile`（连接配置）、身份认证和登录恢复。 |
+| `olares-chart` | 把项目仓库、Docker Compose 项目或 Helm chart 转成 Olares 应用并部署。 |
+| `olares-files` | 管理 Olares 文件，包括上传、下载、压缩、分享，以及挂载 SMB 或 NFS。 |
+| `olares-market` | 浏览 Olares 应用市场，安装、升级、卸载、克隆、停止、恢复或重启应用。 |
+| `olares-settings` | 管理用户、应用、VPN、网络、备份、集成账号、GPU 和搜索等设置。 |
+| `olares-dashboard` | 查看 CPU、内存、磁盘、网络、Pod、GPU、风扇和应用资源占用。 |
+| `olares-cluster` | 查看 Kubernetes 运行状态、日志、容器、工作负载、Job、节点和中间件。 |
+| `olares-doctor` | 排查安装失败、崩溃、镜像拉取失败、应用无法访问和性能问题。 |
+| `olares-router` | 配置云端或本地 AI 模型、默认模型、密钥、配额、用量和模型调用。 |
+| `olares-knowledge` | 管理 URL、yt-dlp、aria2、种子、Hugging Face 和 Wise 下载任务。 |
+| `olares-search` | 搜索 Drive 文件、Sync 资料库和已安装应用。 |
+| `olares-publish` | 把本机运行的应用发布到公开的 Olares 应用市场，包括上架信息和素材。 |
 
-:::warning 务必先安装 `olares-shared`
-其他所有技能都默认 `olares-shared` 已经加载。它定义了 profile 模型、令牌刷新逻辑，以及其他技能依赖的鉴权错误恢复提示。比如只加载了 `olares-files` 的 Agent，遇到鉴权错误时就无从恢复。
-:::
+## 安装或导出技能
 
-## 手动安装技能
-
-如果你是用 `npx @olares/cli@latest install` 安装的 CLI，这些技能已经一并装好，可以跳过本节。如果是单独安装的 CLI，运行下面的命令把六个技能一次装好：
+把 CLI 内置的技能写入标准目录：
 
 ```bash
-npx skills add beclab/Olares -y -g
+olares-cli skills install
 ```
 
-这会把技能装进你正在用的 Agent，比如 Cursor 或 Claude Code。之后只要你提到 Olares 相关的任务，Agent 就会自动加载对应的技能。由于这条命令会把 `olares-shared` 一起装上，“先装 shared”的要求自然就满足了。
+Olares CLI 会把一份完整副本写入 `~/.agents/skills`，再链接到电脑上已有的兼容 Agent 技能目录，包括 Cursor、Claude Code、Codex 和 OpenClaw 使用的目录。未安装的 Agent 不会被创建目录。如果系统不支持符号链接，Olares CLI 会改为复制文件。
 
-:::tip
-这些技能也发布在 ClawHub 上。两个渠道读取的是同一份 `SKILL.md`，所以装其中一个即可。如果你的 Agent 接入了 ClawHub，也可以从那里添加。
-:::
+如果需要把技能套件放进项目目录、容器镜像或其他自定义位置，可以导出：
 
-Olares 上的一些 AI Agent 应用已经内置了这些技能，开箱即可让 Agent 管理 Olares。要在这类应用中使用这些技能，请参考[用 Hermes Agent 管理 Olares](../use-cases/hermes.md#manage-olares-with-your-hermes-agent)或[用 OpenClaw 管理 Olares](../use-cases/openclaw-olares-skills.md)。
-
-## 把 Olares CLI 当作 Agent Skills 使用
-
-加载这些包后，就能用自然语言操作 Olares，由 Agent 决定运行哪条 CLI 命令。例如：
-
-```plain
-# 通过 olares-files 技能列出文件
-列出我 Olares 设备上 Home 文件夹里的文件
-
-# 通过 olares-market 技能安装应用
-从 Market 安装 Firefox，装好后告诉我
-
-# 通过 olares-dashboard 技能查看资源占用
-告诉我哪些应用占用了超过 1 GB 内存
+```bash
+olares-cli skills export ./skills
 ```
 
-:::tip
-如果 Agent 没有自动加载 Olares 技能，用斜杠命令显式调用它们。
-:::
+## 保持技能与 Olares CLI 版本一致
+
+如果通过 npm 安装了 Olares CLI，可同时更新 CLI 和已安装的技能：
+
+```bash
+olares-cli update
+```
+
+如果手动更新 CLI 或安装了其他构建版本，请再运行：
+
+```bash
+olares-cli skills install
+```
+
+如果当前技能来自另一份 CLI 构建，Olares CLI 会在标准错误中显示提示。只有自动化流程不能接受额外输出时，才使用 `OLARES_CLI_NO_SKILL_NOTICE=1` 关闭提示。
+
+请从 Olares CLI 二进制文件安装技能，不要从注册表或 Git 分支获取。注册表和仓库中的副本可能与本机 CLI 支持的命令不一致。ClawHub 上的副本早于内置技能，现已停止更新。
+
+## Agent Skills 的工作方式
+
+每个技能包都包含一份 `SKILL.md`。AI Agent 会根据描述判断何时加载技能，再按照其中的说明选择 Olares CLI 命令、填写参数、完成身份认证和处理常见错误。
+
+源文件位于 Olares 仓库的 [`cli/skills/`](https://github.com/beclab/Olares/tree/main/cli/skills)。复杂命令的详细说明放在技能包的 `references/` 目录中。
+
+发布时，这些技能会编译进 Olares CLI 二进制文件。因此，`skills install`、`skills export` 和 `skills read` 使用的内容始终来自当前运行的 CLI 版本。
+
+## 查看 CLI 内置的技能
+
+列出当前 Olares CLI 内置的技能：
+
+```bash
+olares-cli skills list
+olares-cli skills list -o json
+```
+
+无需安装，直接读取某个技能或其参考文件：
+
+```bash
+olares-cli skills read olares-shared
+olares-cli skills list olares-router/references
+olares-cli skills read olares-router references/olares-router-calling.md
+```
+
+这些命令只会读取当前 CLI 内置的技能，不会连接 Olares，也不会检查 Agent 能否读取技能。如需在 Agent 中确认技能是否可用，请参阅[让 AI Agent 完成第一个任务](./cli-install.md#让-ai-agent-完成第一个任务)。

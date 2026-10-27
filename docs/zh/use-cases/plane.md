@@ -1,17 +1,17 @@
 ---
 outline: [2, 3]
-description: 在 Olares 上部署自托管的 Plane 进行项目管理。通过模块、迭代周期、多种视图和团队协作来组织工作。
+description: 在 Olares 上自托管 Plane，作为开源的 Jira 和 Asana 替代方案。用模块、迭代周期和多种视图组织工作，实现私有的团队项目管理。
 head:
   - - meta
     - name: keywords
-      content: Olares, Plane, project management, self-hosted, kanban, Gantt chart, team collaboration, task tracking
+      content: Olares, Plane, open source jira alternative, jira alternative, self-hosted project management, kanban, team collaboration, plane on olares
 app_version: "1.0.9"
 doc_version: "1.0"
 doc_updated: "2026-04-14"
 ---
 
 :::warning
-本页面由 AI 自动翻译，部分技术术语可能与中文习惯存在差异。如有疑问，请以[英文原文](../../use-cases/plane.md)为准。
+本文档由 AI 自动翻译，仅供参考。涉及关键操作或信息时，请以[英文原文](../../use-cases/plane.md)为准。
 :::
 
 # 使用 Plane 管理项目
@@ -147,7 +147,7 @@ Plane 依赖多个中间件组件才能平稳运行。虽然 PostgreSQL 和 Redi
 2. 点击 **Set your first cycle** 或 **Add cycle**。
 3. 定义阶段的核心详情：
    - **Title**: `Phase 1: Discovery`
-   - **Description**: `Research, wireframe, and define the core value proposition; the goal is to finalize the skeleton of the new product page`
+   - **Description**: `Research, wireframe, and define the core value proposition. The goal is to finalize the skeleton of the new product page`
 4. 选择开始和结束日期。
 5. 点击 **Create cycle**。
 
@@ -155,7 +155,7 @@ Plane 依赖多个中间件组件才能平稳运行。虽然 PostgreSQL 和 Redi
 
 6. 重复这些步骤来创建 Phase 2 的迭代周期：
    - **Title**: `Phase 2: Execution`
-   - **Description**: `Hi-Fi UI design, final copy production, and SEO auditing; the goal is to complete final visual assets and prepare for development`
+   - **Description**: `Hi-Fi UI design, final copy production, and SEO auditing. The goal is to complete final visual assets and prepare for development`
 
 ### 创建并分配工作项
 

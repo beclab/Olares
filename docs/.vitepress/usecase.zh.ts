@@ -3,6 +3,39 @@ import { defineConfig, type DefaultTheme } from "vitepress";
 export const useCaseSidebar: DefaultTheme.Sidebar = {
     "/zh/use-cases/": [
         {
+          text: "Olares 必备",
+          collapsed: false,
+          items: [
+            {
+              text: "本地大模型",
+              link: "/zh/use-cases/llm-base-apps",
+            },
+            {
+              text: "Olares Router",
+              link: "/zh/use-cases/olares-router",
+            },
+            {
+              text: "Lares",
+              link: "/zh/use-cases/lares",
+            },
+            {
+              text: "FlowStudio",
+              link: "/zh/use-cases/flowstudio",
+              collapsed: false,
+              items: [
+                {
+                  text: "在 FlowStudio 中创作",
+                  link: "/zh/use-cases/flowstudio-create",
+                },
+                {
+                  text: "通过 Lares 使用",
+                  link: "/zh/use-cases/flowstudio-lares",
+                },
+              ],
+            },
+          ],
+        },
+        {
           text: "AI",
           collapsed: false,
           items: [
@@ -15,6 +48,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   link: "/zh/use-cases/openclaw",
                   collapsed: true,
                   items: [
+                    {
+                      text: "使用 Openclaw 移动客户端连接",
+                      link: "/zh/use-cases/openclaw-mobile",
+                    },
                     {
                       text: "集成聊天应用",
                       items: [
@@ -40,10 +77,6 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                       text: "使用 OpenClaw 管理 Olares",
                       link: "/zh/use-cases/openclaw-olares-skills",
                     },
-                    //{
-                    //  text: "启用本地文件访问",
-                    //  link: "/zh/use-cases/openclaw-local-access",
-                    //},
                     {
                       text: "启用沙盒",
                       link: "/zh/use-cases/openclaw-enable-sandbox",
@@ -80,6 +113,13 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                 {
                   text: "Hermes Agent",
                   link: "/zh/use-cases/hermes",
+                  collapsed: true,
+                  items: [
+                    {
+                      text: "通过 SSH 管理局域网主机",
+                      link: "/zh/use-cases/hermes-ssh",
+                    },
+                  ],
                 },
                 {
                   text: "OpenCode",
@@ -99,6 +139,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                       link: "/zh/use-cases/opencode-extensions",
                     },
                     {
+                      text: "使用 Olares CLI 管理 Olares",
+                      link: "/zh/use-cases/opencode-olares-cli",
+                    },
+                    {
                       text: "常见问题",
                       link: "/zh/use-cases/opencode-issues",
                     },
@@ -107,6 +151,14 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                 {
                   text: "Claude Code",
                   link: "/zh/use-cases/claude-code",
+                },
+                {
+                  text: "Codex CLI",
+                  link: "/zh/use-cases/codex-cli",
+                },
+                {
+                  text: "Goose",
+                  link: "/zh/use-cases/goose",
                 },
                 {
                   text: "Pool CLI",
@@ -174,12 +226,28 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   link: "/zh/use-cases/anythingllm",
                 },
                 {
+                  text: "Local Deep Research",
+                  link: "/zh/use-cases/local-deep-research",
+                },
+                {
                   text: "Open Notebook",
                   link: "/zh/use-cases/open-notebook",
                 },
                 {
+                  text: "TrustGraph",
+                  link: "/zh/use-cases/trustgraph",
+                },
+                {
                   text: "Vane (Perplexica)",
                   link: "/zh/use-cases/perplexica",
+                },
+                {
+                  text: "Dify",
+                  link: "/zh/use-cases/dify",
+                },
+                {
+                  text: "Unsloth",
+                  link: "/zh/use-cases/unsloth",
                 },
               ],
             },
@@ -187,6 +255,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               text: "创意媒体",
               collapsed: true,
               items: [
+                {
+                  text: "Blender",
+                  link: "/zh/use-cases/blender",
+                },
                 {
                   text: "ComfyUI",
                   link: "/zh/use-cases/comfyui",
@@ -205,6 +277,14 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                       link: "/zh/use-cases/comfyui-common-issues",
                     },
                   ]
+                },
+                {
+                  text: "Concat",
+                  link: "/zh/use-cases/concat",
+                },
+                {
+                  text: "Open Design",
+                  link: "/zh/use-cases/open-design",
                 },
                 {
                   text: "ACE-Step 1.5",
@@ -241,10 +321,6 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               collapsed: true,
               items: [
                 {
-                  text: "Ollama",
-                  link: "/zh/use-cases/ollama",
-                },
-                {
                   text: "Bifrost",
                   link: "/zh/use-cases/bifrost",
                 },
@@ -259,6 +335,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                 {
                   text: "LLMFit",
                   link: "/zh/use-cases/llmfit",
+                },
+                {
+                  text: "Xinference",
+                  link: "/zh/use-cases/xinference",
                 },
                 // {
                 //   text: "Dify",
@@ -285,6 +365,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             {
               text: "macOS",
               link: "/zh/use-cases/macos",
+            },
+            {
+              text: "QEMU Server",
+              link: "/zh/use-cases/qemu",
             },
             {
               text: "Windows",
@@ -324,21 +408,7 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             },
             {
               text: "Jellyfin",
-              link: "/zh/use-cases/stream-media",
-            },
-            {
-              text: "Steam",
-              collapsed: true,
-              items: [
-                {
-                  text: "在 Olares 本机游玩",
-                  link: "/zh/use-cases/play-games-directly",
-                },
-                {
-                  text: "串流到其他设备",
-                  link: "/zh/use-cases/stream-game",
-                }
-              ]
+              link: "/zh/use-cases/jellyfin",
             },
             {
               text: "Komga",
@@ -362,6 +432,53 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             {
               text: "*Arrs",
               link: "/zh/use-cases/arrs",
+              collapsed: true,
+              items: [
+                {
+                  text: "*Arr 应用更新说明",
+                  link: "/zh/use-cases/arrs-upgrade",
+                },
+                {
+                  text: "下载客户端更新说明",
+                  link: "/zh/use-cases/download-clients-upgrade",
+                },
+              ]
+            },
+          ]
+        },
+        {
+          text: "游戏",
+          collapsed: false,
+          items: [
+            {
+              text: "Minecraft",
+              link: "/zh/use-cases/minecraft",
+            },
+            {
+              text: "Palworld",
+              link: "/zh/use-cases/palworld",
+            },
+            {
+              text: "Pterodactyl Panel",
+              link: "/zh/use-cases/pterodactyl",
+            },
+            {
+              text: "Steam",
+              collapsed: true,
+              items: [
+                {
+                  text: "在 Olares 本机游玩",
+                  link: "/zh/use-cases/steam-direct-play",
+                },
+                {
+                  text: "串流到其他设备",
+                  link: "/zh/use-cases/steam-stream",
+                },
+                {
+                  text: "常见问题",
+                  link: "/zh/use-cases/steam-common-issues",
+                }
+              ]
             },
           ]
         },
@@ -382,12 +499,35 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               link: "/zh/use-cases/karakeep",
             },
             {
+              text: "n8n",
+              link: "/zh/use-cases/n8n",
+            },
+            {
+              text: "NocoDB",
+              link: "/zh/use-cases/nocodb",
+            },
+            {
+              text: "Obsidian LiveSync",
+              link: "/zh/use-cases/obsidian-livesync",
+            },
+            {
               text: "Penpot",
               link: "/zh/use-cases/penpot",
             },
             {
               text: "RNA Sequencing",
               link: "/zh/use-cases/rna-sequencing",
+            },
+            {
+              text: "OnlyOffice",
+              link: "/zh/use-cases/onlyoffice",
+              collapsed: true,
+              items: [
+                {
+                  text: "迁移指南",
+                  link: "/zh/use-cases/onlyoffice-migration",
+                },
+              ],
             },
             // {
             //   text: "Stirling PDF",
@@ -418,6 +558,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               link: "/zh/use-cases/context7",
             },
             {
+              text: "Hindsight",
+              link: "/zh/use-cases/hindsight",
+            },
+            {
               text: "Falco",
               link: "/zh/use-cases/falco",
             },
@@ -428,6 +572,14 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             {
               text: "FlareSolverr",
               link: "/zh/use-cases/flaresolverr",
+            },
+            {
+              text: "SearXNG",
+              link: "/zh/use-cases/searxng",
+            },
+            {
+              text: "Home Assistant",
+              link: "/zh/use-cases/home-assistant",
             },
           ],
         },

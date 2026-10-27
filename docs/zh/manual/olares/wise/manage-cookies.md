@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 为 Wise 管理 Cookies，让它可以访问受保护的网站和订阅源。了解 Cookies 的作用、支持的格式、获取方式以及如何上传与维护。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Wise, Cookie 管理, 上传 Cookie, 订阅源, LarePass 扩展, 受限内容
 ---
 
 # 管理 Cookie

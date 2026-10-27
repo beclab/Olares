@@ -69,9 +69,6 @@ https://desktop.<terminus>; backup / restore use the same origin with a
 	// SilenceUsage only: on failure print the RunE error (like profile/files),
 	// but do not dump the full command usage tree — those messages are already actionable.
 	cmd.SilenceUsage = true
-	cmd.PersistentPreRun = func(c *cobra.Command, args []string) {
-		c.SilenceUsage = true
-	}
 
 	for _, sub := range []*cobra.Command{
 		users.NewUsersCommand(f),

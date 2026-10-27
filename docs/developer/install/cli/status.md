@@ -1,3 +1,7 @@
+---
+noindex: true
+description: The status command prints the current Olares system state by calling the local olaresd daemon's /system/status HTTP endpoint.
+---
 # `status`
 
 ## Synopsis
@@ -72,7 +76,8 @@ The table below lists the fields returned by `olaresd` (the `data` object of the
 | CPU         | `cpu_info`    | CPU model name.                                                      |
 | Memory      | `memory`      | Total physical memory, formatted as `<N> G`.                         |
 | Disk        | `disk`        | Total filesystem size of the data partition, formatted as `<N> G`.   |
-| GPU         | `gpu_info`    | GPU model name when one is detected.                                 |
+| GPU         | `gpu_info`    | GPU model name when one is detected.                       |
+| GPUList     | `gpu_list`    | All detected GPU model names.                |
 
 ### Network
 

@@ -45,6 +45,17 @@ type VirtualHostIR struct {
 	UserZone              string
 	UserName              string
 	SourceCIDRs           []string // When non-empty, only these source IPs may reach this VH (RBAC).
+	// IsFileserver is true for vhosts that host fileserver routes (files/settings apps).
+	// Used by the xds layer to attach CORS response headers
+	// that the upstream fileserver / nginx do not emit, so Capacitor / browser
+	// cross-origin requests to /api/preview/*, /api/raw/*, etc. succeed.
+	IsFileserver bool
+	// Priority controls who keeps a domain when two virtual hosts in the same
+	// route config declare it. Domains are claimed in descending Priority order
+	// (higher wins); within the same priority the earlier-declared vhost wins.
+	// System services (auth/desktop/wizard) use a high priority so a
+	// misconfigured app can never hijack their domains. Default 0.
+	Priority int
 }
 
 type HTTPRouteIR struct {
@@ -54,9 +65,18 @@ type HTTPRouteIR struct {
 	PathRegex        string
 	Cluster          string
 	RequestHeaders   map[string]string
+	HeaderMatches    []HeaderMatchIR
 	DirectResponse   *DirectResponseIR
 	ExtAuth          *ExtAuthConfigIR
 	WebSocketUpgrade bool
+	BypassSourceCIDR bool
+}
+
+// HeaderMatchIR is an AND-ed request header condition on a route match.
+type HeaderMatchIR struct {
+	Name      string
+	Exact     string
+	SafeRegex string
 }
 
 type DirectResponseIR struct {
@@ -229,6 +249,9 @@ func (r *HTTPRouteIR) DeepCopy() *HTTPRouteIR {
 		for k, v := range r.RequestHeaders {
 			out.RequestHeaders[k] = v
 		}
+	}
+	if r.HeaderMatches != nil {
+		out.HeaderMatches = append([]HeaderMatchIR(nil), r.HeaderMatches...)
 	}
 	if r.DirectResponse != nil {
 		cp := *r.DirectResponse

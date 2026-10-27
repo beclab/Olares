@@ -1,10 +1,10 @@
 ---
 outline: [2, 3]
-description: Set up Plane on Olares for self-hosted project management. Organize work with modules, cycles, multiple views, and team collaboration.
+description: Self-host Plane on Olares as a private Jira and Asana alternative. Manage projects with modules, cycles, and multiple work views.
 head:
   - - meta
     - name: keywords
-      content: Olares, Plane, project management, self-hosted, kanban, Gantt chart, team collaboration, task tracking
+      content: Olares, Plane, open source jira alternative, jira alternative, self-hosted project management, kanban, team collaboration, plane on olares
 app_version: "1.0.9"
 doc_version: "1.0"
 doc_updated: "2026-04-14"
@@ -143,7 +143,7 @@ In this scenario, we will create two cycles to show the transition from planning
 2. Click **Set your first cycle** or **Add cycle**.
 3. Define the core details of the phase:
    - **Title**: `Phase 1: Discovery`
-   - **Description**: `Research, wireframe, and define the core value proposition; the goal is to finalize the skeleton of the new product page`
+   - **Description**: `Research, wireframe, and define the core value proposition. The goal is to finalize the skeleton of the new product page`
 4. Select the start and end dates.
 5. Click **Create cycle**.
 
@@ -151,7 +151,7 @@ In this scenario, we will create two cycles to show the transition from planning
 
 6. Repeat these steps to create the cycle for Phase 2:
    - **Title**: `Phase 2: Execution`
-   - **Description**: `Hi-Fi UI design, final copy production, and SEO auditing; the goal is to complete final visual assets and prepare for development`
+   - **Description**: `Hi-Fi UI design, final copy production, and SEO auditing. The goal is to complete final visual assets and prepare for development`
 
 ### Create and assign work items
 

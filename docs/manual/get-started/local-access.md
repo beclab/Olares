@@ -1,6 +1,10 @@
 ---
 outline: [2,3]
 description: Learn how to access your Olares services securely using LarePass VPN or the .local domain.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, LarePass VPN, local access, .local domain, remote access, secure connection
 ---
 # Access Olares services securely
 

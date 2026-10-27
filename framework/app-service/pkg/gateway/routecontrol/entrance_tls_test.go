@@ -4,9 +4,12 @@ import (
 	"context"
 	"testing"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/security"
+	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -251,5 +254,61 @@ func TestSyncPerViewerTLS_T4a5_incompleteGC(t *testing.T) {
 	err := c.Get(context.Background(), types.NamespacedName{Namespace: defaultGatewayNS, Name: "shared-entrance-tls-bob"}, &corev1.Secret{})
 	if !apierrors.IsNotFound(err) {
 		t.Fatalf("incomplete CM should gc secret: %v", err)
+	}
+}
+
+func TestMapCallerNamespaceFansOutReplica(t *testing.T) {
+	scheme := runtime.NewScheme()
+	if err := corev1.AddToScheme(scheme); err != nil {
+		t.Fatal(err)
+	}
+	if err := appv1alpha1.AddToScheme(scheme); err != nil {
+		t.Fatal(err)
+	}
+
+	src := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "shared-entrance-tls-vodevall",
+			Namespace: defaultGatewayNS,
+			Labels: map[string]string{
+				ManagedByLabel: ManagedByValue,
+				labelTLSViewer: "vodevall",
+			},
+			Annotations: map[string]string{
+				annotationTLSContentHash: "hash-v",
+				annotationTLSSourceNS:    "user-space-vodevall",
+			},
+		},
+		Type: corev1.SecretTypeTLS,
+		Data: map[string][]byte{
+			corev1.TLSCertKey:       []byte("CERT-V"),
+			corev1.TLSPrivateKeyKey: []byte("KEY-V"),
+		},
+	}
+	callerNS := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "litellm-vodevall",
+			UID:  "ns-uid-1",
+			Labels: map[string]string{
+				security.NamespaceInClusterCallerLabel: "true",
+				"bytetrade.io/ns-owner":                "vodevall",
+			},
+		},
+	}
+	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(src, callerNS).Build()
+	r := &EntranceTLSReconciler{Client: c}
+	reqs := r.mapCallerNamespaceToZoneSSL(context.Background(), callerNS)
+	if len(reqs) != 1 || reqs[0].Namespace != "user-space-vodevall" || reqs[0].Name != zoneSSLConfigMapName {
+		t.Fatalf("requests = %#v", reqs)
+	}
+	replica := &corev1.Secret{}
+	if err := c.Get(context.Background(), types.NamespacedName{
+		Namespace: "litellm-vodevall",
+		Name:      "olares-mesh-in-tls-vodevall",
+	}, replica); err != nil {
+		t.Fatalf("expected fan-out replica: %v", err)
+	}
+	if string(replica.Data[corev1.TLSCertKey]) != "CERT-V" {
+		t.Fatalf("replica cert = %q", replica.Data[corev1.TLSCertKey])
 	}
 }

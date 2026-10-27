@@ -11,7 +11,7 @@ doc_updated: "2026-04-02"
 ---
 
 :::warning
-本页面内容经 AI 翻译生成，仅供参考。具体细节请以[英文原文](../../use-cases/llmfit.md)为准。
+本文档由 AI 自动翻译，仅供参考。涉及关键操作或信息时，请以[英文原文](../../use-cases/llmfit.md)为准。
 :::
 
 # 使用 LLMFit 找到适合你硬件的最佳 LLM 模型
@@ -65,5 +65,5 @@ LLMFit 使用其内置的 Web 仪表板作为主要界面，以简化操作。�
 
 ## 了解更多
 
-- [通过 Ollama 下载和运行本地 AI 模型](ollama.md)
+- [使用 Engine Base 运行本地模型](llm-base-apps.md)：通过 Ollama 等推理引擎部署模型。
 - [设置 Open WebUI](openwebui.md)

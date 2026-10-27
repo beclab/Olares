@@ -28,14 +28,6 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           link: "/zh/one/first-boot",
         },
         {
-          text: "通过 VPN 访问 Olares",
-          link: "/zh/one/access-olares-via-vpn",
-        },
-        {
-          text: "通过 .local 域名访问 Olares",
-          link: "/zh/one/access-olares-via-local-domain",
-        },
-        {
           text: "兑换会员",
           link: "/zh/one/redeem-membership",
         },
@@ -45,108 +37,17 @@ export const oneSidebar: DefaultTheme.Sidebar = {
       text: "入门使用",
       items: [
         {
-          text: "与本地 LLM 对话",
-          link: "/zh/one/open-webui",
+          text: "通过自然语言管理 Olares",
+          link: "/zh/one/olares-onboarding",
         },
         {
-          text: "使用 ComfyUI 生成图片和视频",
-          link: "/zh/one/comfyui",
+          text: "通过 VPN 访问 Olares",
+          link: "/zh/one/access-olares-via-vpn",
         },
         {
-          text: "切换 GPU 模式",
-          link: "/zh/one/gpu",
+          text: "在局域网内访问 Olares",
+          link: "/zh/one/access-olares-via-local-domain",
         },
-      ]
-    },
-    {
-      text: "使用",
-      items: [
-        {
-          text: "自定义 Olares",
-          link: "/zh/one/customize",
-        },
-        {
-          text: "管理文件",
-          link: "/zh/one/files",
-        },
-        {
-          text: "备份与恢复数据",
-          link: "/zh/one/backup-restore",
-        },        
-        {
-          text: "安装与更新应用",
-          link: "/zh/one/market",
-        },
-        {
-          text: "安全密码",
-          link: "/zh/one/vault",
-        },
-        /*{
-          text: "下载 YouTube 视频",
-          link: "/zh/one/wise-download",
-        },*/
-        {
-          text: "部署应用",
-          link: "/zh/one/deploy",
-        },
-
-      ]
-    },
-    {
-       text: "管理",
-       items: [
-        {
-          text: "添加与管理用户",
-          link: "/zh/one/create-users",
-        },
-         {
-           text: "配置应用访问",
-           link: "/zh/one/config-app-access",
-         },
-       ]
-     },
-    {
-      text: "监控",
-      items: [
-        {
-          text: "系统资源",
-          link: "/zh/one/dashboard",
-        },
-        {
-          text: "流量",
-          link: "/zh/one/space",
-        },
-      ]
-    },
-    {
-      text: "探索",
-      items: [
-        {
-          text: "玩 Steam 游戏",
-          collapsed: true,
-          items: [
-            {
-              text: "串流",
-              link: "/zh/one/steam-stream"
-            },
-            {
-              text: "直连游玩",
-              link: "/zh/one/steam-direct-play",
-            }]
-        },
-        {
-          text: "在 Olares 中使用 Windows",
-          link: "/zh/one/windows",
-        },
-        /*{
-          text: "使用 ACE-Step 生成音乐",
-          link: "/zh/one/ace-step",
-        },*/
-
-        // {
-        //   text: "Deep research with DeerFlow",
-        //   link: "/zh/one/deerflow",
-        // },
       ]
     },
     {
@@ -171,7 +72,7 @@ export const oneSidebar: DefaultTheme.Sidebar = {
                 link: "/zh/one/access-physical-console",
               },
             ]
-        },        
+        },
         {
           text: "扩展存储",
           collapsed: true,
@@ -197,7 +98,7 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           // items:
           //   [
           //     {
-          //       text: "Manage GPU",
+          //       text: "Manage accelerator resources",
           //       link: "/zh/one/two-one-gpu",
           //     },
           //     {
@@ -207,9 +108,28 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           //   ]
         },
         {
-          text: "使用 eGPU 设置",
+          text: "连接 eGPU",
           link: "/zh/one/egpu",
-        },        
+          collapsed: true,
+          items: [
+            {
+              text: "在 Olares OS 上设置",
+              link: "/zh/one/egpu-olares-os",
+            },
+            {
+              text: "在 Windows 上设置",
+              link: "/zh/one/egpu-windows",
+            },
+            {
+              text: "排查 eGPU 问题",
+              link: "/zh/one/ts-egpu",
+            },
+          ],
+        },
+        {
+          text: "管理硬件设置",
+          link: "/zh/one/hardware-settings",
+        },
         {
           text: "Olares OS 与 Windows 双启动",
           collapsed: true,
@@ -254,9 +174,17 @@ export const oneSidebar: DefaultTheme.Sidebar = {
               {
                 text: "在 Olares One 上安装 Ubuntu Desktop",
                 link: "/zh/one/install-ubuntu-desktop",
+              },
+              {
+                text: "在 Ubuntu 上配置 GPU 模式",
+                link: "/zh/one/configure-gpu-mode",
               }
             ]
         },                 
+        {
+          text: "设置网络唤醒",
+          link: "/zh/one/wake-on-lan",
+        },
       ]
     },
     {
@@ -265,7 +193,11 @@ export const oneSidebar: DefaultTheme.Sidebar = {
         {
           text: "更新 OS",
           link: "/zh/one/update",
-        },       
+        },
+        {
+          text: "升级双节点 Olares 集群",
+          link: "/zh/one/upgrade-multi-node-cluster",
+        },
         {
           text: "恢复 Olares One",
           items: [
@@ -290,7 +222,7 @@ export const oneSidebar: DefaultTheme.Sidebar = {
         {
           text: "管理 BIOS 和 EC",
           link: "/zh/one/update-firmware",
-        },         
+        },
       ]
     },
   ],

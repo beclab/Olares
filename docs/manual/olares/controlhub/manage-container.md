@@ -1,5 +1,9 @@
 ---
-description: Learn how to manage containers and troubleshoot application issues in Olares' Control Hub. This guide covers how to view pod details, check container status, and export container logs for diagnostics. 
+description: Manage Olares containers in Control Hub. Inspect pods and container status, troubleshoot app issues, and export logs for diagnostics.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Control Hub, containers, pods, logs, troubleshooting
 ---
 
 # Manage containers

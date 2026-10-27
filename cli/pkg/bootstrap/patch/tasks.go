@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/beclab/Olares/cli/pkg/aptsource"
 	"github.com/beclab/Olares/cli/pkg/utils"
 	"github.com/pkg/errors"
 
@@ -63,34 +64,11 @@ func (t *PatchTask) Execute(runtime connector.Runtime) error {
 
 	var systemInfo = runtime.GetSystemInfo()
 	var platformFamily = systemInfo.GetOsPlatformFamily()
-	var aptToolAvailable bool
-	if _, err := util.GetCommand("add-apt-repository"); err == nil {
-		aptToolAvailable = true
-	} else {
-		if _, err := runtime.GetRunner().SudoCmd("apt install -y software-properties-common", false, true); err == nil {
-			aptToolAvailable = true
-		} else {
-			logger.Infof("software-properties-common not available, try to update apt sources ourself")
-		}
-	}
 	var pkgManager = systemInfo.GetPkgManager()
 	switch platformFamily {
 	case common.Debian:
-		sourceType := "deb"
-		repoURL := "https://deb.debian.org/debian"
-		suite := systemInfo.GetDebianVersionCode()
-		components := []string{"contrib", "non-free"}
-
-		if aptToolAvailable {
-			cmd := fmt.Sprintf("add-apt-repository '%s %s %s %s' -y", sourceType, repoURL, suite, strings.Join(components, " "))
-			if _, err := runtime.GetRunner().SudoCmd(cmd, false, true); err != nil {
-				return err
-			}
-		} else {
-			err := utils.AddAptSource(sourceType, repoURL, suite, components)
-			if err != nil {
-				return err
-			}
+		if err := aptsource.EnsureDebianComponents(); err != nil {
+			return err
 		}
 
 		if systemInfo.IsDebianVersionEqual(connector.Debian13) {
@@ -103,6 +81,11 @@ func (t *PatchTask) Execute(runtime connector.Runtime) error {
 	case common.Ubuntu:
 		if systemInfo.IsUbuntu() {
 			if !systemInfo.IsPveOrPveLxc() && !systemInfo.IsRaspbian() {
+				if _, err := util.GetCommand("add-apt-repository"); err != nil {
+					if _, err := runtime.GetRunner().SudoCmd("apt-get update -qq && apt-get install -y software-properties-common", false, true); err != nil {
+						return err
+					}
+				}
 				if _, err := runtime.GetRunner().SudoCmd("add-apt-repository universe -y", false, true); err != nil {
 					logger.Errorf("add os repo error %v", err)
 					return err
@@ -113,7 +96,6 @@ func (t *PatchTask) Execute(runtime connector.Runtime) error {
 					return err
 				}
 			}
-			pre_reqs += " ntpdate "
 		}
 
 		if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("%s update -qq", pkgManager), false, true); err != nil {
@@ -123,6 +105,14 @@ func (t *PatchTask) Execute(runtime connector.Runtime) error {
 
 		logger.Debug("apt update success")
 
+		// ntpdate has been dropped from newer Ubuntu releases (e.g. 26.04) where
+		// it no longer has an installation candidate. Resolve the time-sync
+		// package after the package index is refreshed so we can fall back to
+		// systemd-timesyncd, which the time-sync tasks already handle at runtime.
+		if systemInfo.IsUbuntu() {
+			pre_reqs += " " + getTimeSyncPackage(runtime) + " "
+		}
+
 		if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("%s install -y -qq %s", pkgManager, pre_reqs), false, true); err != nil {
 			logger.Errorf("install deps %s error %v", pre_reqs, err)
 			return err
@@ -131,10 +121,6 @@ func (t *PatchTask) Execute(runtime connector.Runtime) error {
 		if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("%s %s install -y %s", debianFrontend, pkgManager, cmd), false, true); err != nil {
 			logger.Errorf("install deps %s error %v", cmd, err)
 			return err
-		}
-
-		if _, err := runtime.GetRunner().SudoCmd("update-pciids", false, true); err != nil {
-			return fmt.Errorf("failed to update-pciids: %v", err)
 		}
 
 		if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("%s %s install -y openssh-server", debianFrontend, pkgManager), false, true); err != nil {
@@ -150,6 +136,20 @@ func (t *PatchTask) Execute(runtime connector.Runtime) error {
 	}
 
 	return nil
+}
+
+// getTimeSyncPackage returns the package used to keep the system clock in sync.
+// Historically Olares relied on ntpdate, but it has been removed from newer
+// distributions (e.g. Ubuntu 26.04) where it has no installation candidate.
+// When ntpdate is unavailable we fall back to systemd-timesyncd, which the
+// time-sync tasks already use when the ntpdate binary is absent. This must be
+// called after the apt package index has been refreshed.
+func getTimeSyncPackage(runtime connector.Runtime) string {
+	out, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("apt-cache policy %s", common.CommandNtpdate), false, false)
+	if err == nil && strings.Contains(out, "Candidate:") && !strings.Contains(out, "Candidate: (none)") {
+		return common.CommandNtpdate
+	}
+	return "systemd-timesyncd"
 }
 
 type CorrectHostname struct {
@@ -310,5 +310,30 @@ func (t *DisableLocalDNSTask) configResolvConf(runtime connector.Runtime) error 
 		logger.Errorf("exec %s error %v", cmd, err)
 		return err
 	}
+	return nil
+}
+
+// patch nfs script to fix the issue that when nfs mounting systemd reloading will cause the GPU driver to fail in the running containers
+type PatchNfsScriptTask struct {
+	common.KubeAction
+}
+
+func (t *PatchNfsScriptTask) Execute(runtime connector.Runtime) error {
+	if utils.IsExist("/lib/systemd/system/rpc-statd.service") ||
+		utils.IsExist("/etc/systemd/system/rpc-statd.service") {
+		if _, err := runtime.GetRunner().SudoCmd("systemctl add-wants --runtime remote-fs.target rpc-statd.service", false, true); err != nil {
+			logger.Errorf("exec systemctl add-wants error %v", err)
+			return err
+		}
+
+	}
+
+	if utils.IsExist("/usr/sbin/start-statd") {
+		if _, err := runtime.GetRunner().SudoCmd("sed -i 's/systemctl add-wants/#systemctl add-wants/' /usr/sbin/start-statd", false, true); err != nil {
+			logger.Errorf("exec sed error %v", err)
+			return err
+		}
+	}
+
 	return nil
 }

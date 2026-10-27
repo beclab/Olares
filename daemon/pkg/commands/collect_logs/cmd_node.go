@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/beclab/Olares/daemon/pkg/cluster/fanout"
 	"github.com/beclab/Olares/daemon/pkg/commands"
 	"github.com/beclab/Olares/daemon/pkg/utils"
 )
@@ -81,7 +80,7 @@ func (i *nodeCollectLogs) Execute(ctx context.Context, p any) (res any, err erro
 	// abort collection), but bounded so the node self-terminates slightly before
 	// the master's per-node timeout. This prevents orphaned root collectors and
 	// the master's staging cleanup from racing a still-writing process.
-	runCtx, cancel := context.WithTimeout(context.Background(), fanout.DefaultTimeout-time.Minute)
+	runCtx, cancel := context.WithTimeout(context.Background(), nodeCollectTimeout-time.Minute)
 	defer cancel()
 	if _, err := i.BaseCommand.Run_(runCtx, "olares-cli", cmds...); err != nil {
 		return nil, fmt.Errorf("collect logs error: %w", err)

@@ -8,8 +8,16 @@ rules:
   - ""
   resources:
   - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
   - pods
   verbs:
+  - delete
   - get
   - list
   - watch
@@ -51,6 +59,27 @@ rules:
   verbs:
   - update
 - apiGroups:
+  - app.bytetrade.io
+  resources:
+  - overlaymacallocations
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  - replicasets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - iam.kubesphere.io
   resources:
   - users
@@ -82,3 +111,13 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - get
+  - list
+  - create
+  - update
+  - delete

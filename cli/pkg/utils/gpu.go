@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"regexp"
 	"runtime"
 	"strings"
 
@@ -302,6 +303,50 @@ func parseNvmlLibraryVersion(out string) string {
 	return ""
 }
 
+// NovaPCIDriverNames are the sysfs names the in-tree nova driver may register
+// its PCI driver under. nova is the Rust successor to nouveau: it binds every
+// Turing or later GPU and ships enabled in some distro kernels (the 7.0 kernel
+// in Ubuntu 26.04 among them) despite being non-functional, which keeps the
+// proprietary NVIDIA driver from ever getting a probe.
+var NovaPCIDriverNames = []string{"NovaCore", "nova_core", "nova"}
+
+// IsNovaModuleLoaded reports whether the nova kernel module is loaded, whether
+// or not it holds a GPU.
+func IsNovaModuleLoaded(execRuntime connector.Runtime) bool {
+	out, _ := execRuntime.GetRunner().SudoCmd("if [ -d /sys/module/nova_core ] || [ -d /sys/module/nova ]; then echo loaded; fi", false, false)
+	return strings.TrimSpace(out) == "loaded"
+}
+
+// DetectNovaBoundGPUs returns the name nova is registered under and the PCI
+// addresses of the devices it currently holds. A PCI driver directory in sysfs
+// contains one symlink per bound device, named after its PCI address
+// (e.g. 0000:01:00.0), next to regular attribute files.
+func DetectNovaBoundGPUs(execRuntime connector.Runtime) (driver string, devices []string, err error) {
+	if execRuntime.GetSystemInfo().IsDarwin() {
+		return "", nil, nil
+	}
+	for _, name := range NovaPCIDriverNames {
+		out, e := execRuntime.GetRunner().SudoCmd(fmt.Sprintf("ls /sys/bus/pci/drivers/%s 2>/dev/null || true", name), false, false)
+		if e != nil {
+			return "", nil, fmt.Errorf("failed to list devices bound to the %s driver: %w", name, e)
+		}
+		var bound []string
+		for _, entry := range strings.Fields(out) {
+			if strings.Count(entry, ":") == 2 {
+				bound = append(bound, entry)
+			}
+		}
+		if len(bound) > 0 {
+			return name, bound, nil
+		}
+	}
+	return "", nil, nil
+}
+
+// Match a chip codename after the vendor, rather than prefixes anywhere in the
+// line: for example, the "GA" in "VGA" does not identify an Ampere GPU.
+var nvidiaChipPattern = regexp.MustCompile(`(?i)\bNVIDIA Corporation\s+(AD|GB|GH|GA|TU|GV|GP|GM|GK|GF)[0-9]{2,3}[A-Z0-9]*\b`)
+
 func DetectNvidiaModelAndArch(execRuntime connector.Runtime) (model string, architecture string, err error) {
 	if execRuntime.GetSystemInfo().IsDarwin() {
 		return "", "", nil
@@ -315,13 +360,13 @@ func DetectNvidiaModelAndArch(execRuntime connector.Runtime) (model string, arch
 	if out == "" {
 		return "", "", nil
 	}
-	// try to extract codename in square brackets e.g. "AD106 [GeForce RTX 4060 Ti]"
-	// examples: "NVIDIA Corporation AD106 [GeForce RTX 4060 Ti]"
 	model = out
 	architecture = "Unknown"
-	upper := strings.ToUpper(out)
-	// codename appears as two letters followed by digits, within the line, often right before '['
-	// detect common prefixes: AD(Ada), GB(Blackwell), GH(Hopper), GA(Ampere), TU(Turing), GV(Volta), GP(Pascal), GM(Maxwell), GK(Kepler), GF(Fermi)
+	chip := nvidiaChipPattern.FindStringSubmatch(out)
+	var prefix string
+	if len(chip) > 1 {
+		prefix = strings.ToUpper(chip[1])
+	}
 	codePrefixes := []struct {
 		Prefix string
 		Arch   string
@@ -338,7 +383,7 @@ func DetectNvidiaModelAndArch(execRuntime connector.Runtime) (model string, arch
 		{"GF", "Fermi"},
 	}
 	for _, p := range codePrefixes {
-		if strings.Contains(upper, p.Prefix) {
+		if prefix == p.Prefix {
 			architecture = p.Arch
 			break
 		}

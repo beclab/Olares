@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
-description: Step-by-step guide to setting up a custom domain for your Olares environment. Learn how to add and verify domains, create organizations, configure member access, and create Olares IDs under your domain.
+description: Set up a custom domain for Olares. Add and verify domains, create an organization, manage member access, and issue Olares IDs under your domain.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, custom domain, Olares Space, organization, LarePass, DID, domain verification
 ---
 
 # Set up a custom domain for your Olares
@@ -55,7 +59,7 @@ Make sure you have:
 
 The following steps use `space.n1.monster` as an example custom domain.
 
-1. Open [Olares Space](https://space.olares.com/) in your browser and scan the QR code with LarePass to log in.
+1. Open [Olares Space](https://www.olares.com/space) in your browser and scan the QR code with LarePass to log in.
 
    ![LarePass QR code scanner](/images/manual/tutorials/scan-qr-code1.png)
 

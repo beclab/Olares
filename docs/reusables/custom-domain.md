@@ -1,5 +1,9 @@
 ---
 search: false
+head:
+  - - meta
+    - name: keywords
+      content: Olares, custom domain, DID, DNS records, organization, Olares Space
 ---
 <!--
   Reusable content blocks for custom domain setup. Include by named region.
@@ -85,10 +89,10 @@ Once TXT and NS records are verified, you can proceed to create an organization 
    Once an organization is created for a domain, the domain cannot be removed from Olares Space.
    :::
 
-4. Enter the username for your Olares ID. For example, if you enter `alex`, your Olares ID will be `alex@space.n1.monster`.
+4. Enter the username for your Olares ID. For example, if you enter `alex2026`, your Olares ID will be `alex2026@space.n1.monster`.
 
    :::info
-   The username part of your Olares ID should be 1-63 characters long, with lowercase alphanumeric characters only.
+   The username part of your Olares ID should be 8-24 characters long, with lowercase alphanumeric characters only.
    :::
    ![Create an Olares ID with admin privileges](/images/manual/tutorials/custom-domain-create-olares-id-as-admin.png)
 
@@ -132,7 +136,13 @@ To avoid activation failures, ensure that both your phone and the Olares device 
    - If your Olares device is connected to a public IP network, this step will be skipped automatically.
    :::
 
-6. Follow the on-screen instructions to set the login password for Olares, then tap **Complete**.
+6. Select the language for Olares. Olares supports English, Simplified Chinese, German, Spanish, Italian, French, and Japanese.
+
+   :::info
+   This selection does not change the language of the LarePass app. The remaining activation steps stay in the current LarePass language. After activation, Olares Desktop uses the language selected here.
+   :::
+
+7. Follow the on-screen instructions to set the login password for Olares, then tap **Complete**.
 
    ![ISO Activate-2](/images/manual/larepass/iso-activate-4.png#bordered)
 

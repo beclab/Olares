@@ -64,6 +64,15 @@ func (r *ImageManagerController) SetupWithManager(mgr ctrl.Manager) error {
 				return r.preEnqueueCheckForUpdate(e.ObjectOld, e.ObjectNew)
 			},
 			DeleteFunc: func(e event.TypedDeleteEvent[*appv1alpha1.ImageManager]) bool {
+				// Only cancel in-flight pulls. Terminal IMs have nothing
+				// running; calling cancel would only log a no-op error.
+				if e.Object != nil && !isTerminalState(e.Object.Status.State) {
+					go func() {
+						if err := r.cancel(e.Object); err != nil {
+							klog.Infof("cancel im=%s on delete: %v", e.Object.Name, err)
+						}
+					}()
+				}
 				return false
 			},
 		},

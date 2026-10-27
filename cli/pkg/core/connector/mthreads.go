@@ -2,13 +2,14 @@ package connector
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 )
 
 func isMthreadsAIBook(cmdExec func(s string) (string, error)) bool {
 	dmidecode, err := cmdExec("command -v dmidecode")
 	if err != nil {
-		fmt.Printf("Error executing dmidecode command: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error executing dmidecode command: %v\n", err)
 		return false
 	}
 
@@ -19,7 +20,7 @@ func isMthreadsAIBook(cmdExec func(s string) (string, error)) bool {
 
 	output, err := cmdExec("dmidecode -s processor-manufacturer")
 	if err != nil {
-		fmt.Printf("Error executing dmidecode to get processor manufacturer: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error executing dmidecode to get processor manufacturer: %v\n", err)
 		return false
 	}
 
@@ -33,7 +34,7 @@ func isMthreadsAIBookM1000(cmdExec func(s string) (string, error)) bool {
 
 	output, err := cmdExec("dmidecode -s processor-version")
 	if err != nil {
-		fmt.Printf("Error executing dmidecode to get processor version: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error executing dmidecode to get processor version: %v\n", err)
 		return false
 	}
 

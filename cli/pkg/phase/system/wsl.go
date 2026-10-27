@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	cc "github.com/beclab/Olares/cli/pkg/core/common"
+	"github.com/beclab/Olares/cli/pkg/images"
 
 	"github.com/beclab/Olares/cli/pkg/daemon"
 
@@ -15,7 +16,6 @@ import (
 	"github.com/beclab/Olares/cli/pkg/container"
 	"github.com/beclab/Olares/cli/pkg/core/module"
 	"github.com/beclab/Olares/cli/pkg/gpu"
-	"github.com/beclab/Olares/cli/pkg/images"
 	"github.com/beclab/Olares/cli/pkg/k3s"
 	"github.com/beclab/Olares/cli/pkg/manifest"
 	"github.com/beclab/Olares/cli/pkg/terminus"
@@ -101,6 +101,9 @@ func (l *wslPhaseBuilder) build() []module.Module {
 			}
 
 		}).withGPU(l.runtime)...).
+		// Images are preloaded on WSL as on any offline install; the market
+		// preinstall declaration is not published, so nothing is preinstalled
+		// here. See linux.go for the wiring WSL deliberately omits.
 		addModule(&images.PreloadImagesModule{
 			ManifestModule: manifest.ManifestModule{
 				Manifest: l.manifestMap,

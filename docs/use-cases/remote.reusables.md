@@ -1,5 +1,9 @@
 ---
 search: false
+head:
+  - - meta
+    - name: keywords
+      content: Olares, LarePass VPN, enable VPN, remote access, mobile VPN, desktop VPN
 ---
 <tabs>
 <template #LarePass-mobile>

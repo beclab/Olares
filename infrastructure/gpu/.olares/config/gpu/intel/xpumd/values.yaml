@@ -1,0 +1,191 @@
+# @schema additionalProperties:false
+image:
+  # -- Image repository
+  repository: ghcr.io/intel/xpumanager/xpumd
+  # @schema enum: [Always, IfNotPresent, Never]
+  # -- Image pull policy
+  pullPolicy: IfNotPresent
+  # -- Image tag, defaults to Chart.AppVersion
+  tag: ""
+
+# @schema $ref: $k8s/_definitions.json#/definitions/io.k8s.api.core.v1.PodSpec/properties/imagePullSecrets
+# -- [Image pull secrets](https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod)
+imagePullSecrets: []
+
+# -- Override the chart name
+nameOverride: ""
+# -- Override the fully qualified app name
+fullnameOverride: ""
+
+# @schema additionalProperties:false
+serviceAccount:
+  # -- Create service account
+  create: true
+  # @schema $ref: $k8s/_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations
+  # -- Annotations to add to the service account
+  annotations: {}
+  # -- The name of the service account to use. If not specified and create is true, a name is generated using the fully qualified app name.
+  name: ""
+
+# @schema $ref: $k8s/_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations
+# -- Annotations to add to the pod
+podAnnotations: {}
+
+# @schema $ref: $k8s/_definitions.json#/definitions/io.k8s.api.core.v1.Container/properties/env
+# -- Extra environment variables for the xpumd container
+extraEnv: []
+
+# @schema $ref: $k8s/_definitions.json#/definitions/io.k8s.api.core.v1.Container/properties/volumeMounts
+# -- Additional volume mounts for the xpumd container
+extraVolumeMounts: []
+
+# @schema $ref: $k8s/_definitions.json#/definitions/io.k8s.api.core.v1.PodSpec/properties/volumes
+# -- Additional volumes for the xpumd pod
+extraVolumes: []
+
+# @schema $ref: $k8s/_definitions.json#/definitions/io.k8s.api.core.v1.PodSecurityContext
+# -- [Pod security context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod).
+# NOTE: security settings control to what GPU metrics container has access to
+podSecurityContextOverride: {}
+
+# @schema $ref: $k8s/_definitions.json#/definitions/io.k8s.api.core.v1.SecurityContext
+# -- [Container security context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container).
+# NOTE: security settings control to what GPU metrics container has access to
+securityContextOverride: {}
+
+# @schema $ref: $k8s/_definitions.json#/definitions/io.k8s.api.core.v1.PodSpec/properties/initContainers
+# -- Init containers to run
+initContainers: []
+
+# @schema additionalProperties:false
+service:
+  # -- Create service
+  create: false
+  # @schema enum: [ClusterIP, NodePort, LoadBalancer, ExternalName]
+  # -- Service type
+  type: ClusterIP
+  # -- Service port
+  port: 8080
+
+# @schema enum: [dra, plugin, i915, xe, none]
+# -- method for requesting monitoring access to Intel GPUs: `dra` (K8s DRA GPU driver), `plugin` (K8s GPU plugin),
+# `i915` / `xe` (old K8s GPU plugin KMD-based resource names), `none` (no GPU resource request, useful for stub-driver testing)
+gpuAccess: plugin
+
+# @schema additionalProperties:false
+prometheus:
+  # -- Add Prometheus service monitor for XPUMD, requires Prometheus to be installed.
+  # overrides `service.create`
+  monitor: true
+  # -- Helm release name for Helm ('kube-prometheus') chart that installed Prometheus.
+  # (May be) needed for Prometheus to detect daemon serviceMonitor
+  release: k8s
+
+# @schema additionalProperties:false
+grafana:
+  # -- Install XPUMD dashboard(s) for Grafana
+  dashboards: false
+  # -- Namespace for Grafana install.
+  # Needed when Grafana dashboard auto-loader sidecar `searchNamespace: ALL` option is not used
+  namespace: monitoring
+
+# @schema $ref: $k8s/_definitions.json#/definitions/io.k8s.api.core.v1.ResourceRequirements
+# -- [Resource requests and limits](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/) of the container.
+# NOTE: overrides `gpuAccess` setting
+resourcesOverride: {}
+
+# @schema $ref: $k8s/_definitions.json#/definitions/io.k8s.api.core.v1.PodSpec/properties/nodeSelector
+# -- Node selector for pod placement
+nodeSelector:
+  intel.feature.node.kubernetes.io/gpu: "true"
+  kubernetes.io/arch: amd64
+
+# @schema $ref: $k8s/_definitions.json#/definitions/io.k8s.api.core.v1.PodSpec/properties/tolerations
+# -- [Tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) for the pods
+tolerations: []
+
+# @schema $ref: $k8s/_definitions.json#/definitions/io.k8s.api.core.v1.Affinity
+# -- [Affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity) for the pods
+affinity: {}
+
+
+# @schema additionalProperties:false
+crashlog:
+  # -- Host directory to watch for collecting GPU crash logs.
+  # Use `*` to match all files.
+  directory: /var/log/crashlog
+
+
+# @schema additionalProperties:false
+config:
+  # -- [Configuration for receivers](https://opentelemetry.io/docs/collector/configuration/#receivers)
+  # @default --  
+  # @section -- XPUM Daemon Configuration
+  receivers:
+    # @schema additionalProperties:false
+    # -- Configuration for the Intel XPU receiver.
+    # @default --  
+    # @section -- XPUM Daemon Configuration
+    intel_xpu:
+      # -- Metrics data collection interval. Must be at least twice the sampling_interval.
+      # @section -- XPUM Daemon Configuration
+      collection_interval: 5s
+      # -- Initial start delay for metrics collection, any non positive value is assumed to be immediately.
+      # @section -- XPUM Daemon Configuration
+      initial_delay: 1s
+      # -- Metrics collection timeout.
+      # @section -- XPUM Daemon Configuration
+      timeout: 0
+      # -- Sampling interval for the high-frequency metrics.
+      # @section -- XPUM Daemon Configuration
+      sampling_interval: 1s
+      # -- Whether to fail collector startup if the L0 Sysman API cannot be
+      # initialized (e.g. no GPU driver or device access).
+      fail_on_sysman_init_error: false
+      # -- Configuration for enabling/disabling individual metrics.
+      # @section -- XPUM Daemon Configuration
+      metrics: {}
+    # -- Override configuration for the Intel Crashlog receiver. Should only be used for advanced use cases.
+    # See `intel_crashlog` README for details.
+    # @section -- XPUM Daemon Configuration
+    intel_crashlog: {}
+
+  # -- [Configuration for processors](https://opentelemetry.io/docs/collector/configuration/#processors)
+  # @section -- XPUM Daemon Configuration
+  processors:
+    # -- Override configuration for the Intel XPU processor. Should only be used for advanced use cases. See `intel_xpu_status` README for details.
+    # @section -- XPUM Daemon Configuration
+    intel_xpu_status: {}
+
+  # -- [Configuration for exporters](https://opentelemetry.io/docs/collector/configuration/#exporters)
+  # @default --  
+  # @section -- XPUM Daemon Configuration
+  exporters:
+    # -- Override configuration for the Intel XPU info exporter. Should only be used for advanced use cases. See `intel_xpu_info` README for details.
+    # @section -- XPUM Daemon Configuration
+    intel_xpu_info: {}
+    # @schema hidden
+    prometheus:
+      endpoint: "0.0.0.0:8080"
+
+  # -- [Configuration for extensions](https://opentelemetry.io/docs/collector/configuration/#extensions)
+  # @section -- XPUM Daemon Configuration
+  extensions: {}
+
+  # -- [Configuration for service](https://opentelemetry.io/docs/collector/configuration/#service)
+  # @section -- XPUM Daemon Configuration
+  service:
+    # @schema hidden
+    telemetry:
+      logs:
+        level: info
+        disable_stacktrace: true
+    # @schema hidden
+    pipelines:
+      metrics:
+        receivers: [intel_xpu]
+        processors: [intel_xpu_status]
+        exporters: [intel_xpu_info, prometheus]
+      logs:
+        receivers: [intel_xpu, intel_crashlog]
+        exporters: [intel_xpu_info]

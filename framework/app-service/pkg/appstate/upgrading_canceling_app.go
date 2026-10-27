@@ -23,10 +23,10 @@ func (p *UpgradingCancelingApp) IsAppCreated() bool {
 	return true
 }
 
-func NewUpgradingCancelingApp(c client.Client,
+func NewUpgradingCancelingApp(deps Deps,
 	manager *appsv1.ApplicationManager) (StatefulApp, StateError) {
 
-	return appFactory.New(c, manager, 0,
+	return deps.Factory.New(deps, manager, 0,
 		func(c client.Client, manager *appsv1.ApplicationManager, ttl time.Duration) StatefulApp {
 			return &UpgradingCancelingApp{
 				baseOperationApp: &baseOperationApp{
@@ -36,7 +36,7 @@ func NewUpgradingCancelingApp(c client.Client,
 						client:  c,
 					},
 				},
-				imageClient: images.NewImageManager(c),
+				imageClient: deps.NewImageManager(c),
 			}
 		})
 }
@@ -56,11 +56,11 @@ func (p *UpgradingCancelingApp) Exec(ctx context.Context) (StatefulInProgressApp
 		klog.Infof("im name=%s not found while canceling upgrade, treating as already canceled", p.manager.Name)
 	}
 
-	if ok := appFactory.cancelOperation(p.manager.Name); !ok {
+	if ok := p.deps.Factory.cancelOperation(p.manager.Name); !ok {
 		klog.Errorf("app %s operation is not ", p.manager.Name)
 	}
 
-	err = p.updateStatus(ctx, p.manager, appsv1.Stopping, nil, appsv1.Stopping.String(), appsv1.Stopping.String())
+	err = p.finishCancelToStopping(ctx, p.manager)
 	if err != nil {
 		klog.Errorf("update appmgr state to suspending state failed %v", err)
 		err = p.updateStatus(ctx, p.manager, appsv1.UpgradingCancelFailed, nil, "Failed to update status after canceling", appsv1.UpgradingCancelFailed.String())

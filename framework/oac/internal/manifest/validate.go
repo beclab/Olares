@@ -15,6 +15,11 @@ import (
 var validChartName = regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`)
 
 var (
+	minWorkloadOptionsManifestVersion = semver.MustParse("0.16.0")
+	maxOlaresManifestVersion          = semver.MustParse("0.16.0")
+)
+
+var (
 	errInvalidSubChartName = fmt.Errorf(
 		"invalid subchart name, must match regex %s and the length must not be longer than 53",
 		validChartName.String())
@@ -53,6 +58,7 @@ var (
 	validDependencyTypes = []any{"system", "application", "middleware"}
 	validAuthLevels      = []any{"", "public", "private", "internal"}
 	validOpenMethods     = []any{"", "default", "iframe", "window"}
+	validPortProtocols   = []any{"", "tcp", "udp"}
 	// validOverlayProtocols enumerates the protocols an overlayGateway
 	// entrance may declare. An empty value is allowed and means the
 	// entrance is reachable over both tcp and udp.
@@ -87,7 +93,8 @@ func ValidateKnownAPIVersion(api string) error {
 func ValidateAppConfiguration(c *AppConfiguration) error {
 	structErr := validation.ValidateStruct(c,
 		validation.Field(&c.ConfigVersion,
-			validation.Required.Error("olaresManifest.version is required")),
+			validation.Required.Error("olaresManifest.version is required"),
+			validation.By(validateOlaresManifestVersionCeiling)),
 		validation.Field(&c.APIVersion,
 			validation.When(c.APIVersion != "",
 				validation.In(validAPIVersions...).Error("not supported version"),
@@ -100,6 +107,10 @@ func ValidateAppConfiguration(c *AppConfiguration) error {
 			validation.Each(validation.By(validateEntranceValue)),
 			validation.By(uniqueEntranceNames),
 		),
+		validation.Field(&c.Ports,
+			validation.Each(validation.By(validateServicePortValue)),
+			validation.By(uniquePortNames),
+		),
 		validation.Field(&c.Spec,
 			validation.Required.Error("spec is required"),
 			validation.By(validateAppSpecFor(c)),
@@ -110,14 +121,131 @@ func ValidateAppConfiguration(c *AppConfiguration) error {
 	return errors.Join(
 		structErr,
 		checkSubCharts(c),
-		validatePermission(c.ConfigVersion, c.Permission),
+		validatePermission(c.ConfigVersion, c.Metadata.Name, c.Permission, c.Options.Shared),
 		validateRootProvider(c.ConfigVersion, c.Provider),
-		validateWorkloadReplicas(c.ConfigVersion, c.APIVersion, c.WorkloadReplicas),
+		validateWorkloadSchema(c),
 		validateModernFieldRequiresManifestVersion(c),
 		validateOlaresDependency(c),
 		validateSharedAppRequirements(c),
 		validateV3Configuration(c),
 	)
+}
+
+func validateOlaresManifestVersionCeiling(value any) error {
+	version, _ := value.(string)
+	v, err := semver.NewVersion(version)
+	if err != nil {
+		return fmt.Errorf("olaresManifest.version is invalid: %q", version)
+	}
+	if v.GreaterThan(maxOlaresManifestVersion) {
+		return fmt.Errorf("olaresManifest.version must be <= %s", maxOlaresManifestVersion)
+	}
+	return nil
+}
+
+func workloadOptionsCheckApplies(version string) bool {
+	v, err := semver.NewVersion(version)
+	return err == nil && v.GreaterThanEqual(minWorkloadOptionsManifestVersion)
+}
+
+func validateWorkloadSchema(c *AppConfiguration) error {
+	if !workloadOptionsCheckApplies(c.ConfigVersion) {
+		var errs []error
+		if len(c.WorkloadOptions) > 0 {
+			errs = append(errs, fmt.Errorf("workloadOptions requires olaresManifest.version >= %s", minWorkloadOptionsManifestVersion))
+		}
+		errs = append(errs, validateWorkloadReplicas(c.ConfigVersion, c.APIVersion, c.WorkloadReplicas))
+		return errors.Join(errs...)
+	}
+
+	var errs []error
+	if c.WorkloadReplicas != nil {
+		errs = append(errs, fmt.Errorf("workloadReplicas is not supported for olaresManifest.version >= %s; use workloadOptions", minWorkloadOptionsManifestVersion))
+	}
+	if c.OverlayGateway.Enable || len(c.OverlayGateway.Entrances) > 0 {
+		errs = append(errs, fmt.Errorf("top-level overlayGateway is not supported for olaresManifest.version >= %s; use workloadOptions.<workload>.overlayGateway", minWorkloadOptionsManifestVersion))
+	}
+	if len(c.WorkloadOptions) == 0 {
+		errs = append(errs, fmt.Errorf("workloadOptions is required for olaresManifest.version >= %s", minWorkloadOptionsManifestVersion))
+		return errors.Join(errs...)
+	}
+
+	for name, option := range c.WorkloadOptions {
+		if strings.TrimSpace(name) == "" {
+			errs = append(errs, errors.New("workloadOptions contains an empty workload name"))
+			continue
+		}
+		if err := validateWorkloadOption(name, option); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	return errors.Join(errs...)
+}
+
+func validateWorkloadOption(name string, option WorkloadOption) error {
+	prefix := fmt.Sprintf("workloadOptions.%s", name)
+	var errs []error
+	if option.Replicas == nil {
+		errs = append(errs, fmt.Errorf("%s.replicas is required", prefix))
+	} else if *option.Replicas < 0 {
+		errs = append(errs, fmt.Errorf("%s.replicas must be >= 0", prefix))
+	}
+
+	validTypes := map[string]struct{}{
+		WorkloadAllowFolder: {}, WorkloadAllowDeviceSerial: {},
+		WorkloadAllowDeviceVideo: {}, WorkloadAllowDeviceAudio: {},
+		WorkloadAllowDeviceHID: {}, WorkloadAllowBluetooth: {},
+	}
+	seenTypes := make(map[string]struct{}, len(option.Allow))
+	for i, capability := range option.Allow {
+		capPrefix := fmt.Sprintf("%s.allow[%d]", prefix, i)
+		if _, ok := validTypes[capability.Type]; !ok {
+			errs = append(errs, fmt.Errorf("%s.type must be one of folder, device.serial, device.video, device.audio, device.hid, bluetooth", capPrefix))
+		}
+		if _, duplicate := seenTypes[capability.Type]; duplicate {
+			errs = append(errs, fmt.Errorf("%s.type %q is duplicated", capPrefix, capability.Type))
+		}
+		seenTypes[capability.Type] = struct{}{}
+		if len(capability.Containers) == 0 {
+			errs = append(errs, fmt.Errorf("%s.containers must not be empty", capPrefix))
+		}
+		seenContainers := make(map[string]struct{}, len(capability.Containers))
+		for _, container := range capability.Containers {
+			if strings.TrimSpace(container) == "" {
+				errs = append(errs, fmt.Errorf("%s.containers must not contain an empty name", capPrefix))
+				continue
+			}
+			if _, duplicate := seenContainers[container]; duplicate {
+				errs = append(errs, fmt.Errorf("%s.containers contains duplicate %q", capPrefix, container))
+			}
+			seenContainers[container] = struct{}{}
+		}
+		if strings.HasPrefix(capability.Type, "device.") && len(capability.Containers) != 1 {
+			errs = append(errs, fmt.Errorf("%s.containers must contain exactly one container for a device capability", capPrefix))
+		}
+	}
+
+	if option.OverlayGateway != nil {
+		for i, entrance := range option.OverlayGateway.Entrances {
+			entrancePrefix := fmt.Sprintf("%s.overlayGateway.entrances[%d]", prefix, i)
+			if err := validation.ValidateStruct(&entrance,
+				validation.Field(&entrance.Title,
+					validation.Required.Error(entrancePrefix+".title is required"),
+					validation.Length(1, 30).Error(entrancePrefix+".title must be 1-30 characters"),
+				),
+				validation.Field(&entrance.Port,
+					validation.Required.Error(entrancePrefix+".port is required"),
+					validation.Min(int32(1)).Error(entrancePrefix+".port must be > 0"),
+				),
+				validation.Field(&entrance.Protocol,
+					validation.In(validOverlayProtocols...).Error(entrancePrefix+`.protocol must be one of "", "tcp", "udp"`),
+				),
+			); err != nil {
+				errs = append(errs, err)
+			}
+		}
+	}
+	return errors.Join(errs...)
 }
 
 func validateAppMetaData(v interface{}) error {
@@ -145,7 +273,7 @@ func validateAppMetaData(v interface{}) error {
 			validation.Required.Error("metadata.version is required"),
 			isSemver.Error("metadata.version must be a valid semantic version (e.g. 1.2.3)"),
 		),
-		validation.Field(&m.AppID,
+		validation.Field(&m.Name,
 			validation.By(validateMetadataAppID),
 		),
 	)
@@ -159,14 +287,14 @@ func validateAppMetaData(v interface{}) error {
 func validateMetadataAppID(v interface{}) error {
 	s, ok := v.(string)
 	if !ok {
-		return fmt.Errorf("metadata.appid: unexpected type %T", v)
+		return fmt.Errorf("metadata.name: unexpected type %T", v)
 	}
 	if s == "" {
 		return nil
 	}
 	if IsReservedSystemAppID(s) {
 		return fmt.Errorf(
-			"metadata.appid %q collides with a reserved system app id; choose a different value (the loader normalizes appid to md5(metadata.name)[:8] anyway, so leaving the field empty is also fine)",
+			"%q collides with a reserved system app; choose a different value",
 			s,
 		)
 	}
@@ -202,6 +330,39 @@ func validateEntranceValue(v interface{}) error {
 		),
 		validation.Field(&e.OpenMethod,
 			validation.In(validOpenMethods...).Error(`entrance.openMethod must be one of "", "default", "iframe", "window"`),
+		),
+	)
+}
+
+func validateServicePortValue(v interface{}) error {
+	p, ok := v.(appv1.ServicePort)
+	if !ok {
+		return fmt.Errorf("port: unexpected type %T", v)
+	}
+	return validation.ValidateStruct(&p,
+		validation.Field(&p.Name,
+			validation.Required.Error("port.name is required"),
+			validation.Match(entranceNameRegex).Error("port.name must match ^[a-z0-9A-Z-]*$"),
+			validation.Length(1, 63).Error("port.name must be 1-63 characters"),
+		),
+		validation.Field(&p.Host,
+			validation.Required.Error("port.host is required"),
+			validation.Match(entranceHostRegex).Error("port.host must match ^[a-z]([-a-z0-9]*[a-z0-9])$"),
+			validation.Length(1, 63).Error("port.host must be 1-63 characters"),
+		),
+		validation.Field(&p.Port,
+			validation.Required.Error("port.port is required"),
+			validation.Min(int32(1)).Error("port.port must be between 1 and 65535"),
+			validation.Max(int32(65535)).Error("port.port must be between 1 and 65535"),
+		),
+		validation.Field(&p.ExposePort,
+			validation.When(p.ExposePort != 0,
+				validation.Min(int32(1)).Error("port.exposePort must be between 1 and 65535"),
+				validation.Max(int32(65535)).Error("port.exposePort must be between 1 and 65535"),
+			),
+		),
+		validation.Field(&p.Protocol,
+			validation.In(validPortProtocols...).Error(`port.protocol must be one of "", "tcp", "udp"`),
 		),
 	)
 }
@@ -274,6 +435,8 @@ func validateAppSpec(configVersion, apiVersion string, templateOnly bool, s AppS
 		validation.Field(&s.RequiredGPU, optionalGPUQuantity),
 		validation.Field(&s.LimitedGPU, optionalLimitedGPUQuantity),
 		validation.Field(&s.SupportArch,
+			validation.Required.Error("spec.supportArch is required"),
+			validation.Length(1, 0).Error("spec.supportArch must contain at least one item"),
 			validation.Each(validation.By(validateSupportArchEntry)),
 			validation.By(uniqueSupportArches),
 		),
@@ -463,18 +626,29 @@ func validateFlatResourceQuantities(spec *AppSpec, templateOnly bool) error {
 //   - permission.externalData (grants access to the External directory) was
 //     introduced with olaresManifest.version 0.12.0; declaring it on an
 //     older manifest is rejected.
+//
 //   - permission.provider (cross-app provider access) was retired starting
 //     with olaresManifest.version 0.12.0; the field is still accepted
 //     structurally for backwards compatibility on legacy manifests, but a
 //     modern manifest must leave it empty so the platform can finish
 //     migrating callers away from it.
 //
+//   - permission.loginOlaresCLI (a mounted ten-year user credential) is
+//     restricted to the apps in loginOlaresCLIAllowlist; any other app
+//     declaring it is rejected here so gitbot blocks the submission long
+//     before an install could mint a token. It is also incompatible with
+//     options.shared: a shared app is a cluster singleton whose identity
+//     is the cluster owner, which is not the per-user login this
+//     permission exists to provide.
+//
 // permission.appCommon (access to the cross-app Common directory) is a
 // >= 1.12.6 field and is gated by validateModernFieldRequiresManifestVersion
 // (requires olaresManifest.version >= 0.12.0 + Olares dep locked to
 // >=1.12.6-0), so this function deliberately leaves it alone — adding a
-// check here would emit a duplicate error.
-func validatePermission(configVersion string, p Permission) error {
+// check here would emit a duplicate error. permission.loginOlaresCLI is
+// version-gated the same way (it is one of detectOlares1126OnlyFields), so
+// only its allowlist and shared-incompatibility halves live here.
+func validatePermission(configVersion, appName string, p Permission, shared bool) error {
 	var errs []error
 	if p.ExternalData && !resourcesCheckApplies(configVersion) {
 		errs = append(errs, fmt.Errorf(
@@ -486,6 +660,17 @@ func validatePermission(configVersion string, p Permission) error {
 		errs = append(errs, fmt.Errorf(
 			"permission.provider must be empty for olaresManifest.version >= %s; cross-app provider access is no longer granted via permission.provider",
 			minResourcesManifestVersion,
+		))
+	}
+	if p.LoginOlaresCLI && !IsLoginOlaresCLIAllowed(appName) {
+		errs = append(errs, fmt.Errorf(
+			"permission.loginOlaresCLI is not available to %q; the permission mounts a long-lived Olares credential into the app and is limited to apps on the platform allowlist",
+			appName,
+		))
+	}
+	if p.LoginOlaresCLI && shared {
+		errs = append(errs, fmt.Errorf(
+			"permission.loginOlaresCLI cannot be combined with options.shared; the credential is a per-user login and is not defined for a cluster-wide shared app",
 		))
 	}
 	return errors.Join(errs...)
@@ -550,6 +735,9 @@ func detectOlares1126OnlyFields(c *AppConfiguration) []string {
 	if c.WorkloadReplicas != nil && len(*c.WorkloadReplicas) > 0 {
 		fields = append(fields, "workloadReplicas")
 	}
+	if len(c.WorkloadOptions) > 0 {
+		fields = append(fields, "workloadOptions")
+	}
 	if c.OverlayGateway.Enable || len(c.OverlayGateway.Entrances) > 0 {
 		fields = append(fields, "overlayGateway")
 	}
@@ -565,6 +753,9 @@ func detectOlares1126OnlyFields(c *AppConfiguration) []string {
 	if c.Permission.AppCommon {
 		fields = append(fields, "permission.appCommon")
 	}
+	if c.Permission.LoginOlaresCLI {
+		fields = append(fields, "permission.loginOlaresCLI")
+	}
 	return fields
 }
 
@@ -579,6 +770,9 @@ func pickOlaresDepRule(c *AppConfiguration) (rule olaresDepConstraintRule, featu
 	api := normalizeAPIVersion(c.APIVersion)
 	if api == APIVersionV3 {
 		return olaresDepRulePostV3, nil
+	}
+	if api == APIVersionV1 || api == APIVersionV2 || len(api) == 0 {
+		return olaresDepRulePreV3, nil
 	}
 	triggers := detectOlares1126OnlyFields(c)
 	if len(triggers) > 0 {
@@ -597,7 +791,8 @@ func pickOlaresDepRule(c *AppConfiguration) (rule olaresDepConstraintRule, featu
 //   - apiVersion=v3 — the v3 runtime itself ships with Olares 1.12.6+.
 //   - any field returned by detectOlares1126OnlyFields (spec.accelerator,
 //     workloadReplicas, overlayGateway, options.LLMGatewaySupported,
-//     options.templateOnly, options.shared, permission.appCommon).
+//     options.templateOnly, options.shared, permission.appCommon,
+//     permission.loginOlaresCLI).
 //
 // When any trigger is declared the manifest must bump
 // olaresManifest.version to at least 0.12.0 AND lock
@@ -656,9 +851,9 @@ func validateModernFieldRequiresManifestVersion(c *AppConfiguration) error {
 // manifests — the platform always pins the host Olares version, so
 // omitting it makes the manifest non-portable.
 func validateOlaresDependency(c *AppConfiguration) error {
-	if !resourcesCheckApplies(c.ConfigVersion) {
-		return nil
-	}
+	//if !resourcesCheckApplies(c.ConfigVersion) {
+	//	return nil
+	//}
 	var olaresDep *Dependency
 	for i := range c.Options.Dependencies {
 		d := &c.Options.Dependencies[i]
@@ -967,6 +1162,21 @@ func uniqueEntranceNames(value interface{}) error {
 			return fmt.Errorf("entrances[%d].name: duplicate entrance name %q", i, e.Name)
 		}
 		seen[e.Name] = struct{}{}
+	}
+	return nil
+}
+
+func uniquePortNames(value interface{}) error {
+	ports, ok := value.([]appv1.ServicePort)
+	if !ok {
+		return fmt.Errorf("ports: unexpected type %T", value)
+	}
+	seen := make(map[string]struct{}, len(ports))
+	for i, p := range ports {
+		if _, dup := seen[p.Name]; dup {
+			return fmt.Errorf("ports[%d].name: duplicate port name %q", i, p.Name)
+		}
+		seen[p.Name] = struct{}{}
 	}
 	return nil
 }

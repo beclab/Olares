@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -16,10 +17,13 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway"
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway/meshinagent"
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway/meshoutagent"
+	"github.com/beclab/Olares/framework/app-service/pkg/mesh"
 	"github.com/beclab/Olares/framework/app-service/pkg/provider"
 	"github.com/beclab/Olares/framework/app-service/pkg/sandbox/sidecar"
 	"github.com/beclab/Olares/framework/app-service/pkg/security"
-	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/api/pkg/generated/clientset/versioned"
 
@@ -60,8 +64,9 @@ var (
 
 // Webhook used to implement a webhook.
 type Webhook struct {
-	kubeClient    *kubernetes.Clientset
-	dynamicClient *versioned.Clientset
+	kubeClient       kubernetes.Interface
+	dynamicClient    versioned.Interface
+	allocationClient dynamic.Interface
 }
 
 // New create a webhook client.
@@ -74,28 +79,54 @@ func New(config *rest.Config) (*Webhook, error) {
 	if err != nil {
 		return nil, err
 	}
+	allocationClient, err := dynamic.NewForConfig(config)
+	if err != nil {
+		return nil, err
+	}
 
 	return &Webhook{
-		kubeClient:    client,
-		dynamicClient: dynamicClient,
+		kubeClient:       client,
+		dynamicClient:    dynamicClient,
+		allocationClient: allocationClient,
 	}, nil
 }
 
 // GetAppConfig get app config by namespace.
-func (wh *Webhook) GetAppConfig(namespace string) (appMgr *v1alpha1.ApplicationManager, appConfig *appcfg.ApplicationConfig, isShared bool, err error) {
-	list, err := wh.dynamicClient.AppV1alpha1().ApplicationManagers().List(context.TODO(), metav1.ListOptions{})
+func (wh *Webhook) GetAppConfig(namespace string) (appMgr *v1alpha1.ApplicationManager, appConfig *appcfg.ApplicationConfig, isShared, isSharedApp bool, err error) {
+	return GetAppConfigForNamespace(context.TODO(), wh.dynamicClient, wh.kubeClient, namespace)
+}
+
+// GetAppConfigForNamespace resolves the application that owns namespace,
+// returning api.ErrApplicationManagerNotFound when the namespace belongs
+// to no application.
+//
+// Both reads go straight to the API server rather than through an
+// informer cache. Admission decides what a pod becomes at the moment it
+// is created, and an app's pods can follow its ApplicationManager or its
+// namespace labels by milliseconds; reading a stale cache would silently
+// treat a just-installed app as belonging to nothing.
+//
+// It is a package-level function taking the clients explicitly so callers
+// that hold clients but not a *Webhook -- notably the runasuser admission
+// path -- resolve namespaces through this exact logic instead of a
+// parallel reimplementation that would drift. The parameters are the
+// client interfaces rather than the concrete clientsets so tests can
+// inject the generated fakes.
+func GetAppConfigForNamespace(ctx context.Context, appClient versioned.Interface, kubeClient kubernetes.Interface, namespace string) (
+	appMgr *v1alpha1.ApplicationManager, appConfig *appcfg.ApplicationConfig, isShared, isSharedApp bool, err error) {
+	list, err := appClient.AppV1alpha1().ApplicationManagers().List(ctx, metav1.ListOptions{})
 	if err != nil {
-		return nil, nil, false, err
+		return nil, nil, false, false, err
 	}
 	sorted := list.Items
 	sort.Slice(sorted, func(i, j int) bool {
 		return sorted[j].CreationTimestamp.Before(&sorted[i].CreationTimestamp)
 	})
 
-	ns, err := wh.kubeClient.CoreV1().Namespaces().Get(context.TODO(), namespace, metav1.GetOptions{})
+	ns, err := kubeClient.CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{})
 	if err != nil {
 		klog.Error("failed to get namespace, namespace=", namespace, " err=", err)
-		return nil, nil, false, err
+		return nil, nil, false, false, err
 	}
 
 	refAppName := ns.Labels[constants.ApplicationNameLabel]
@@ -103,7 +134,8 @@ func (wh *Webhook) GetAppConfig(namespace string) (appMgr *v1alpha1.ApplicationM
 	installedUser := ns.Labels[constants.ApplicationInstallUserLabel]
 
 	var appconfig appcfg.ApplicationConfig
-	for _, a := range sorted {
+	for i := range sorted {
+		a := sorted[i]
 		switch {
 		case a.Spec.AppNamespace == namespace && (a.Spec.Type == v1alpha1.App || a.Spec.Type == v1alpha1.Middleware),
 			// shared server namespace
@@ -111,12 +143,34 @@ func (wh *Webhook) GetAppConfig(namespace string) (appMgr *v1alpha1.ApplicationM
 				(a.Spec.Type == v1alpha1.App || a.Spec.Type == v1alpha1.Middleware):
 			err = json.Unmarshal([]byte(a.Spec.Config), &appconfig)
 			if err != nil {
-				return nil, nil, false, err
+				return nil, nil, false, false, err
 			}
-			return &a, &appconfig, (sharedNamespace == "true" && a.Spec.AppName == refAppName), nil
+			// isShared keeps the legacy heuristic (ws/upload/oes/mesh-out/appkey).
+			// isSharedApp is the union source for mesh-in only (v2 heuristic + v3 labels).
+			isShared, isSharedApp = resolveSharedFlags(ns, &a)
+			return &a, &appconfig, isShared, isSharedApp, nil
 		}
 	}
-	return nil, nil, false, api.ErrApplicationManagerNotFound
+	return nil, nil, false, false, api.ErrApplicationManagerNotFound
+}
+
+// resolveSharedFlags returns legacy isShared (admission sidecars other than mesh-in)
+// and isSharedApp (mesh-in only). Union: ApplicationManager / Namespace app-shared
+// labels or the v2 ns-shared + name-label heuristic.
+func resolveSharedFlags(ns *corev1.Namespace, mgr *v1alpha1.ApplicationManager) (isShared, isSharedApp bool) {
+	if ns == nil || mgr == nil {
+		return false, false
+	}
+	refAppName := ""
+	if ns.Labels != nil {
+		refAppName = ns.Labels[constants.ApplicationNameLabel]
+	}
+	sharedNamespace := ""
+	if ns.Labels != nil {
+		sharedNamespace = ns.Labels["bytetrade.io/ns-shared"]
+	}
+	legacyShared := sharedNamespace == "true" && mgr.Spec.AppName == refAppName
+	return legacyShared, appcfg.IsShared(mgr) || appcfg.IsShared(ns) || legacyShared
 }
 
 // GetAdmissionRequestBody returns admission request body.
@@ -150,7 +204,7 @@ func (wh *Webhook) CreatePatch(
 	ctx context.Context,
 	pod *corev1.Pod,
 	req *admissionv1.AdmissionRequest,
-	proxyUUID uuid.UUID, injectPolicy, injectWs, injectUpload bool,
+	proxyUUID uuid.UUID, injectPolicy, injectMeshInAgent, injectMeshOutAgent bool,
 	injectSharedPod *bool,
 	appmgr *v1alpha1.ApplicationManager,
 	appConfig *appcfg.ApplicationConfig,
@@ -161,66 +215,63 @@ func (wh *Webhook) CreatePatch(
 	if isInjected {
 		// TODO: force mutate
 		klog.Infof("Pod is injected with uuid=%s namespace=%s", prevUUID, req.Namespace)
+		mesh.HardenLinkerdProxyAdminProbes(pod)
+		sidecar.ApplyNestedIfaceBypass(pod)
+		if err := wh.patchProbeHeaders(ctx, pod); err != nil {
+			klog.Errorf("Failed to patch probe headers for already-injected pod=%s/%s err=%v", pod.Namespace, pod.Name, err)
+			return nil, err
+		}
 		return makePatches(req, pod)
 	}
 
 	// inject sidecar only for the app's namespace
 	if req.Namespace == appmgr.Spec.AppNamespace {
-		configMapName, err := wh.createSidecarConfigMap(ctx, pod, proxyUUID.String(), req.Namespace, injectPolicy, injectWs, injectUpload, appmgr, appConfig, perms)
-		if err != nil {
-			return nil, err
-		}
-
-		volume := sidecar.GetSidecarVolumeSpec(configMapName)
-
 		if pod.Spec.Volumes == nil {
 			pod.Spec.Volumes = []corev1.Volume{}
 		}
 
-		pod.Spec.Volumes = append(pod.Spec.Volumes, volume, sidecar.GetEnvoyConfigWorkVolume())
-
-		clusterID := fmt.Sprintf("%s.%s", pod.Spec.ServiceAccountName, req.Name)
-		envoyFilename := constants.EnvoyConfigFilePath + "/" + constants.EnvoyConfigFileName
-		// pod is not an entrance pod, just inject outbound proxy
-		if !injectPolicy {
-			envoyFilename = constants.EnvoyConfigFilePath + "/" + constants.EnvoyConfigOnlyOutBoundFileName
-		}
-		appKey, appSecret, _ := wh.getAppKeySecret(req.Namespace)
-
-		if injectPolicy || len(appConfig.PodsSelectors) == 0 || wh.isSelected(appConfig.PodsSelectors, pod) {
-			// If the owning Application enables overlay-gateway, multus will
-			// attach a macvlan NIC (net1) to the pod. Tell the iptables init
-			// container to install bypass RETURN rules for that interface so
-			// north/south traffic on net1 doesn't get redirected to envoy.
-			injectMacvlan, err := wh.ShouldInjectMacvlanInit(ctx, pod, req.Namespace)
-			if err != nil {
-				klog.Errorf("Failed to evaluate macvlan-init for sidecar pod=%s/%s err=%v", req.Namespace, pod.Name, err)
-				return nil, err
+		if injectMeshInAgent {
+			// Conf is materialized at sidecar start (base64 → /tmp/mesh-in); do not
+			// mount an emptyDir over /etc/nginx (would hide image modules path).
+			viewer := ""
+			if appConfig != nil {
+				viewer = appConfig.OwnerName
 			}
-			initContainer := sidecar.GetInitContainerSpec(appConfig, injectMacvlan)
-			pod.Spec.InitContainers = append(pod.Spec.InitContainers, initContainer)
-			policySidecar := sidecar.GetEnvoySidecarContainerSpec(clusterID, envoyFilename, appKey, appSecret)
-			pod.Spec.Containers = append(pod.Spec.Containers, policySidecar)
-
-			pod.Spec.InitContainers = append(
-				[]corev1.Container{
-					sidecar.GetInitContainerSpecForWaitFor(appConfig.OwnerName),
-					sidecar.GetInitContainerSpecForRenderEnvoyConfig(),
-				},
-				pod.Spec.InitContainers...)
-		}
-
-		if injectWs {
-			wsSidecar := sidecar.GetWebSocketSideCarContainerSpec(&appConfig.WsConfig)
-			pod.Spec.Containers = append(pod.Spec.Containers, wsSidecar)
-		}
-		if injectUpload {
-			uploadSidecar := sidecar.GetUploadSideCarContainerSpec(pod, &appConfig.Upload)
-			if uploadSidecar != nil {
-				pod.Spec.Containers = append(pod.Spec.Containers, *uploadSidecar)
+			pod.Spec.Volumes = append(pod.Spec.Volumes,
+				meshinagent.JWTSecretVolume(),
+				meshinagent.CertsVolumeForViewer(viewer),
+				meshinagent.SharedHostsVolume(),
+			)
+			gatewayIPs := wh.lookupMeshInGatewayIPs(ctx)
+			pod.Spec.InitContainers = append(pod.Spec.InitContainers, meshinagent.InitContainerSpecWithGatewayIPs(gatewayIPs))
+			pod.Spec.Containers = append(pod.Spec.Containers, meshinagent.ContainerSpec())
+			// ARCH S6: mesh-in and linkerd-proxy share the same admission predicate.
+			if mesh.ShouldInjectLinkerdProxy(injectMeshInAgent) {
+				mesh.AnnotatePodForLinkerdInject(pod, true)
+				klog.Infof("mesh-xport: annotate pod=%s/%s linkerd.io/inject=enabled", req.Namespace, pod.Name)
 			}
+		}
+		if injectMeshOutAgent {
+			pod.Spec.Volumes = append(pod.Spec.Volumes, meshoutagent.SATokenVolume(), meshoutagent.ConfVolume())
+			pod.Spec.InitContainers = append(pod.Spec.InitContainers, meshoutagent.InitContainerSpec())
+			pod.Spec.Containers = append(pod.Spec.Containers, meshoutagent.ContainerSpec())
 		}
 	} // end of inject sidecar
+
+	// The macvlan bypass must stay behind every iptables writer in the init
+	// sequence (mesh-in agent iptables is appended above, linkerd-init comes
+	// from a later admission pass), so re-place it after the sidecar block.
+	injectMacvlanBypass, err := wh.ShouldInjectMacvlanInit(ctx, pod, req.Namespace)
+	if err != nil {
+		klog.Errorf("macvlan-bypass: failed to evaluate injection for pod=%s/%s err=%v", req.Namespace, pod.Name, err)
+		return nil, err
+	}
+	if injectMacvlanBypass {
+		sidecar.EnsureMacvlanBypassLast(pod)
+	}
+	if sidecar.ApplyNestedIfaceBypass(pod) {
+		klog.Infof("nested-iface-bypass: inject pod=%s/%s", req.Namespace, pod.Name)
+	}
 
 	if injectSharedPod != nil {
 		if *injectSharedPod {
@@ -240,12 +291,76 @@ func (wh *Webhook) CreatePatch(
 	}
 	pod.Annotations[UUIDAnnotation] = proxyUUID.String()
 
+	// Avoid kubelet httpGet to PodIP:4191 (stolen by in-pod DNAT on virt workloads).
+	mesh.HardenLinkerdProxyAdminProbes(pod)
+
 	// add header to probes
 	if err := wh.patchProbeHeaders(ctx, pod); err != nil {
 		klog.Errorf("Failed to patch probe headers for pod=%s/%s err=%v", pod.Namespace, pod.Name, err)
 		return nil, err
 	}
 	return makePatches(req, pod)
+}
+
+// PatchLinkerdAdminProbesOnly hardens linkerd-proxy admin probes when no other
+// sidecar work is required. Returns patched=false when nothing changed.
+func (wh *Webhook) PatchLinkerdAdminProbesOnly(
+	ctx context.Context,
+	req *admissionv1.AdmissionRequest,
+	pod *corev1.Pod,
+) (patchBytes []byte, patched bool, err error) {
+	changed := mesh.HardenLinkerdProxyAdminProbes(pod)
+	if sidecar.ApplyNestedIfaceBypass(pod) {
+		changed = true
+		klog.Infof("nested-iface-bypass: inject (probe-only) pod=%s/%s", req.Namespace, pod.Name)
+	}
+	if !changed {
+		return nil, false, nil
+	}
+	if err := wh.patchProbeHeaders(ctx, pod); err != nil {
+		klog.Errorf("Failed to patch probe headers after linkerd harden pod=%s/%s err=%v", pod.Namespace, pod.Name, err)
+		return nil, false, err
+	}
+	patchBytes, err = makePatches(req, pod)
+	if err != nil {
+		klog.Errorf("Failed to build patch after linkerd harden pod=%s/%s err=%v", pod.Namespace, pod.Name, err)
+		return nil, false, err
+	}
+	return patchBytes, true, nil
+}
+
+func (wh *Webhook) shouldInjectEnvoySidecar(ctx context.Context, injectPolicy bool, appConfig *appcfg.ApplicationConfig, pod *corev1.Pod) bool {
+	// R1 does not blanket-retire outbound oes when Linkerd is ready
+	// (ShouldSkipEnvoySidecar stays false until L2-c). Shared-caller skip is
+	// applied in CreatePatch via ShouldSkipOesForSharedCaller.
+	_ = ctx
+	if appConfig == nil {
+		return injectPolicy
+	}
+	return injectPolicy || len(appConfig.PodsSelectors) == 0 || wh.isSelected(appConfig.PodsSelectors, pod)
+}
+
+func (wh *Webhook) shouldSkipInboundEntranceSidecar(ctx context.Context, appConfig *appcfg.ApplicationConfig, ns, entranceName string) (bool, error) {
+	if appConfig == nil || wh == nil || wh.kubeClient == nil {
+		return false, nil
+	}
+	applicationName, err := apputils.FmtAppMgrName(appConfig.AppName, appConfig.OwnerName, ns)
+	if err != nil {
+		return false, err
+	}
+	app, err := wh.dynamicClient.AppV1alpha1().Applications().Get(ctx, applicationName, metav1.GetOptions{})
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	appid := strings.ToLower(strings.TrimSpace(app.Spec.Appid))
+	if appid == "" {
+		return false, nil
+	}
+	srrName := gateway.ResourceNameForEntranceApp(appid, entranceName)
+	return mesh.ShouldSkipInboundEntranceSidecar(ctx, wh.kubeClient, app.Spec.Namespace, srrName), nil
 }
 
 func (wh *Webhook) getProbeUA(ctx context.Context, pod *corev1.Pod) (string, error) {
@@ -327,7 +442,7 @@ func (wh *Webhook) AdmissionError(uid types.UID, err error) *admissionv1.Admissi
 
 // MustInject checks which inject operation should do for a pod.
 func (wh *Webhook) MustInject(ctx context.Context, pod *corev1.Pod, namespace string) (
-	injectPolicy, injectWs, injectUpload bool, injectSharedPod *bool, perms []appcfg.ProviderPermission,
+	injectPolicy, injectMeshInAgent, injectMeshOutAgent bool, injectSharedPod *bool, perms []appcfg.ProviderPermission,
 	appConfig *appcfg.ApplicationConfig, appMgr *v1alpha1.ApplicationManager, err error) {
 	var isShared bool
 
@@ -345,7 +460,8 @@ func (wh *Webhook) MustInject(ctx context.Context, pod *corev1.Pod, namespace st
 		return
 	}
 
-	appMgr, appConfig, isShared, err = wh.GetAppConfig(namespace)
+	var isSharedApp bool
+	appMgr, appConfig, isShared, isSharedApp, err = wh.GetAppConfig(namespace)
 	if err != nil {
 		if errors.Is(err, api.ErrApplicationManagerNotFound) {
 			err = nil
@@ -364,12 +480,6 @@ func (wh *Webhook) MustInject(ctx context.Context, pod *corev1.Pod, namespace st
 	}
 
 	if !isShared {
-		if appConfig.WsConfig.URL != "" && appConfig.WsConfig.Port > 0 {
-			injectWs = true
-		}
-		if appConfig.Upload.Dest != "" {
-			injectUpload = true
-		}
 		for _, p := range appConfig.Permission {
 			klog.Info("found permission: ", p)
 			if providerP, ok := p.([]interface{}); ok {
@@ -402,7 +512,13 @@ func (wh *Webhook) MustInject(ctx context.Context, pod *corev1.Pod, namespace st
 			}
 
 			if isEntrancePod {
-				injectPolicy = true
+				skip, skipErr := wh.shouldSkipInboundEntranceSidecar(ctx, appConfig, namespace, e.Name)
+				if skipErr != nil {
+					return false, false, false, nil, perms, nil, nil, skipErr
+				}
+				if !skip {
+					injectPolicy = true
+				}
 				break
 			}
 		}
@@ -429,7 +545,83 @@ func (wh *Webhook) MustInject(ctx context.Context, pod *corev1.Pod, namespace st
 		}
 	}
 
+	var declaresSharedCaller bool
+	injectMeshInAgent, declaresSharedCaller, err = wh.shouldInjectMeshInAgent(ctx, appConfig, namespace, isSharedApp)
+	if err != nil {
+		return false, false, false, nil, perms, nil, nil, err
+	}
+	isEntrancePod := isSharedEntranceWorkload(injectSharedPod, pod.GetLabels())
+	injectMeshInAgent = applyOutboundMeshInGate(injectMeshInAgent, isEntrancePod, declaresSharedCaller, pod.GetLabels())
+	injectMeshOutAgent = meshoutagent.ShouldInject(isShared, perms)
 	return
+}
+
+// applyOutboundMeshInGate clears mesh-in when AllowOutboundMeshIn denies the pod.
+func applyOutboundMeshInGate(injectMeshInAgent, isEntrancePod, declaresSharedCaller bool, podLabels map[string]string) bool {
+	if !injectMeshInAgent {
+		return false
+	}
+	if !meshinagent.AllowOutboundMeshIn(isEntrancePod, declaresSharedCaller, podLabels) {
+		return false
+	}
+	return true
+}
+
+func (wh *Webhook) shouldInjectMeshInAgent(ctx context.Context, appConfig *appcfg.ApplicationConfig, ns string, isSharedApp bool) (inject bool, declaresSharedCaller bool, err error) {
+	if appConfig == nil {
+		return false, false, nil
+	}
+	applicationName, err := apputils.FmtAppMgrName(appConfig.AppName, appConfig.OwnerName, ns)
+	if err != nil {
+		return false, false, err
+	}
+	app, err := wh.dynamicClient.AppV1alpha1().Applications().Get(ctx, applicationName, metav1.GetOptions{})
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return false, false, nil
+		}
+		return false, false, err
+	}
+	declaresSharedCaller = meshinagent.DeclaresSharedCaller(app.Spec.Settings)
+	return meshinagent.ShouldInject(app, isSharedApp), declaresSharedCaller, nil
+}
+
+// lookupMeshInGatewayIPs returns the app-gateway-data ClusterIP for iptables -d.
+// Empty means init falls back to the os-gateway Service DNS name.
+func (wh *Webhook) lookupMeshInGatewayIPs(ctx context.Context) string {
+	if wh == nil || wh.kubeClient == nil {
+		return ""
+	}
+	ns := security.AppGatewayNamespace
+	svc, err := wh.kubeClient.CoreV1().Services(ns).Get(ctx, meshinagent.GatewayDataServiceName, metav1.GetOptions{})
+	if err != nil {
+		if !apierrors.IsNotFound(err) {
+			klog.Warningf("mesh-in: get %s/%s: %v", ns, meshinagent.GatewayDataServiceName, err)
+		}
+		klog.Warningf("mesh-in: gateway ClusterIP unavailable; iptables init will fall back to DNS")
+		return ""
+	}
+	ip := strings.TrimSpace(svc.Spec.ClusterIP)
+	if ip == "" || ip == corev1.ClusterIPNone {
+		klog.Warningf("mesh-in: %s/%s has no ClusterIP; iptables init will fall back to DNS", ns, meshinagent.GatewayDataServiceName)
+		return ""
+	}
+	klog.V(4).Infof("mesh-in: gateway ClusterIP %s from %s/%s", ip, ns, meshinagent.GatewayDataServiceName)
+	return ip
+}
+
+// isSharedEntranceWorkload reports whether the pod is a Shared entrance (callee
+// entrypoint). Prefer the Service-selector result from MustInject; also honor an
+// existing shared-entrance label so mesh-in is not injected when selector lookup
+// is temporarily unavailable.
+func isSharedEntranceWorkload(injectSharedPod *bool, podLabels map[string]string) bool {
+	if injectSharedPod != nil && *injectSharedPod {
+		return true
+	}
+	if podLabels == nil {
+		return false
+	}
+	return strings.EqualFold(strings.TrimSpace(podLabels[constants.AppSharedEntrancesLabel]), "true")
 }
 
 func (wh *Webhook) isAppEntrancePod(ctx context.Context, appname, host string, pod *corev1.Pod, namespace string) (bool, error) {
@@ -449,45 +641,6 @@ func (wh *Webhook) isAppEntrancePod(ctx context.Context, appname, host string, p
 	}
 
 	return selector.Matches(labels.Set(pod.GetLabels())), nil
-}
-
-func (wh *Webhook) createSidecarConfigMap(
-	ctx context.Context, pod *corev1.Pod,
-	proxyUUID, namespace string, injectPolicy, injectWs, injectUpload bool,
-	appmgr *v1alpha1.ApplicationManager, appConfig *appcfg.ApplicationConfig,
-	perms []appcfg.ProviderPermission,
-) (string, error) {
-	configMapName := fmt.Sprintf("%s-%s", constants.SidecarConfigMapVolumeName, proxyUUID)
-	if deployName := utils.GetDeploymentName(pod); deployName != "" {
-		configMapName = fmt.Sprintf("%s-%s", constants.SidecarConfigMapVolumeName, deployName)
-	}
-	cm, e := wh.kubeClient.CoreV1().ConfigMaps(namespace).Get(ctx, configMapName, metav1.GetOptions{})
-	if e != nil && !apierrors.IsNotFound(e) {
-		return "", e
-	}
-
-	permCfg, err := apputils.ProviderPermissionsConvertor(perms).ToPermissionCfg(ctx, appConfig.OwnerName, appcfg.GetMarketSource(appmgr))
-	if err != nil {
-		klog.Errorf("Failed to convert permissions for app %s: %v", appConfig.AppName, err)
-		return "", err
-	}
-
-	newConfigMap := sidecar.GetSidecarConfigMap(configMapName, namespace, appConfig, injectPolicy, injectWs, injectUpload, pod, permCfg)
-	if e == nil {
-		// configmap found
-		cm.Data = newConfigMap.Data
-		if _, err := wh.kubeClient.CoreV1().ConfigMaps(namespace).Update(ctx, cm, metav1.UpdateOptions{}); err != nil {
-			klog.Errorf("Failed to update sidecar configmap=%s in namespace=%s err=%v", configMapName, namespace, err)
-			return "", err
-		}
-	} else {
-		if _, err := wh.kubeClient.CoreV1().ConfigMaps(namespace).Create(ctx, newConfigMap, metav1.CreateOptions{}); err != nil {
-			klog.Errorf("Failed to create sidecar configmap=%s in namespace=%s err=%v", configMapName, namespace, err)
-			return "", err
-		}
-	}
-
-	return configMapName, nil
 }
 
 func isNamespaceInjectable(namespace string) bool {
@@ -551,9 +704,21 @@ type EnvKeyValue struct {
 	Value string
 }
 
+// GPUResources is what the gpu-limit webhook injects for the app's compute
+// mode. An empty Resource injects nothing.
+type GPUResources struct {
+	// Resource is the per-container device count resource, set to 1.
+	Resource string
+	// MemoryResource carries Memory, the per-container memory limit in the
+	// form the device plugin expects. Either being empty skips it.
+	MemoryResource string
+	Memory         *string
+	RuntimeClass   string
+}
+
 // CreatePatchForDeployment add gpu env for deployment and returns patch bytes.
-func CreatePatchForDeployment(tpl *corev1.PodTemplateSpec, injectAll bool, injectContainer []string, gpuTypeKey string, gpumem *string, envKeyValues []EnvKeyValue) ([]byte, error) {
-	patches, err := addGpuResourceLimits(tpl, injectAll, injectContainer, gpuTypeKey, gpumem)
+func CreatePatchForDeployment(tpl *corev1.PodTemplateSpec, injectAll bool, injectContainer []string, gpu GPUResources, envKeyValues []EnvKeyValue) ([]byte, error) {
+	patches, err := addGpuResourceLimits(tpl, injectAll, injectContainer, gpu)
 	if err != nil {
 		return []byte{}, err
 	}
@@ -585,13 +750,22 @@ func CreateCleanupPatchForDeployment(tpl *corev1.PodTemplateSpec) ([]byte, error
 }
 
 // gpuResourceKeys lists every extended-resource key the gpu-limit
-// webhook may have injected on a prior install. Keep in sync with
-// addGpuResourceLimits / getGPUResourceTypeKey.
+// webhook may have injected on a prior install: every ExtendedResource /
+// MemoryResource of compute's mode capability table, plus keys that a mode
+// no longer uses (gpu.intel.com/xe for discrete Intel before HAMi).
 var gpuResourceKeys = []string{
 	constants.NvidiaGPU,
 	constants.NvidiaGPUMem,
 	constants.AMDGPU,
 	constants.AMDAPU,
+	constants.IntelIGPU,
+	constants.IntelGPU,
+	constants.IntelVGPU,
+	constants.IntelVGPUMem,
+}
+
+func IsGPUResourceKey(key string) bool {
+	return slices.Contains(gpuResourceKeys, key)
 }
 
 // jsonPointerEscape escapes a string per RFC 6901 so it is safe to use
@@ -639,28 +813,25 @@ func removeGpuResources(tpl *corev1.PodTemplateSpec) []patchOp {
 	return patches
 }
 
-func addGpuResourceLimits(tpl *corev1.PodTemplateSpec, injectAll bool, injectContainer []string, typeKey string, gpumem *string) (patch []patchOp, err error) {
+func addGpuResourceLimits(tpl *corev1.PodTemplateSpec, injectAll bool, injectContainer []string, gpu GPUResources) (patch []patchOp, err error) {
+	typeKey := gpu.Resource
 	if typeKey == "" {
 		klog.Warning("No gpu type selected, skip adding resource limits")
 		return patch, nil
 	}
 
-	// add runtime class for nvidia gpu, HAMi runtime class is "nvidia"
-	if typeKey == constants.NvidiaGPU {
+	if gpu.RuntimeClass != "" {
+		op := constants.PatchOpAdd
 		if tpl.Spec.RuntimeClassName != nil {
-			patch = append(patch, patchOp{
-				Op:    constants.PatchOpReplace,
-				Path:  runtimeClassPath,
-				Value: "nvidia",
-			})
-		} else {
-			patch = append(patch, patchOp{
-				Op:    constants.PatchOpAdd,
-				Path:  runtimeClassPath,
-				Value: "nvidia",
-			})
+			op = constants.PatchOpReplace
 		}
+		patch = append(patch, patchOp{
+			Op:    op,
+			Path:  runtimeClassPath,
+			Value: gpu.RuntimeClass,
+		})
 	}
+	injectMemory := gpu.MemoryResource != "" && gpu.Memory != nil && *gpu.Memory != ""
 
 	for i := range tpl.Spec.Containers {
 		container := tpl.Spec.Containers[i]
@@ -673,8 +844,8 @@ func addGpuResourceLimits(tpl *corev1.PodTemplateSpec, injectAll bool, injectCon
 				typeKey: "1",
 			}
 
-			if gpumem != nil && *gpumem != "" && typeKey == constants.NvidiaGPU {
-				limitsValues[constants.NvidiaGPUMem] = *gpumem
+			if injectMemory {
+				limitsValues[gpu.MemoryResource] = *gpu.Memory
 			}
 
 			patch = append(patch, patchOp{
@@ -687,23 +858,31 @@ func addGpuResourceLimits(tpl *corev1.PodTemplateSpec, injectAll bool, injectCon
 			t := make(map[string]map[string]string)
 			t["limits"] = map[string]string{}
 			for k, v := range container.Resources.Limits {
-				if k.String() == constants.NvidiaGPU ||
-					k.String() == constants.NvidiaGPUMem ||
-					k.String() == constants.AMDAPU {
-					// unset all previous gpu limits
+				if IsGPUResourceKey(k.String()) {
 					continue
 				}
 				t["limits"][k.String()] = v.String()
 			}
 			t["limits"][typeKey] = "1"
-			if gpumem != nil && *gpumem != "" && typeKey == constants.NvidiaGPU {
-				t["limits"][constants.NvidiaGPUMem] = *gpumem
+			if injectMemory {
+				t["limits"][gpu.MemoryResource] = *gpu.Memory
 			}
 			patch = append(patch, patchOp{
 				Op:    constants.PatchOpReplace,
 				Path:  fmt.Sprintf(resourcePath, i),
 				Value: t["limits"],
 			})
+		}
+
+		// An extended resource request must equal its limit, so a request
+		// left over from an earlier mode would block the pod.
+		for _, key := range gpuResourceKeys {
+			if _, ok := container.Resources.Requests[corev1.ResourceName(key)]; ok {
+				patch = append(patch, patchOp{
+					Op:   constants.PatchOpRemove,
+					Path: fmt.Sprintf("/spec/template/spec/containers/%d/resources/requests/%s", i, jsonPointerEscape(key)),
+				})
+			}
 		}
 	}
 
@@ -782,7 +961,7 @@ func (wh *Webhook) getAppKeySecret(namespace string) (string, string, error) {
 	if err != nil {
 		return "", "", err
 	}
-	_, appConfig, isShared, err := wh.GetAppConfig(namespace)
+	_, appConfig, isShared, _, err := wh.GetAppConfig(namespace)
 	if err != nil {
 		klog.Errorf("Failed to get app config err=%v", err)
 		return "", "", err
@@ -914,25 +1093,117 @@ func (wh *Webhook) ShouldInjectMacvlanInit(ctx context.Context, pod *corev1.Pod,
 	return enabled, nil
 }
 
-// CreateMacvlanInitPatch appends the macvlan init container to the pod's
-// init containers (idempotent — does nothing if the container is already
-// present) and returns the JSON merge patch to send back in the admission
-// response.
+// CreateMacvlanInitPatch appends the macvlan init container and injects a
+// collision-free, persisted MAC into the Multus network selection.
 func (wh *Webhook) CreateMacvlanInitPatch(req *admissionv1.AdmissionRequest, pod *corev1.Pod) ([]byte, error) {
+	return wh.CreateMacvlanInitPatchWithContext(context.Background(), req, pod)
+}
+
+func (wh *Webhook) CreateMacvlanInitPatchWithContext(ctx context.Context, req *admissionv1.AdmissionRequest, pod *corev1.Pod) ([]byte, error) {
+	if req == nil {
+		return nil, errEmptyAdmissionRequestBody
+	}
+	if pod == nil {
+		return nil, errors.New("nil pod")
+	}
+	if err := wh.checkFixedMACUpgrade(ctx); err != nil {
+		return nil, err
+	}
+	if err := wh.ensureMasterPlacement(ctx, pod); err != nil {
+		return nil, err
+	}
+	mac, err := wh.ensureOverlayMAC(ctx, pod, req.DryRun != nil && *req.DryRun)
+	if err != nil {
+		return nil, err
+	}
 	if pod.Annotations == nil {
 		pod.Annotations = make(map[string]string)
 	}
-	pod.Annotations["k8s.v1.cni.cncf.io/networks"] = "kube-system/underlay-macvlan"
+	// Rebuild the selection wholesale: chart-authored values (extra networks,
+	// a self-chosen MAC, legacy fields) never reach Multus.
+	pod.Annotations[multusNetworksAnnotation] = platformMacvlanSelection(mac)
+	delete(pod.Annotations, multusDefaultNetworkAnnotation)
 
+	hasReplyInit := false
 	for _, c := range pod.Spec.InitContainers {
 		if c.Name == MacvlanInitContainerName {
 			klog.Infof("macvlan-init: container already present in pod=%s/%s, skip", pod.Namespace, pod.Name)
-			return makePatches(req, pod)
+			hasReplyInit = true
+			break
 		}
 	}
-	// Append after any existing init containers (e.g. sidecar wait-for /
-	// render-envoy-config) so we run after them but still before the main
-	// app containers.
-	pod.Spec.InitContainers = append(pod.Spec.InitContainers, GetMacvlanInitContainer())
+	if !hasReplyInit {
+		// Append after any existing init containers (e.g. sidecar wait-for /
+		// render-envoy-config) so we run after them but still before the main
+		// app containers.
+		pod.Spec.InitContainers = append(pod.Spec.InitContainers, GetMacvlanInitContainer())
+	}
+	// Keep the iptables bypass last: routing setup above only touches ip rules,
+	// while the bypass has to win the head of the nat/filter chains.
+	sidecar.EnsureMacvlanBypassLast(pod)
 	return makePatches(req, pod)
+}
+
+// StripMacvlanAnnotations removes every Multus network selection from a pod
+// whose application is not entitled to the underlay network and returns the
+// admission patch plus the keys that were removed. The pod itself stays
+// admitted: losing an extra NIC is recoverable from the UI, a rejected pod is
+// not.
+func (wh *Webhook) StripMacvlanAnnotations(req *admissionv1.AdmissionRequest, pod *corev1.Pod) ([]byte, []string, error) {
+	if req == nil {
+		return nil, nil, errEmptyAdmissionRequestBody
+	}
+	if pod == nil {
+		return nil, nil, errors.New("nil pod")
+	}
+	removed := stripMacvlanSelectionAnnotations(pod)
+	if len(removed) == 0 {
+		return nil, nil, nil
+	}
+	patch, err := makePatches(req, pod)
+	if err != nil {
+		return nil, removed, err
+	}
+	return patch, removed, nil
+}
+
+// RecordMacvlanEvent tells the user, through a namespaced Event on the pod,
+// what the platform decided about its network selection. Admission dry runs
+// must not leave side effects, so they only log.
+func (wh *Webhook) RecordMacvlanEvent(ctx context.Context, pod *corev1.Pod, ns, reason, message string, dryRun bool) {
+	if pod == nil {
+		return
+	}
+	podName := pod.Name
+	if podName == "" {
+		podName = pod.GenerateName
+	}
+	if dryRun || wh.kubeClient == nil {
+		klog.Infof("macvlan-event: pod=%s/%s reason=%s message=%q (not recorded)", ns, podName, reason, message)
+		return
+	}
+	now := metav1.Now()
+	event := &corev1.Event{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: strings.TrimSuffix(podName, "-") + "-overlay-",
+			Namespace:    ns,
+		},
+		InvolvedObject: corev1.ObjectReference{
+			Kind:       "Pod",
+			APIVersion: "v1",
+			Namespace:  ns,
+			Name:       podName,
+			UID:        pod.UID,
+		},
+		Reason:         reason,
+		Message:        message,
+		Type:           corev1.EventTypeWarning,
+		Source:         corev1.EventSource{Component: "app-service"},
+		FirstTimestamp: now,
+		LastTimestamp:  now,
+		Count:          1,
+	}
+	if _, err := wh.kubeClient.CoreV1().Events(ns).Create(ctx, event, metav1.CreateOptions{}); err != nil {
+		klog.Warningf("macvlan-event: failed to record event pod=%s/%s reason=%s err=%v", ns, podName, reason, err)
+	}
 }

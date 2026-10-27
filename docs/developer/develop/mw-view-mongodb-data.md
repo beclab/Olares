@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Learn how to view and manage MongoDB data in Olares using CLI or Bytebase.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, MongoDB, Bytebase, middleware, NoSQL database, CLI access, manage data
 ---
 # View MongoDB data
 

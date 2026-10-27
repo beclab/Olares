@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 了解 Olares 应用在部署期间的变量注入机制：声明式环境变量（.Values.olaresEnv）与系统自动注入的运行时 Helm Values（.Values.*）。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 环境变量, OlaresManifest, Helm Values, 声明式变量, 运行时变量, 应用部署
 ---
 
 # 环境变量概览

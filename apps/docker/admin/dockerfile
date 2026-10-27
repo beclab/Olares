@@ -1,4 +1,7 @@
-FROM node:24.0.2-alpine as server_dist
+# Build JS on the native builder architecture to avoid QEMU-related crashes.
+# The webpack output is architecture-independent; native runtime dependencies
+# are installed separately for each target architecture below.
+FROM --platform=$BUILDPLATFORM node:26.12.1-alpine AS server_dist
 
 WORKDIR /server_dist
 
@@ -29,7 +32,7 @@ RUN npm run admin:build
 
 
 
-FROM node:16.13.1 as server_dist2
+FROM node:26.12.1-trixie-slim AS server_dist2
 
 WORKDIR /server_dist2/packages/admin
 
@@ -41,7 +44,7 @@ COPY --from=server_dist /server_dist/packages/admin/dist/ .
 
 
 
-FROM node:16.13.1-buster-slim
+FROM node:26.12.1-trixie-slim
 
 EXPOSE 3010
 ENV PL_ASSETS_DIR=/assets

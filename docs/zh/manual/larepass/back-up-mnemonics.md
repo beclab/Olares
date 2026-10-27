@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 学习备份 Olares 账号助记词的正确方法，确保账号安全和数据访问权限。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, LarePass, 备份助记词, Olares ID, 恢复账户, 安全备份
 ---
 
 # 备份助记词

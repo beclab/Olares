@@ -3,6 +3,7 @@ package node
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/url"
 	"os"
 	"text/tabwriter"
@@ -30,8 +31,9 @@ func NewListCommand(f *cmdutil.Factory) *cobra.Command {
 		Short: "list K8s nodes visible to the active profile",
 		Long: `List Kubernetes nodes visible to the active profile.
 
-Output (table mode): NAME, STATUS, ROLES, AGE, VERSION, INTERNAL-IP
-— same shape kubectl uses. STATUS = Ready /
+Output (table mode): NAME, STATUS, ROLES, AGE, VERSION, INTERNAL-IP,
+ARCHITECTURE
+— kubectl-style node columns with architecture included. STATUS = Ready /
 "Ready,SchedulingDisabled" / NotReady / Unknown derived from the
 Ready condition + spec.unschedulable. ROLES are read from
 node-role.kubernetes.io/* labels.
@@ -89,24 +91,25 @@ func runList(ctx context.Context, o *clusteropts.ClusterOptions, p *clusteropts.
 	if o.Quiet {
 		return nil
 	}
-	return renderListTable(items, o.NoHeaders, p, total)
+	return renderListTable(os.Stdout, items, o.NoHeaders, p, total)
 }
 
-func renderListTable(items []Node, noHeaders bool, p *clusteropts.PaginationOptions, totalItems int) error {
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+func renderListTable(out io.Writer, items []Node, noHeaders bool, p *clusteropts.PaginationOptions, totalItems int) error {
+	w := tabwriter.NewWriter(out, 0, 0, 2, ' ', 0)
 	defer w.Flush()
 	if !noHeaders {
-		fmt.Fprintln(w, "NAME\tSTATUS\tROLES\tAGE\tVERSION\tINTERNAL-IP")
+		fmt.Fprintln(w, "NAME\tSTATUS\tROLES\tAGE\tVERSION\tINTERNAL-IP\tARCHITECTURE")
 	}
 	now := time.Now()
 	for _, n := range items {
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\n",
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
 			n.Metadata.Name,
 			n.StatusLabel(),
 			n.Roles(),
 			n.Age(now),
 			clusteropts.DashIfEmpty(n.KubeletVersion()),
 			n.InternalIP(),
+			clusteropts.DashIfEmpty(n.Status.NodeInfo.Architecture),
 		)
 	}
 	w.Flush()

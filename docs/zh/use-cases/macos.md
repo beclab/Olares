@@ -11,7 +11,7 @@ doc_updated: "2026-04-08"
 ---
 
 :::warning
-本页面为 AI 翻译版本，内容仅供快速参考。关键信息建议以[英文原文](../../use-cases/macos.md)为准。
+本文档由 AI 自动翻译，仅供参考。涉及关键操作或信息时，请以[英文原文](../../use-cases/macos.md)为准。
 :::
 
 # 在你的 Olares 设备上运行 macOS 虚拟机
@@ -226,3 +226,4 @@ macOS 虚拟机继续在你的 Olares 设备上运行，并保持就绪状态供
 
 - [dockur/macos GitHub 仓库](https://github.com/dockur/macos)
 - [在你的 Olares 设备上运行 Windows 虚拟机](./windows.md)
+- [使用 QEMU Server 运行 Linux 虚拟机](qemu.md)：创建 Linux 服务器，通过 SSH 或浏览器控制台管理。

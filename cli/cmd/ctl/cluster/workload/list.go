@@ -68,6 +68,19 @@ Pagination: --limit sets the page size per kind (default 100). --page
 picks one 1-indexed page per kind (default 1). --all drains every
 page until exhausted (per-kind, independently) and is mutually
 exclusive with --page > 1.
+
+-o json shapes itself to --kind. With a single kind you get
+{items, totalItems, page, limit, all}; with the default "all" you get
+{kinds:[{kind, items, totalItems}], page, limit, all} instead, because
+each kind was paginated on its own and one flat totalItems would be a
+lie. Handle both, or pass --kind to be sure which one arrives.
+
+Readiness is spelled differently per kind, which is the trap here.
+Deployments and StatefulSets carry .status.replicas /
+.status.readyReplicas; DaemonSets carry .status.desiredNumberScheduled
+/ .status.numberReady. A ready DaemonSet has no readyReplicas at all,
+so a check written against replicas alone reports every DaemonSet as
+down.
 `,
 		Args: cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {

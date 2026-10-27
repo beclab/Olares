@@ -1,5 +1,5 @@
 ---
-description: Learn how to set up your Olares One for the first time, including setting up hardware, installing the client app, creating your Olares account, connecting to your device, installing & activating the system, and logging into your Olares.
+description: Set up Olares One for the first time. Connect the hardware, install LarePass, create an account, activate the system, and log in.
 head:
   - - meta
     - name: keywords
@@ -59,12 +59,16 @@ If wired access is not available, use Bluetooth to configure Wi-Fi credentials.
 1. In the LarePass app, on the device you just found, tap **Install now**.
 2. When installation finishes, tap **Activate now** to initialize the system.
 3. Select a reverse proxy node that is closest to your location and tap **Confirm**. The reverse proxy node acts as a secure gateway for remote access. Choosing the nearest node ensures the fastest connection speed and best stability.
-4. Set the login password for Olares.
-5. Copy or note down your personal desktop URL. You need this URL to access your Olares services.
+4. Select the language for Olares. Olares supports English, Simplified Chinese, German, Spanish, Italian, French, and Japanese.
+   :::info
+   This selection does not change the language of the LarePass app. The remaining activation steps stay in the current LarePass language. After activation, Olares Desktop uses the language selected here.
+   :::
+5. Set the login password for Olares.
+6. Copy or note down your personal desktop URL. You need this URL to access your Olares services.
 
     ![Obtain URL](/images/one/obtain-url.png#bordered)
 
-6. Tap **Got it** to close the prompt.
+7. Tap **Got it** to close the prompt.
 
 ## Step 4: Login to Olares Desktop
 1. Open a web browser on your computer and go to your desktop URL.

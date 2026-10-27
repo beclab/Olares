@@ -27,10 +27,10 @@ func (p *DownloadingCancelingApp) IsAppCreated() bool {
 	return false
 }
 
-func NewDownloadingCancelingApp(c client.Client,
+func NewDownloadingCancelingApp(deps Deps,
 	manager *appsv1.ApplicationManager) (StatefulApp, StateError) {
 
-	return appFactory.New(c, manager, 0,
+	return deps.Factory.New(deps, manager, 0,
 		func(c client.Client, manager *appsv1.ApplicationManager, ttl time.Duration) StatefulApp {
 			return &DownloadingCancelingApp{
 				baseOperationApp: &baseOperationApp{
@@ -40,7 +40,7 @@ func NewDownloadingCancelingApp(c client.Client,
 					},
 					ttl: ttl,
 				},
-				imageClient: images.NewImageManager(c),
+				imageClient: deps.NewImageManager(c),
 			}
 		})
 }
@@ -59,7 +59,7 @@ func (p *DownloadingCancelingApp) exec(ctx context.Context) error {
 		}
 		klog.Infof("im name=%s not found while canceling download, treating as already canceled", p.manager.Name)
 	}
-	if ok := appFactory.cancelOperation(p.manager.Name); !ok {
+	if ok := p.deps.Factory.cancelOperation(p.manager.Name); !ok {
 		klog.Errorf("app %s operation is not ", p.manager.Name)
 	}
 
@@ -140,7 +140,7 @@ func (p *downloadingCancelInProgressApp) poll(ctx context.Context) error {
 }
 
 func (p *downloadingCancelInProgressApp) WaitAsync(ctx context.Context) {
-	appFactory.waitForPolling(ctx, p, func(err error) {
+	p.deps.Factory.waitForPolling(ctx, p, func(err error) {
 		if err != nil {
 			updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.DownloadingCancelFailed, nil, appsv1.DownloadingCancelFailed.String(), appsv1.DownloadingCancelFailed.String())
 			if updateErr != nil {
@@ -151,7 +151,7 @@ func (p *downloadingCancelInProgressApp) WaitAsync(ctx context.Context) {
 			return
 		}
 
-		updateErr := p.updateStatus(context.TODO(), p.manager, appsv1.DownloadingCanceled, nil, appsv1.DownloadingCanceled.String(), appsv1.DownloadingCanceled.String())
+		updateErr := p.finishCancelToCanceled(context.TODO(), p.manager, appsv1.DownloadingCanceled, false)
 		if updateErr != nil {
 			klog.Errorf("update app manager %s to %s state failed %v", p.manager.Name, appsv1.InstallingCanceled.String(), updateErr)
 			return

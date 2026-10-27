@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Manage organization members in Olares Space. Add new users under your custom domain and configure member access for your organization.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Olares Space, domain management, members, custom domain, organization
 ---
 
 # Manage domain members

@@ -1,17 +1,19 @@
 ---
 description: 在 Olares 中管理团队成员用户。掌握团队成员添加、权限设置和资源分配方法，提升团队运营效率。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 多用户, 团队成员, 用户管理, 资源配额, 创建用户, 删除用户
 ---
 # 管理多用户
 
 Olares 支持多用户。作为管理员，你可以创建并管理团队成员，同时确保系统安全和资源高效使用。
 
-:::tip 角色权限说明
-作为管理员角色，超级管理员和管理员在大多数系统管理权限上相同，但只有**超级管理员**可以创建或管理管理员用户。管理员只能创建和管理成员用户。详情见[角色与权限](roles-permissions.md)。
-:::
+分配角色前，请先查看[角色与权限](roles-permissions.md)，确认成员、管理员和超级管理员分别可以执行哪些操作。
 
 ![管理多用户](/images/zh/manual/olares/manage-users.png#bordered)
 
-## 开始之前
+## 准备工作
 
 请确保：
 
@@ -43,7 +45,7 @@ Olares 支持多用户。作为管理员，你可以创建并管理团队成员�
 
 :::tip
 新用户无需本地安装 Olares 即可通过激活向导激活用户。
-详细说明请参阅[激活 Olares](../../get-started/activate-olares){target="_blank"}。
+详细说明请参阅[加入 Olares 集群](../../get-started/join-olares){target="_blank"}。
 :::
 
 ## 删除用户

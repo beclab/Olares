@@ -21,9 +21,16 @@ spec:
         app: monitoring-server
     spec:
       priorityClassName: "system-cluster-critical"
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node-role.kubernetes.io/control-plane
+                    operator: Exists
       containers:
       - name: monitoring-server
-        image: beclab/monitoring-server-v1:v0.3.15
+        image: beclab/monitoring-server-v1:v0.3.16
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8000

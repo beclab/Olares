@@ -1,22 +1,25 @@
 ---
 outline: [2, 3]
 description: Install Olares on NVIDIA DGX Spark using the command-line installation script for quick deployment.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, DGX Spark script, NVIDIA DGX Spark, command line install, GPU memory
 ---
 
 # Install Olares on DGX Spark via script
 
 This guide explains how to install Olares on NVIDIA DGX Spark using the command-line installation script.
 
-<!--@include: ./reusables.md#installation-troubleshooting-tip-->
+## Prerequisites
 
-## System requirements
-
-- **DGX Spark**: Ensure your device has completed the [initial setup](https://docs.nvidia.com/dgx/dgx-spark/first-boot.html), with a user account created and network configured.
-- **Storage**: At least 150 GB of available SSD storage on DGX Spark.
-- **Access method**: You need access to the terminal on DGX Spark, either via:
+- **Olares device**: NVIDIA DGX Spark with at least 150 GB of available SSD storage.
+<!--@include: ./reusables.md#larepass-prerequisite-->
+- **Initial setup**: DGX Spark has completed the [initial setup](https://docs.nvidia.com/dgx/dgx-spark/first-boot.html), including user account and network configuration.
+- **Terminal access**: Use either method:
   - Direct access: Connect a monitor, keyboard, and mouse to DGX Spark.
   - Remote access: Connect via SSH from another computer on the same network.
-- **Network**: An Ethernet cable connecting DGX Spark to your router (recommended for stable connection).
+- **Network**: An Ethernet connection to your router is recommended.
 
 ## Prepare DGX Spark
 
@@ -64,7 +67,7 @@ Use the Wizard URL and initial one-time password to activate. This process conne
 2. Enter the one-time password and click **Continue**.
 
    ![Enter password](/images/manual/get-started/wizard-enter-password1.png#bordered)
-3. Select the system language.
+3. Select the system language. Olares supports English, Simplified Chinese, German, Spanish, Italian, French, and Japanese. The Wizard switches to the selected language immediately, and Olares Desktop uses the same language after activation.
 
    ![Select language](/images/manual/get-started/select-language.png#bordered)
 4. Select a reverse proxy node that is geographically closest to your location. You can adjust this later on the [Change reverse proxy](../olares/settings/change-frp.md) page.
@@ -103,3 +106,5 @@ If needed, you can manually adjust the memory allocation for each AI application
 4. In the **Edit VRAM allocation** dialog, enter the desired VRAM amount in GB and click **Confirm**.
 
 <!--@include: ./reusables.md#protect-olares-id-->
+
+<!--@include: ./reusables.md#installation-troubleshooting-tip-->

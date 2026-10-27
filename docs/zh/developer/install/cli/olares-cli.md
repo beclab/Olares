@@ -1,64 +1,92 @@
 ---
 outline: [2, 3]
-description: 在 Olares 主机上运行的所有 olares-cli 命令的字母顺序参考。包含语法、结构，以及指向各命令详情页（含选项和示例）的链接。
+description: 在 Olares 设备终端中使用常用 Olares CLI 命令检查系统状态、收集日志、重置密码和管理存储。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, olares-cli, 设备终端, 系统日志, 重置密码, 磁盘存储, GPU 状态
 ---
-# 命令参考
 
-本页是在 Olares 主机上运行的所有 `olares-cli` 命令的字母顺序参考。你可以在这里查找某条命令的语法、选项和示例。对于以登录用户身份、或在 Olares 应用内部运行的命令，参见[搭配 AI Agent 使用](../../cli-overview.md#了解更多)。
+# Olares CLI 常用命令
 
-:::warning 适用于 Olares 1.12.X
-如果你的 Olares 版本是 1.12.X，请使用此版本的参考。
-:::
+Olares OS 在 `/usr/local/bin/olares-cli` 中内置了 `olares-cli`。本页介绍系统维护和故障排查时，最常需要你在 Olares 设备终端中亲自运行的命令。
 
-:::info 需要 root 权限
-大多数 `olares-cli` 命令都需要 root 权限。请使用 root 用户执行命令，或在命令前加上 `sudo`。
-:::
+如需通过自然语言管理文件、应用、设置等 Olares 功能，请参阅[通过 AI Agent 使用 Olares CLI](../../cli-install.md)。
 
-:::info 在 WSL 中使用 olares-cli
-如果通过 WSL（Windows Subsystem for Linux）方式安装了 Olares，请在 WSL 环境中运行 `olares-cli`。在 PowerShell 中：
+## 准备工作
 
-```powershell
-wsl -d Ubuntu
+- 在你管理的设备上[访问 Olares 终端](../../../manual/access-olares-terminal.md)。
+- 需要系统权限的命令请使用 `sudo` 运行。
+- 运行 `olares-cli help` 或 `olares-cli <command> --help`，查看当前安装版本提供的命令和选项。
+
+## 检查系统状态
+
+检查 Olares 服务是否正常运行，并查看当前安装或升级状态：
+
+```bash
+olares-cli status
 ```
+
+如果设备配有 NVIDIA GPU，可检查驱动和服务状态：
+
+```bash
+olares-cli gpu status
+```
+
+## 收集系统日志
+
+将系统、Kubernetes、容器、内核和网络诊断信息收集到一个压缩包中：
+
+```bash
+mkdir -p "$HOME/olares-logs"
+sudo olares-cli logs --max-lines 0 --output-dir "$HOME/olares-logs"
+```
+
+命令输出的最后一行会显示压缩包路径。日志可能包含系统隐私信息，请只通过私密支持渠道提供。
+
+了解更多：[收集诊断信息](../../../manual/collect-diagnostic-information.md)。
+
+## 重置忘记的桌面密码
+
+将 `<username>` 替换为 Olares ID 中 `@` 之前的部分：
+
+```bash
+olares-cli user reset-password <username> -p <new-password>
+```
+
+如果命令返回权限错误，请按照[忘记桌面登录密码](../../../manual/help/ts-forget-login-password.md)中的说明检查错误，并选择下一步操作。
+
+## 释放磁盘空间
+
+在 Olares 1.12.6 及以上版本中，列出未被标准工作负载引用的容器镜像：
+
+```bash
+olares-cli doctor images --unused
+```
+
+删除前请逐项检查结果。自定义工作负载仍可能依赖列表中的镜像。
+
+了解更多：[释放磁盘空间](../../../manual/free-up-disk-space.md)。
+
+## 扩展系统存储
+
+对于基于 LVM 的 Olares 安装，先检查哪些磁盘可以加入系统卷：
+
+```bash
+olares-cli disk list-unmounted
+```
+
+:::warning 所选磁盘上的数据会被清除
+扩容流程会清除所选磁盘上的所有数据，并将磁盘合并到 Olares 系统卷中。请先备份磁盘数据。
 :::
 
-## 语法
-Olares 命令行工具使用如下语法：
+请按照[扩展 Olares 系统存储](../../../manual/best-practices/expand-storage-in-olares.md)中的步骤识别目标磁盘、执行扩容并检查结果。
 
-> `olares-cli 命令 [子命令] [参数] [选项]`
+## 相关指南
 
-其中：
-- `命令`：指定要执行的主要操作，例如 `olares-cli install`。
-- `子命令`：进一步指定命令的具体任务，适用于支持子操作的命令。例如 `wizard` 或 `component`。
-- `参数`：指定命令的目标资源或输入数据，通常是 ID、名称或文件路径。例如，在 `olares-cli user activate <Olares ID> [选项]` 中，`<Olares ID>` 就是该命令的参数。
-- `选项`：可选参数，用于修改命令的行为。包括标志（flags）和带参数的选项。
+以下 Olares CLI 命令属于较长的操作流程，不应脱离对应指南单独运行：
 
-通过 Olares 命令行工具，你可以临时覆盖某些 Olares 默认设置。每个选项仅对当前执行的命令生效。
-
-例如，在执行 `olares-cli download wizard` 时使用 `--base-dir` 选项，只会影响向导的下载过程，而不会改变其他命令（如“安装”阶段）的基础目录。
-
-如需查看任何命令的详细帮助信息，请运行 `olares-cli help`。
-
-## 可用命令列表
-
-| 操作 | 语法   | 说明   |
-|--|--|--|
-| `backups` | `olares-cli backups <子命令> [选项]`  | 管理备份相关操作。 |
-| `change-ip` | `olares-cli change-ip [选项]` | 修改 Olares OS 的 IP 地址。 |
-| `disk` | `olares-cli disk <子命令>` | 管理 Olares 系统存储资源。 |
-| `download` | `olares-cli download <子命令> [选项]` | 下载指定资源。 |
-| `gpu` | `olares-cli gpu <子命令> [选项]` | 管理 GPU 相关的操作。 |
-| `info` | `olares-cli info [选项]`  | 显示已下载的 Olares OS 的常规信息。|
-| `install` | `olares-cli install [选项]` | 部署 Olares 的系统级和用户级组件。|
-| `logs` | `olares-cli logs [选项]` | 收集 Olares 系统组件的日志，用于调试和故障排查。 |
-| `node`  | `olares-cli node <子命令> [选项]` | 管理节点相关的操作。 |
-| `osinfo` | `olares-cli osinfo <子命令> [选项]` | 显示当前设备的操作系统信息。 |
-| `precheck`| `olares-cli precheck [选项]` | 检查系统环境是否满足 Olares 安装要求。|
-| `prepare` | `olares-cli prepare [选项]` | 为安装过程准备环境，包括设置 Olares 的基础服务和配置。 |
-| `release` | `olares-cli release [选项]` | 打包 Olares 安装资源以供分发或部署。|
-| `start` | `olares-cli start [选项]` | 启动 Olares 服务和组件。 |
-| `status` | `olares-cli status [选项]` | 查询本机 olaresd 守护进程，输出当前 Olares 系统状态。 |
-| `stop` | `olares-cli stop [选项]` | 停止 Olares 服务和组件。 |
-| `uninstall` | `olares-cli uninstall [选项]` | 完全卸载 Olares，或将安装回滚到特定阶段。 |
-| `upgrade` | `olares-cli upgrade <子命令> [选项]` | 升级 Olares，检查升级准备情况与兼容性。 |
-| `user` | `olares-cli user <子命令> [选项]`| 管理 Olares 用户。 |
+- [安装特定 CUDA 版本](../../../manual/best-practices/install-specific-cuda-version.md)：自动配置无法满足需求时，安装或启用 GPU 支持。
+- [通过命令行安装并激活 Olares](../../../manual/best-practices/activate-olares-using-cli.md)：在设备终端中初始化新设备。
+- [搭建 Olares 多节点集群](../../../manual/best-practices/install-olares-multi-node.md)：启用共享存储并添加工作节点。
+- [升级双节点 Olares 集群](../../../one/upgrade-multi-node-cluster.md)：手动协调主节点和工作节点的升级。

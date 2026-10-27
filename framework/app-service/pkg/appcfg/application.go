@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"time"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	manifestsysv1alpha1 "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
 
@@ -108,6 +110,11 @@ type ApplicationConfig struct {
 	SharedEntrances      []Entrance
 	SelectedGpuType      string
 	Accelerator          []ResourceMode
+	// SupportArch mirrors spec.supportArch in OlaresManifest.yaml. When it
+	// declares exactly one architecture (amd64 or arm64) the pod-arch
+	// mutating webhook pins the app's pods to matching nodes via a
+	// kubernetes.io/arch nodeSelector.
+	SupportArch []string
 	// NeedsSharedAccess signals that the app needs cross-namespace access to
 	// a shared app's services (e.g. for service-mesh sidecar injection).
 	// Force-set to true for SHARED apps in toApplicationConfig regardless of
@@ -118,6 +125,7 @@ type ApplicationConfig struct {
 	LLMGatewaySupported bool
 	OverlayGateway      OverlayGateway
 	WorkloadReplicas    *WorkloadReplicas
+	WorkloadOptions     WorkloadOptions
 	TemplateOnly        bool
 
 	// Shared mirrors options.shared in OlaresManifest.yaml. Only meaningful
@@ -143,6 +151,14 @@ type ApplicationConfig struct {
 	// for market installs (push events then fall back to the installing
 	// user); otherwise the uploading user.
 	ChartOwner string
+
+	// LoginOlaresCLI mirrors permission.loginOlaresCLI in
+	// OlaresManifest.yaml: the app asks for a long-lived Olares credential
+	// belonging to its owner, mounted read-only into every container so
+	// olares-cli inside the pod starts out logged in. oac restricts the
+	// field to an allowlist, so by the time it reaches here the app has
+	// already been vetted.
+	LoginOlaresCLI bool
 }
 
 func (c *ApplicationConfig) IsMiddleware() bool {
@@ -193,7 +209,66 @@ func (c *ApplicationConfig) HasClusterSharedCharts() bool {
 // enforced by convention (the manifest is the source of truth), and
 // the helpers below are kept consistent with that assumption.
 func (c *ApplicationConfig) HasWorkloadReplicas() bool {
-	return c.WorkloadReplicas != nil && len(*c.WorkloadReplicas) > 0
+	return len(c.EffectiveWorkloadReplicas()) > 0
+}
+
+// EffectiveWorkloadReplicas returns the schema-independent replica view used
+// by install, scale, suspend, and resume. workloadOptions is authoritative
+// when present; legacy workloadReplicas remains the fallback for manifests
+// older than 0.16.0.
+func (c *ApplicationConfig) EffectiveWorkloadReplicas() WorkloadReplicas {
+	if len(c.WorkloadOptions) > 0 {
+		result := make(WorkloadReplicas, len(c.WorkloadOptions))
+		for name, option := range c.WorkloadOptions {
+			if option.Replicas != nil {
+				result[name] = *option.Replicas
+			}
+		}
+		return result
+	}
+	if c.WorkloadReplicas == nil {
+		return nil
+	}
+	result := make(WorkloadReplicas, len(*c.WorkloadReplicas))
+	for name, replicas := range *c.WorkloadReplicas {
+		result[name] = replicas
+	}
+	return result
+}
+
+// EffectiveOverlayGateway returns the schema-independent overlay gateway
+// configuration consumed by the existing runtime. For workloadOptions, the
+// surrounding map key supplies the workload that used to be repeated on each
+// top-level entrance.
+func (c *ApplicationConfig) EffectiveOverlayGateway() OverlayGateway {
+	if len(c.WorkloadOptions) == 0 {
+		return c.OverlayGateway
+	}
+
+	workloads := make([]string, 0, len(c.WorkloadOptions))
+	for workload := range c.WorkloadOptions {
+		workloads = append(workloads, workload)
+	}
+	sort.Strings(workloads)
+
+	result := OverlayGateway{}
+	for _, workload := range workloads {
+		gateway := c.WorkloadOptions[workload].OverlayGateway
+		if gateway == nil {
+			continue
+		}
+		result.Enable = true
+		for _, entrance := range gateway.Entrances {
+			result.Entrances = append(result.Entrances, OverlayEntrance{
+				Title:       entrance.Title,
+				Port:        entrance.Port,
+				Workload:    workload,
+				Description: entrance.Description,
+				Protocol:    entrance.Protocol,
+			})
+		}
+	}
+	return result
 }
 
 // DesiredReplicas returns the declared replica count for the given
@@ -205,10 +280,7 @@ func (c *ApplicationConfig) HasWorkloadReplicas() bool {
 // HasWorkloadReplicas before treating the result as a definitive
 // scale-up target.
 func (c *ApplicationConfig) DesiredReplicas(name string) int32 {
-	if c.WorkloadReplicas == nil {
-		return 1
-	}
-	if v, ok := (*c.WorkloadReplicas)[name]; ok {
+	if v, ok := c.EffectiveWorkloadReplicas()[name]; ok {
 		return v
 	}
 	return 1
@@ -241,6 +313,16 @@ func (c *ApplicationConfig) GetEntrances(ctx context.Context) (map[string]Entran
 
 func (c *ApplicationConfig) GenSharedEntranceURL(ctx context.Context) ([]Entrance, error) {
 	app := &Application{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels: map[string]string{
+				constants.AppSharedLabel: func() string {
+					if c.IsShared() {
+						return "true"
+					}
+					return "false"
+				}(),
+			},
+		},
 		Spec: ApplicationSpec{
 			Appid:           c.AppID,
 			Owner:           c.OwnerName,

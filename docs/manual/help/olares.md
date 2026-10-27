@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Find answers to common questions about the Olares platform.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, FAQ, personal cloud, LarePass, Olares ID, open source, backup
 ---
 
 # Olares FAQs

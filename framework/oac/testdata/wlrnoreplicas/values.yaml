@@ -1,0 +1,3 @@
+workloads:
+  wlrnoreplicas:
+    replicaCount: 1

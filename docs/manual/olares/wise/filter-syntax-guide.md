@@ -1,6 +1,10 @@
 ---
 outline: [2,4]
 description: Explain key syntax rules and available filters in Wise.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Wise, filter syntax, query language, search parameters, operators
 ---
 # Filter syntax reference
 

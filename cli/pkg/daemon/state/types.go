@@ -81,11 +81,20 @@ type State struct {
 	// OsVersion is the OS version string, e.g. "22.04".
 	OsVersion string `json:"os_version"`
 
+	// OsKernel is the kernel release string from GetMachineInfo (OS_KERNEL).
+	// It is daemon-internal: excluded from /system/status so that endpoint's
+	// wire format stays unchanged. /system/node-status projects it as os_kernel.
+	OsKernel string `json:"-"`
+
 	// CpuInfo is the CPU model name as reported by the OS.
 	CpuInfo string `json:"cpu_info"`
 
 	// GpuInfo is the GPU model name when one is detected.
 	GpuInfo *string `json:"gpu_info,omitempty"`
+
+	// GPUList lists all detected GPU model names as "Vendor Product".
+	// Empty when no GPU is detected; always present as an array on the wire.
+	GPUList []string `json:"gpu_list"`
 
 	// Memory is the total physical memory, formatted as "<n> G".
 	Memory string `json:"memory"`

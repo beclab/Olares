@@ -25,7 +25,7 @@ workloadReplicas:
 **Self-check (inspect the files directly — do not rely on any tool):**
 
 1. `OlaresManifest.yaml` top-level `workloadReplicas` lists **every** Deployment/StatefulSet the chart renders (by rendered `metadata.name`) → its replica count. **DaemonSets are excluded** (one-per-node, not replica-controlled).
-2. Every listed workload's template sets `spec.replicas: {{ .Values.workloads.<name>.replicaCount }}` — **never a hardcoded number**. This `spec.replicas` is the Deployment/StatefulSet **template's** spec under `templates/`, a different field from the manifest's top-level `spec` — don't conflate the two.
+2. Every listed workload's template sets `spec.replicas: {{ .Values.workloads.<name>.replicaCount }}` — **never a hardcoded number**. If the workload name contains a dash, write `spec.replicas: {{ (index .Values.workloads "<name>").replicaCount }}` instead; Helm's dotted syntax cannot reach a dashed key and the chart fails to render. This `spec.replicas` is the Deployment/StatefulSet **template's** spec under `templates/`, a different field from the manifest's top-level `spec` — don't conflate the two.
 3. `values.yaml` carries a matching `workloads.<name>.replicaCount` for each. The `.Values.workloads.*` value is documented in the system-injected Helm values reference.
 
 **Why the template wiring matters (non-obvious).** app-service drives the whole lifecycle through this Helm value: install is two-phase (helm renders at `replicas: 0`, then scales up), suspend scales every listed workload to `0`, resume scales back to the declared counts. If a template **hardcodes** `replicas`, **suspend/resume and the staged install silently stop working** — the value override has nothing to drive.
@@ -53,10 +53,10 @@ For deploying to your own Olares, metadata can stay a stub as long as `lint` pas
 ```yaml
 metadata:
   name: myapp                 # must match folder + Chart.yaml name; do not change casually
-  appid: myapp                # app identifier; set = name. from-compose scaffolds it; backs the entrance domain <appid>.<zone>
+  appid: myapp                # app identifier; set = name. from-compose scaffolds it
   title: My App               # stub title=name is OK for local deploy
   description: One-line summary
-  icon: https://app.cdn.olares.com/appstore/default/defaulticon.webp  # default OK for local deploy
+  icon: https://app.cdn.olares.com/appstore/default/defaulticon.webp  # default OK for local deploy; "official icon" → pinned upstream URL, see entrances
   version: 0.0.1              # Chart Version — MUST equal Chart.yaml `version`; bump on each (re)upload
   categories:
   - Utilities                 # stub OK for local deploy; lint does not enum-check
@@ -67,11 +67,13 @@ spec:
 
 > **Resource envelope (optional, under `spec`):** a non-accelerator app sets flat `spec.requiredCpu` / `limitedCpu` / `requiredMemory` / `limitedMemory` / `requiredDisk` (no `mode`); a GPU/accelerator app uses `spec.accelerator[]` instead — the two are mutually exclusive. See the Accelerator sizing §A.1.
 
-> **`appid` vs `lint`:** `chart lint` only requires `name`, `icon`, `description`, `title`, `version` (`appid` is `omitempty` in the schema, so a chart lints without it). But `from-compose` always writes `appid: <name>`, and the platform uses it as the app's identity (e.g. the entrance host `<appid>.<zone>` — see the system-injected Helm values reference). **Keep `appid` present and equal to `metadata.name`** when hand-authoring a manifest (e.g. from a generic Helm chart); rename it alongside `name` / the folder / `Chart.yaml`. **`lint` passes without it; `market upload` does not** — omitting it produces `upload payload missing ... metadata.appid`.
+> **`appid` vs `lint`:** `chart lint` only requires `name`, `icon`, `description`, `title`, `version` (`appid` is `omitempty` in the schema, so a chart lints without it). `market upload` accepts it missing too — the chart uploads and publishes, with the platform supplying the value. **Keep `appid` present and equal to `metadata.name`** anyway when hand-authoring a manifest (e.g. from a generic Helm chart), and rename it alongside `name` / the folder / `Chart.yaml`: a value someone else decides for you is one you will eventually misread, and a mismatch is harder to notice than an absence. (`upload payload missing ... metadata.appid` comes from Market's internal payload path, not from uploading a chart that omits the field.) It does not decide the entrance host, which the platform derives from the app name — see the system-injected Helm values reference.
 
 ### Keep as stub (deploy to your Olares)
 
-Keep the stub: `Utilities` category, default icon, and empty `spec.developer`/`submitter`/`website`/`sourceCode`/`fullDescription`/`featuredImage`/`promoteImage`/`locale`/`supportArch` are all fine (skip `supportArch` unless using accelerator modes). Optional polish: set `metadata.title`/`description` to something readable and `spec.versionName` to the upstream version.
+Keep the stub: `Utilities` category, default icon, and empty `spec.developer`/`submitter`/`website`/`sourceCode`/`fullDescription`/`featuredImage`/`promoteImage`/`locale` are all fine. Optional polish: set `metadata.title`/`description` to something readable and `spec.versionName` to the upstream version.
+
+**`spec.supportArch` is not part of the stub** — `lint` requires it and rejects an empty list, so it must name the arch you actually built (one entry for a local deploy). See the Image capability.
 
 ## 2. Storage (compose volumes → Olares userspace)
 
@@ -92,9 +94,13 @@ In the deployment template, replace the PVC mount with the injected host path (`
       volumes:
       - name: app-data
         hostPath:
-          path: {{ .Values.userspace.appData }}/myapp
+          path: {{ .Values.userspace.appData }}
           type: DirectoryOrCreate
 ```
+
+> The injected value already ends in the app's own name, so appending it again
+> lands the data one level deeper than intended. Add a subdirectory only to
+> organize *within* the app's area.
 
 > Anything declared in a template (`.Values.userspace.appData/appCache/userData`) MUST have the matching `permission` field, or `lint`'s app-data cross-check fails. Drop leftover kompose PVCs.
 
@@ -104,35 +110,11 @@ In the deployment template, replace the PVC mount with the injected host path (`
 
 Replace any bundled `postgres`/`redis`/`mongodb`/`mysql`/`mariadb`/`minio`/`rabbitmq`/`nats` workload with Olares **system middleware**, prefer Postgres over a bundled SQLite, and depend on an already-ported companion app instead of copying its workload. `lint` does **not** flag a bundled db, so this is on you. Full rules — the SQLite→Postgres decision, the `middleware:` block, the PostgreSQL extension catalog, `type: application` dependencies, and the self-hosted escape hatch — are in the Middleware & dependencies area. Env wiring of the `.Values.<mw>.*` values is in the Env area.
 
-> The `olares` `type: system` dependency (see "System dependency: olares") is a **separate, always-required** entry in `options.dependencies` — keep it when you add or remove middleware / application dependencies.
+> The `olares` `type: system` dependency ([System dependency: olares](#system-dependency-olares-required)) is a **separate, always-required** entry in `options.dependencies` — keep it when you add or remove middleware / application dependencies.
 
 ## 4. Entrances & ports
 
-The stub has one auto-detected entrance. Adjust:
-
-```yaml
-entrances:
-- name: myapp
-  host: myapp-svc        # an existing Service name in templates/
-  port: 8080             # the Service port
-  title: My App
-  authLevel: private     # public | private | internal
-  invisible: false       # true for internal-only services
-```
-
-- **One entrance per user-facing HTTP service.** Add entries for additional UIs; set `invisible: true` (or omit the entrance) for internal-only services.
-- **No web UI at all** (a CLI tool, an MCP server, an API daemon)? Don't force a fake entrance — apply the headless archetype: a web terminal as the visible entrance + the service port as an invisible internal entrance (the headless archetype).
-- **Non-HTTP services** (game server, SMTP, RDP, …) are exposed via `ports[]`, not entrances:
-  ```yaml
-  ports:
-  - name: game
-    host: game-svc
-    port: 7777
-    protocol: udp
-    exposePort: 47777    # cluster-unique; avoid reserved 22/80/81/443/444/2379/18088
-  ```
-- **Outbound non-HTTP** (e.g. the app sends SMTP): `options.allowedOutboundPorts: [465, 587]`.
-- **Long-running HTTP requests** (LLM streaming, big uploads, slow report generation): the per-app **entrance proxy** caps every request at `options.apiTimeout` **seconds** — **default 15s**, so anything slower is cut at the entrance (504 / closed connection) regardless of the app or browser. Set `options.apiTimeout: 0` to disable the cap, or a large value (e.g. `3600`) for a bounded one. **Only `0` disables it** — a *negative* value is not "no timeout"; the sidecar treats it (like an unset field) as the 15s default. It is an install-time **manifest** field (not an install-time env), so for `templateOnly` env-driven charts you must edit it in the chart manifest and re-package.
+The stub has one auto-detected entrance with `openMethod: default` and the default icon. Its fields — `openMethod` (open in a new browser tab vs. inside the Desktop), `icon`, `authLevel`, `invisible` — plus `ports[]`, outbound ports and the entrance request cap are in [entrances](olares-chart-entrances.md).
 
 ## After refining
 

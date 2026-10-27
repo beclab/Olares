@@ -107,6 +107,9 @@ func (m *RemoveReleaseFileModule) Init() {
 type CheckPreparedModule struct {
 	common.KubeModule
 	Force bool
+	// ForJoin applies the stricter rules a node must satisfy to join an
+	// existing cluster. See CheckPrepared.
+	ForJoin bool
 }
 
 func (m *CheckPreparedModule) Init() {
@@ -114,7 +117,7 @@ func (m *CheckPreparedModule) Init() {
 
 	checkPrepared := &task.LocalTask{
 		Name:   "CheckPrepared",
-		Action: &CheckPrepared{Force: m.Force},
+		Action: &CheckPrepared{Force: m.Force, ForJoin: m.ForJoin},
 	}
 
 	checkTimeSync := &task.LocalTask{
@@ -322,8 +325,18 @@ func (m *StopOlaresModule) Init() {
 		minIOServiceName,
 		cniDhcpServiceName,
 	} {
-		if serviceExists(service) {
-			m.Tasks = append(m.Tasks, newStopServiceTask(service))
+		if !serviceExists(service) {
+			continue
+		}
+		m.Tasks = append(m.Tasks, newStopServiceTask(service))
+		// The juicefs client force-exits when its own umount does not finish in
+		// 30s, leaving a dead mount behind that systemd reports as a clean stop.
+		// Detach it here so the node is not left with a poisoned mount point.
+		if service == juiceFSServiceName {
+			m.Tasks = append(m.Tasks, &task.LocalTask{
+				Name:   "CleanupStaleJuiceFSMount",
+				Action: new(storage.CleanupStaleJuiceFSMount),
+			})
 		}
 	}
 	if len(m.Tasks) == 0 {
@@ -367,9 +380,19 @@ func (m *StartOlaresModule) Init() {
 		// backupETCDServiceName,
 		containerdServiceName,
 	} {
-		if serviceExists(service) {
-			m.Tasks = append(m.Tasks, newStartServiceTask(service))
+		if !serviceExists(service) {
+			continue
 		}
+		// A previous shutdown (or a crash) can leave a dead fuse.juicefs mount
+		// on the rootfs, which makes every subsequent mount fail. Detach it
+		// first, otherwise juicefs.service crash-loops and k3s never starts.
+		if service == juiceFSServiceName {
+			m.Tasks = append(m.Tasks, &task.LocalTask{
+				Name:   "CleanupStaleJuiceFSMount",
+				Action: new(storage.CleanupStaleJuiceFSMount),
+			})
+		}
+		m.Tasks = append(m.Tasks, newStartServiceTask(service))
 	}
 	k3sServiceExists := serviceExists(k3sServiceName)
 	kubeletServiceExists := serviceExists(kubeletServiceName)
@@ -397,8 +420,8 @@ func (m *StartOlaresModule) Init() {
 			Prepare: &prepare.InitialDelay{
 				Duration: 30 * time.Second,
 			},
-			Name:   "EnsurePodsUpAndRunningAgain",
-			Action: &CheckKeyPodsRunning{Node: m.Runtime.GetLocalHost().GetName()},
+			Name:   "EnsureSystemComponentsUpAndRunningAgain",
+			Action: &CheckSystemComponentsReady{Node: m.Runtime.GetLocalHost().GetName()},
 			Delay:  10 * time.Second,
 			Retry:  60,
 		})
@@ -697,10 +720,45 @@ func (m *ChangeIPModule) addKubernetesTasks() {
 }
 
 func (m *ChangeIPModule) addRestartTasks() {
+	newNodeName := m.Runtime.GetLocalHost().GetName()
+
+	m.Tasks = append(m.Tasks,
+		&task.LocalTask{
+			Name:   "WaitForKubeAPIServerUp",
+			Action: new(precheck.GetKubernetesNodesStatus),
+			Retry:  20,
+		})
+
+	hostnameChanged, _ := m.PipelineCache.GetMustBool(common.CacheHostnameChanged)
+	// ensureNode scopes the final readiness check. For a same-node IP change we
+	// keep checking the (stable) local node. For a hostname change we check the
+	// whole cluster ("" = all nodes): right after the old node is deleted its
+	// pods are recreated as unscheduled Pending replacements (empty NodeName),
+	// which a new-node-scoped check would skip, so it could pass before the
+	// workloads actually reschedule and become ready.
+	ensureNode := newNodeName
+	if hostnameChanged {
+		ensureNode = ""
+		m.addRenamedNodeMigrationTasks(newNodeName)
+	} else {
+		m.addSameNodeRestartTasks(newNodeName)
+	}
+
+	m.Tasks = append(m.Tasks, &task.LocalTask{
+		Name:   "EnsureSystemComponentsUpAndRunningAgain",
+		Action: &CheckSystemComponentsReady{Node: ensureNode},
+		Delay:  10 * time.Second,
+		Retry:  60,
+	})
+}
+
+// addSameNodeRestartTasks is the original change-ip behavior: the node name is
+// unchanged, so pods pinned to the host IP are deleted and awaited for recreation.
+func (m *ChangeIPModule) addSameNodeRestartTasks(newNodeName string) {
 	restartPodsTasks := []task.Interface{
 		&task.LocalTask{
 			Name:   "RestartAllPods",
-			Action: &DeleteAllPods{Node: m.Runtime.GetLocalHost().GetName()},
+			Action: &DeleteAllPods{Node: newNodeName},
 			Retry:  5,
 			Delay:  15 * time.Second,
 		},
@@ -723,20 +781,59 @@ func (m *ChangeIPModule) addRestartTasks() {
 			},
 		}
 	}
+	m.Tasks = append(m.Tasks, restartPodsTasks...)
+}
+
+// addRenamedNodeMigrationTasks handles the case where the hostname changed before
+// change-ip ran: k3s registers a brand-new node under the new name. We restore
+// the labels Olares applied onto the new node, drop node-local PVs pinned to the
+// old node (disposable Prometheus monitoring data that would otherwise keep the
+// recreated PVC bound to an unschedulable PV), then delete the old node so its
+// controllers reschedule pods onto the new node. The host-IP pod dance is skipped
+// because deleting the old node already forces every pod to be recreated.
+func (m *ChangeIPModule) addRenamedNodeMigrationTasks(newNodeName string) {
+	oldNodeName, _ := m.PipelineCache.GetMustString(common.CacheOldNodeName)
 	m.Tasks = append(m.Tasks,
 		&task.LocalTask{
-			Name:   "WaitForKubeAPIServerUp",
-			Action: new(precheck.GetKubernetesNodesStatus),
+			Name:   "RestoreRenamedNodeLabels",
+			Action: &RestoreLabelsFromRenamedNode{OldNode: oldNodeName, NewNode: newNodeName},
+			Delay:  6 * time.Second,
 			Retry:  20,
-		})
-	m.Tasks = append(m.Tasks, restartPodsTasks...)
-
-	m.Tasks = append(m.Tasks, &task.LocalTask{
-		Name:   "EnsurePodsUpAndRunningAgain",
-		Action: &CheckKeyPodsRunning{Node: m.Runtime.GetLocalHost().GetName()},
-		Delay:  10 * time.Second,
-		Retry:  60,
-	})
+		},
+		&task.LocalTask{
+			Name:   "MigrateRenamedNodeGPUAllocations",
+			Action: &MigrateRenamedNodeGPUAllocations{OldNode: oldNodeName, NewNode: newNodeName},
+			Delay:  3 * time.Second,
+			Retry:  10,
+		},
+		&task.LocalTask{
+			Name:   "CleanupRenamedNodeLocalPVs",
+			Action: &CleanupRenamedNodeLocalPVs{OldNode: oldNodeName},
+			Delay:  10 * time.Second,
+			Retry:  10,
+		},
+		&task.LocalTask{
+			Name:   "DeleteRenamedOldNode",
+			Action: &DeleteRenamedOldNode{OldNode: oldNodeName},
+			Delay:  6 * time.Second,
+			Retry:  5,
+		},
+		// Wait for the old node's pods to actually drain before the shared
+		// EnsurePodsUpAndRunningAgain readiness check runs; otherwise that check
+		// would pass on the old node's stale (still-Running) pods immediately
+		// after the node object is deleted, before anything migrated.
+		&task.LocalTask{
+			Name:   "WaitForRenamedOldNodeDrained",
+			Action: &WaitForRenamedOldNodeDrained{OldNode: oldNodeName},
+			Delay:  10 * time.Second,
+			Retry:  60,
+		},
+	)
+	// Readiness of the recreated pods on the new node is then handled by the
+	// shared EnsurePodsUpAndRunningAgain step (cluster-wide scope). We
+	// intentionally do not pre-capture a pod count to wait against: a snapshot
+	// count is fragile (transient/Job/scaled-down pods may never come back, which
+	// would block forever).
 }
 
 type ChangeHostIPModule struct {
@@ -765,19 +862,31 @@ func (m *ChangeHostIPModule) Init() {
 type GetMasterInfoModule struct {
 	common.KubeModule
 	Print bool
+	// Out, when non-nil, receives the probed master info. The pipeline cache is
+	// cleared once a run finishes, so this is how a caller outside the pipeline
+	// gets hold of the result.
+	Out *MasterInfo
+	// Bootstrapping marks the probe that runs at the start of `node join`,
+	// before this machine has been brought into a joinable shape. See
+	// CheckJoinEligibility.
+	Bootstrapping bool
 }
 
 func (m *GetMasterInfoModule) Init() {
 	m.Name = "GetMasterInfo"
 	m.Tasks = append(m.Tasks,
+		&task.LocalTask{
+			Name:   "CheckMasterReachable",
+			Action: new(CheckMasterReachable),
+		},
 		&task.RemoteTask{
 			Name:   "GetMasterInfo",
-			Action: &GetMasterInfo{Print: m.Print},
+			Action: &GetMasterInfo{Print: m.Print, Out: m.Out},
 			Hosts:  m.Runtime.GetHostsByRole(common.Master),
 		},
 		&task.LocalTask{
 			Name:   "AddNodePrecheck",
-			Action: new(AddNodePrecheck),
+			Action: &AddNodePrecheck{Bootstrapping: m.Bootstrapping},
 		},
 	)
 }

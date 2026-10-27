@@ -1,9 +1,13 @@
 ---
 description: 本页面记录了使用 Olares One 时可能遇到的已知问题和异常行为，以及相应的解决方案或变通方法。
+head:
+  - - meta
+    - name: keywords
+      content: Olares One, 已知问题, 故障排查, 初始设置失败, Thunderbolt 5, USB4
 ---
 
 :::warning
-本文档由 AI 自动翻译，可能存在表述差异。如需核对，请参考[英文原文](../../one/known-issues.md)。
+本文档由 AI 自动翻译，仅供参考。涉及关键操作或信息时，请以[英文原文](../../one/known-issues.md)为准。
 :::
 
 # Olares One 已知问题

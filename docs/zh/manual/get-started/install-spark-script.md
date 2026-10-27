@@ -1,22 +1,25 @@
 ---
 outline: [2, 3]
 description: 在 NVIDIA DGX Spark 上通过命令行安装脚本快速部署 Olares。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, DGX Spark, 命令行安装, NVIDIA, GPU 显存
 ---
 
 # 在 Spark 上使用命令行安装 Olares
 
 本文介绍如何在 NVIDIA DGX Spark 上通过命令行安装脚本安装 Olares。
 
-<!--@include: ./reusables.md#installation-troubleshooting-tip-->
+## 前提条件
 
-## 系统要求
-
-- **DGX Spark**：确保设备已完成[首次启动设置](https://docs.nvidia.com/dgx/dgx-spark/first-boot.html)，创建了用户账户并配置好网络。
-- **存储**：DGX Spark 上至少有 150 GB 的可用 SSD 存储空间。
-- **访问方式**：你需要访问 DGX Spark 的终端，可通过以下任一方式：
+- **Olares 设备**：一台至少有 150 GB 可用 SSD 存储空间的 NVIDIA DGX Spark。
+<!--@include: ./reusables.md#larepass-prerequisite-->
+- **初始设置**：DGX Spark 已完成[首次启动设置](https://docs.nvidia.com/dgx/dgx-spark/first-boot.html)，包括创建用户账号和配置网络。
+- **终端访问**：使用以下任一方式：
   - 直接访问：将显示器、键盘和鼠标连接到 DGX Spark。
   - 远程访问：通过 SSH 从同一网络的另一台电脑连接。
-- **网络**：建议使用网线将 DGX Spark 连接到路由器，以获得稳定的网络连接。
+- **网络**：建议使用网线连接 DGX Spark 和路由器。
 
 ## 准备 DGX Spark
 
@@ -64,7 +67,7 @@ sudo nft flush ruleset
 2. 输入一次性密码，点击**继续**。
 
    ![输入密码](/images/manual/get-started/wizard-enter-password1.png#bordered)
-3. 选择系统语言。
+3. 选择系统语言。Olares 支持英语、简体中文、德语、西班牙语、意大利语、法语和日语。选择后，向导会立即切换语言。激活后，Olares 桌面也会使用该语言。
 
    ![选择语言](/images/manual/get-started/select-language.png#bordered)
 4. 选择一个距你所在位置最近的反向代理节点。你也可以之后在 Olares 的[更改反向代理](../olares/settings/change-frp.md)页面进行调整。
@@ -90,7 +93,7 @@ sudo nft flush ruleset
 
 DGX Spark 采用统一内存架构，CPU 和 GPU 共享 128 GB 的 LPDDR5x 内存。与传统 GPU 拥有独立显存不同，DGX Spark 不区分系统内存和 GPU 显存。
 
-在 DGX Spark 上，Olares 默认使用**显存分片**模式进行 GPU 资源管理。当你安装 AI 应用时，Olares 会自动分配最低所需的内存，以确保应用能够正常启动和运行。
+在 DGX Spark 上，Olares 默认使用**容量分片**模式进行 GPU 资源管理。当你安装 AI 应用时，Olares 会自动分配最低所需的内存，以确保应用能够正常启动和运行。
 
 如需调整某个应用的内存分配，可以手动修改：
 
@@ -103,3 +106,5 @@ DGX Spark 采用统一内存架构，CPU 和 GPU 共享 128 GB 的 LPDDR5x 内�
 4. 在**编辑显存分配**对话框中，输入所需的显存大小（GB），然后点击**确认**。
 
 <!--@include: ./reusables.md#protect-olares-id-->
+
+<!--@include: ./reusables.md#installation-troubleshooting-tip-->

@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Learn how to integrate your app with the built-in PostgreSQL service in Olares.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, PostgreSQL integration, integrate with PostgreSQL, Olares middleware, built-in Postgres
 ---
 # Integrate with PostgreSQL
 

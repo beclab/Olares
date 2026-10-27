@@ -10,7 +10,7 @@ doc_version: "1.0"
 doc_updated: "2026-05-28"
 ---
 
-# Integrate with WhatsApp
+# Integrate OpenClaw with WhatsApp
 
 Connect your OpenClaw agent to WhatsApp to interact with it remotely.
 

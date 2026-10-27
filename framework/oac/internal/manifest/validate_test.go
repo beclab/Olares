@@ -35,6 +35,14 @@ func newValidConfig() *AppConfiguration {
 			RequiredMemory: "128Mi",
 			LimitedMemory:  "256Mi",
 			RequiredDisk:   "1Gi",
+			SupportArch:    []string{"amd64"},
+		},
+		Options: Options{
+			Dependencies: []Dependency{{
+				Name:    olaresSystemDepName,
+				Version: olaresDepRulePreV3.requirement,
+				Type:    "system",
+			}},
 		},
 	}
 }
@@ -80,7 +88,7 @@ func TestAppConfiguration_APIVersionEnum(t *testing.T) {
 	// really tracks the apiVersion enum rule rather than the
 	// manifest-version gate.
 	c = newValidConfig()
-	c.ConfigVersion = "0.13.0"
+	c.ConfigVersion = "0.12.0"
 	c.APIVersion = APIVersionV3
 	wr := WorkloadReplicas{c.Metadata.Name: 1}
 	c.WorkloadReplicas = &wr
@@ -108,6 +116,99 @@ func TestValidateKnownAPIVersion(t *testing.T) {
 	}
 	if !strings.Contains(errV0.Error(), "not supported version") {
 		t.Fatalf("got: %v", errV0)
+	}
+}
+
+func newWorkloadOptionsBaseline() *AppConfiguration {
+	c := newValidConfig()
+	c.ConfigVersion = "0.16.0"
+	replicas := int32(1)
+	c.WorkloadOptions = WorkloadOptions{
+		c.Metadata.Name: {
+			Replicas: &replicas,
+			Allow: []WorkloadCapability{{
+				Type:       WorkloadAllowFolder,
+				Containers: []string{c.Metadata.Name},
+			}},
+		},
+	}
+	c.WorkloadReplicas = nil
+	c.OverlayGateway = OverlayGateway{}
+	c.Options.Dependencies = []Dependency{newOlaresSystemDep(c)}
+	return c
+}
+
+func TestWorkloadOptions_ValidAt016(t *testing.T) {
+	if err := ValidateAppConfiguration(newWorkloadOptionsBaseline()); err != nil {
+		t.Fatalf("valid workloadOptions failed: %v", err)
+	}
+}
+
+func TestWorkloadOptions_VersionBoundary(t *testing.T) {
+	c := newWorkloadOptionsBaseline()
+	c.ConfigVersion = "0.15.0"
+	err := ValidateAppConfiguration(c)
+	if err == nil || !strings.Contains(err.Error(), "workloadOptions requires") {
+		t.Fatalf("0.15 workloadOptions should fail, got: %v", err)
+	}
+
+	c = newValidConfig()
+	c.ConfigVersion = "0.15.0"
+	c.Options.Dependencies = []Dependency{newOlaresSystemDep(c)}
+	legacy := WorkloadReplicas{c.Metadata.Name: 1}
+	c.WorkloadReplicas = &legacy
+	if err := ValidateAppConfiguration(c); err != nil {
+		t.Fatalf("0.15 workloadReplicas should still validate: %v", err)
+	}
+
+	c = newWorkloadOptionsBaseline()
+	legacy = WorkloadReplicas{c.Metadata.Name: 1}
+	c.WorkloadReplicas = &legacy
+	err = ValidateAppConfiguration(c)
+	if err == nil || !strings.Contains(err.Error(), "workloadReplicas is not supported") {
+		t.Fatalf("0.16 legacy workloadReplicas should fail, got: %v", err)
+	}
+}
+
+func TestOlaresManifestVersion_Max(t *testing.T) {
+	for _, version := range []string{"0.16.1", "0.17.0", "1.0.0", "v0.16.1"} {
+		c := newWorkloadOptionsBaseline()
+		c.ConfigVersion = version
+		err := ValidateAppConfiguration(c)
+		if err == nil || !strings.Contains(err.Error(), "olaresManifest.version must be <= 0.16.0") {
+			t.Fatalf("version %s should exceed the maximum, got: %v", version, err)
+		}
+	}
+
+	c := newWorkloadOptionsBaseline()
+	c.ConfigVersion = "0.16.0"
+	if err := ValidateAppConfiguration(c); err != nil {
+		t.Fatalf("0.16.0 is the maximum and must validate: %v", err)
+	}
+}
+
+func TestOlaresManifestVersion_Invalid(t *testing.T) {
+	for _, version := range []string{"not-a-version", "latest", "   "} {
+		c := newValidConfig()
+		c.ConfigVersion = version
+		err := ValidateAppConfiguration(c)
+		if err == nil || !strings.Contains(err.Error(), `olaresManifest.version is invalid: "`) {
+			t.Fatalf("version %q should be rejected as invalid, got: %v", version, err)
+		}
+	}
+}
+
+func TestWorkloadOptions_DeviceRequiresOneContainer(t *testing.T) {
+	c := newWorkloadOptionsBaseline()
+	option := c.WorkloadOptions[c.Metadata.Name]
+	option.Allow = []WorkloadCapability{{
+		Type:       WorkloadAllowDeviceVideo,
+		Containers: []string{"camera", "sidecar"},
+	}}
+	c.WorkloadOptions[c.Metadata.Name] = option
+	err := ValidateAppConfiguration(c)
+	if err == nil || !strings.Contains(err.Error(), "exactly one container") {
+		t.Fatalf("device capability with two containers should fail, got: %v", err)
 	}
 }
 
@@ -246,6 +347,75 @@ func TestEntrance_PortNegative(t *testing.T) {
 	c.Entrances[0].Port = -1
 	if err := ValidateAppConfiguration(c); err == nil {
 		t.Fatal("expected error: port must be > 0")
+	}
+}
+
+func TestServicePortsValidation(t *testing.T) {
+	validPort := ServicePort{Name: "api", Host: "api", Port: 4712}
+	cases := []struct {
+		name    string
+		ports   []ServicePort
+		wantErr string
+	}{
+		{name: "omitted"},
+		{name: "default protocol and automatic expose port", ports: []ServicePort{validPort}},
+		{name: "tcp with explicit expose port", ports: []ServicePort{{
+			Name: "api", Host: "api", Port: 4712, ExposePort: 4712, Protocol: "tcp",
+		}}},
+		{name: "udp", ports: []ServicePort{{
+			Name: "api", Host: "api", Port: 4712, Protocol: "udp",
+		}}},
+		{name: "missing name", ports: []ServicePort{{
+			Host: "api", Port: 4712,
+		}}, wantErr: "port.name is required"},
+		{name: "invalid name", ports: []ServicePort{{
+			Name: "bad_name", Host: "api", Port: 4712,
+		}}, wantErr: "port.name must match"},
+		{name: "missing host", ports: []ServicePort{{
+			Name: "api", Port: 4712,
+		}}, wantErr: "port.host is required"},
+		{name: "invalid host", ports: []ServicePort{{
+			Name: "api", Host: "API", Port: 4712,
+		}}, wantErr: "port.host must match"},
+		{name: "missing port", ports: []ServicePort{{
+			Name: "api", Host: "api",
+		}}, wantErr: "port.port is required"},
+		{name: "port above range", ports: []ServicePort{{
+			Name: "api", Host: "api", Port: 65536,
+		}}, wantErr: "port.port must be between 1 and 65535"},
+		{name: "negative expose port", ports: []ServicePort{{
+			Name: "api", Host: "api", Port: 4712, ExposePort: -1,
+		}}, wantErr: "port.exposePort must be between 1 and 65535"},
+		{name: "expose port above range", ports: []ServicePort{{
+			Name: "api", Host: "api", Port: 4712, ExposePort: 65536,
+		}}, wantErr: "port.exposePort must be between 1 and 65535"},
+		{name: "uppercase protocol", ports: []ServicePort{{
+			Name: "api", Host: "api", Port: 4712, Protocol: "TCP",
+		}}, wantErr: `port.protocol must be one of "", "tcp", "udp"`},
+		{name: "duplicate name", ports: []ServicePort{
+			validPort,
+			{Name: "api", Host: "peer", Port: 4713},
+		}, wantErr: `duplicate port name "api"`},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			c := newValidConfig()
+			c.Ports = tc.ports
+			err := ValidateAppConfiguration(c)
+			if tc.wantErr == "" {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				return
+			}
+			if err == nil {
+				t.Fatalf("expected error containing %q", tc.wantErr)
+			}
+			if !strings.Contains(err.Error(), tc.wantErr) {
+				t.Fatalf("error should contain %q, got: %v", tc.wantErr, err)
+			}
+		})
 	}
 }
 
@@ -599,7 +769,7 @@ func TestValidateAppSpec_ModernAcceptsLegacyFlatEnvelope(t *testing.T) {
 	// workloadReplicas, which the modern gate also requires); we
 	// re-populate the five mandatory quantities here.
 	populated := func() *AppConfiguration {
-		c := newResourcesConfig() // no modes, ConfigVersion=0.13.0, every flat field cleared
+		c := newResourcesConfig() // no modes, ConfigVersion=0.12.0, every flat field cleared
 		c.ConfigVersion = modernBoundary
 		c.APIVersion = APIVersionV1
 		c.Spec.RequiredCPU = "100m"
@@ -618,12 +788,13 @@ func TestValidateAppSpec_ModernAcceptsLegacyFlatEnvelope(t *testing.T) {
 	})
 
 	t.Run("complete_flat_envelope_valid_above_boundary", func(t *testing.T) {
-		// 0.13.0 sits well above the gate. The closure must take the
-		// same branch as the 0.12.0 boundary and accept the flat shape.
+		// 0.15.0 sits above the 0.12.0 resources gate and below the
+		// 0.16.0 workloadOptions gate, so the flat envelope keeps
+		// workloadReplicas.
 		c := populated()
-		c.ConfigVersion = "0.13.0"
+		c.ConfigVersion = "0.15.0"
 		if err := ValidateAppConfiguration(c); err != nil {
-			t.Fatalf("modern manifest at 0.13.0 using the legacy flat envelope must validate: %v", err)
+			t.Fatalf("modern manifest at 0.15.0 using the legacy flat envelope must validate: %v", err)
 		}
 	})
 
@@ -886,7 +1057,7 @@ func TestSubCharts_V2TriggersRegardlessOfOlaresVersion(t *testing.T) {
 
 func TestAPIVersionV2_ModernOlaresUsesLegacyEnvelope(t *testing.T) {
 	c := newValidConfig()
-	c.ConfigVersion = "0.13.0"
+	c.ConfigVersion = "0.12.0"
 	c.APIVersion = APIVersionV2
 	c.Spec.SubCharts = []Chart{{Name: "main", Shared: true}}
 	c.Options.Dependencies = []Dependency{newOlaresSystemDep(c)}
@@ -927,7 +1098,7 @@ func TestSupportedGpu_AllowedBelow012(t *testing.T) {
 
 func TestSupportedGpu_ForbiddenForV2ModernOlares(t *testing.T) {
 	c := newValidConfig()
-	c.ConfigVersion = "0.13.0"
+	c.ConfigVersion = "0.12.0"
 	c.APIVersion = APIVersionV2
 	c.Spec.SubCharts = []Chart{{Name: "main", Shared: true}}
 	c.Spec.SupportedGpu = []any{"nvidia"}
@@ -980,16 +1151,24 @@ func TestSpec_SupportArch_AcceptsKnownArches(t *testing.T) {
 	}
 }
 
-func TestSpec_SupportArch_EmptyIsAccepted(t *testing.T) {
+func TestSpec_SupportArch_RejectsEmpty(t *testing.T) {
 	c := newValidConfig()
 	c.Spec.SupportArch = nil
-	if err := ValidateAppConfiguration(c); err != nil {
-		t.Fatalf("empty supportArch must remain valid (no enum gate): %v", err)
+	err := ValidateAppConfiguration(c)
+	if err == nil {
+		t.Fatal("nil supportArch must be rejected")
+	}
+	if !strings.Contains(err.Error(), "spec.supportArch is required") {
+		t.Fatalf("error should mention required, got: %v", err)
 	}
 
 	c.Spec.SupportArch = []string{}
-	if err := ValidateAppConfiguration(c); err != nil {
-		t.Fatalf("zero-length supportArch slice must remain valid: %v", err)
+	err = ValidateAppConfiguration(c)
+	if err == nil {
+		t.Fatal("zero-length supportArch slice must be rejected")
+	}
+	if !strings.Contains(err.Error(), "spec.supportArch") {
+		t.Fatalf("error should mention spec.supportArch, got: %v", err)
 	}
 }
 
@@ -1020,18 +1199,23 @@ func TestSpec_SupportArch_RejectsDuplicates(t *testing.T) {
 }
 
 func TestDependency_TypeEnum(t *testing.T) {
+	olaresDep := Dependency{
+		Name:    olaresSystemDepName,
+		Version: olaresDepRulePreV3.requirement,
+		Type:    "system",
+	}
 	c := newValidConfig()
-	c.Options.Dependencies = []Dependency{{Name: "foo", Version: "1.0.0", Type: "bogus"}}
+	c.Options.Dependencies = []Dependency{{Name: "foo", Version: "1.0.0", Type: "bogus"}, olaresDep}
 	if err := ValidateAppConfiguration(c); err == nil {
 		t.Fatal("expected error for bad dependency type")
 	}
 
-	c.Options.Dependencies = []Dependency{{Name: "foo", Version: "1.0.0", Type: "system"}}
+	c.Options.Dependencies = []Dependency{{Name: "foo", Version: "1.0.0", Type: "system"}, olaresDep}
 	if err := ValidateAppConfiguration(c); err != nil {
 		t.Fatalf("system is a valid dep type: %v", err)
 	}
 
-	c.Options.Dependencies = []Dependency{{Name: "foo", Version: "1.0.0", Type: "application"}}
+	c.Options.Dependencies = []Dependency{{Name: "foo", Version: "1.0.0", Type: "application"}, olaresDep}
 	if err := ValidateAppConfiguration(c); err != nil {
 		t.Fatalf("application is a valid dep type: %v", err)
 	}
@@ -1108,7 +1292,7 @@ func TestPermission_ExternalDataVersionGate(t *testing.T) {
 	// appCommon on a modern manifest validates once the prerequisites
 	// (workloadReplicas + locked Olares dep) are in place.
 	c = newValidConfig()
-	c.ConfigVersion = "0.13.0"
+	c.ConfigVersion = "0.12.0"
 	c.Permission.AppCommon = true
 	wr = WorkloadReplicas{c.Metadata.Name: 1}
 	c.WorkloadReplicas = &wr
@@ -1131,22 +1315,23 @@ func newValidOverlayEntrance() OverlayEntrance {
 // newOverlayGatewayBaseline returns a modern (>= 0.12.0) baseline that
 // declares the prerequisites overlayGateway requires:
 //
-//   - olaresManifest.version=0.13.0 — overlayGateway is a 1.12.6-only
+//   - olaresManifest.version=0.12.0 — overlayGateway is a 1.12.6-only
 //     feature field, so the legacy fixture would trip
 //     validateModernFieldRequiresManifestVersion before the overlay
 //     entrance is even inspected.
 //   - workloadReplicas with one entry — required on every non-v2 modern
 //     manifest, and the test wouldn't be exercising overlay-specific
 //     behaviour if it failed for missing replicas instead.
-//   - the olares system dependency locked to the post-v3 window —
-//     overlayGateway promotes the dep window to >=1.12.6-0 via
-//     pickOlaresDepRule, so the helper picks that automatically.
+//   - the olares system dependency locked to the pre-v3 window — v1
+//     manifests always sit in the >=1.12.3-0,<1.12.6 window regardless
+//     of 1.12.6-only feature fields; newOlaresSystemDep picks that
+//     automatically.
 //
 // Each test then layers exactly one overlay entrance on top so the
 // assertion focuses on overlay rules alone.
 func newOverlayGatewayBaseline() *AppConfiguration {
 	c := newValidConfig()
-	c.ConfigVersion = "0.13.0"
+	c.ConfigVersion = "0.12.0"
 	wr := WorkloadReplicas{c.Metadata.Name: 1}
 	c.WorkloadReplicas = &wr
 	c.Options.Dependencies = []Dependency{newOlaresSystemDep(c)}
@@ -1252,7 +1437,7 @@ func TestOptions_TemplateOnlyRequiresAllowMultipleInstall(t *testing.T) {
 	// validateModernFieldRequiresManifestVersion gate would mask the
 	// templateOnly+allowMultipleInstall pairing under test here.
 	c = newValidConfig()
-	c.ConfigVersion = "0.13.0"
+	c.ConfigVersion = "0.12.0"
 	c.Options.TemplateOnly = true
 	c.Options.AllowMultipleInstall = true
 	wr := WorkloadReplicas{c.Metadata.Name: 1}
@@ -1282,7 +1467,7 @@ func TestOptions_TemplateOnlyRequiresAllowMultipleInstall(t *testing.T) {
 // shape at modern versions when spec.resources[] is not used.
 func TestAppSpec_TemplateOnlyAllowsAutoOnNonDiskLegacy(t *testing.T) {
 	c := newValidConfig()
-	c.ConfigVersion = "0.13.0"
+	c.ConfigVersion = "0.12.0"
 	c.Options.TemplateOnly = true
 	c.Options.AllowMultipleInstall = true
 	c.Spec.RequiredCPU = AutoResourceValue
@@ -1350,7 +1535,7 @@ func TestRootProvider_ForbiddenAtOrAbove012(t *testing.T) {
 
 	t.Run("v3_modern_with_root_provider_rejected", func(t *testing.T) {
 		c := newValidConfig()
-		c.ConfigVersion = "0.13.0"
+		c.ConfigVersion = "0.12.0"
 		c.APIVersion = APIVersionV3
 		c.Provider = []Provider{providerEntry}
 		wr := WorkloadReplicas{c.Metadata.Name: 1}
@@ -1366,7 +1551,7 @@ func TestRootProvider_ForbiddenAtOrAbove012(t *testing.T) {
 
 	t.Run("v2_modern_with_root_provider_rejected", func(t *testing.T) {
 		c := newValidConfig()
-		c.ConfigVersion = "0.13.0"
+		c.ConfigVersion = "0.12.0"
 		c.APIVersion = APIVersionV2
 		c.Spec.SubCharts = []Chart{{Name: "main", Shared: true}}
 		c.Provider = []Provider{providerEntry}
@@ -1381,7 +1566,7 @@ func TestRootProvider_ForbiddenAtOrAbove012(t *testing.T) {
 
 	t.Run("modern_without_root_provider_accepted", func(t *testing.T) {
 		c := newValidConfig()
-		c.ConfigVersion = "0.13.0"
+		c.ConfigVersion = "0.12.0"
 		wr := WorkloadReplicas{c.Metadata.Name: 1}
 		c.WorkloadReplicas = &wr
 		c.Options.Dependencies = []Dependency{newOlaresSystemDep(c)}
@@ -1403,7 +1588,7 @@ func TestRootProvider_ForbiddenAtOrAbove012(t *testing.T) {
 		// in a single Validate run so a manifest carrying both retired
 		// shapes sees every offender at once.
 		c := newValidConfig()
-		c.ConfigVersion = "0.13.0"
+		c.ConfigVersion = "0.12.0"
 		wr := WorkloadReplicas{c.Metadata.Name: 1}
 		c.WorkloadReplicas = &wr
 		c.Options.Dependencies = []Dependency{newOlaresSystemDep(c)}
@@ -1449,7 +1634,7 @@ func TestPermission_ProviderForbiddenAtOrAbove012(t *testing.T) {
 
 	t.Run("v3_modern_with_provider_rejected", func(t *testing.T) {
 		c := newValidConfig()
-		c.ConfigVersion = "0.13.0"
+		c.ConfigVersion = "0.12.0"
 		c.APIVersion = APIVersionV3
 		c.Permission.Provider = []ProviderPermission{providerEntry}
 		wr := WorkloadReplicas{c.Metadata.Name: 1}
@@ -1467,7 +1652,7 @@ func TestPermission_ProviderForbiddenAtOrAbove012(t *testing.T) {
 		// The rule does not depend on apiVersion — the field is retired
 		// platform-wide on the modern channel. v2 must hit the same gate.
 		c := newValidConfig()
-		c.ConfigVersion = "0.13.0"
+		c.ConfigVersion = "0.12.0"
 		c.APIVersion = APIVersionV2
 		c.Spec.SubCharts = []Chart{{Name: "main", Shared: true}}
 		c.Permission.Provider = []ProviderPermission{providerEntry}
@@ -1482,7 +1667,7 @@ func TestPermission_ProviderForbiddenAtOrAbove012(t *testing.T) {
 
 	t.Run("modern_without_provider_accepted", func(t *testing.T) {
 		c := newValidConfig()
-		c.ConfigVersion = "0.13.0"
+		c.ConfigVersion = "0.12.0"
 		wr := WorkloadReplicas{c.Metadata.Name: 1}
 		c.WorkloadReplicas = &wr
 		c.Options.Dependencies = []Dependency{newOlaresSystemDep(c)}
@@ -1522,7 +1707,7 @@ func TestWorkloadReplicas_RequiredAtOrAbove012(t *testing.T) {
 
 	t.Run("v1_above_boundary_empty_map_rejected", func(t *testing.T) {
 		c := newValidConfig()
-		c.ConfigVersion = "0.13.0"
+		c.ConfigVersion = "0.12.0"
 		empty := WorkloadReplicas{}
 		c.WorkloadReplicas = &empty
 		err := ValidateAppConfiguration(c)
@@ -1536,7 +1721,7 @@ func TestWorkloadReplicas_RequiredAtOrAbove012(t *testing.T) {
 
 	t.Run("v1_above_boundary_with_entry_accepted", func(t *testing.T) {
 		c := newValidConfig()
-		c.ConfigVersion = "0.13.0"
+		c.ConfigVersion = "0.12.0"
 		wr := WorkloadReplicas{c.Metadata.Name: 1}
 		c.WorkloadReplicas = &wr
 		c.Options.Dependencies = []Dependency{newOlaresSystemDep(c)}
@@ -1560,7 +1745,7 @@ func TestWorkloadReplicas_RequiredAtOrAbove012(t *testing.T) {
 
 	t.Run("v3_above_boundary_with_entry_accepted", func(t *testing.T) {
 		c := newValidConfig()
-		c.ConfigVersion = "0.13.0"
+		c.ConfigVersion = "0.12.0"
 		c.APIVersion = APIVersionV3
 		wr := WorkloadReplicas{c.Metadata.Name: 1}
 		c.WorkloadReplicas = &wr
@@ -1572,7 +1757,7 @@ func TestWorkloadReplicas_RequiredAtOrAbove012(t *testing.T) {
 
 	t.Run("empty_apiversion_defaults_to_v1_and_requires", func(t *testing.T) {
 		c := newValidConfig()
-		c.ConfigVersion = "0.13.0"
+		c.ConfigVersion = "0.12.0"
 		c.APIVersion = ""
 		err := ValidateAppConfiguration(c)
 		if err == nil {
@@ -1585,7 +1770,7 @@ func TestWorkloadReplicas_RequiredAtOrAbove012(t *testing.T) {
 
 	t.Run("v2_modern_does_not_require", func(t *testing.T) {
 		c := newValidConfig()
-		c.ConfigVersion = "0.13.0"
+		c.ConfigVersion = "0.12.0"
 		c.APIVersion = APIVersionV2
 		c.Spec.SubCharts = []Chart{{Name: "main", Shared: true}}
 		c.Options.Dependencies = []Dependency{newOlaresSystemDep(c)}
@@ -1611,30 +1796,22 @@ func TestWorkloadReplicas_RequiredAtOrAbove012(t *testing.T) {
 // system dependency (options.dependencies entry with name="olares" and
 // type="system"):
 //
-//   - On olaresManifest.version >= 0.12.0, the entry must exist.
-//   - apiVersion=v3 OR any 1.12.6-only feature field (workloadReplicas,
-//     spec.accelerator, overlayGateway, options.LLMGatewaySupported,
-//     options.templateOnly, options.shared, permission.appCommon) forces
-//     the constraint to restrict Olares to >=1.12.6-0.
-//   - apiVersion in {empty, v1, v2} AND none of those feature fields
-//     declared: the constraint must restrict Olares to
-//     >=1.12.3-0,<1.12.6 (no leakage into 1.12.6+, no permission below
-//     the 1.12.3-0 floor).
-//   - Below the modern gate (< 0.12.0), the entry is unconstrained.
+//   - The entry must exist on every manifest.
+//   - apiVersion=v3 forces the constraint to restrict Olares to
+//     >=1.12.6-0.
+//   - apiVersion in {empty, v1, v2}: the constraint must restrict Olares
+//     to >=1.12.3-0,<1.12.6 regardless of 1.12.6-only feature fields
+//     (no leakage into 1.12.6+, no permission below the 1.12.3-0 floor).
 //
 // Each subtest builds a config that already satisfies every other modern
 // gate so the assertion truly tracks validateOlaresDependency alone.
-// Note: modern non-v2 manifests must declare workloadReplicas, so they
-// always sit in the post-v3 window — the pre-v3 window is exercised
-// through the apiVersion=v2 path.
 func TestOlaresDependency_ConstraintGate(t *testing.T) {
 	// modernV1 builds a non-v2 modern manifest. workloadReplicas is
-	// required for non-v2 modern manifests, so the helper sets it; that
-	// also trips rule 4 and pulls the required constraint window up to
-	// >=1.12.6-0.
+	// required for non-v2 modern manifests; apiVersion=v1 still selects
+	// the pre-v3 (>=1.12.3-0,<1.12.6) window.
 	modernV1 := func() *AppConfiguration {
 		c := newValidConfig()
-		c.ConfigVersion = "0.13.0"
+		c.ConfigVersion = "0.12.0"
 		wr := WorkloadReplicas{c.Metadata.Name: 1}
 		c.WorkloadReplicas = &wr
 		return c
@@ -1650,7 +1827,7 @@ func TestOlaresDependency_ConstraintGate(t *testing.T) {
 	// 1.12.6-only feature field unset.
 	modernV2NoTriggers := func() *AppConfiguration {
 		c := newValidConfig()
-		c.ConfigVersion = "0.13.0"
+		c.ConfigVersion = "0.12.0"
 		c.APIVersion = APIVersionV2
 		c.Spec.SubCharts = []Chart{{Name: "main", Shared: true}}
 		return c
@@ -1666,6 +1843,7 @@ func TestOlaresDependency_ConstraintGate(t *testing.T) {
 
 	t.Run("modern_without_olares_dep_rejected", func(t *testing.T) {
 		c := modernV1()
+		c.Options.Dependencies = nil
 		err := ValidateAppConfiguration(c)
 		if err == nil {
 			t.Fatal("expected error: modern manifest must declare the Olares system dependency")
@@ -1675,10 +1853,15 @@ func TestOlaresDependency_ConstraintGate(t *testing.T) {
 		}
 	})
 
-	t.Run("legacy_without_olares_dep_accepted", func(t *testing.T) {
-		c := newValidConfig() // ConfigVersion 0.11.0; no dep set
-		if err := ValidateAppConfiguration(c); err != nil {
-			t.Fatalf("legacy manifest without Olares dep must validate: %v", err)
+	t.Run("legacy_without_olares_dep_rejected", func(t *testing.T) {
+		c := newValidConfig()
+		c.Options.Dependencies = nil
+		err := ValidateAppConfiguration(c)
+		if err == nil {
+			t.Fatal("expected error: legacy manifest must declare the Olares system dependency")
+		}
+		if !strings.Contains(err.Error(), `options.dependencies must declare an entry with name="olares" and type="system"`) {
+			t.Fatalf("error should mention the missing Olares dep, got: %v", err)
 		}
 	})
 
@@ -1730,39 +1913,32 @@ func TestOlaresDependency_ConstraintGate(t *testing.T) {
 		}
 	})
 
-	t.Run("v1_with_workload_replicas_demands_post_v3_range", func(t *testing.T) {
+	t.Run("v1_with_workload_replicas_accepts_pre_v3_range", func(t *testing.T) {
 		c := modernV1()
-		// The pre-v3 window would have satisfied apiVersion alone, but
-		// workloadReplicas (required on non-v2 modern manifests) trips
-		// rule 4 and forces >=1.12.6-0.
 		setOlaresDep(c, ">=1.12.3-0,<1.12.6")
+		if err := ValidateAppConfiguration(c); err != nil {
+			t.Fatalf("v1 with workloadReplicas must accept the pre-v3 dep window: %v", err)
+		}
+	})
+
+	t.Run("v1_with_workload_replicas_rejects_post_v3_range", func(t *testing.T) {
+		c := modernV1()
+		setOlaresDep(c, ">=1.12.6-0")
 		err := ValidateAppConfiguration(c)
 		if err == nil {
-			t.Fatal("expected error: workloadReplicas must promote v1 into the post-v3 dep window")
+			t.Fatal("expected error: v1 dep constraint must stay in the pre-v3 window")
 		}
-		msg := err.Error()
-		if !strings.Contains(msg, `must restrict the Olares system version to ">=1.12.6-0" for apiVersion=v1`) {
-			t.Fatalf("error should mention the post-v3 requirement on v1, got: %v", err)
-		}
-		if !strings.Contains(msg, "workloadReplicas") {
-			t.Fatalf("error should attribute the promotion to workloadReplicas, got: %v", err)
+		if !strings.Contains(err.Error(), `must restrict the Olares system version to ">=1.12.3-0,<1.12.6" for apiVersion=v1`) {
+			t.Fatalf("error should mention the pre-v3 requirement on v1, got: %v", err)
 		}
 	})
 
-	t.Run("v1_with_workload_replicas_accepts_post_v3_range", func(t *testing.T) {
-		c := modernV1()
-		setOlaresDep(c, ">=1.12.6-0")
-		if err := ValidateAppConfiguration(c); err != nil {
-			t.Fatalf("v1 with workloadReplicas and >=1.12.6-0 must validate: %v", err)
-		}
-	})
-
-	t.Run("empty_apiversion_treated_as_v1_post_v3_range", func(t *testing.T) {
+	t.Run("empty_apiversion_treated_as_v1_pre_v3_range", func(t *testing.T) {
 		c := modernV1()
 		c.APIVersion = ""
-		setOlaresDep(c, ">=1.12.6-0")
+		setOlaresDep(c, ">=1.12.3-0,<1.12.6")
 		if err := ValidateAppConfiguration(c); err != nil {
-			t.Fatalf("empty apiVersion with workloadReplicas must accept >=1.12.6-0: %v", err)
+			t.Fatalf("empty apiVersion with workloadReplicas must accept the pre-v3 window: %v", err)
 		}
 	})
 
@@ -1833,23 +2009,15 @@ func TestOlaresDependency_ConstraintGate(t *testing.T) {
 	})
 }
 
-// TestOlaresDependency_FeatureTriggersPromoteRange exercises rule 4:
-// when a v1/v2 manifest declares any of the 1.12.6-only feature fields,
-// the Olares dep constraint must restrict to >=1.12.6-0 and the error
-// must attribute the promotion to that field. Each subtest starts from
-// modernV2NoTriggers (which would otherwise sit in the pre-v3 window),
-// flips exactly one trigger, and verifies both the promotion and the
-// attribution.
-func TestOlaresDependency_FeatureTriggersPromoteRange(t *testing.T) {
-	// preV3Constraint is the constraint that satisfies the validator
-	// for a manifest with NO triggers. By keeping it constant across
-	// subtests we make the assertion "trigger X promoted the required
-	// range to >=1.12.6-0" unambiguous: nothing else in the config moved.
+// TestOlaresDependency_FeatureTriggersDoNotPromoteV1V2Range verifies that
+// 1.12.6-only feature fields on v1/v2 manifests do NOT promote the Olares
+// dep constraint window — apiVersion alone selects pre-v3 vs post-v3.
+func TestOlaresDependency_FeatureTriggersDoNotPromoteV1V2Range(t *testing.T) {
 	const preV3Constraint = ">=1.12.3-0,<1.12.6"
 
 	base := func() *AppConfiguration {
 		c := newValidConfig()
-		c.ConfigVersion = "0.13.0"
+		c.ConfigVersion = "0.12.0"
 		c.APIVersion = APIVersionV2
 		c.Spec.SubCharts = []Chart{{Name: "main", Shared: true}}
 		c.Options.Dependencies = []Dependency{{
@@ -1860,14 +2028,10 @@ func TestOlaresDependency_FeatureTriggersPromoteRange(t *testing.T) {
 		return c
 	}
 
-	// flipTrigger mutates c to declare exactly one 1.12.6-only feature.
-	// Each function returns the user-facing label the error message
-	// is expected to include.
 	cases := []struct {
 		name       string
 		flip       func(c *AppConfiguration)
-		wantLabel  string
-		extraSetup func(c *AppConfiguration) // pre-flip prerequisites, if any
+		extraSetup func(c *AppConfiguration)
 	}{
 		{
 			name: "workloadReplicas",
@@ -1875,7 +2039,6 @@ func TestOlaresDependency_FeatureTriggersPromoteRange(t *testing.T) {
 				wr := WorkloadReplicas{c.Metadata.Name: 1}
 				c.WorkloadReplicas = &wr
 			},
-			wantLabel: "workloadReplicas",
 		},
 		{
 			name: "overlayGateway",
@@ -1885,49 +2048,35 @@ func TestOlaresDependency_FeatureTriggersPromoteRange(t *testing.T) {
 					Entrances: []OverlayEntrance{newValidOverlayEntrance()},
 				}
 			},
-			wantLabel: "overlayGateway",
 		},
 		{
 			name: "options.LLMGatewaySupported",
 			flip: func(c *AppConfiguration) {
 				c.Options.LLMGatewaySupported = true
 			},
-			wantLabel: "options.LLMGatewaySupported",
 		},
 		{
 			name: "permission.appCommon",
 			flip: func(c *AppConfiguration) {
 				c.Permission.AppCommon = true
 			},
-			wantLabel: "permission.appCommon",
 		},
 	}
 
 	for _, tc := range cases {
 		tc := tc
-		t.Run(tc.name+"_promotes_to_post_v3_range", func(t *testing.T) {
+		t.Run(tc.name+"_accepts_pre_v3_with_feature", func(t *testing.T) {
 			c := base()
 			if tc.extraSetup != nil {
 				tc.extraSetup(c)
 			}
 			tc.flip(c)
-			err := ValidateAppConfiguration(c)
-			if err == nil {
-				t.Fatalf("expected error: declaring %s must promote the dep window to >=1.12.6-0", tc.wantLabel)
-			}
-			msg := err.Error()
-			if !strings.Contains(msg, `must restrict the Olares system version to ">=1.12.6-0"`) {
-				t.Fatalf("error should require the post-v3 range, got: %v", err)
-			}
-			if !strings.Contains(msg, tc.wantLabel) {
-				t.Fatalf("error should attribute the promotion to %s, got: %v", tc.wantLabel, err)
-			}
-			if !strings.Contains(msg, "because the manifest declares") {
-				t.Fatalf("error should explain the rule-4 promotion with a 'because' clause, got: %v", err)
+			if err := ValidateAppConfiguration(c); err != nil {
+				t.Fatalf("declaring %s on v2 with pre-v3 dep must validate: %v", tc.name, err)
 			}
 		})
 
-		t.Run(tc.name+"_accepts_post_v3_range", func(t *testing.T) {
+		t.Run(tc.name+"_rejects_post_v3_on_v2", func(t *testing.T) {
 			c := base()
 			if tc.extraSetup != nil {
 				tc.extraSetup(c)
@@ -1938,21 +2087,23 @@ func TestOlaresDependency_FeatureTriggersPromoteRange(t *testing.T) {
 				Version: ">=1.12.6-0",
 				Type:    "system",
 			}}
-			if err := ValidateAppConfiguration(c); err != nil {
-				t.Fatalf("declaring %s with >=1.12.6-0 dep must validate: %v", tc.wantLabel, err)
+			err := ValidateAppConfiguration(c)
+			if err == nil {
+				t.Fatalf("expected error: v2 dep constraint must stay in the pre-v3 window even with %s", tc.name)
+			}
+			msg := err.Error()
+			if !strings.Contains(msg, `must restrict the Olares system version to ">=1.12.3-0,<1.12.6" for apiVersion=v2`) {
+				t.Fatalf("error should require the pre-v3 range, got: %v", err)
+			}
+			if strings.Contains(msg, "because the manifest declares") {
+				t.Fatalf("v2 error must not attribute the requirement to feature triggers, got: %v", err)
 			}
 		})
 	}
 
-	// Two extra rule-4 triggers (spec.accelerator, options.shared,
-	// options.templateOnly) have additional cross-field constraints that
-	// don't fit the v2 baseline above, so cover them on shapes that do.
-	t.Run("spec.accelerator_promotes_to_post_v3_range", func(t *testing.T) {
-		// spec.accelerator lives on v1 (v2 forbids it; v3 always sits in
-		// the post-v3 window). Pair it with workloadReplicas (required on
-		// v1) but assert the trigger list includes spec.accelerator.
+	t.Run("spec.accelerator_accepts_pre_v3_on_v1", func(t *testing.T) {
 		c := newValidConfig()
-		c.ConfigVersion = "0.13.0"
+		c.ConfigVersion = "0.12.0"
 		c.APIVersion = APIVersionV1
 		c.Spec.RequiredCPU = ""
 		c.Spec.LimitedCPU = ""
@@ -1977,37 +2128,24 @@ func TestOlaresDependency_FeatureTriggersPromoteRange(t *testing.T) {
 		c.WorkloadReplicas = &wr
 		c.Options.Dependencies = []Dependency{{
 			Name:    olaresSystemDepName,
-			Version: ">=1.12.3-0,<1.12.6",
+			Version: preV3Constraint,
 			Type:    "system",
 		}}
-		err := ValidateAppConfiguration(c)
-		if err == nil {
-			t.Fatal("expected error: spec.accelerator must promote dep window to >=1.12.6-0")
-		}
-		msg := err.Error()
-		if !strings.Contains(msg, "spec.accelerator") {
-			t.Fatalf("error should attribute the promotion to spec.accelerator, got: %v", err)
-		}
-		if !strings.Contains(msg, `must restrict the Olares system version to ">=1.12.6-0"`) {
-			t.Fatalf("error should require the post-v3 range, got: %v", err)
+		if err := ValidateAppConfiguration(c); err != nil {
+			t.Fatalf("v1 with spec.accelerator and pre-v3 dep must validate: %v", err)
 		}
 	})
 
 	t.Run("options.shared_is_v3_only_post_v3_range", func(t *testing.T) {
-		// options.shared=true requires apiVersion=v3 (a separate rule),
-		// so promotion is observable through the v3 branch. The trigger
-		// list intentionally omits "options.shared" here because v3
-		// already routes through the apiVersion path; the assertion
-		// focuses on the post-v3 requirement.
 		c := newValidConfig()
-		c.ConfigVersion = "0.13.0"
+		c.ConfigVersion = "0.12.0"
 		c.APIVersion = APIVersionV3
 		c.Options.Shared = true
 		wr := WorkloadReplicas{c.Metadata.Name: 1}
 		c.WorkloadReplicas = &wr
 		c.Options.Dependencies = []Dependency{{
 			Name:    olaresSystemDepName,
-			Version: ">=1.12.3-0,<1.12.6",
+			Version: preV3Constraint,
 			Type:    "system",
 		}}
 		err := ValidateAppConfiguration(c)
@@ -2019,29 +2157,18 @@ func TestOlaresDependency_FeatureTriggersPromoteRange(t *testing.T) {
 		}
 	})
 
-	t.Run("options.templateOnly_promotes_to_post_v3_range", func(t *testing.T) {
-		// templateOnly=true additionally needs allowMultipleInstall=true
-		// (a separate cross-field rule). Anchor it on a v2 baseline so
-		// the post-v3 promotion comes purely from rule 4.
+	t.Run("options.templateOnly_accepts_pre_v3_on_v2", func(t *testing.T) {
 		c := base()
 		c.Options.AllowMultipleInstall = true
 		c.Options.TemplateOnly = true
-		err := ValidateAppConfiguration(c)
-		if err == nil {
-			t.Fatal("expected error: options.templateOnly must promote dep window to >=1.12.6-0")
-		}
-		msg := err.Error()
-		if !strings.Contains(msg, "options.templateOnly") {
-			t.Fatalf("error should attribute the promotion to options.templateOnly, got: %v", err)
-		}
-		if !strings.Contains(msg, `must restrict the Olares system version to ">=1.12.6-0"`) {
-			t.Fatalf("error should require the post-v3 range, got: %v", err)
+		if err := ValidateAppConfiguration(c); err != nil {
+			t.Fatalf("v2 with options.templateOnly and pre-v3 dep must validate: %v", err)
 		}
 	})
 }
 
 // TestModernFieldRequiresManifestVersion is the inverse of
-// TestOlaresDependency_FeatureTriggersPromoteRange: on a LEGACY manifest
+// TestOlaresDependency_FeatureTriggersDoNotPromoteV1V2Range: on a LEGACY manifest
 // (olaresManifest.version < 0.12.0), declaring any 1.12.6-only feature
 // field — or apiVersion=v3 — must be rejected with guidance to bump the
 // manifest version AND lock the Olares dep to >=1.12.6-0.
@@ -2184,7 +2311,7 @@ func TestModernFieldRequiresManifestVersion(t *testing.T) {
 		// but here we expect the error (if any) to come from the dep
 		// check, not from the legacy gate.
 		c := newValidConfig()
-		c.ConfigVersion = "0.13.0"
+		c.ConfigVersion = "0.12.0"
 		c.Permission.AppCommon = true
 		wr := WorkloadReplicas{c.Metadata.Name: 1}
 		c.WorkloadReplicas = &wr
@@ -2259,7 +2386,7 @@ func TestOptions_SharedRequiresAPIVersionV3(t *testing.T) {
 			// tracks the shared/v3 rule and nothing else.
 			if tc.apiVersion == APIVersionV3 && tc.shared {
 				c.Spec.OnlyAdmin = true
-				c.ConfigVersion = "0.13.0"
+				c.ConfigVersion = "0.12.0"
 				wr := WorkloadReplicas{c.Metadata.Name: 1}
 				c.WorkloadReplicas = &wr
 				c.Options.Dependencies = []Dependency{newOlaresSystemDep(c)}
@@ -2296,7 +2423,7 @@ func TestOptions_SharedAppRequirements(t *testing.T) {
 	// gate in isolation.
 	validSharedV3 := func() *AppConfiguration {
 		c := newValidConfig()
-		c.ConfigVersion = "0.13.0"
+		c.ConfigVersion = "0.12.0"
 		c.APIVersion = APIVersionV3
 		c.Options.Shared = true
 		c.Spec.OnlyAdmin = true

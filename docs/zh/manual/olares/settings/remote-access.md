@@ -1,6 +1,10 @@
 ---
 outline: [2,3]
 description: 了解如何使用设置在 Olares 上配置专用网络，包括强制 VPN 访问、SSH 远程连接与 ACL 端口。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 专用网络, VPN, LarePass VPN, SSH 远程连接, ACL 端口, 远程访问
 ---
 # 配置 Olares 的专用网络
 

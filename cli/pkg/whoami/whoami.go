@@ -207,7 +207,7 @@ func FetchAndCache(
 	res.PreviousRole = target.OwnerRole
 	res.AlreadyMatchedAt = target.WhoamiRefreshedAt
 
-	changed, err := cfg.SetOwnerRole(olaresID, env.Data.OwnerRole, res.RefreshedAt)
+	changed, err := cliconfig.SetOwnerRole(ctx, olaresID, env.Data.OwnerRole, res.RefreshedAt)
 	if err != nil {
 		return nil, err
 	}

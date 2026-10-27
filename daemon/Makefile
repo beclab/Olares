@@ -27,6 +27,7 @@ build-linux-in-docker:
 	docker run -it --platform linux/amd64 --rm \
 		-v $(current_dir):/olaresd \
 		-v $(current_dir)/../cli:/cli \
+		-v $(current_dir)/../framework:/framework \
 		-w /olaresd \
 		-e DEBIAN_FRONTEND=noninteractive \
 		golang:1.25.0 \
@@ -36,6 +37,7 @@ build-arm-in-docker:
 	docker run -it --platform linux/arm64 --rm \
 		-v $(current_dir):/olaresd \
 		-v $(current_dir)/../cli:/cli \
+		-v $(current_dir)/../framework:/framework \
 		-w /olaresd \
 		-e DEBIAN_FRONTEND=noninteractive \
 		golang:1.25.0 \

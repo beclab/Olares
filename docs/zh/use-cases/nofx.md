@@ -1,4 +1,6 @@
 ---
+connectionVersion: "1.12.7"
+connectionLatestPath: /zh/use-cases/nofx
 outline: deep
 description: 在 Olares 上运行 NOFX，一个开源的自主 AI 交易智能体。为 AI 钱包充值，连接交易所，配置策略，并让智能体进行交易。
 head:
@@ -7,14 +9,16 @@ head:
       content: Olares, NOFX, AI trading, autonomous agent, crypto, Hyperliquid, self-hosted
 app_version: "1.0.5"
 doc_version: "1.1"
-doc_updated: "2026-05-09"
+doc_updated: "2026-09-23"
 ---
 
 :::warning
-本页面内容经 AI 翻译生成，仅供参考。具体细节请以[英文原文](../../use-cases/nofx.md)为准。
+本文档由 AI 自动翻译，仅供参考。涉及关键操作或信息时，请以[英文原文](../../use-cases/nofx.md)为准。
 :::
 
 # 使用 NOFX 设置自主 AI 交易智能体
+
+<VersionRouteSelect />
 
 NOFX 是一个开源的自主 AI 交易智能体。与传统需要你配置模型、管理 API 密钥和连接数据源的 AI 工具不同，NOFX 感知市场、选择模型，并自行拉取数据。你设置策略，智能体处理其余部分。
 
@@ -210,46 +214,21 @@ NOFX 需要两个不同的钱包用于不同的目的：
 - 它必须支持 OpenAI 兼容的 API 调用。
 - 它需要强大的指令遵循能力、足够的上下文窗口和快速的推理速度。否则，模型可能无法输出有效的交易指令。
 
-要配置本地模型：
-1. 在 **配置** 页面上，点击 **+ 模型配置**。
-2. 点击 **其他 API 提供商**，然后选择 **OpenAI**。
-3. 在 **API 密钥** 字段中，输入任意文本字符串。
-4. 在 **基础地址** 字段中，输入你的本地模型端点 URL。确保 URL 以 `/v1` 结尾。
+连接本地模型前，你需要：
 
-   Olares 提供两种提供本地模型的方式。对于任一方式，获取共享入口 URL：
+<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
+- 已从应用市场安装 Qwen3.8-27B (llama.cpp)。
 
-   <Tabs>
-   <template #Ollama>
+<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
+5. 打开 NOFX，然后点击 **Config** 页面上的 **+ MODELS_CONFIG**。
+6. 点击 **Other API Providers**，然后选择 **OpenAI**。
+7. 指定以下设置：
 
-   一个应用托管多个模型，位于单个共享端点后面。
+   - **API Key**：输入任意文本字符串，例如 `local`。
+   - **Base URL**：输入从 Router 复制的 **Base URL**。确保 URL 以 `/v1` 结尾。
+   - **Model Name (Optional)**： 填写 `default-chat`。
 
-   a. 打开 **设置**，然后前往 **应用** > **Ollama**。
-
-   b. 在 **共享入口** 中，选择 **Ollama API** 以查看共享端点 URL。
-
-      ![设置中的 Ollama 共享入口](/images/manual/use-cases/ollama-shared.png#bordered){width=80%}
-
-   c. 复制共享端点。例如，`http://d54536a50.shared.olares.com`。
-
-   d. 在此端点 URL 后附加 `/v1`，即 `http://d54536a50.shared.olares.com/v1`。
-   </template>
-   <template #单模型应用>
-
-   每个应用打包一个特定模型并暴露其自己的共享端点。以 **Qwen3.5 9B Q4_K_M (Ollama)** 为例。
-
-   a. 打开 **设置**，然后前往 **应用** > **Qwen3.5 9B Q4_K_M (Ollama)**。
-
-   b. 在 **共享入口** 中，选择 **Qwen3.5 9B Q4_K_M** 以查看端点 URL。
-
-      ![Qwen3.5 9B 共享入口](/images/manual/use-cases/anythingllm-qwen359b-shared-entrance.png#bordered){width=80%}
-
-   c. 复制共享端点 URL。例如，`http://bd5355000.shared.olares.com`。
-
-   d. 在此端点 URL 后附加 `/v1`，即 `http://bd5355000.shared.olares.com/v1`。
-   </template>
-   </Tabs>
-
-5. 点击 **保存配置**。
+8. 点击 **Save Configuration**。
 
 ### 模型未输出结构化 JSON 决策
 

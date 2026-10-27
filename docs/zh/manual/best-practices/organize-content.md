@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 使用 Wise 构建知识库的完整教程，学习如何收集网页内容、管理文档、订阅 RSS 和搜索资料，打造个人信息中心。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Wise, 知识库, LarePass 扩展, RSS 订阅, 内容收集
 ---
 # 使用 Wise 打造知识中枢
 

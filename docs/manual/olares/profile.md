@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
-description: Create and customize your Olares personal homepage with a unique cover design, social media links, custom layouts, and monitor its performance with powerful analytics tracking capabilities.
+description: Create an Olares personal homepage with a custom cover, social links, flexible layouts, and analytics to track profile performance.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Profile, personal homepage, social links, homepage layout, digital business card
 ---
 
 # Design Your Olares profile

@@ -100,7 +100,7 @@ Upon completion of the installation, the initial system information, including t
 2. Enter the one-time password and click **Continue**.
 
    ![Enter password](/images/manual/get-started/wizard-enter-password.png#bordered)
-3. Select the system language.
+3. Select the system language. Olares supports English, Simplified Chinese, German, Spanish, Italian, French, and Japanese. The Wizard switches to the selected language immediately, and Olares Desktop uses the same language after activation.
 
    ![Select language](/images/manual/get-started/select-language.png#bordered)
 4. Select a reverse proxy node that is geographically closest to your location.

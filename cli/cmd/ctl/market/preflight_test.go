@@ -21,9 +21,9 @@ func TestIsUpgradableState(t *testing.T) {
 		// SPA allowlist (5 states):
 		{"running", true},
 		{"stopped", true},
-		{"stopFailed", true},
+		{"stopFailed", false},
 		{"upgradeFailed", true},
-		{"applyEnvFailed", true},
+		{"applyEnvFailed", false},
 
 		// Everything else must be denied — sample from the broader
 		// backend state machine so a future expansion of the SPA
@@ -318,7 +318,17 @@ func TestPreflightUpgrade(t *testing.T) {
 			setup: func(f *fakeMarketBackend) {
 				f.stateRows["market.olares"] = fakeStateRow{name: "firefox", state: "installing", version: "1.0.11"}
 			},
-			wantErrSub: "in state 'installing'",
+			wantErrSub: "'olares-cli market uninstall firefox' cancels and removes it",
+		},
+		{
+			name:    "in-flight initializing → points at cancel then upgrade",
+			appName: "firefox",
+			target:  "1.0.12",
+			source:  "market.olares",
+			setup: func(f *fakeMarketBackend) {
+				f.stateRows["market.olares"] = fakeStateRow{name: "firefox", state: "initializing", version: "1.0.11"}
+			},
+			wantErrSub: "'olares-cli market cancel firefox' to stop the app and then upgrade from 'stopped'",
 		},
 		{
 			name:    "upgradeFailed retry path is allowed",
@@ -450,7 +460,7 @@ func TestPreflightUpgrade(t *testing.T) {
 			mc := newTestMarketClient(t, fb.srv.URL)
 			opts := &MarketOptions{Source: c.source, Output: "json", Quiet: true}
 
-			err := preflightUpgrade(context.Background(), opts, mc, c.appName, c.target, c.source)
+			_, err := preflightUpgrade(context.Background(), opts, mc, c.appName, c.target, c.source)
 			switch {
 			case c.wantErrSub == "" && !c.wantSoftWar:
 				if err != nil {
@@ -698,6 +708,114 @@ func TestLookupInstalledAppFallsBackToNotInstalled(t *testing.T) {
 	}
 }
 
+func TestPreflightInstall(t *testing.T) {
+	cases := []struct {
+		name       string
+		setup      func(f *fakeMarketBackend)
+		appName    string
+		wantErrSub string
+	}{
+		{
+			name:    "no state row at all",
+			appName: "firefox",
+		},
+		{
+			name:    "uninstalled row is installable",
+			appName: "firefox",
+			setup: func(f *fakeMarketBackend) {
+				f.stateRows["market.olares"] = fakeStateRow{name: "firefox", state: "uninstalled", version: "1.0.0"}
+			},
+		},
+		{
+			// Retrying a failed install is the common case and must not be
+			// blocked: installFailed is one of the SPA's uninstalledAppStates.
+			name:    "installFailed row is installable",
+			appName: "firefox",
+			setup: func(f *fakeMarketBackend) {
+				f.stateRows["market.olares"] = fakeStateRow{name: "firefox", state: "installFailed", version: "1.0.0"}
+			},
+		},
+		{
+			name:    "cancelled install is installable",
+			appName: "firefox",
+			setup: func(f *fakeMarketBackend) {
+				f.stateRows["market.olares"] = fakeStateRow{name: "firefox", state: "downloadingCanceled", version: "1.0.0"}
+			},
+		},
+		{
+			name:    "running app points at upgrade",
+			appName: "firefox",
+			setup: func(f *fakeMarketBackend) {
+				f.stateRows["market.olares"] = fakeStateRow{name: "firefox", state: "running", version: "1.0.0"}
+			},
+			wantErrSub: "market upgrade firefox",
+		},
+		{
+			name:    "upgradeFailed app points at upgrade",
+			appName: "firefox",
+			setup: func(f *fakeMarketBackend) {
+				f.stateRows["market.olares"] = fakeStateRow{name: "firefox", state: "upgradeFailed", version: "1.0.0"}
+			},
+			wantErrSub: "market upgrade firefox",
+		},
+		{
+			// The deviation this gate exists for: app-service answers an
+			// install against an in-flight row with an opaque failure.
+			name:    "in-flight upgrade points at cancel",
+			appName: "firefox",
+			setup: func(f *fakeMarketBackend) {
+				f.stateRows["market.olares"] = fakeStateRow{name: "firefox", state: "upgrading", version: "1.0.0"}
+			},
+			wantErrSub: "market cancel firefox",
+		},
+		{
+			name:    "in-flight install points at cancel",
+			appName: "firefox",
+			setup: func(f *fakeMarketBackend) {
+				f.stateRows["market.olares"] = fakeStateRow{name: "firefox", state: "downloading", version: "1.0.0"}
+			},
+			wantErrSub: "market cancel firefox",
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			fb := newFakeMarketBackend(t)
+			if c.setup != nil {
+				c.setup(fb)
+			}
+			opts := &MarketOptions{Output: "json", Quiet: true}
+
+			err := preflightInstall(context.Background(), opts, newTestMarketClient(t, fb.srv.URL), c.appName)
+
+			if c.wantErrSub == "" {
+				if err != nil {
+					t.Fatalf("preflightInstall = %v, want nil", err)
+				}
+				return
+			}
+			if err == nil {
+				t.Fatalf("preflightInstall = nil, want error containing %q", c.wantErrSub)
+			}
+			if !strings.Contains(err.Error(), c.wantErrSub) {
+				t.Fatalf("error %q missing %q", err, c.wantErrSub)
+			}
+		})
+	}
+}
+
+// A flaky /market/state read must not block an install the backend would
+// have accepted; the backend keeps the final say.
+func TestPreflightInstallSoftFailsOnLookupError(t *testing.T) {
+	fb := newFakeMarketBackend(t)
+	fb.stateErr = true
+
+	opts := &MarketOptions{Output: "json", Quiet: true}
+	if err := preflightInstall(context.Background(), opts, newTestMarketClient(t, fb.srv.URL), "firefox"); err != nil {
+		t.Fatalf("preflightInstall must soft-fail on a state lookup error, got %v", err)
+	}
+}
+
 // TestPreflightUpgrade_SourceMismatchWarns confirms that preflight does
 // NOT fail when the user passes -s pointing at a different source from
 // the one the app is currently installed from — it should only emit a
@@ -710,8 +828,11 @@ func TestPreflightUpgrade_SourceMismatchWarns(t *testing.T) {
 	mc := newTestMarketClient(t, fb.srv.URL)
 	opts := &MarketOptions{Source: "market.olares", Output: "json", Quiet: true}
 
-	err := preflightUpgrade(context.Background(), opts, mc, "firefox", "1.0.12", "market.olares")
+	row, err := preflightUpgrade(context.Background(), opts, mc, "firefox", "1.0.12", "market.olares")
 	if err != nil {
 		t.Fatalf("preflightUpgrade returned error on source mismatch: %v", err)
+	}
+	if row == nil {
+		t.Fatalf("preflightUpgrade must return the pre-upgrade row (runUpgrade uses its statusTime as the --watch baseline)")
 	}
 }

@@ -44,9 +44,6 @@ Endpoints (all under https://control-hub.<terminus>):
 `,
 	}
 	cmd.SilenceUsage = true
-	cmd.PersistentPreRun = func(c *cobra.Command, args []string) {
-		c.SilenceUsage = true
-	}
 
 	cmd.AddCommand(NewListCommand(f))
 	cmd.AddCommand(NewGetCommand(f))
@@ -55,6 +52,7 @@ Endpoints (all under https://control-hub.<terminus>):
 	cmd.AddCommand(NewLogsCommand(f))
 	cmd.AddCommand(NewDeleteCommand(f))
 	cmd.AddCommand(NewRestartCommand(f))
+	cmd.AddCommand(NewExecCommand(f))
 
 	return cmd
 }

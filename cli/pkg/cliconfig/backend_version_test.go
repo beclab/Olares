@@ -1,12 +1,14 @@
 package cliconfig
 
 import (
+	"context"
 	"testing"
 )
 
 func TestSetBackendVersion(t *testing.T) {
 	// Isolate the config dir to a temp location.
 	t.Setenv(homeEnv, t.TempDir())
+	ctx := context.Background()
 
 	const id = "alice@olares.com"
 	seed := &MultiProfileConfig{}
@@ -16,11 +18,7 @@ func TestSetBackendVersion(t *testing.T) {
 	}
 
 	// First write: empty -> version reports changed.
-	cfg, err := LoadMultiProfileConfig()
-	if err != nil {
-		t.Fatalf("load: %v", err)
-	}
-	changed, err := cfg.SetBackendVersion(id, "1.12.5", 1000)
+	changed, err := SetBackendVersion(ctx, id, "1.12.5", 1000)
 	if err != nil {
 		t.Fatalf("set: %v", err)
 	}
@@ -39,19 +37,23 @@ func TestSetBackendVersion(t *testing.T) {
 	}
 
 	// Same version again: not changed (but timestamp still updated).
-	changed, err = reloaded.SetBackendVersion(id, "1.12.5", 2000)
+	changed, err = SetBackendVersion(ctx, id, "1.12.5", 2000)
 	if err != nil {
 		t.Fatalf("set same: %v", err)
 	}
 	if changed {
 		t.Error("rewriting the same version should report changed=false")
 	}
+	reloaded, err = LoadMultiProfileConfig()
+	if err != nil {
+		t.Fatalf("reload: %v", err)
+	}
 	if reloaded.FindByOlaresID(id).BackendVersionRefreshedAt != 2000 {
 		t.Error("refreshedAt should update even when version is unchanged")
 	}
 
 	// Upgrade detected: 1.12.5 -> 1.12.6 reports changed.
-	changed, err = reloaded.SetBackendVersion(id, "1.12.6", 3000)
+	changed, err = SetBackendVersion(ctx, id, "1.12.6", 3000)
 	if err != nil {
 		t.Fatalf("set upgrade: %v", err)
 	}
@@ -60,7 +62,7 @@ func TestSetBackendVersion(t *testing.T) {
 	}
 
 	// Unknown profile errors.
-	if _, err := reloaded.SetBackendVersion("bob@olares.com", "1.12.6", 4000); err == nil {
+	if _, err := SetBackendVersion(ctx, "bob@olares.com", "1.12.6", 4000); err == nil {
 		t.Error("setting version for an unknown profile should error")
 	}
 }

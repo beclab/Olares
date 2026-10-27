@@ -58,9 +58,6 @@ For one-shot Jobs see "cluster job".
 `,
 	}
 	cmd.SilenceUsage = true
-	cmd.PersistentPreRun = func(c *cobra.Command, args []string) {
-		c.SilenceUsage = true
-	}
 
 	cmd.AddCommand(NewListCommand(f))
 	cmd.AddCommand(NewGetCommand(f))

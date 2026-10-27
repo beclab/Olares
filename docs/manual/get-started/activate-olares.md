@@ -1,5 +1,6 @@
 ---
 search: false
+noindex: true
 ---
 ## Activate Olares
 
@@ -12,7 +13,7 @@ Use the Wizard URL and initial one-time password to activate. This process conne
 2. Enter the one-time password and click **Continue**.
 
    ![Enter password](/images/manual/get-started/wizard-enter-password1.png#bordered)
-3. Select the system language.
+3. Select the system language. Olares supports English, Simplified Chinese, German, Spanish, Italian, French, and Japanese. The Wizard switches to the selected language immediately, and Olares Desktop uses the same language after activation.
 
    ![Select language](/images/manual/get-started/select-language.png#bordered)
 <!-- #endregion activation-wizard-basics -->
@@ -39,7 +40,7 @@ Use the Wizard URL and initial one-time password to activate. This process conne
 <!-- #endregion scan-qr-and-reset-password -->
 
    ::: tip 
-   If you reinstall Olares, the original instance becomes unavailable. To continue using the same Olares ID, you need to [reactivate Olares](../larepass/activate-olares.md#reactivate-olares-with-the-same-olares-id).
+   If you reinstall Olares, the original instance becomes unavailable. To continue using the same Olares ID, you need to [reactivate Olares](../larepass/activate-olares.md).
    :::
 
 <!-- #region activation-complete-redirect -->

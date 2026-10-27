@@ -1,13 +1,17 @@
 ---
 outline: [2,3]
-description: 当 LarePass 的系统区域显示“系统错误”时，诊断并收集相关信息。
+description: 当 LarePass 显示“系统错误”时，根据 Olares 版本选择日志收集方式并获取帮助，也可使用终端进一步检查系统 Pod。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, LarePass, 系统错误, Pod 状态, SSH, 故障排查, kubectl
 ---
 # LarePass 显示“系统错误”
 
-当 LarePass 移动端的**系统**部分显示“系统错误”时，参考本指南进行排查。出现此提示可能由多种底层原因导致，先按照以下步骤收集诊断信息，然后将结果提供给 Olares 团队。
+当 LarePass 移动端的**系统**部分显示“系统错误”时，参考本指南进行排查。你可以根据 Olares 版本选择日志收集方式并联系 Olares 团队，也可以按下方的进阶排查步骤进一步定位原因。
 
-:::info
-本文以 Olares One 为例。如果你在自己的设备上安装 Olares，排查步骤基本相同，只是访问终端的方式可能存在差异。
+:::warning 不要卸载 LarePass 或 Olares OS
+不要卸载 LarePass，也不要进入“系统错误”页面卸载 Olares OS 或恢复出厂设置。卸载 Olares OS 或恢复出厂设置可能清除数据。
 :::
 
  ![系统错误](/images/zh/manual/help/ts-sys-err.png#bordered){width=90%}
@@ -19,13 +23,29 @@ description: 当 LarePass 的系统区域显示“系统错误”时，诊断并
 
 ## 原因
 
-“系统错误”通常意味着一个或多个系统 Pod 运行异常。发生这种情况时，LarePass 无法获取整体系统状态。
+该提示表示 LarePass 未能获取到健康的系统状态。一个或多个系统 Pod 可能处于异常状态，可以通过系统日志和 Pod 事件进一步定位原因。
 
 ## 解决方案
 
-按照以下步骤访问 Olares 设备终端，定位未正常运行的 Pod，查看其错误详情，并将这些信息提供给 Olares 团队。这有助于缩小可能原因范围，加快故障排查。
+### 收集日志并获取帮助
 
-### 步骤 1：尝试访问 Olares 桌面
+Olares 1.12.7 及以上版本可通过 Ticket 应用提交支持工单。在**系统日志**中点击**采集日志**，自动收集并附加日志。前提条件和操作步骤见[通过 Ticket 应用提交](request-technical-support.md#通过-ticket-应用提交)。
+
+在这些版本中，如果无法使用 Ticket 应用，但可以访问设备终端，可运行 Olares Space 提供的命令，自动收集、上传日志并创建工单。操作步骤见[通过 Olares CLI 自动创建工单](../space/tickets.md#通过-olares-cli-自动创建工单)。
+
+如果使用的版本低于 1.12.7，可以[通过设置导出日志](../olares/settings/developer.md#导出系统日志)，或在设备终端使用 [`olares-cli logs`](../../developer/install/cli/logs.md) 收集日志。将日志压缩包发送至 [hi@olares.com](mailto:hi@olares.com)，联系 Olares 团队。
+
+提供日志时，附上“系统错误”截图、出现时间和时区、Olares 版本，并说明近期是否更新或重启过设备。
+
+### 进阶排查（可选）
+
+通过设备终端检查系统 Pod（运行系统组件的容器组）的状态和错误事件，帮助 Olares 团队定位故障组件。
+
+:::info
+本文以 Olares One 为例。如果你在自己的设备上安装 Olares，排查步骤基本相同，只是访问终端的方式可能存在差异。
+:::
+
+#### 步骤 1：尝试访问 Olares 桌面
 
 如果你仍然可以访问 Olares 桌面，打开控制面板并使用 Olares 内置终端。
 
@@ -41,7 +61,7 @@ description: 当 LarePass 的系统区域显示“系统错误”时，诊断并
 
 如果你可以成功访问终端，跳转至[步骤 4](#步骤-4-检查系统-pod-状态)。
 
-### 步骤 2: 尝试 SSH 连接
+#### 步骤 2: 尝试 SSH 连接
 
 如果你无法访问 Olares 桌面，可以尝试 SSH 连接。
 
@@ -65,7 +85,7 @@ description: 当 LarePass 的系统区域显示“系统错误”时，诊断并
 
    c. 找到带有 <span class="material-symbols-outlined">terminal</span> 图标的条目，点击查看密码。
 
-      ![在 Vault 中查看保存的 SSH 密码](/public/images/zh/manual/olares/ssh-check-password-in-vault1.png#bordered)
+      ![在 Vault 中查看保存的 SSH 密码](/images/zh/manual/olares/ssh-check-password-in-vault1.png#bordered)
 
 3. 在你的电脑上打开终端，通过 SSH 连接设备。
 
@@ -78,7 +98,7 @@ description: 当 LarePass 的系统区域显示“系统错误”时，诊断并
 
 如果连接成功，跳转至[步骤 4](#步骤-4-检查系统-pod-状态)。
 
-### 步骤 3: 本地登录设备
+#### 步骤 3: 本地登录设备
 
 如果无法通过 SSH 访问，使用显示器和键盘在本地登录设备。
 
@@ -91,17 +111,17 @@ description: 当 LarePass 的系统区域显示“系统错误”时，诊断并
 2. 输入用户名 `olares` 并按回车键。
 3. 输入[步骤 2](#步骤-2-尝试-ssh-连接) 中获取的设备登录密码并按回车键。
 
-### 步骤 4: 检查系统 Pod 状态
+#### 步骤 4: 检查系统 Pod 状态
 
 1. 运行以下命令，查看所有命名空间下的 Pod 状态：
     ```bash
     kubectl get pods -A
     ```
-2. 查看 **STATUS** 列，找到状态不是 `Running` 的 Pod。
-3. 准确记录每个异常 Pod 的 **NAMESPACE** 和 **NAME**。
+2. 查看 **STATUS** 和 **RESTARTS**。重点检查 `CrashLoopBackOff`、`Error`、`ImagePullBackOff` 等错误状态，或长时间处于 `Pending` 的 Pod。任务 Pod 显示 `Completed` 表示已成功完成。
+3. 记录显示错误或重启次数持续增加的 Pod 对应的 **NAMESPACE** 和 **NAME**。如果没有，直接跳到[步骤 6](#步骤-6-记录结果并收集日志)。
     ![定位异常 Pod](/images/zh/manual/help/ts-sys-err-pod-crash.png#bordered){width=90%}
 
-### 步骤 5：查看 Pod 错误信息
+#### 步骤 5：查看 Pod 错误信息
 
 1. 运行以下命令，并将 `<namespace>` 和 `<pod-name>` 替换为上一步记录的值：
 
@@ -117,12 +137,13 @@ description: 当 LarePass 的系统区域显示“系统错误”时，诊断并
 2. 在输出结果中向下滚动到 **Events** 部分，查看失败相关的错误信息。
     ![Pod 错误详情](/images/zh/manual/help/ts-sys-err-pod-event-detail.png#bordered){width=90%}
 
-### 步骤 6：联系技术支持
+#### 步骤 6：提供排查结果 {#步骤-6-记录结果并收集日志}
 
-在 [Olares GitHub 仓库](https://github.com/beclab/Olares/issues)提交 Issue，并提供以下信息：
+将以下信息提供给 Olares 团队：
 
-- 每个异常 Pod 对应的 `kubectl describe pod <pod-name> -n <namespace>` 完整输出结果
-- 错误信息的截图（如有）
-- 错误最初出现的时间及简要说明（例如，是在更新后还是重启后出现的）
+- 异常 Pod 的 **NAMESPACE**、**NAME**、**STATUS** 和 **RESTARTS**
+- **Events** 部分中的错误行
+- 报错时间和时区
+- 当前 Olares 版本，以及错误是否出现在更新或重启之后
 
-这些信息将帮助团队更快排查并解决问题。
+如果所有 Pod 状态正常，且重启次数保持稳定，也请一并说明，帮助 Olares 团队缩小排查范围。

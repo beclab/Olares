@@ -50,6 +50,8 @@ This password logs you in to the Olares One host system over SSH. It's different
 
 <!--@include: ./reusables-reset-ssh.md#reset-ssh-upon-activation-->
 
+To change the saved password, see [Reset SSH password](./hardware-settings.md#reset-ssh-password).
+
 ### Step 3: Connect via SSH
 
 The default username for Olares One is `olares`.
@@ -103,6 +105,3 @@ The default username for Olares One is `olares`.
 If **Subnet routes** is enabled in **Settings** > **VPN**, all devices on Olares One's local network become reachable through the VPN. You can then SSH using the local IP address (`192.168.x.x`) instead of the Tailscale IP (`100.64.x.x`), even when accessing from a different network.
 :::
 -->
-
-## Reset SSH password
-<!--@include: ./reusables-reset-ssh.md#reset-ssh-in-settings-->

@@ -7,11 +7,11 @@ head:
       content: Olares, Olares One, Windows 驱动, NVIDIA 显卡驱动, GPU
 ---
 
-# 在 Windows 上安装驱动 <Badge type="tip" text="15 min"/>
-
 :::warning
-本文档由 AI 自动翻译，可能存在表述差异。如需核对，请参考[英文原文](../../one/install-nvidia-driver.md)。
+本文档由 AI 自动翻译，仅供参考。涉及关键操作或信息时，请以[英文原文](../../one/install-nvidia-driver.md)为准。
 :::
+
+# 在 Windows 上安装驱动 <Badge type="tip" text="15 min"/>
 
 为了确保在 Olares One 上运行 Windows 时获得最佳性能和系统稳定性，Olares 提供了一个经过测试的一体化驱动包。该包包含设备的所有必要驱动，如音频、网络和 NVIDIA 显卡驱动。
 
@@ -34,11 +34,7 @@ head:
 
 ## 步骤 1：下载并解压驱动包
 
-1. 下载[驱动包](http://cdn.olares.com/common/OlaresOne_driver_251125.zip)。
-
-    :::tip 浏览器安全警告
-    由于下载链接使用标准的 HTTP 连接而非 HTTPS，你的 Web 浏览器可能会将其标记或阻止为不安全下载。如果发生这种情况，请在浏览器的下载管理器中选择 **保留** 或 **允许** 以继续下载。
-    :::
+1. 下载[驱动包](https://cdn.olares.com/common/OlaresOne_driver_251125.zip)。
 
     :::info 下载时间
     驱动包很大。根据你的互联网连接速度，下载可能需要一段时间才能完成。

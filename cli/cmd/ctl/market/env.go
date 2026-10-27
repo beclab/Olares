@@ -14,7 +14,12 @@ import (
 )
 
 type envValidationError struct {
-	AppName       string
+	AppName string
+	// Source is the source the failing verb resolved. It is carried so the
+	// suggested `market get` command can be pinned to it: without -s, get
+	// resolves market.olares, which is the wrong bucket for an app that came
+	// from an upload and makes the copied command fail on its own.
+	Source        string
 	MissingValues []string
 	MissingRefs   []string
 	InvalidValues []string
@@ -59,6 +64,10 @@ func formatEnvValidationError(e *envValidationError) string {
 
 	b.WriteString("\nRun 'olares-cli market get ")
 	b.WriteString(e.AppName)
+	if source := strings.TrimSpace(e.Source); source != "" {
+		b.WriteString(" -s ")
+		b.WriteString(source)
+	}
 	b.WriteString("' to inspect the declared envs, then use --env KEY=VALUE to provide or correct values.")
 	return b.String()
 }
@@ -171,7 +180,7 @@ func tryFetchRemoteOptions(endpoint string) ([]sysv1alpha1.EnvValueOptionItem, e
 
 // parseServerEnvError extracts env validation details from a failed API response.
 // This handles the case where the market service wraps app-service's 422 response.
-func parseServerEnvError(resp *APIResponse, appName string) *envValidationError {
+func parseServerEnvError(resp *APIResponse, appName, source string) *envValidationError {
 	if resp == nil || len(resp.Data) == 0 {
 		return nil
 	}
@@ -184,6 +193,7 @@ func parseServerEnvError(resp *APIResponse, appName string) *envValidationError 
 
 	result := &envValidationError{
 		AppName:       appName,
+		Source:        source,
 		MissingValues: envNames(checkResult.MissingValues),
 		MissingRefs:   envNames(checkResult.MissingRefs),
 		InvalidValues: envNames(checkResult.InvalidValues),

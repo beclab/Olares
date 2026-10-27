@@ -208,7 +208,7 @@ func FetchAndCache(
 		res.PreviousGlobalRole = target.ClusterContext.GlobalRole
 	}
 
-	changed, err := cfg.SetClusterContext(olaresID, info.toCacheEntry(), res.RefreshedAt)
+	changed, err := cliconfig.SetClusterContext(ctx, olaresID, info.toCacheEntry(), res.RefreshedAt)
 	if err != nil {
 		return nil, err
 	}

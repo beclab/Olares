@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 了解 Olares 系统应用 Wise 的基本操作。学习收集、阅读和组织内容，使用标签和笔记功能，追踪阅读进度，实现个性化阅读体验。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Wise, 内容管理, RSS 阅读器, 阅读工具, 标签, 笔记, 收藏内容
 ---
 # Wise 基本操作
 

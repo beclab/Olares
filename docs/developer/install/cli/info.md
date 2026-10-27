@@ -1,3 +1,7 @@
+---
+noindex: true
+description: The info command displays general information about the installed Olares version.
+---
 # `info`
 
 ## Synopsis

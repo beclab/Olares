@@ -20,10 +20,6 @@ and do not require a profile login.`,
 	// full help block on every validation failure.
 	cmd.SilenceErrors = true
 	cmd.SilenceUsage = true
-	cmd.PersistentPreRun = func(c *cobra.Command, args []string) {
-		c.SilenceErrors = true
-		c.SilenceUsage = true
-	}
 	cmd.AddCommand(NewCmdChartLint())
 	cmd.AddCommand(NewCmdChartFromCompose())
 	cmd.AddCommand(NewCmdChartPackage())

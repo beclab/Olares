@@ -134,28 +134,24 @@ func TestAcquire_ConcurrentInProcess(t *testing.T) {
 	t.Logf("maxConcurrent observed: %d (expected 1 across processes, ≤ %d within one process)", maxConcurrent.Load(), n)
 }
 
-// TestRefreshLockPath_Sanitization ensures path-unsafe characters in
-// the olaresId are replaced rather than reaching the filesystem.
-// Production olaresIds look like "alice@olares.com", which is fine on
-// every supported OS — but defensive sanitization keeps a malformed
-// override (e.g. from $OLARES_PROFILE) from causing a path-traversal.
-func TestRefreshLockPath_Sanitization(t *testing.T) {
-	t.Setenv("OLARES_CLI_HOME", t.TempDir())
+// TestSanitize ensures path-unsafe characters in a lock name are replaced
+// rather than reaching the filesystem. Production olaresIds look like
+// "alice@olares.com", which is fine on every supported OS — but defensive
+// sanitization keeps a malformed override (e.g. from $OLARES_PROFILE) from
+// causing a path-traversal.
+func TestSanitize(t *testing.T) {
 	for _, tc := range []struct {
-		in       string
-		mustHave string
+		in   string
+		want string
 	}{
-		{"alice@olares.com", "alice@olares.com.refresh.lock"},
-		{"weird/id", "weird_id.refresh.lock"},
-		{"with\x00null", "with_null.refresh.lock"},
-		{"", "_.refresh.lock"},
+		{"alice@olares.com", "alice@olares.com"},
+		{"weird/id", "weird_id"},
+		{"with\x00null", "with_null"},
+		{"../../escape", ".._.._escape"},
+		{"", "_"},
 	} {
-		got, err := RefreshLockPath(tc.in)
-		if err != nil {
-			t.Fatalf("RefreshLockPath(%q): %v", tc.in, err)
-		}
-		if filepath.Base(got) != tc.mustHave {
-			t.Errorf("RefreshLockPath(%q) base = %q, want %q", tc.in, filepath.Base(got), tc.mustHave)
+		if got := Sanitize(tc.in); got != tc.want {
+			t.Errorf("Sanitize(%q) = %q, want %q", tc.in, got, tc.want)
 		}
 	}
 }

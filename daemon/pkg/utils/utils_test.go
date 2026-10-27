@@ -72,7 +72,12 @@ func TestGetGpu(t *testing.T) {
 		return
 	}
 
-	t.Log(*s)
+	if len(s) == 0 {
+		t.Log("no gpu info")
+		return
+	}
+
+	t.Log(s)
 }
 
 func TestFindCommand(t *testing.T) {

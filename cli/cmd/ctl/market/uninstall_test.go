@@ -362,3 +362,33 @@ func TestShouldAutoCascadeWith(t *testing.T) {
 		})
 	}
 }
+
+// TestUninstallRejectingStatesMatchesAppService pins the one state where this
+// set must diverge from notInstalledStates. Both sets answer "is this row an
+// installed app?" with no, but only OperationAllowedInState decides whether
+// app-service will accept an uninstall — and `installFailed` is the state
+// where the two disagree. Treating it as un-uninstallable would skip a real
+// cleanup of the resources a failed install left behind.
+func TestUninstallRejectingStatesMatchesAppService(t *testing.T) {
+	if uninstallRejectingStates["installFailed"] {
+		t.Error("installFailed accepts UninstallOp; short-circuiting it would skip a real cleanup")
+	}
+	for _, state := range []string{"downloadFailed", "pendingCanceled", "downloadingCanceled", "installingCanceled", "uninstalled"} {
+		if !uninstallRejectingStates[state] {
+			t.Errorf("%s permits InstallOp but not UninstallOp; uninstall there 404s", state)
+		}
+	}
+	// Every member must also be a state the SPA hides from --mine; a state
+	// that renders as installed has no business short-circuiting.
+	for state := range uninstallRejectingStates {
+		if isInstalledState(state) {
+			t.Errorf("%s renders as installed; it must not short-circuit uninstall", state)
+		}
+	}
+	// In-flight rows go to the cancel path, never here.
+	for state := range uninstallRejectingStates {
+		if inFlightCancelableStates[state] {
+			t.Errorf("%s is cancelable in-flight; the cancel path owns it", state)
+		}
+	}
+}

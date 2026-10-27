@@ -1,8 +1,7 @@
 // Package integration implements the `olares-cli settings integration`
 // subtree (Settings -> Integration). Backed by user-service's
-// account.controller.ts. The cookie / cloud-binding / NFT subsets are
-// browser-/wallet-bound and stay out of CLI scope; only the headless account
-// CRUD is in.
+// account.controller.ts and cookie.controller.ts. The cloud-binding / NFT
+// subsets are wallet-bound and stay out of CLI scope.
 package integration
 
 import (
@@ -12,13 +11,14 @@ import (
 )
 
 // NewIntegrationCommand returns the `settings integration` parent:
-// inspect, add (object-storage credentials only) and delete external
-// integration accounts.
+// external integration accounts plus the per-domain cookie store that
+// downloads and Wise collection read from.
 func NewIntegrationCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "integration",
-		Short: "External integration accounts (Settings -> Integration)",
-		Long: `Manage integration accounts (S3 / Dropbox / Google Drive / Tencent COS / ...).
+		Short: "External integration accounts and cookies (Settings -> Integration)",
+		Long: `Manage integration accounts (S3 / Dropbox / Google Drive / Tencent COS / ...)
+and the browser cookies used to download content behind a login.
 
 Subcommands:
   accounts list
@@ -26,13 +26,18 @@ Subcommands:
   accounts add awss3   [flags]
   accounts add tencent [flags]
   accounts delete <type> [name]
+  cookie import [--domain <d>] --file <path>
+  cookie list
+  cookie rm <domain>
+  cookie validate <domain>
 
-OAuth flows (Google Drive, Dropbox), the cookie store and the
-Olares-Space / NFT cloud-binding flows stay in the SPA — they are
-browser- and wallet-bound by design.
+OAuth flows (Google Drive, Dropbox) and the Olares-Space / NFT
+cloud-binding flows stay in the SPA — they are browser- and
+wallet-bound by design.
 `,
 	}
 	cmd.SilenceUsage = true
 	cmd.AddCommand(NewAccountsCommand(f))
+	cmd.AddCommand(NewCookieCommand(f))
 	return cmd
 }

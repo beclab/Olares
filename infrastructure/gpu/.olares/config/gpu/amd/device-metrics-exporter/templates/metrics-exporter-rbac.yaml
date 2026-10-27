@@ -1,0 +1,69 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  {{- include "metrics-exporter.name" . | nindent 2 }}
+  labels:
+  {{- include "metrics-exporter.labels" . | nindent 4 }}
+  {{- include "helm-charts-exporter.labels" . | nindent 4 }}
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "helm-charts-exporter.fullname" . }}-metrics-exporter
+  labels:
+  {{- include "metrics-exporter.labels" . | nindent 4 }}
+  {{- include "helm-charts-exporter.labels" . | nindent 4 }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - watch
+  - get
+  - list
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  verbs:
+  - watch
+  - get
+  - list
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+{{- if eq .Values.platform "openshift" }}
+- apiGroups:
+  - security.openshift.io
+  resourceNames:
+  - privileged
+  resources:
+  - securitycontextconstraints
+  verbs:
+  - use
+{{- end }}
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "helm-charts-exporter.fullname" . }}-metrics-exporter
+  labels:
+  {{- include "metrics-exporter.labels" . | nindent 4 }}
+  {{- include "helm-charts-exporter.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: '{{ include "helm-charts-exporter.fullname" . }}-metrics-exporter'
+subjects:
+- kind: ServiceAccount
+  {{- include "metrics-exporter.name" . | nindent 2 }}
+  namespace: '{{ .Release.Namespace }}'

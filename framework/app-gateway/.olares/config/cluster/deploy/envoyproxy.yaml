@@ -14,6 +14,9 @@ spec:
       envoyDeployment:
         pod:
           priorityClassName: system-cluster-critical
+          annotations:
+            linkerd.io/inject: enabled
+            config.linkerd.io/opaque-ports: "10080,19001"
   telemetry:
     accessLog:
       settings:

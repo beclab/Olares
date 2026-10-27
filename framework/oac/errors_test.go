@@ -43,6 +43,36 @@ func TestValidationError_Format(t *testing.T) {
 	}
 }
 
+// TestValidationError_DoesNotRepeatFieldPath pins the fix for the message
+// `chart lint` printed on a manifest missing one field:
+//
+//	manifest validation failed (apiVersion=v1): metadata.icon: metadata.icon: metadata.icon is required
+//
+// Field and the first line of Reason name the same path, so printing both
+// said it twice on top of ozzo naming it inside its own message.
+func TestValidationError_DoesNotRepeatFieldPath(t *testing.T) {
+	verrs := validation.Errors{
+		"metadata": validation.Errors{"icon": errors.New("metadata.icon is required")},
+	}
+	got := WrapValidation("v1", verrs).Error()
+	if n := strings.Count(got, "metadata.icon"); n > 1 {
+		t.Errorf("field path repeated %d times: %s", n, got)
+	}
+	if !strings.Contains(got, "metadata.icon is required") {
+		t.Errorf("message lost the reason: %s", got)
+	}
+}
+
+// TestValidationError_KeepsFieldWhenReasonOmitsIt covers the other branch:
+// a Field set by NewValidationError, whose Reason does not name the path,
+// must still be printed.
+func TestValidationError_KeepsFieldWhenReasonOmitsIt(t *testing.T) {
+	got := NewValidationError("v1", "metadata.name", "is required").Error()
+	if !strings.Contains(got, "metadata.name") {
+		t.Errorf("message dropped the field path: %s", got)
+	}
+}
+
 func TestValidationError_Unwrap(t *testing.T) {
 	inner := errors.New("root cause")
 	v := &ValidationError{Version: "v1", Reason: "wrapped", Inner: inner}

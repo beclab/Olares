@@ -40,9 +40,8 @@ import (
 // full IntegrationAccount including raw_data. We never print raw_data
 // in --output table, but pass --output json to get it back.
 //
-// The cookie store and Olares-Space NFT cloud-binding flows live behind
-// separate routes that need browser/wallet context, so they stay out
-// of CLI scope.
+// Olares-Space NFT cloud-binding lives behind separate routes that need
+// wallet context, so it stays out of CLI scope.
 func NewAccountsCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "accounts",
@@ -58,9 +57,11 @@ Subcommands:
   delete       <type> [name]
 
 The "add" verb covers the *direct* object-storage flows (awss3, tencent)
-that don't need an OAuth/wallet redirect. The cookie store, OAuth flows
-(Google Drive, Dropbox), and Olares-Space NFT cloud-binding stay in the
-SPA — they need browser- or wallet-bound state that has no CLI surface.
+that don't need an OAuth/wallet redirect. OAuth flows (Google Drive,
+Dropbox) and Olares-Space NFT cloud-binding stay in the SPA — they need
+browser- or wallet-bound state that has no CLI surface.
+
+Cookies live under "settings integration cookie".
 `,
 	}
 	cmd.SilenceUsage = true

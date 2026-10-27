@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 了解如何在 Olares 中将你的应用接入 MinIO 服务。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, MinIO, 中间件集成, OlaresManifest, 对象存储, 环境变量映射, 存储桶
 ---
 # 集成 MinIO
 

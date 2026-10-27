@@ -35,6 +35,10 @@ func (u UbuntuVersion) String() string {
 		return "22."
 	case Ubuntu24:
 		return "24."
+	case Ubuntu25:
+		return "25."
+	case Ubuntu26:
+		return "26."
 	}
 	return ""
 }
@@ -56,6 +60,7 @@ const (
 	Ubuntu22   UbuntuVersion = "22."
 	Ubuntu24   UbuntuVersion = "24."
 	Ubuntu25   UbuntuVersion = "25."
+	Ubuntu26   UbuntuVersion = "26."
 	Ubuntu2204 UbuntuVersion = "22.04"
 	Ubuntu2404 UbuntuVersion = "24.04"
 
@@ -84,6 +89,7 @@ type Systems interface {
 	IsMThreadsM1000() bool
 	IsRyzenAIMax() bool
 	IsIntelGPU() bool
+	IsIntelDGPU() bool
 
 	IsUbuntu() bool
 	IsDebian() bool
@@ -97,6 +103,7 @@ type Systems interface {
 	GetHostname() string
 	GetOsType() string
 	GetOsArch() string
+	GetOsKernel() string
 	GetUsername() string
 	GetHomeDir() string
 	GetOsVersion() string
@@ -146,7 +153,7 @@ func (s *SystemInfo) IsSupport() error {
 	//}
 
 	if s.IsUbuntu() {
-		if !s.IsUbuntuVersionEqual(Ubuntu22) && !s.IsUbuntuVersionEqual(Ubuntu24) && !s.IsUbuntuVersionEqual(Ubuntu25) {
+		if !s.IsUbuntuVersionEqual(Ubuntu22) && !s.IsUbuntuVersionEqual(Ubuntu24) && !s.IsUbuntuVersionEqual(Ubuntu25) && !s.IsUbuntuVersionEqual(Ubuntu26) {
 			return fmt.Errorf("unsupported ubuntu os version '%s'", s.GetOsVersion())
 		}
 	}
@@ -203,6 +210,10 @@ func (s *SystemInfo) GetOsVersion() string {
 	return s.HostInfo.OsVersion
 }
 
+func (s *SystemInfo) GetOsKernel() string {
+	return s.HostInfo.OsKernel
+}
+
 func (s *SystemInfo) GetOsPlatformFamily() string {
 	return s.HostInfo.OsPlatformFamily
 }
@@ -252,20 +263,28 @@ func (s *SystemInfo) IsAmdApu() bool {
 	return s.CpuInfo.HasAmdAPU
 }
 
-func (s *SystemInfo) IsAmdGPU() bool {
-	return s.HasAmdGPU
-}
-
 // IsRyzenAIMax reports whether the node carries an AMD "Ryzen AI Max" APU
 // (integrated GPU). It drives ROCm install + the "amd" node mode label.
 func (s *SystemInfo) IsRyzenAIMax() bool {
 	return s.CpuInfo.IsRyzenAIMax
 }
 
-// IsIntelGPU reports whether the node exposes an Intel GPU (drives the "intel"
-// node mode label)
+// IsAmdGPU reports whether the node has a discrete AMD GPU (not an APU).
+// It drives ROCm install + the "amd-gpu" node mode label.
+func (s *SystemInfo) IsAmdGPU() bool {
+	return s.HasAmdGPU
+}
+
+// IsIntelGPU reports whether the node exposes an Intel integrated GPU (drives
+// the "intel" unified-memory node mode label)
 func (s *SystemInfo) IsIntelGPU() bool {
 	return s.CpuInfo.IsIntelGPU
+}
+
+// IsIntelDGPU reports whether the node exposes an Intel discrete GPU (drives the
+// "intel-gpu" node mode label)
+func (s *SystemInfo) IsIntelDGPU() bool {
+	return s.CpuInfo.IsIntelDGPU
 }
 
 func (s *SystemInfo) IsAmdGPUOrAPU() bool {
@@ -491,19 +510,20 @@ type CpuInfo struct {
 	IsMThreadsM1000  bool   `json:"is_mthreads_m1000,omitempty"`
 	IsRyzenAIMax     bool   `json:"is_ryzen_ai_max,omitempty"`
 	IsIntelGPU       bool   `json:"is_intel_gpu,omitempty"`
+	IsIntelDGPU      bool   `json:"is_intel_dgpu,omitempty"`
 }
 
 // Not considering the case where AMD GPU and AMD APU coexist.
 func getAmdGPU() (bool, error) {
 	APUOrGPUExists, err := HasAmdAPUOrGPULocal()
 	if err != nil {
-		fmt.Printf("Error checking AMD APU/GPU: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error checking AMD APU/GPU: %v\n", err)
 		return false, err
 	}
 
 	hasAmdAPU, err := HasAmdAPULocal()
 	if err != nil {
-		fmt.Printf("Error checking AMD APU: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error checking AMD APU: %v\n", err)
 		return false, err
 	}
 
@@ -555,19 +575,26 @@ func getCpu() *CpuInfo {
 	// check if it has amd igpu
 	hasAmdAPU, err := HasAmdAPULocal()
 	if err != nil {
-		fmt.Printf("Error checking AMD iGPU: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error checking AMD iGPU: %v\n", err)
 		hasAmdAPU = false
 	}
 
 	// check if it is an AMD Ryzen AI Max APU
 	isRyzenAIMax, err := HasRyzenAIMaxLocal()
 	if err != nil {
-		fmt.Printf("Error checking AMD Ryzen AI Max: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error checking AMD Ryzen AI Max: %v\n", err)
 		isRyzenAIMax = false
 	}
 
-	// check if it has an Intel GPU
-	isIntelGPU := HasIntelGPULocal()
+	// check if it has an Intel integrated GPU (unified-memory "intel" mode) and
+	// an Intel discrete GPU ("intel-gpu" mode)
+	intelGPUs, err := IntelGPUsLocal()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error checking Intel GPU: %v\n", err)
+		intelGPUs = nil
+	}
+	isIntelGPU := hasIntelIGPU(intelGPUs)
+	isIntelDGPU := hasIntelDGPU(intelGPUs)
 
 	// check if it is mthreads m1000
 	ret.IsMThreadsM1000 = IsMThreadsAIBookM1000Local()
@@ -576,6 +603,7 @@ func getCpu() *CpuInfo {
 	ret.HasAmdAPU = hasAmdAPU
 	ret.IsRyzenAIMax = isRyzenAIMax
 	ret.IsIntelGPU = isIntelGPU
+	ret.IsIntelDGPU = isIntelDGPU
 
 	return ret
 }

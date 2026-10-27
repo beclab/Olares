@@ -1,5 +1,9 @@
 ---
 search: false
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Wise, LarePass, 收藏文章, 聚合搜索, 网页剪藏, 稍后阅读, 知识库
 ---
 将你的内容收集到 Wise 后，你可以通过 Olares 的聚合搜索功能进行全文搜索。
 

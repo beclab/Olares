@@ -1,25 +1,29 @@
 ---
 
 outline: [2, 3]
-description: Install Olares on NVIDIA DGX Spark using the official ISO image, including bootable USB creation, installation steps, and activation process.
+description: Install Olares on NVIDIA DGX Spark from a bootable USB drive, then activate and configure GPU memory.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, DGX Spark ISO, NVIDIA DGX Spark, ISO image, GPU memory, memory slicing
 ---
 
 # Install Olares on DGX Spark via ISO
 
 This guide explains how to install Olares on NVIDIA DGX Spark using the official ISO image.
 
-<!--@include: ./reusables.md#installation-troubleshooting-tip-->
+## Prerequisites
 
-## System requirements
-
-- **DGX Spark**: Ensure your device is connected to a monitor and keyboard.
-- **USB flash drive**: A drive with 8 GB or higher capacity.
-- **Computer**: A Windows, macOS, or Linux computer to create the bootable USB drive.
-- **Network**: An Ethernet cable connecting DGX Spark to your router (recommended for stable connection).
+- **Olares device**: NVIDIA DGX Spark.
+<!--@include: ./reusables.md#larepass-prerequisite-->
+- **Peripherals**: A monitor and keyboard connected to DGX Spark.
+- **USB flash drive**: At least 8 GB of capacity.
+- **Setup computer**: A Windows, macOS, or Linux computer for creating the bootable USB drive.
+- **Network**: An Ethernet connection to your router is recommended.
 
 ## Create a bootable USB drive
 
-1. Download [the official Olares ISO image for DGX Spark](https://cdn.olares.com/spark/olares-latest-arm64.iso).
+1. Download [the official Olares ISO image for DGX Spark](https://cdn.olares.com/spark/olares-v1.12.7-arm64.iso).
 2. Download and install [Balena Etcher](https://etcher.balena.io/).
 3. Insert the USB flash drive into your computer.
 4. Launch Balena Etcher and follow these steps:
@@ -67,19 +71,21 @@ This guide explains how to install Olares on NVIDIA DGX Spark using the official
 
 5. To prevent startup delays, turn on DGX Spark and immediately press the **Delete** key repeatedly to enter the BIOS setup. Set the internal hard drive as the **Boot Option #1**.
 
-## Connect to DGX Spark
+## Finish installation and activate Olares
+
+### Connect to DGX Spark
 
 <tabs>
 <template #Set-up-via-wired-LAN>
 
 1. Ensure DGX Spark is connected to your router via Ethernet.
-2. In the LarePass app, on your Olares activation page, tap **Discover nearby Olares**.
+2. Open LarePass. If you do not have an Olares ID, tap **Create an account** and follow the prompts. On the activation page, tap **Discover nearby Olares**.
 3. Select the target Olares instance from the list.
 
 </template>
 <template #Set-up-via-wireless-network>
 
-1. In the LarePass app, on your Olares activation page, tap **Discover nearby Olares**.
+1. Open LarePass. If you do not have an Olares ID, tap **Create an account** and follow the prompts. On the activation page, tap **Discover nearby Olares**.
 2. Tap **Bluetooth network setup** at the bottom.
 3. Select your device from the Bluetooth list and tap **Network setup**.
 4. Follow the prompts to connect DGX Spark to the Wi-Fi network your phone is currently using.
@@ -88,7 +94,7 @@ This guide explains how to install Olares on NVIDIA DGX Spark using the official
 </template>
 </tabs>
 
-## Activate Olares
+### Activate Olares
 
 1. In the LarePass app, on the device you just found, tap **Install now**.
 2. When the installation completes, tap **Activate now**.
@@ -96,7 +102,11 @@ This guide explains how to install Olares on NVIDIA DGX Spark using the official
    :::tip Note
    You can change this setting later on the [Change reverse proxy](../olares/settings/change-frp.md) page in Olares.
    :::
-4. Follow the on-screen instructions to set the login password for Olares, then tap **Complete**.
+4. Select the language for Olares. Olares supports English, Simplified Chinese, German, Spanish, Italian, French, and Japanese.
+   :::info
+   This selection does not change the language of the LarePass app. The remaining activation steps stay in the current LarePass language. After activation, Olares Desktop uses the language selected here.
+   :::
+5. Follow the on-screen instructions to set the login password for Olares, then tap **Complete**.
 
    ![ISO Activate-2](/images/manual/larepass/iso-activate-4.png#bordered)
 
@@ -121,3 +131,5 @@ If needed, you can manually adjust the memory allocation for each AI application
 4. In the **Edit VRAM allocation** dialog, enter the desired VRAM amount in GB and click **Confirm**.
 
 <!--@include: ./reusables.md#protect-olares-id-->
+
+<!--@include: ./reusables.md#installation-troubleshooting-tip-->

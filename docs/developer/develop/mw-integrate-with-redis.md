@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Learn how to integrate your app with the built-in Redis service in Olares.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Redis integration, integrate with Redis, Olares middleware, built-in Redis
 ---
 # Integrate with Redis
 

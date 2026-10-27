@@ -1,10 +1,14 @@
 ---
 outline: [2, 4]
 description: 在 Olares 上安装和运行 Windows 虚拟机的综合指南。学习如何配置初始凭据、通过基于浏览器的 VNC 或 Microsoft 远程桌面（RDP）连接，以及在计算机和 VM 之间传输文件。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Windows VM, run Windows on Olares, Windows virtual machine, self-hosted Windows, Windows RDP, Windows VM on Olares
 ---
 
 :::warning
-本文档由 AI 自动翻译，可能存在表述差异。如需核对，请参考[英文原文](../../use-cases/windows.md)。
+本文档由 AI 自动翻译，仅供参考。涉及关键操作或信息时，请以[英文原文](../../use-cases/windows.md)为准。
 :::
 
 # 在 Olares 设备上运行 Windows VM
@@ -14,7 +18,7 @@ Olares 允许您直接在设备上运行完整的 Windows 虚拟机，为您提�
 :::info 系统功能
 - Olares 支持运行基本的 Windows 应用程序。
 - 默认情况下，Windows VM 使用基于 CPU 的虚拟化和虚拟显示输出。
-- Intel 集成显卡支持仅在支持的硬件上可用，需要额外的主机配置。请参阅[为 Windows VM 启用 Intel 集成显卡直通](./windows-intel-gpu-passthrough.md)。
+- Intel 集成显卡支持仅在支持的硬件上可用。在 Olares One 上，所需的显卡配置已默认包含，无需额外的主机设置。在自托管设备上，则需要额外的主机配置。请参阅[为 Windows VM 启用 Intel 集成显卡直通](./windows-intel-gpu-passthrough.md)。
 - 仅通过远程桌面（RDP）连接时才支持音频输出。
 :::
 
@@ -202,3 +206,4 @@ Windows VM 会继续在您的 Olares 设备上运行，并随时准备让您重�
 
 - [为 Windows VM 启用 Intel 集成显卡直通](./windows-intel-gpu-passthrough.md)
 - [在 Olares 设备上运行 macOS VM](./macos.md)
+- [使用 QEMU Server 运行 Linux 虚拟机](qemu.md)：创建 Linux 服务器，通过 SSH 或浏览器控制台管理。

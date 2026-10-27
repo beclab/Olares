@@ -32,6 +32,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/beclab/Olares/cli/pkg/bflenvelope"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 	"github.com/beclab/Olares/cli/pkg/credential"
 	"github.com/beclab/Olares/cli/pkg/whoami"
@@ -103,60 +104,26 @@ func prepare(ctx context.Context, f *cmdutil.Factory) (*preparedClient, error) {
 	}, nil
 }
 
-// bflEnvelope is the universal user-service / BFL response wrapper. Every
-// /api/* and /bfl/backend/* endpoint we hit in `me` returns this shape:
-//
-//	{ "code": 0, "message": "ok", "data": <typed payload> }
-//
-// We unmarshal data lazily via json.RawMessage so each verb can decode
-// into its own typed struct without re-reading the response.
-type bflEnvelope struct {
-	Code    int             `json:"code"`
-	Message string          `json:"message"`
-	Data    json.RawMessage `json:"data"`
-}
-
 // doGetEnvelope sends a GET, validates the BFL envelope, and decodes
-// data into out. Verbs that only care about the unwrapped payload should
-// call this; verbs that need code/message visibility (none yet) can call
-// d.DoJSON directly with their own envelope type.
+// data into out.
 //
 // Errors fall into three buckets:
 //   - HTTP / network → wrapped by the underlying Doer (already
 //     CTA-formatted for 401/403).
-//   - Envelope code != 0 → wrapped here so the user sees the server's
-//     own message rather than a generic "decode failure".
-//   - JSON decode of data → wrapped here.
+//   - Envelope code outside 0/200 → wrapped by bflenvelope so the user
+//     sees the server's own message rather than a decode failure.
+//   - JSON decode of data → wrapped by bflenvelope.
 func doGetEnvelope(ctx context.Context, d Doer, path string, out interface{}) error {
 	return doMutateEnvelope(ctx, d, "GET", path, nil, out)
 }
 
 // doMutateEnvelope is the POST/PUT/DELETE counterpart of doGetEnvelope.
-// user-service routes either return BFL `{code: 0}` (the most common
-// shape — returnSucceed wraps everything) or, for endpoints that proxy
-// through additional layers, `{code: 200}`. Both are treated as success
-// here.
 func doMutateEnvelope(ctx context.Context, d Doer, method, path string, body, out interface{}) error {
-	var env bflEnvelope
+	var env bflenvelope.Envelope
 	if err := d.DoJSON(ctx, method, path, body, &env); err != nil {
 		return err
 	}
-	switch env.Code {
-	case 0, 200:
-	default:
-		msg := strings.TrimSpace(env.Message)
-		if msg == "" {
-			msg = fmt.Sprintf("server returned code=%d", env.Code)
-		}
-		return fmt.Errorf("%s %s: %s", method, path, msg)
-	}
-	if out == nil || len(env.Data) == 0 {
-		return nil
-	}
-	if err := json.Unmarshal(env.Data, out); err != nil {
-		return fmt.Errorf("%s %s: decode data: %w", method, path, err)
-	}
-	return nil
+	return bflenvelope.Data(method, path, env, out)
 }
 
 // printJSON pretty-prints v to stdout — used by every `me` verb when the

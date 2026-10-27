@@ -1,3 +1,7 @@
+---
+noindex: true
+description: The delete subcommand permanently removes an existing user account from the Olares system.
+---
 # `delete`
 
 ## Synopsis

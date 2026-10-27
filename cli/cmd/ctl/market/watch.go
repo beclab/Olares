@@ -23,6 +23,7 @@ const (
 	watchUninstall watchOp = "uninstall"
 	watchStop      watchOp = "stop"
 	watchResume    watchOp = "resume"
+	watchRestart   watchOp = "restart"
 	watchCancel    watchOp = "cancel"
 	// watchStatus is the op-agnostic variant used by the `status --watch`
 	// command: the user didn't kick off any lifecycle in this CLI
@@ -66,6 +67,17 @@ var (
 		"resumeFailed":    true,
 		"applyEnvFailed":  true,
 		"failed":          true,
+	}
+
+	// upgradeCanceledReasons are the two Status.Reason tags app-service
+	// stamps when an upgrade is cancelled — by the user through
+	// `market cancel`, or by the backend's own download TTL. Verbatim from
+	// framework/app-service/pkg/constants/operate_msg.go. They are the only
+	// signal that separates a cancelled upgrade from a completed one once
+	// both are resting on `stopped`; see upgradeStoppedTerminal.
+	upgradeCanceledReasons = map[string]bool{
+		"upgradeCancelByUser":   true,
+		"upgradeCancelBySystem": true,
 	}
 )
 
@@ -135,6 +147,75 @@ type watchTarget struct {
 	// distinguish "no-op success" from "pre-tick-zero" from the row
 	// alone, so we keep the strict gate for those.
 	idempotentSuccess bool
+
+	// stoppedTerminalSuccess treats a `stopped` row as a terminal SUCCESS,
+	// op-agnostically, but ONLY when its statusTime is strictly newer than
+	// baselineStatusTime. This is the resume watcher's cancel escape hatch:
+	// a resume that gets cancelled (by the user via `market cancel`, or by
+	// the backend's TTL) walks resuming -> resumingCanceling -> stopping ->
+	// stopped, so `stopped` is the settled outcome — but it is ALSO the
+	// pre-resume resting state (you resume a stopped app), byte-identical at
+	// tick zero. We reuse restart's statusTime-baseline trick to tell the
+	// freshly-cancelled `stopped` from the stale pre-resume row (strict `>`;
+	// a missing/unparseable statusTime -> effectiveTime 0 -> never terminal,
+	// mirroring the SPA). Unlike requireNewerThanBaseline this is scoped to
+	// the single `stopped` state, so the `running` success path (incl. the
+	// idempotentSuccess no-op shortcut) is unaffected. Only watchResume sets
+	// it; captured baseline comes from runResume, same as restart.
+	stoppedTerminalSuccess bool
+
+	// upgradeStoppedTerminal makes `stopped` terminal for the upgrade
+	// watcher, which is the one op where that state is BOTH outcomes:
+	//   - an upgrade started from `stopped` lands back on `stopped` at the
+	//     new version (upgrading_app.go keeps the pre-upgrade landed state),
+	//     so it never reaches `running`;
+	//   - a cancelled upgrade also settles on `stopped`, still on the OLD
+	//     version, via upgrading -> upgradingCanceling -> stopping.
+	// Reason is what tells them apart: app-service stamps
+	// upgradeCancelByUser / upgradeCancelBySystem when the cancel is
+	// accepted and SuspendingApp deliberately re-reads and preserves it
+	// while writing `stopped`, so it survives to the row we poll. The row's
+	// version cannot be used instead — it tracks the AM's target version,
+	// which a cancel does not roll back.
+	//
+	// Baseline-gated like stoppedTerminalSuccess: for an upgrade started
+	// from `stopped` the tick-zero row is the pre-upgrade resting one, and
+	// only statusTime separates it from the landed row.
+	upgradeStoppedTerminal bool
+
+	// installStoppedFailure fails an install on any `stopped` row. An install
+	// is only accepted when the app has no settled row, so `stopped` is
+	// app-service giving up on it: a startup crash or a scheduling rejection,
+	// named by Status.Reason. The rejection path also rewrites OpType to
+	// `stop`, which is why this does not go through matchOpType.
+	installStoppedFailure bool
+
+	// requireNewerThanBaseline gates BOTH success and failure on the row's
+	// statusTime being strictly newer than baselineStatusTime. This is the
+	// crux of the restart watcher: a completed restart rests at
+	// `state=running, OpType=resume` — byte-for-byte identical to the row's
+	// pre-restart resting state (OpType is never cleared). The ONLY way to
+	// tell "restart just finished" from "restart hasn't started yet" is
+	// temporal, and we align with the SPA which orders status rows by
+	// statusTime (getEffectiveTime in apps/.../constant/constants.ts).
+	//
+	// We use STRICT `>` (not `>=`) on purpose: the baseline IS the stale
+	// row's statusTime, so `>=` would let the tick-zero stale row satisfy
+	// `T0 >= T0` and short-circuit to success — exactly the false positive
+	// this whole mechanism exists to prevent.
+	//
+	// When the row's statusTime is missing/unparseable (effectiveTime == 0)
+	// we mirror the SPA (newTime===0 → invalid, skip): the row is NOT
+	// treated as terminal and we keep polling until --watch-timeout. Only
+	// restart sets this; every other op leaves it false (passesBaseline is
+	// then a no-op).
+	requireNewerThanBaseline bool
+	baselineStatusTime       int64
+
+	// probePods reads the app's own pods while the row is in flight
+	// (install / upgrade), because a crashlooping container keeps the row
+	// in `installing` / `initializing` for minutes.
+	probePods bool
 }
 
 func newWatchTarget(op watchOp, appName, source string) watchTarget {
@@ -145,6 +226,10 @@ func newWatchTarget(op watchOp, appName, source string) watchTarget {
 		matchOpType: true,
 	}
 	switch op {
+	case watchInstall, watchUpgrade:
+		t.probePods = true
+	}
+	switch op {
 	case watchInstall:
 		t.successSet = map[string]bool{"running": true}
 		// During install, any *Failed terminates as failure; *Canceled
@@ -152,9 +237,14 @@ func newWatchTarget(op watchOp, appName, source string) watchTarget {
 		// did not happen, so the user-facing exit code should be
 		// non-zero even though the backend reached a "clean" state.
 		t.failureSet = unionStateSets(operationFailedStates, canceledStates)
+		t.installStoppedFailure = true
 	case watchUpgrade:
 		t.successSet = map[string]bool{"running": true}
 		t.failureSet = unionStateSets(operationFailedStates, canceledStates)
+		// `running` alone never settles an upgrade that started from a
+		// stopped app, nor one that gets cancelled — both end on `stopped`.
+		// See upgradeStoppedTerminal for how the two are told apart.
+		t.upgradeStoppedTerminal = true
 	case watchUninstall:
 		t.successSet = map[string]bool{"uninstalled": true}
 		t.failureSet = map[string]bool{"uninstallFailed": true}
@@ -177,14 +267,48 @@ func newWatchTarget(op watchOp, appName, source string) watchTarget {
 		t.idempotentSuccess = true
 	case watchResume:
 		t.successSet = map[string]bool{"running": true}
+		// resumingCanceled is intentionally omitted: that transition does
+		// not exist (a cancelled resume settles at `stopped`, handled by
+		// stoppedTerminalSuccess below). Failure is the resume dying
+		// (resumeFailed) or the cancel request itself being rejected
+		// (resumingCancelFailed).
 		t.failureSet = map[string]bool{
 			"resumeFailed":         true,
-			"resumingCanceled":     true,
 			"resumingCancelFailed": true,
 		}
 		// Symmetric to stop: `resume` on an already-running row is a
 		// backend no-op and would otherwise hang the watcher.
 		t.idempotentSuccess = true
+		// A resume that gets cancelled lands on `stopped`; accept it as a
+		// terminal (baseline-gated so the pre-resume stopped row at tick
+		// zero is not a false positive). See stoppedTerminalSuccess.
+		t.stoppedTerminalSuccess = true
+	case watchRestart:
+		// restart = backend stop THEN resume once stop succeeds. The row
+		// therefore passes through `OpType=stop` (stop phase) and
+		// `OpType=resume` (resume phase, via `initializing`) before
+		// resting at `state=running`. We must NOT reuse watchResume:
+		//   - idempotentSuccess would fire on the tick-zero stale
+		//     `running, OpType=resume` row (the restart target is by
+		//     definition a running app), returning before the cycle even
+		//     starts.
+		//   - matchOpType=true / OpType=resume can't catch a `stopFailed`
+		//     in the stop phase (it carries OpType=stop), so a failed stop
+		//     would hang until timeout.
+		//
+		// Instead: op-agnostic success on `running`, a failure set that
+		// spans BOTH phases, and a statusTime baseline gate that alone
+		// distinguishes the freshly-completed row from the pre-restart
+		// resting row (see requireNewerThanBaseline). No idempotentSuccess.
+		t.successSet = map[string]bool{"running": true}
+		t.failureSet = map[string]bool{
+			"stopFailed":           true,
+			"resumeFailed":         true,
+			"resumingCanceled":     true,
+			"resumingCancelFailed": true,
+		}
+		t.matchOpType = false
+		t.requireNewerThanBaseline = true
 	case watchCancel:
 		// `cancel` is op-agnostic on settling: once the row leaves its
 		// in-flight phase the cancel has done all it can, regardless of
@@ -264,16 +388,21 @@ func newWatchTarget(op watchOp, appName, source string) watchTarget {
 type watchTimeoutError struct {
 	target watchTarget
 	last   *statusRow
+	pods   string
 }
 
 func (e *watchTimeoutError) Error() string {
 	if e.last != nil {
-		return fmt.Sprintf("%s '%s' watch timed out (last state: %s, op: %s)",
+		msg := fmt.Sprintf("%s '%s' watch timed out (last state: %s, op: %s); timeout is not failure and the operation may still be progressing; inspect with `olares-cli market status %s`",
 			e.target.op, e.target.appName,
-			valueOrUnknown(e.last.State), valueOrUnknown(e.last.OpType))
+			valueOrUnknown(e.last.State), valueOrUnknown(e.last.OpType), e.target.appName)
+		if e.pods != "" {
+			msg += "; app containers: " + e.pods
+		}
+		return msg
 	}
-	return fmt.Sprintf("%s '%s' watch timed out (no status reported by the backend)",
-		e.target.op, e.target.appName)
+	return fmt.Sprintf("%s '%s' watch timed out (no status reported by the backend); timeout is not failure; inspect with `olares-cli market status %s`",
+		e.target.op, e.target.appName, e.target.appName)
 }
 
 // watchFailureError represents a terminal-failure classification. It exposes
@@ -284,6 +413,10 @@ type watchFailureError struct {
 }
 
 func (e *watchFailureError) Error() string {
+	if e.target.installStoppedFailure && e.row.State == appStateStopped {
+		return fmt.Sprintf("install '%s' failed: app-service stopped it (reason=%s) — the app is still installed; read why with `olares-cli cluster pod list -n <namespace>` and `olares-cli cluster container logs <namespace>/<pod>/<container> --previous`, then either upgrade to a fixed version and `olares-cli market resume %s`, or `olares-cli market uninstall %s` and install again",
+			e.target.appName, valueOrUnknown(e.row.Reason), e.target.appName, e.target.appName)
+	}
 	parts := []string{fmt.Sprintf("state=%s", e.row.State)}
 	if e.row.OpType != "" {
 		parts = append(parts, "op="+e.row.OpType)
@@ -291,8 +424,8 @@ func (e *watchFailureError) Error() string {
 	if detail := strings.TrimSpace(e.row.Message); detail != "" {
 		parts = append(parts, "reason: "+detail)
 	}
-	return fmt.Sprintf("%s '%s' failed: %s",
-		e.target.op, e.target.appName, strings.Join(parts, " "))
+	return fmt.Sprintf("%s '%s' failed: %s; inspect with `olares-cli market status %s`",
+		e.target.op, e.target.appName, strings.Join(parts, " "), e.target.appName)
 }
 
 // waitForTerminal polls /market/state until the row classifies as terminal
@@ -321,7 +454,13 @@ func waitForTerminal(parentCtx context.Context, mc *MarketClient, opts *MarketOp
 		last         *statusRow
 		seen         bool
 		consecErrors int
+		pods         *podWatch
 	)
+	if t.probePods {
+		if probe := opts.podProber(); probe != nil {
+			pods = &podWatch{probe: probe, appName: t.appName, failFast: opts.FailOnCrashLoop}
+		}
+	}
 
 	for {
 		if err := ctx.Err(); err != nil {
@@ -331,7 +470,7 @@ func waitForTerminal(parentCtx context.Context, mc *MarketClient, opts *MarketOp
 			return statusRow{}, err
 		}
 		if time.Now().After(deadline) {
-			return statusRow{}, &watchTimeoutError{target: t, last: last}
+			return statusRow{}, &watchTimeoutError{target: t, last: last, pods: pods.summary()}
 		}
 
 		resp, err := mc.GetMarketState(ctx)
@@ -397,7 +536,27 @@ func waitForTerminal(parentCtx context.Context, mc *MarketClient, opts *MarketOp
 			rowCopy := row
 			last = &rowCopy
 
-			if t.successSet[row.State] {
+			// Resume-cancel escape hatch: a cancelled resume settles at
+			// `stopped`, op-agnostically, but only a row strictly newer
+			// than the pre-resume baseline is the fresh cancel (the tick-
+			// zero pre-resume `stopped` row shares the baseline statusTime).
+			if t.stoppedTerminalSuccess && row.State == appStateStopped && effectiveTime(row) > t.baselineStatusTime {
+				return row, nil
+			}
+			// Upgrade settling on `stopped`: a cancel is a failure (the
+			// upgrade we asked for did not happen — same verdict a cancelled
+			// install gets), anything else is the landed upgrade-from-stopped.
+			// See upgradeStoppedTerminal.
+			if t.upgradeStoppedTerminal && row.State == appStateStopped && effectiveTime(row) > t.baselineStatusTime {
+				if upgradeCanceledReasons[row.Reason] {
+					return row, &watchFailureError{target: t, row: row}
+				}
+				return row, nil
+			}
+			if t.installStoppedFailure && row.State == appStateStopped {
+				return row, &watchFailureError{target: t, row: row}
+			}
+			if t.successSet[row.State] && t.passesBaseline(row) {
 				switch {
 				case t.matchesOpType(row):
 					return row, nil
@@ -410,8 +569,11 @@ func waitForTerminal(parentCtx context.Context, mc *MarketClient, opts *MarketOp
 					return row, nil
 				}
 			}
-			if t.matchesOpType(row) && t.failureSet[row.State] {
+			if t.matchesOpType(row) && t.failureSet[row.State] && t.passesBaseline(row) {
 				return row, &watchFailureError{target: t, row: row}
+			}
+			if crash := pods.poll(ctx, opts, time.Now()); crash != nil {
+				return row, &watchCrashLoopError{target: t, row: row, signal: *crash}
 			}
 		}
 
@@ -427,6 +589,46 @@ func (t watchTarget) matchesOpType(row statusRow) bool {
 		return true
 	}
 	return row.OpType == string(t.op)
+}
+
+// passesBaseline enforces the statusTime baseline gate (restart only). For
+// targets that don't set requireNewerThanBaseline it's a no-op. When set, the
+// row's statusTime must parse AND be strictly newer than the captured
+// baseline; a missing/unparseable statusTime (effectiveTime == 0) is treated
+// as "no reliable signal yet" and keeps the watcher polling (mirrors the SPA's
+// `newTime === 0 → invalid, skip` in appStore.setAppStatus).
+func (t watchTarget) passesBaseline(row statusRow) bool {
+	if !t.requireNewerThanBaseline {
+		return true
+	}
+	et := effectiveTime(row)
+	if et == 0 {
+		return false
+	}
+	return et > t.baselineStatusTime
+}
+
+// effectiveTime mirrors the SPA's getEffectiveTime
+// (apps/.../constant/constants.ts): the canonical ordering key for a status
+// row is statusTime. Returns unix-millis, or 0 when statusTime is
+// absent/unparseable (the SPA's "invalid" sentinel).
+func effectiveTime(row statusRow) int64 {
+	return parseStatusTime(row.StatusTime)
+}
+
+// parseStatusTime parses a backend statusTime (RFC3339, e.g.
+// "2026-07-01T08:29:03Z"; fractional seconds accepted) into unix-millis.
+// Returns 0 for empty or unparseable input.
+func parseStatusTime(s string) int64 {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return 0
+	}
+	tm, err := time.Parse(time.RFC3339, s)
+	if err != nil {
+		return 0
+	}
+	return tm.UnixMilli()
 }
 
 func unionStateSets(sets ...map[string]bool) map[string]bool {
@@ -486,6 +688,14 @@ func valueOrUnknown(s string) string {
 	return s
 }
 
+func watchResultStatus(err error) string {
+	var timeout *watchTimeoutError
+	if errors.As(err, &timeout) {
+		return "timeout"
+	}
+	return "failed"
+}
+
 // runWithWatch is the shared post-mutation flow used by every command that
 // adds --watch. When opts.Watch is false it simply prints the existing
 // "accepted" result; when true it polls until terminal and folds the final
@@ -510,7 +720,7 @@ func runWithWatch(opts *MarketOptions, mc *MarketClient, accepted OperationResul
 		// state so JSON consumers see structured data instead of a
 		// bare error string.
 		failed := accepted
-		failed.Status = "failed"
+		failed.Status = watchResultStatus(err)
 		failed.Message = err.Error()
 		var fail *watchFailureError
 		if errors.As(err, &fail) {
@@ -518,6 +728,11 @@ func runWithWatch(opts *MarketOptions, mc *MarketClient, accepted OperationResul
 			failed.Progress = fail.row.Progress
 			failed.FinalState = fail.row.State
 			failed.FinalOpType = fail.row.OpType
+		}
+		var crash *watchCrashLoopError
+		if errors.As(err, &crash) {
+			failed.State = crash.row.State
+			failed.Progress = crash.row.Progress
 		}
 		var to *watchTimeoutError
 		if errors.As(err, &to) && to.last != nil {

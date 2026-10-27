@@ -10,33 +10,18 @@ import (
 	"github.com/Masterminds/semver/v3"
 )
 
-// isUpgradableStates is the verbatim mirror of the SPA's
-// `isUpgradableAppStates` set in apps/.../constant/config.ts:
-//
-//	APP_STATUS.RUNNING            -> "running"
-//	APP_STATUS.STOP.COMPLETED     -> "stopped"
-//	APP_STATUS.STOP.FAILED        -> "stopFailed"
-//	APP_STATUS.UPGRADE.FAILED     -> "upgradeFailed"
-//	APP_STATUS.ENV.APPLY_FAILED   -> "applyEnvFailed"
-//
-// These are the only five states the SPA's `canUpgrade()` predicate
-// (also config.ts) will accept before showing the "Upgrade" button.
-// The CLI's `market upgrade` preflight refuses every other state up
-// front so the call never reaches the backend in a knowingly-bad
-// state — exactly the same surface area the user sees in the Market
-// UI. Keep this map in lockstep with the SPA: any reshuffle of the
-// SPA's upgradable states must be reflected here and in
-// TestIsUpgradableState.
+// isUpgradableStates is what both backends accept for an upgrade: Market's
+// gate also admits stopFailed and upgradingCancelFailed, and the SPA's
+// canUpgrade also offers stopFailed and applyEnvFailed, but app-service
+// rejects all three, so the call would only fail one hop later.
 var isUpgradableStates = map[string]struct{}{
-	"running":        {},
-	"stopped":        {},
-	"stopFailed":     {},
-	"upgradeFailed":  {},
-	"applyEnvFailed": {},
+	"running":       {},
+	"stopped":       {},
+	"upgradeFailed": {},
 }
 
 // isUpgradable reports whether an app currently in `state` can have
-// `market upgrade` issued against it per the SPA's `canUpgrade` gate.
+// `market upgrade` issued against it; see isUpgradableStates.
 // Empty / unknown states return false (same as the SPA's button being
 // hidden) so the preflight bails with an actionable error rather than
 // firing an upgrade we know the backend will reject.
@@ -48,12 +33,10 @@ func isUpgradable(state string) bool {
 	return ok
 }
 
-// upgradableStateList returns the SPA's allowed states in a stable
-// human-friendly order, used to render preflight errors like
-// "allowed states: running, stopped, stopFailed, upgradeFailed,
-// applyEnvFailed".
+// upgradableStateList returns isUpgradableStates in a stable order for
+// preflight errors.
 func upgradableStateList() string {
-	return "running, stopped, stopFailed, upgradeFailed, applyEnvFailed"
+	return "running, stopped, upgradeFailed"
 }
 
 // installedAppRow captures the subset of /market/state fields the
@@ -66,6 +49,10 @@ type installedAppRow struct {
 	Source  string
 	State   string
 	Version string
+	// StatusTime is the backend-generated statusTime on the matched row
+	// (RFC3339, verbatim). restart captures it before POST /apps/restart as
+	// the --watch baseline; empty when the backend omits it.
+	StatusTime string
 }
 
 // lookupInstalledApp finds the active profile's per-user state row
@@ -151,11 +138,12 @@ func lookupInstalledApp(ctx context.Context, mc *MarketClient, appName string) (
 				continue
 			}
 			row := &installedAppRow{
-				Name:    appName,
-				RawName: strings.TrimSpace(appState.Status.RawName),
-				Source:  sn,
-				State:   appState.Status.State,
-				Version: strings.TrimSpace(appState.Version),
+				Name:       appName,
+				RawName:    strings.TrimSpace(appState.Status.RawName),
+				Source:     sn,
+				State:      appState.Status.State,
+				Version:    strings.TrimSpace(appState.Version),
+				StatusTime: strings.TrimSpace(appState.Status.StatusTime),
 			}
 			if isInstalledState(row.State) {
 				return row, nil
@@ -184,11 +172,12 @@ func lookupInstalledApp(ctx context.Context, mc *MarketClient, appName string) (
 				continue
 			}
 			row := &installedAppRow{
-				Name:    rawName,
-				RawName: rawName,
-				Source:  sn,
-				State:   appState.Status.State,
-				Version: strings.TrimSpace(appState.Version),
+				Name:       rawName,
+				RawName:    rawName,
+				Source:     sn,
+				State:      appState.Status.State,
+				Version:    strings.TrimSpace(appState.Version),
+				StatusTime: strings.TrimSpace(appState.Status.StatusTime),
 			}
 			if isInstalledState(row.State) {
 				return row, nil
@@ -257,6 +246,45 @@ func appLabels(appInfo map[string]interface{}) []string {
 	return labels
 }
 
+// preflightInstall refuses an install the per-user state row already rules
+// out. Without it the only feedback is whatever app-service says once the
+// request has travelled through market and back, and app-service answers a
+// state-machine refusal with the same opaque failure it uses for an
+// unschedulable chart — the user cannot tell "already installed" from
+// "cluster is full" from the CLI output alone.
+//
+// The gate is the SPA's own installability set inverted: the six
+// `uninstalledAppStates` (notInstalledStates in types.go) are exactly the rows
+// install may start from, plus the case where no row exists at all. Everything
+// else splits two ways for the hint, because the two need different verbs: a
+// settled app wants `upgrade`, an in-flight one wants `cancel` or patience.
+//
+// Lookup errors soft-fail, matching preflightUpgrade's catalog probe. A flaky
+// read must not block an install the backend would have accepted; the backend
+// keeps the final say either way.
+func preflightInstall(ctx context.Context, opts *MarketOptions, mc *MarketClient, appName string) error {
+	row, err := lookupInstalledApp(ctx, mc, appName)
+	if err != nil {
+		opts.info("warning: preflight could not read the state row for '%s' (%v); proceeding", appName, err)
+		return nil
+	}
+	if row == nil || !isInstalledState(row.State) {
+		return nil
+	}
+
+	if isUpgradable(row.State) {
+		return fmt.Errorf(
+			"cannot install '%s': it is already installed (state '%s') — use 'olares-cli market upgrade %s' to move it to another version, or 'olares-cli market uninstall %s' first to reinstall from scratch",
+			appName, row.State, appName, appName,
+		)
+	}
+
+	return fmt.Errorf(
+		"cannot install '%s': an operation is already in flight (state '%s') — run 'olares-cli market status %s --watch' to wait for it to settle, or 'olares-cli market cancel %s' to abandon an install you no longer want",
+		appName, row.State, appName, appName,
+	)
+}
+
 // preflightUpgrade mirrors the SPA's `canUpgrade(statusLatest, appId,
 // sourceId)` predicate in apps/.../constant/config.ts — same four
 // gates, same order:
@@ -265,9 +293,8 @@ func appLabels(appInfo map[string]interface{}) []string {
 //  2. installed + target version both present
 //  3. target version > installed (strict semver) — EXCEPT for the
 //     `upload` source, where target == installed is also allowed
-//     (re-uploading the same version overwrites the stored chart and
-//     app-service permits a same-version upgrade); a true downgrade is
-//     always rejected
+//     (app-service permits a same-version upgrade, which re-applies the
+//     stored chart); a true downgrade is always rejected
 //  4. catalog row is NOT marked `suspend` / `remove` (`isAppSuspended`)
 //
 // Returns nil on pass. On any explicit gate failure returns a typed
@@ -291,49 +318,81 @@ func appLabels(appInfo map[string]interface{}) []string {
 // gates (state / version) never soft-fail because their inputs come
 // from the /market/state response we already have in hand for the
 // row lookup.
-func preflightUpgrade(ctx context.Context, opts *MarketOptions, mc *MarketClient, appName, targetVersion, source string) error {
+//
+// On success it hands back the pre-upgrade row so runUpgrade can use its
+// statusTime as the --watch baseline without a second round trip.
+func preflightUpgrade(ctx context.Context, opts *MarketOptions, mc *MarketClient, appName, targetVersion, source string) (*installedAppRow, error) {
 	row, err := lookupInstalledApp(ctx, mc, appName)
 	if err != nil {
-		return fmt.Errorf("preflight: %w", err)
+		return nil, fmt.Errorf("preflight: %w", err)
 	}
 	if row == nil {
-		return fmt.Errorf("cannot upgrade '%s': app is not installed (no per-user state row); use 'olares-cli market install %s' first", appName, appName)
+		return nil, fmt.Errorf("cannot upgrade '%s': app is not installed (no per-user state row); use 'olares-cli market install %s' first", appName, appName)
 	}
 
 	if !isUpgradable(row.State) {
-		return fmt.Errorf(
+		if installTeardownStates[row.State] {
+			return nil, fmt.Errorf(
+				"cannot upgrade '%s' in state '%s': its install is still in flight, and upgrade is only allowed from %s — wait with 'olares-cli market status %s --watch'; if its pods are crash-looping the install will not settle on its own: 'olares-cli market uninstall %s' cancels and removes it, then re-run 'olares-cli market install %s' with the fixed version",
+				appName, row.State, upgradableStateList(), appName, appName, appName,
+			)
+		}
+		switch row.State {
+		case "applyingEnv":
+			return nil, fmt.Errorf(
+				"cannot upgrade '%s' in state 'applyingEnv': an env change is still in flight and cannot be cancelled — wait with 'olares-cli market status %s --watch'; it ends in 'running' (upgrade then) or 'applyEnvFailed'",
+				appName, appName,
+			)
+		case "applyEnvFailed":
+			return nil, fmt.Errorf(
+				"cannot upgrade '%s' in state 'applyEnvFailed': upgrade is only allowed from %s — re-apply a working env with 'olares-cli settings apps env set %s --var KEY=VALUE' (it returns to 'running'), or 'olares-cli market uninstall %s'",
+				appName, upgradableStateList(), appName, appName,
+			)
+		case "stopFailed":
+			return nil, fmt.Errorf(
+				"cannot upgrade '%s' in state 'stopFailed': upgrade is only allowed from %s — retry 'olares-cli market stop %s' and upgrade from 'stopped', or 'olares-cli market uninstall %s'",
+				appName, upgradableStateList(), appName, appName,
+			)
+		}
+		if inFlightCancelableStates[row.State] {
+			return nil, fmt.Errorf(
+				"cannot upgrade '%s' in state '%s': an operation is still in flight, and upgrade is only allowed from %s — wait with 'olares-cli market status %s --watch', or 'olares-cli market cancel %s' to stop the app and then upgrade from 'stopped'",
+				appName, row.State, upgradableStateList(), appName, appName,
+			)
+		}
+		return nil, fmt.Errorf(
 			"cannot upgrade '%s' in state '%s': upgrade is only allowed from %s; current state may be transient (in-flight install / uninstall) — re-run 'olares-cli market status %s' to confirm",
 			appName, row.State, upgradableStateList(), appName,
 		)
 	}
 
 	if row.Version == "" {
-		return fmt.Errorf("cannot upgrade '%s': no version recorded on the state row (mid-flight install or older backend) — re-run 'olares-cli market status %s --watch' until the row stabilizes, then retry", appName, appName)
+		return nil, fmt.Errorf("cannot upgrade '%s': no version recorded on the state row (mid-flight install or older backend) — re-run 'olares-cli market status %s --watch' until the row stabilizes, then retry", appName, appName)
 	}
 	if targetVersion == "" {
-		return fmt.Errorf("cannot upgrade '%s': target version is empty (internal error — version resolution did not produce a version string)", appName)
+		return nil, fmt.Errorf("cannot upgrade '%s': target version is empty (internal error — version resolution did not produce a version string)", appName)
 	}
 
-	// The "upload" bucket (chartUploadSource) overwrites the stored
-	// chart in place when the same version is re-uploaded, and
-	// app-service accepts a same-version upgrade (it gates on
-	// `>= deployedVersion`, not strictly greater — see
-	// framework/app-service/pkg/appstate/upgrading_app.go). So for
-	// upload-source apps, `upgrade` to the SAME version is the
-	// sanctioned way to re-apply an edited chart (and to recover an
-	// app stuck in upgradeFailed) without an artificial version bump.
+	// app-service gates upgrade on `>= deployedVersion`, not strictly
+	// greater (framework/app-service/pkg/appstate/upgrading_app.go), so
+	// a same-version upgrade is accepted. For upload-source apps that
+	// makes it a retry: it re-applies the STORED chart at that version,
+	// which is the way to recover from an upgradeFailed caused by a
+	// transient failure. It is not a way to apply edited bytes — market
+	// refuses to re-upload a published version (see the upload rule in
+	// olares-market-charts.md), so a fixed chart needs a new version.
 	// We only relax the same-version no-op gate; a true downgrade
 	// (cmp < 0) is still rejected because app-service rejects it too.
 	isUpload := strings.TrimSpace(source) == chartUploadSource
 	cmp, err := compareSemver(targetVersion, row.Version)
 	if err != nil {
-		return fmt.Errorf("cannot upgrade '%s': version comparison failed: %w (installed %q, target %q)", appName, err, row.Version, targetVersion)
+		return nil, fmt.Errorf("cannot upgrade '%s': version comparison failed: %w (installed %q, target %q)", appName, err, row.Version, targetVersion)
 	}
 	if cmp == 0 && !isUpload {
-		return fmt.Errorf("cannot upgrade '%s': target version '%s' is already installed — nothing to do", appName, targetVersion)
+		return nil, fmt.Errorf("cannot upgrade '%s': target version '%s' is already installed — nothing to do", appName, targetVersion)
 	}
 	if cmp < 0 {
-		return fmt.Errorf("cannot upgrade '%s': target version '%s' is older than installed version '%s'; downgrade via upgrade is rejected — uninstall and reinstall the older version instead", appName, targetVersion, row.Version)
+		return nil, fmt.Errorf("cannot upgrade '%s': target version '%s' is older than installed version '%s'; downgrade via upgrade is rejected — uninstall and reinstall the older version instead", appName, targetVersion, row.Version)
 	}
 
 	if strings.TrimSpace(source) != "" && row.Source != "" && source != row.Source {
@@ -359,13 +418,13 @@ func preflightUpgrade(ctx context.Context, opts *MarketOptions, mc *MarketClient
 		// passed. Surface as a warning so it's visible without
 		// blocking the operation.
 		opts.info("warning: preflight could not read catalog metadata for '%s' from source '%s' (%v); skipping suspend-label check", lookupName, source, err)
-		return nil
+		return row, nil
 	}
 	if isAppSuspended(appInfo) {
-		return fmt.Errorf("cannot upgrade '%s': chart is marked 'suspend' or 'remove' in source '%s' (the SPA hides the Upgrade button for the same reason); upstream has withdrawn this app", lookupName, source)
+		return nil, fmt.Errorf("cannot upgrade '%s': chart is marked 'suspend' or 'remove' in source '%s' (the SPA hides the Upgrade button for the same reason); upstream has withdrawn this app", lookupName, source)
 	}
 
-	return nil
+	return row, nil
 }
 
 // compareSemver returns -1 / 0 / 1 comparing target vs installed using

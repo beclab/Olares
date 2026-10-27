@@ -1,5 +1,9 @@
 ---
 search: false
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 自定义域名, DID, 域名验证, DNS 配置, 组织创建, 添加用户
 ---
 <!--
   自定义域名设置的复用内容块。请通过命名 region 引用。
@@ -85,10 +89,10 @@ TXT 和 NS 记录验证通过后，可以在 LarePass 中创建组织。
    为域名创建组织后，该域名将无法从 Olares Space 中移除。
    :::
 
-4. 输入 Olares ID 的用户名部分。例如输入 `alex`，则 Olares ID 为 `alex@space.n1.monster`。
+4. 输入 Olares ID 的用户名部分。例如输入 `alex2026`，则 Olares ID 为 `alex2026@space.n1.monster`。
 
    :::info
-   用户名部分应为 1-63 个字符，仅支持小写字母和数字。
+   用户名部分应为 8-24 个字符，仅支持小写字母和数字。
    :::
    ![以管理员身份创建 Olares ID](/images/manual/tutorials/custom-domain-create-olares-id-as-admin.png)
 
@@ -132,7 +136,13 @@ TXT 和 NS 记录验证通过后，可以在 LarePass 中创建组织。
    - 如果你的 Olares 设备连接的是公网 IP 网络，此步骤会自动跳过。
    :::
 
-6. 按照屏幕提示设置 Olares 的登录密码，然后点击**完成**。
+6. 选择 Olares 语言。Olares 支持英语、简体中文、德语、西班牙语、意大利语、法语和日语。
+
+   :::info
+   这里选择的是 Olares 语言，不会改变当前 LarePass 的界面语言。后续激活流程仍使用 LarePass 当前语言。激活完成后，Olares 桌面会使用此处选择的语言。
+   :::
+
+7. 按照屏幕提示设置 Olares 的登录密码，然后点击**完成**。
 
    ![ISO Activate-2](/images/manual/larepass/iso-activate-4.png#bordered)
 

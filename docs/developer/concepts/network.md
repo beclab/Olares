@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
-description: Olares network architecture principles, covering application entrance types, local access mechanisms, endpoint configurations and internal network security policies.
+description: Understand Olares network architecture, including application entrances, local access, endpoint configuration, and internal network security policies.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Olares network, network architecture, application entrance, endpoint configuration, network security
 ---
 # Network
 
@@ -86,5 +90,5 @@ Inside the application, Olares has multiple layers of security.
 
 ## Learn more
 
-- [Set up custom domain name for application](../../manual/olares/settings/custom-app-domain.md#custom-domain-name)
+- [Set up custom domain name for application](../../manual/olares/settings/custom-app-domain.md#set-a-custom-domain-name)
 - [Access Olares via VPN](/manual/larepass/private-network.md)

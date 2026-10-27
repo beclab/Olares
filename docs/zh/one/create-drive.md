@@ -8,7 +8,7 @@ head:
 ---
 
 :::warning
-当前文档由 AI 翻译生成，若发现术语或表述不准确，请查看[英文原文](../../one/create-drive.md)。
+本文档由 AI 自动翻译，仅供参考。涉及关键操作或信息时，请以[英文原文](../../one/create-drive.md)为准。
 :::
 
 # 使用可启动 USB 重新安装 Olares OS <Badge type="tip" text="15 min"/>
@@ -27,7 +27,7 @@ head:
    :::info 已安装的 OS 版本
    附带 USB 驱动器上的 OS 镜像可能是较早版本，具体取决于设备的出厂时间。你仍可以用它重新安装系统，如有需要，激活后再更新 Olares OS。
 
-   如果你需要最新的 OS 镜像，可以从 [Olares One ISO](https://cdn.olares.com/one/olares-latest-amd64.iso) 创建新的可启动 USB 驱动器。详细步骤请参阅[创建 Olares One 可启动 USB 驱动器](create-bootable-usb.md)。
+   如果你需要最新的 OS 镜像，可以从 [Olares One ISO](https://cdn.olares.cn/one/v1.12.7-amd64.iso) 创建新的可启动 USB 驱动器。详细步骤请参阅[创建 Olares One 可启动 USB 驱动器](create-bootable-usb.md)。
 
 ## 步骤 1：从 USB 驱动器启动
 

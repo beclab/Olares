@@ -24,9 +24,8 @@
 //
 //   - It does NOT do any client-side permission gating. ControlHub
 //     scopes resources by the caller's token server-side; CLI verbs
-//     MUST defer to that. 401/403 from the server are wrapped via
-//     reformatClusterAuthErr to keep the recovery CTA consistent across
-//     verbs (`olares-cli profile login`).
+//     MUST defer to that. reformatClusterAuthErr separates authentication
+//     recovery from a 403 permission denial.
 package clusterclient
 
 import (
@@ -57,11 +56,11 @@ import (
 //   - Auth helpers (reformatClusterAuthErr) compose a friendlier CTA
 //     than the raw `formatHTTPErr` dump; that wording is preserved via
 //     Message, while Status still carries the underlying HTTP code so
-//     401/403 returned from anywhere look the same to retry logic.
+//     401/403/459 returned from anywhere look the same to retry logic.
 type HTTPError struct {
-	Status  int
-	Method  string
-	URL     string
+	Status int
+	Method string
+	URL    string
 	// Body is the truncated response body (matches the truncate helper's
 	// cap). Useful for diagnostics; rendering is the Message responsibility.
 	Body string
@@ -126,7 +125,7 @@ type Client struct {
 	httpClient *http.Client
 	baseURL    string
 
-	// olaresID is captured for diagnostics (401/403 reformatter mentions
+	// olaresID is captured for diagnostics (401/403/459 reformatter mentions
 	// it in the CTA). Never used for permission decisions.
 	olaresID string
 }
@@ -184,7 +183,7 @@ func (c *Client) DoJSON(ctx context.Context, method, path string, body, out inte
 // either a typed object or a metav1.Status on error), and by `cluster pod
 // yaml` which forwards bytes to the user as-is.
 //
-// All non-2xx handling (401/403 reformat, generic HTTP error) happens
+// All non-2xx handling (401/403/459 reformat, generic HTTP error) happens
 // before this returns, so a successful return always carries a 2xx body.
 func (c *Client) DoRaw(ctx context.Context, method, path string, body interface{}) ([]byte, error) {
 	return c.do(ctx, method, path, body, "")
@@ -202,7 +201,7 @@ func (c *Client) DoRaw(ctx context.Context, method, path string, body interface{
 // that might-or-might-not need a custom header.
 //
 // Behavior is otherwise identical to DoJSON: same auth chain, same
-// 401/403 reformat, same generic HTTP error handling, same JSON
+// 401/403/459 reformat, same generic HTTP error handling, same JSON
 // decode into out (when non-nil).
 func (c *Client) DoJSONWithContentType(ctx context.Context, method, path string, body interface{}, contentType string, out interface{}) error {
 	respBody, err := c.do(ctx, method, path, body, contentType)
@@ -272,7 +271,7 @@ func (c *Client) do(ctx context.Context, method, path string, body interface{}, 
 		return nil, fmt.Errorf("read response body: %w", err)
 	}
 
-	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
+	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden || resp.StatusCode == 459 {
 		return nil, reformatClusterAuthErr(method, url, resp.StatusCode, respBody, c.olaresID)
 	}
 	if resp.StatusCode/100 != 2 {
@@ -281,37 +280,14 @@ func (c *Client) do(ctx context.Context, method, path string, body interface{}, 
 	return respBody, nil
 }
 
-// reformatClusterAuthErr mirrors files/download.go::reformatHTTPError
-// 401/403 branch and market/client.go::reformatMarketAuthErr — same
-// recovery CTA across all per-user ingress points so the user only has
-// to memorize one trick (`olares-cli profile login`).
-//
-// Note: ControlHub itself does some path-level RBAC (a non-admin user
-// hitting `/api/v1/nodes` will get 403 even with a valid token). We do
-// NOT try to disambiguate "token bad" from "role insufficient" here:
-// the body is included verbatim so the user can read it, and the action
-// (`profile login` then `cluster context --refresh`) is appropriate for
-// both modes.
+// reformatClusterAuthErr separates authentication failures from permission
+// denials so a 403 does not incorrectly claim that logging in again fixes RBAC.
 func reformatClusterAuthErr(method, url string, status int, respBody []byte, olaresID string) error {
-	body := strings.TrimSpace(string(respBody))
-	if len(body) > 200 {
-		body = body[:200]
-	}
-	var msg string
-	switch {
-	case olaresID != "" && body != "":
-		msg = fmt.Sprintf("server rejected the request (HTTP %d: %s); please run: olares-cli profile login --olares-id %s",
-			status, body, olaresID)
-	case olaresID != "":
-		msg = fmt.Sprintf("server rejected the request (HTTP %d); please run: olares-cli profile login --olares-id %s",
-			status, olaresID)
-	default:
-		msg = fmt.Sprintf("server rejected the request (HTTP %d); please re-run `olares-cli profile login`", status)
-	}
-	return &HTTPError{Status: status, Method: method, URL: url, Body: body, Message: msg}
+	msg := credential.FormatHTTPAuthError(status, respBody, olaresID).Error()
+	return &HTTPError{Status: status, Method: method, URL: url, Message: msg}
 }
 
-// formatHTTPErr handles non-401/403 non-2xx responses. ControlHub forwards
+// formatHTTPErr handles non-authentication non-2xx responses. ControlHub forwards
 // upstream errors verbatim — KubeSphere returns `{message, status}`,
 // kube-apiserver returns metav1.Status `{kind, apiVersion, status,
 // message, reason, code}`, /capi/* returns plain text on some failures.

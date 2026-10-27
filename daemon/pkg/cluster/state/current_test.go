@@ -7,6 +7,16 @@ import (
 	"github.com/beclab/Olares/daemon/pkg/utils"
 )
 
+func TestPrimaryGPUUsesFirstListEntry(t *testing.T) {
+	got := primaryGPU([]string{"NVIDIA RTX 4070", "Intel Arc"})
+	if got == nil || *got != "NVIDIA RTX 4070" {
+		t.Fatalf("primaryGPU() = %#v, want first GPU", got)
+	}
+	if got := primaryGPU(nil); got != nil {
+		t.Fatalf("primaryGPU(nil) = %#v, want nil", got)
+	}
+}
+
 func TestCurrentState(t *testing.T) {
 	err := CheckCurrentStatus(context.Background())
 	if err != nil {

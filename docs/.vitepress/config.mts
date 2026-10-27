@@ -3,11 +3,36 @@ import { withMermaid } from "vitepress-plugin-mermaid";
 import { en } from "./en";
 import { zh } from "./zh";
 import _ from "lodash";
+import { redirects, temporaryRedirects } from "./theme/redirects";
+import fs from 'node:fs';
+import path from 'node:path';
+import { createSocialImages } from './og/generate.mjs';
+
+const socialImages = createSocialImages(path.resolve(__dirname, 'og'));
 //import defaultConfig from 'vitepress-versioning-plugin';
 
 // Paths collected during transformPageData so sitemap.transformItems can
 // filter them out without re-reading frontmatter from disk.
 const noindexPaths = new Set<string>();
+
+// Normalize a route/path to the extensionless, slash-trimmed form used for
+// sitemap comparisons (works regardless of cleanUrls or trailing slashes).
+const normalizeRoute = (p: string) =>
+  p.replace(/^\/+/, "").replace(/\.html$/, "").replace(/\/$/, "");
+
+// Every path that 301/302-redirects at the edge (see theme/redirects.ts) must
+// be kept out of sitemap.xml: a sitemap URL that redirects is flagged by Google
+// as "Page with redirect" and wastes crawl budget.
+const redirectSources = new Set<string>(
+  [...Object.keys(redirects), ...Object.keys(temporaryRedirects)].map(normalizeRoute)
+);
+
+// Deep, low-value reference pages that inflate "Discovered – currently not
+// indexed" without real search demand. noindex them in both locales so crawl
+// budget concentrates on the pages users actually search for. Matched against
+// the locale-stripped route (so it covers /docs/... and /docs/zh/... alike).
+const noindexRoutePattern =
+  /^developer\/contribute\/olares-id\/(contract|verifiable-credential)\//;
 
 // Archived (non-latest) versioned doc builds deploy under /docs/<version>/
 // (e.g. /docs/1.12.4/...) and duplicate the latest docs almost verbatim,
@@ -19,7 +44,89 @@ const noindexPaths = new Set<string>();
 // never match the latest deploy, whose base is "/docs/" or "/" (no version).
 const isArchivedVersionBuild = /\/\d+\.\d+/.test(process.env.BASE_URL || "");
 
- 
+// Shared by the sitemap generator and the buildEnd hook that splits its output
+// per locale — the hook keys ZH entries off the `<loc>` prefix.
+const SITEMAP_HOSTNAME = "https://www.olares.com/docs/";
+
+// VitePress generates the sitemap by piping into a write stream and never awaits
+// it, so when buildEnd starts the file may be absent or truncated. Wait for the
+// closing tag rather than racing it.
+//
+// This assumes outDir was emptied for this build: a leftover sitemap.xml from a
+// previous run would already end in </urlset> and be returned as-is. Vite empties
+// outDir by default, and the release-docs pipeline re-clones per build, so that
+// case does not arise — but do not reuse a dirty outDir here.
+async function waitForSitemap(file: string, timeoutMs = 5000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (fs.existsSync(file)) {
+      const xml = fs.readFileSync(file, 'utf-8');
+      if (xml.trimEnd().endsWith('</urlset>')) return xml;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  throw new Error(`timed out waiting for ${file} to be fully written`);
+}
+
+// Build a map of routable EN route -> ZH route so we can inject hreflang
+// alternate links for pages that exist in both locales. Scanned once at
+// config load time; srcExclude fragments are ignored because they are not
+// real routes.
+const docsRoot = path.resolve(__dirname, '..');
+const srcExcludeGlobs = new Set([
+  '**/README.md',
+  '**/reusables/**',
+  '**/reusables.md',
+  '**/reusables-*.md',
+  '**/*.reusables.md',
+  'manual/get-started/activate-olares.md',
+  'manual/get-started/log-in-to-olares.md',
+  'manual/get-started/install-and-activate-olares.md',
+  'zh/manual/get-started/activate-olares.md',
+  'zh/manual/get-started/log-in-to-olares.md',
+  'zh/manual/get-started/install-and-activate-olares.md',
+]);
+function isExcludedRoute(relPath: string) {
+  const base = path.basename(relPath);
+  if (base === 'README.md') return true;
+  if (relPath.startsWith('reusables/') || relPath.includes('/reusables/')) return true;
+  if (base === 'reusables.md' || /^reusables-.*\.md$/.test(base) || /\.reusables\.md$/.test(base)) {
+    return true;
+  }
+  return srcExcludeGlobs.has(relPath);
+}
+function routeFromRelativePath(relPath: string) {
+  return relPath.replace(/(^|\/)index\.md$/, '$1').replace(/\.md$/, '');
+}
+function buildLocaleMaps() {
+  const enToZh = new Map<string, string>();
+  const zhToEn = new Map<string, string>();
+  const mdFiles: string[] = [];
+  function walk(dir: string, base = '') {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const rel = base ? `${base}/${entry.name}` : entry.name;
+      if (entry.isDirectory()) {
+        if (entry.name === 'node_modules' || entry.name === '.vitepress' || entry.name === 'public') continue;
+        walk(path.join(dir, entry.name), rel);
+      } else if (entry.isFile() && entry.name.endsWith('.md') && !isExcludedRoute(rel)) {
+        mdFiles.push(rel);
+      }
+    }
+  }
+  walk(docsRoot);
+  const enFiles = new Set(mdFiles.filter((f) => !f.startsWith('zh/')));
+  for (const f of mdFiles) {
+    if (!f.startsWith('zh/')) continue;
+    const enPath = f.replace(/^zh\//, '');
+    if (!enFiles.has(enPath)) continue;
+    const enRoute = routeFromRelativePath(enPath);
+    const zhRoute = `zh/${enRoute}`;
+    enToZh.set(enRoute, zhRoute);
+    zhToEn.set(zhRoute, enRoute);
+  }
+  return { enToZh, zhToEn };
+}
+const { enToZh: enToZhMap, zhToEn: zhToEnMap } = buildLocaleMaps();
 
 function defineVersionedConfig2(
   defaultConfig: UserConfig<DefaultTheme.Config>
@@ -33,6 +140,13 @@ function defineVersionedConfig2(
   const versions =  process.env.VERSIONS?.split(",");
   const latestVersion = process.env.LATEST_VERSION || versions![versions!.length - 1];
   console.log(versions, latestVersion);
+
+  // With a single published version, every non-latest copy 301s to /docs/, so
+  // the switcher would render an empty dropdown (its only entry equals the
+  // current version and is filtered out). Skip injecting it entirely.
+  if( !versions || versions.length <= 1 ) {
+    return config;
+  }
 
   for( const locale of Object.keys(config.locales) ) {
     let themeConfig = config.locales[locale]!.themeConfig!;
@@ -57,6 +171,7 @@ function defineVersionedConfig2(
 // https://vitepress.dev/reference/site-config
 export default defineVersionedConfig2(withMermaid({
   title: "Olares",
+  titleTemplate: ":title | Olares Docs",
   description: "Let people own their data again",
   lang: "en",
   locales: {
@@ -138,7 +253,9 @@ export default defineVersionedConfig2(withMermaid({
     // we don't shift source line numbers, which would break `@include` ranges
     // in files that embed this one as a snippet.
     // Archived versioned builds noindex every page (see isArchivedVersionBuild).
-    if (isArchivedVersionBuild || pageData.frontmatter?.noindex) {
+    const localeStrippedRoute = pageData.relativePath.replace(/^zh\//, "");
+    const noindexByPath = noindexRoutePattern.test(localeStrippedRoute);
+    if (isArchivedVersionBuild || pageData.frontmatter?.noindex || noindexByPath) {
       pageData.frontmatter.head ??= [];
       pageData.frontmatter.head.push([
         'meta',
@@ -153,6 +270,9 @@ export default defineVersionedConfig2(withMermaid({
       // with `noindex` sends contradictory signals to crawlers.
       return;
     }
+
+    // Locale is shared by the canonical and hreflang blocks.
+    const isZh = pageData.relativePath.startsWith('zh/');
 
     // Self-referencing canonical for every indexable doc page. Built from the
     // *unversioned* route on the production origin (matches the sitemap
@@ -170,17 +290,49 @@ export default defineVersionedConfig2(withMermaid({
       'link',
       { rel: 'canonical', href: canonicalHref },
     ]);
-    // Keep og:url identical to the canonical URL. A mismatch between the two
-    // sends conflicting signals to crawlers and social scrapers about the
-    // page's authoritative address.
-    pageData.frontmatter.head.push([
-      'meta',
-      { property: 'og:url', content: canonicalHref },
-    ]);
+
+    // Hreflang alternate links for pages available in both EN and ZH.
+    // Each indexable page points to itself and its translated counterpart;
+    // x-default points to the English version. Skip when no counterpart exists.
+    let enHref: string | undefined;
+    let zhHref: string | undefined;
+    if (isZh) {
+      const enRoute = zhToEnMap.get(route);
+      if (enRoute !== undefined) {
+        enHref = `https://www.olares.com/docs/${enRoute}`;
+        zhHref = canonicalHref;
+      }
+    } else {
+      const zhRoute = enToZhMap.get(route);
+      if (zhRoute !== undefined) {
+        enHref = canonicalHref;
+        zhHref = `https://www.olares.com/docs/${zhRoute}`;
+      }
+    }
+    if (enHref && zhHref) {
+      for (const alt of [
+        { hreflang: 'en', href: enHref },
+        { hreflang: 'zh', href: zhHref },
+        { hreflang: 'x-default', href: enHref },
+      ]) {
+        pageData.frontmatter.head.push(['link', { rel: 'alternate', hreflang: alt.hreflang, href: alt.href }]);
+      }
+    }
   },
 
-  sitemap: {
-    hostname: "https://www.olares.com/docs/",
+  // Runs for every rendered page, including noindex and archived pages.
+  // Generate directly into outDir at buildEnd, after Vite has copied public/.
+  transformHead({ pageData, siteConfig }) {
+    return socialImages.head(pageData, siteConfig.site.base, process.env.DOCS_SITE_URL);
+  },
+
+  // Archived versioned builds noindex every page, so their sitemap would be
+  // empty. The `sitemap` package throws `EmptySitemap` when the stream ends
+  // with zero URLs, which crashes the whole build (exit != 0) and makes the
+  // release-docs pipeline silently skip that version. Since we explicitly do
+  // not want archived versions in the sitemap anyway, disable it for them.
+  sitemap: isArchivedVersionBuild ? undefined : {
+    hostname: SITEMAP_HOSTNAME,
     transformItems: (items) =>
       // Drop noindex pages from sitemap.xml so crawlers don't even discover
       // them via the sitemap. The meta tag above is what ultimately removes
@@ -192,9 +344,81 @@ export default defineVersionedConfig2(withMermaid({
         // Repo READMEs are srcExclude'd above, but guard the sitemap too so a
         // stray /docs/README (or nested README) can never leak back in.
         if (p === 'README' || p.endsWith('/README')) return false;
+        // Drop URLs that 301/302-redirect at the edge — a sitemap entry that
+        // redirects is what Google reports as "Page with redirect".
+        if (redirectSources.has(p.replace(/\/$/, ''))) return false;
         return !noindexPaths.has(p);
       }),
   },
+
+  // Split the generated sitemap by locale. Search Console's Page indexing
+  // report can only be sliced per submitted sitemap, so a single file mixing
+  // EN and ZH makes per-language index coverage unreadable.
+  //
+  // This post-processes the file the built-in generator already wrote (VitePress
+  // runs generateSitemap immediately before buildEnd) instead of rebuilding the
+  // entries, so it inherits transformItems' filtering, the git-derived lastmod
+  // values, and the xhtml:link alternates VitePress computes from `locales`.
+  buildEnd: async ({ outDir, site, cacheDir }) => {
+    socialImages.write(outDir, cacheDir);
+    // Archived builds disable the sitemap entirely, so there is nothing to
+    // split and waiting below would time out.
+    if (isArchivedVersionBuild) return;
+
+    const combined = path.join(outDir, 'sitemap.xml');
+    const xml = await waitForSitemap(combined);
+    const prolog = xml.match(/^<\?xml[^>]*\?>/)?.[0] ?? '<?xml version="1.0" encoding="UTF-8"?>';
+    const openTag = xml.match(/<urlset[^>]*>/)?.[0];
+    const entries = xml.match(/<url>[\s\S]*?<\/url>/g) ?? [];
+    // Fail loud: silently writing empty per-locale sitemaps would ship a site
+    // with no discoverable URLs at all.
+    if (!openTag) throw new Error('sitemap.xml has no <urlset> element');
+    if (entries.length === 0) throw new Error('sitemap.xml has no <url> entries');
+
+    // Derive one bucket per declared locale instead of hardcoding en/zh, so
+    // adding a locale has no silent failure mode here: its URLs get their own
+    // file rather than being lumped in with English. VitePress calls the
+    // unprefixed locale "root", which for this site is English; every other
+    // locale key doubles as its URL prefix (zh -> /docs/zh/...).
+    const localeDirs = Object.keys(site.locales ?? {}).filter((l) => l !== 'root');
+    if (localeDirs.length === 0) {
+      throw new Error('no non-root locales found — cannot split the sitemap per locale');
+    }
+    const buckets: Record<string, string[]> = { en: [] };
+    for (const dir of localeDirs) buckets[dir] = [];
+
+    for (const entry of entries) {
+      // Mirror the x-default alternate injected into each page's <head> so both
+      // annotation channels agree; English is x-default in both. Pages with no
+      // counterpart in another locale carry no alternates, so nothing to mirror.
+      const annotated = entry.replace(/<xhtml:link[^>]*hreflang="en"[^>]*\/>/, (link) => {
+        const href = link.match(/href="([^"]*)"/)?.[1];
+        return href
+          ? `${link}<xhtml:link rel="alternate" hreflang="x-default" href="${href}"/>`
+          : link;
+      });
+      const loc = entry.match(/<loc>([^<]*)<\/loc>/)?.[1] ?? '';
+      const dir = localeDirs.find((d) => loc.startsWith(`${SITEMAP_HOSTNAME}${d}/`));
+      buckets[dir ?? 'en'].push(annotated);
+    }
+
+    for (const [lang, urls] of Object.entries(buckets)) {
+      // An empty file would quietly drop a whole locale out of Search Console,
+      // which looks identical to "that language just isn't indexed yet".
+      if (urls.length === 0) {
+        throw new Error(`sitemap-${lang}.xml would be empty — no URLs matched locale "${lang}"`);
+      }
+      fs.writeFileSync(
+        path.join(outDir, `sitemap-${lang}.xml`),
+        `${prolog}${openTag}${urls.join('')}</urlset>`
+      );
+    }
+    // Leaving the combined file behind would double-attribute every URL in
+    // Search Console, which is the mixed reporting this split exists to remove.
+    // The site-wide index and robots.txt reference the per-locale files instead.
+    fs.rmSync(combined);
+  },
+
   lastUpdated: true,
   cleanUrls: true,
   // Snippet-only fragments and repo READMEs are pulled into real pages via
@@ -207,6 +431,13 @@ export default defineVersionedConfig2(withMermaid({
     "**/reusables.md",
     "**/reusables-*.md",
     "**/*.reusables.md",
+    // Get-started snippets (included by host pages only)
+    "manual/get-started/activate-olares.md",
+    "manual/get-started/log-in-to-olares.md",
+    "manual/get-started/install-and-activate-olares.md",
+    "zh/manual/get-started/activate-olares.md",
+    "zh/manual/get-started/log-in-to-olares.md",
+    "zh/manual/get-started/install-and-activate-olares.md",
   ],
   base: process.env.BASE_URL || "/",
   vite: {
@@ -230,6 +461,31 @@ export default defineVersionedConfig2(withMermaid({
         rel: "icon",
         href: (process.env.BASE_URL || "/") + "icon1.png",
       },
+    ],
+    // Organization schema (shared with olares.com; single #organization entity).
+    [
+      "script",
+      { type: "application/ld+json" },
+      JSON.stringify({
+        "@context": "https://schema.org",
+        "@id": "https://www.olares.com/#organization",
+        "@type": "Organization",
+        name: "Olares",
+        url: "https://www.olares.com/",
+        logo: {
+          "@type": "ImageObject",
+          url: "https://www.olares.com/olares-logo.png",
+          width: 1000,
+          height: 236,
+        },
+        sameAs: [
+          "https://github.com/beclab/Olares",
+          "https://x.com/Olares_OS",
+          "https://www.linkedin.com/company/olarestech/",
+          "https://www.youtube.com/@OlaresOS/featured",
+          "https://www.facebook.com/people/Olares/61579156063357/",
+        ],
+      }),
     ],
     [
       "script",

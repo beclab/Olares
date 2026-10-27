@@ -1,20 +1,24 @@
 ---
+connectionVersion: "1.12.7"
+connectionLatestPath: /use-cases/hermes
 outline: [2,3]
-description: Learn how to install Hermes Agent on Olares, connect it to Discord, install Olares skills, and integrate it with other applications via the Gateway API.
+description: Install Hermes Agent on Olares, connect it to a local model and Discord, use Olares skills, and integrate it with other applications through the Gateway API.
 head:
   - - meta
     - name: keywords
       content: Olares, Hermes, Hermes Agent, autonomous AI, self-improving AI, Discord bot, self-hosted
-app_version: "1.3.9"
-doc_version: "2.0"
-doc_updated: "2026-05-29"
+app_version: "1.3.49"
+doc_version: "3.2"
+doc_updated: "2026-10-21"
 ---
 
 # Set up a self-directed AI agent with Hermes
 
+<VersionRouteSelect />
+
 Hermes Agent is a self-directed AI assistant that connects to your local models to execute system tasks, generate code, and manage workflows. It retains memory across sessions and creates reusable skills based on your interactions.
 
-In Olares, you can install specialized skills that allow your agent to manage your device's files and applications. You can also interact with your agent remotely via messaging platforms like Discord, or integrate it with other applications like Open WebUI.
+In Olares, you can use the built-in skills that allow your agent to manage your device's files and applications. You can also interact with your agent remotely via messaging platforms like Discord, or integrate it with other applications like Open WebUI.
 
 ## Learning objectives
 
@@ -23,14 +27,27 @@ In this guide, you will learn how to:
 - Configure Hermes Agent to connect to a local model.
 - Interact with your agent directly via the terminal.
 - Integrate with Discord for remote chat.
-- Install Olares skills to manage files and applications via the agent.
+- Use Olares skills to manage files and applications via the agent.
 - Enable the Gateway API to connect Hermes Agent with other applications like Open WebUI.
 
 ## Prerequisites
 
-- Local model: [Ollama is installed](./ollama.md) with at least one tool-capable model downloaded and running. This tutorial uses `qwen3.5:9b`.
+Before you begin, you need:
+
+<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - Discord account: Required to create the bot application.
 - Discord server: A server where you have permissions to add bots.
+- The following model:
+
+    | Model type | Model | How to get it |
+    | :--- | :--- | :--- |
+    | Chat | Qwen3.8-27B (llama.cpp) | Install from Market |
+
+    :::tip
+    Hermes Agent requires a model with a context window of at least 64K tokens.
+    :::
+
+<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## Install Hermes Agent
 
@@ -53,25 +70,13 @@ Olares supports app cloning. If you want to run multiple independent AI agents f
 
 Run a quick setup to connect Hermes Agent to your local model.
 
-### Step 1: Get model and endpoint details
+### Step 1: Get model connection details
 
-1. Open the Ollama app from the Launchpad.
-2. Check the installed models by running the following command:
+<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
 
-    ```bash
-    ollama list
-    ```
-3. Copy and save your model name exactly as shown in the **NAME** column. For example, `qwen3.5:9b`.
-4. Check the context window of the model by running the following command:
+<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
-    ```bash
-    ollama ps
-    ```
-
-5. Copy and save the value as shown in the **CONTEXT** column. For example, `32768`.
-6. Open Settings, go to **Applications** > **Ollama** > **Shared entrances** > **Ollama API**, and then copy the endpoint address. For example, `http://d54536a50.shared.olares.com`.
-
-    ![Obtain Ollama API](/images/manual/use-cases/ollama-endpoint1.png#bordered){width=65%}
+5. In Router, open **LLM** and click the information icon on the Qwen3.8-27B (llama.cpp) row to open **Model card**. Under **Engine args**, read the number after `-c`. For example, `-c 104448` means you should enter `104448` in the next step. See [Check the configured context size](llm-base-apps.md#view-model-details-in-router) for screenshots.
 
 ### Step 2: Run the setup wizard
 
@@ -84,16 +89,25 @@ Run a quick setup to connect Hermes Agent to your local model.
 
 3. The wizard guides you through a series of steps. Use the arrow keys to navigate and press **Enter** to confirm.
 
+    The model-selection prompts below are alternative branches. Follow the row that matches the number of models detected, then continue to **Context length in tokens**.
+
     | Settings   | Option   |
     |:-----------|:---------|
-    | How would you like to set up Hermes | Select **Quick setup - provider, model & messaging (recommended)**. |
+    | How would you like to set up Hermes | Select **Full setup — configure every provider, tool & option yourself (bring your own keys)**. |
     | Select provider | Select **Custom endpoint (enter URL manually)**.  |
-    | API base URL  | Enter your model's API address and append `/v1` to the end.<br>For example, `http://d54536a50.shared.olares.com/v1`.  |
-    | API key  | Enter any text as a placeholder value, such as `ollama-local`.<br>The input remains hidden for security. |
-    | Available models | Enter the number corresponding to your target model<br> from the generated list. |
-    | Context length in tokens | <ul><li>If your model's context window is less than `65536`,<br>enter a value greater than `65536`.</li><li>If your model's context window is more than `65536`,<br>leave this field blank to auto-detect.</li></ul> |
-    | Display name |  Enter a name for easy identification, such as `ollama-local`.|
-    | Connect a messaging platform | Select **Skip - set up later with `hermes setup gateway`**. |
+    | API base URL  | Enter the **Base URL** you copied from Router.<br>For example, `https://router.<your-olares-domain>/v1`.  |
+    | API key  | Enter any text as a placeholder value, such as `local`.<br>The input remains hidden for security. |
+    | Select API compatibility mode | Enter `1` to select **Auto-detect**. |
+    | Use this model? [Y/n] — only when one model is detected | Enter `n`. At the following **Model name** prompt, enter `default-chat`. This confirmation accepts yes/no, not a model name. |
+    | Select model [1-N] or type name — only when multiple models are detected | Type `default-chat` instead of selecting a numbered model. |
+    | Model name — when no model is detected | Enter `default-chat`. |
+    | Context length in tokens | Enter the exact context size from Router's **Model card > Engine args**, such as `104448` for `-c 104448`. Hermes requires at least `65536` tokens. The value must not exceed the engine configuration. |
+    | Display name |  Enter a name to identify this model, such as `router-chat`.|
+    | Select terminal backend | Select **Local - run directly on this machine**. |
+    | Select platforms to configure | Press **Enter** to skip for now. |
+    | Tools for CLI | Press **Enter** to skip for now. |
+    | Choose a provider | Select **Skip - keep defaults / configure later**. |
+    | Select Search Provider | Select **Skip - keep defaults / configure later**. |
 
 4. Keep the Hermes CLI window open for the next step.
 
@@ -103,19 +117,23 @@ Run a quick setup to connect Hermes Agent to your local model.
 
 The Terminal User Interface (TUI) runs directly in the Hermes CLI with no extra setup. It is ideal for quick tests.
 
-1. When the setup wizard completes, it prompts you to launch `hermes chat`. Type `y` and press **Enter** to start the TUI.
+1. When the setup wizard completes, it shows `Ready to go` with the available commands:
+
+    - `hermes`: Start chatting.
+    - `hermes gateway`: Start the messaging gateway.
+    - `hermes doctor`: Check for issues.
+
+2. Type `hermes` and press **Enter** to launch the TUI.
 
    :::tip
-   If you exited the wizard, manually start the chat by entering `hermes chat` in the Hermes CLI.
+   If you exited the wizard, manually start the chat by entering `hermes` in the Hermes CLI.
    :::
 
-    ![Hermes setup complete](/images/manual/use-cases/hermes-setup-complete.png#bordered)
+3. Send a message, such as `what can you do`, to verify that the agent responds correctly.
 
-2. Send a message, such as `what can you do`, to verify that the agent responds correctly.
+    ![Hermes TUI chat](/images/manual/use-cases/hermes-tui1.png#bordered)
 
-    ![Hermes TUI chat](/images/manual/use-cases/hermes-tui.png#bordered)
-
-3. To close the TUI and return to the standard CLI, type `/exit`, and then press **Enter**.
+4. To close the TUI and return to the standard CLI, type `/exit`, and then press **Enter**.
 
 ### Option 2: Remote chat via Discord
 
@@ -203,10 +221,10 @@ For security, the bot does not talk to unauthorized users. You must pair your Di
 
 ## Manage Olares with your Hermes Agent
 
-Use the Olares CLI skills in Hermes Agent so your agent can manage files and applications on your Olares device. For example, ask it to list files, read logs, or install apps from Olares Market.
+Use the pre-installed Olares CLI skills directly in Hermes Agent to manage files and applications on your Olares device. For example, ask it to list files, read logs, or install apps from Olares Market.
 
 1. Open the Hermes CLI from the Launchpad.
-2. Run the following commands one by one to confirm that both olares-cli and its skills are properly installed and enabled:
+2. Run the following commands one by one to confirm that both `olares-cli` and its skills are properly installed and enabled:
 
    ```bash
    olares-cli -v
@@ -222,6 +240,10 @@ Use the Olares CLI skills in Hermes Agent so your agent can manage files and app
 4. Follow the prompt to enter your Olares login password. For security, the password is hidden.
 5. You can now enter the TUI, and ask the agent to interact with your Olares environment. For example, ask it to install an app from Olares Market.
 
+## Manage LAN computers over SSH
+
+You can also ask Hermes to run commands and scripts on LAN computers over SSH. For key setup, disk-space checks on one or more computers, and connection troubleshooting, see [Manage LAN computers with Hermes Agent over SSH](hermes-ssh.md).
+
 ## Integrate Hermes Agent with other applications
 
 Hermes Agent provides an OpenAI-compatible API, allowing you to integrate it with other applications like Open WebUI or Hermes Workspace.
@@ -236,7 +258,7 @@ Hermes Agent provides an OpenAI-compatible API, allowing you to integrate it wit
 3. Click **Confirm**.
 4. Find **HERMES_API_SERVER_KEY**, click <i class="material-symbols-outlined">edit_square</i>, and then enter the value. Ensure the key meets the following requirements:
 
-    - It must be at least 8 characters long.
+    - It must be at least 16 characters long.
     - It can only contain letters, numbers, and common symbols.
     - It cannot be a predictable placeholder value, such as "your_API_key".
   
@@ -315,27 +337,23 @@ To resolve this issue, reset your `HERMES_API_SERVER_KEY`:
 1. Open Olares Settings, and then go to **Applications** > **Hermes Agent** > **Manage environment variables**.
 2. Set a new key for `HERMES_API_SERVER_KEY` that meets the following requirements:
 
-    - It must be at least 8 characters long.
+    - It must be at least 16 characters long.
     - It can only contain letters, numbers, and common symbols.
     - It cannot be a predictable placeholder value, such as "your_API_key".
     
- 3. Click **Save**, and then click **Apply**.
-
-## Next steps
-
-After you complete the basic setup, explore the official resources to expand your agent's capabilities:
-- For advanced terminal commands, see [CLI Interface](https://hermes-agent.nousresearch.com/docs/user-guide/cli).
-- For integration with Slack, Telegram, and other platforms, see [Messaging Platforms](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/).
-- For installation of skills, see [Skills System](https://hermes-agent.nousresearch.com/docs/user-guide/features/skills).
-- For installation of tools, see [Tools & Toolsets](https://hermes-agent.nousresearch.com/docs/user-guide/features/tools).
-- For information about best practices and optimization, see [Tips & Best Practices](https://hermes-agent.nousresearch.com/docs/guides/tips).
-
-:::info Note on sudo commands
-The Hermes CLI in the Olares environment does not support `sudo` commands. Ignore any steps in the official documentation that require `sudo` privileges.
-:::
+3. Click **Save**, and then click **Apply**.
 
 ## Learn more
 
-- [How do I create a server in Discord](https://support.discord.com/hc/en-us/articles/204849977-How-do-I-create-a-server)
-- [How to find the Channel ID number](https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID)
-- [OpenClaw](openclaw.md)
+:::info Note on sudo commands
+The Hermes container runs as an unprivileged user. Do not use instructions that require local `sudo` inside the container. Commands executed over SSH use the remote account's permissions. See [Manage LAN computers over SSH](hermes-ssh.md).
+:::
+
+- [CLI Interface](https://hermes-agent.nousresearch.com/docs/user-guide/cli): Explore advanced terminal commands.
+- [Messaging Platforms](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/): Connect Slack, Telegram, and other platforms.
+- [Skills System](https://hermes-agent.nousresearch.com/docs/user-guide/features/skills): Install and manage skills.
+- [Tools & Toolsets](https://hermes-agent.nousresearch.com/docs/user-guide/features/tools): Configure the tools available to your agent.
+- [Tips & Best Practices](https://hermes-agent.nousresearch.com/docs/guides/tips): Improve your agent's setup and workflows.
+- [Create a server in Discord](https://support.discord.com/hc/en-us/articles/204849977-How-do-I-create-a-server): Set up a server for your bot.
+- [Find Discord IDs](https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID): Find the user, server, and channel IDs used in bot configuration.
+- [OpenClaw](openclaw.md): Set up another AI assistant on Olares.

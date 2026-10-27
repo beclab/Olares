@@ -18,6 +18,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/beclab/Olares/cli/pkg/bflenvelope"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 	"github.com/beclab/Olares/cli/pkg/credential"
 	"github.com/beclab/Olares/cli/pkg/whoami"
@@ -73,12 +74,6 @@ func prepare(ctx context.Context, f *cmdutil.Factory) (*preparedClient, error) {
 	}, nil
 }
 
-type bflEnvelope struct {
-	Code    int             `json:"code"`
-	Message string          `json:"message"`
-	Data    json.RawMessage `json:"data"`
-}
-
 func doGetEnvelope(ctx context.Context, d Doer, path string, out interface{}) error {
 	return doMutateEnvelope(ctx, d, "GET", path, nil, out)
 }
@@ -86,28 +81,13 @@ func doGetEnvelope(ctx context.Context, d Doer, path string, out interface{}) er
 // doMutateEnvelope is the POST/PUT/DELETE counterpart of doGetEnvelope.
 // search.controller.ts proxies all methods (`@All`) so the response
 // envelope is the same on writes as on reads — search3's own
-// {code, message, data} body, where code 0/200 mean success.
+// {code, message, data} body.
 func doMutateEnvelope(ctx context.Context, d Doer, method, path string, body, out interface{}) error {
-	var env bflEnvelope
+	var env bflenvelope.Envelope
 	if err := d.DoJSON(ctx, method, path, body, &env); err != nil {
 		return err
 	}
-	switch env.Code {
-	case 0, 200:
-	default:
-		msg := strings.TrimSpace(env.Message)
-		if msg == "" {
-			return fmt.Errorf("%s %s: upstream returned code %d", method, path, env.Code)
-		}
-		return fmt.Errorf("%s %s: upstream returned code %d: %s", method, path, env.Code, msg)
-	}
-	if out == nil || len(env.Data) == 0 {
-		return nil
-	}
-	if err := json.Unmarshal(env.Data, out); err != nil {
-		return fmt.Errorf("%s %s: decode data: %w", method, path, err)
-	}
-	return nil
+	return bflenvelope.Data(method, path, env, out)
 }
 
 func printJSON(w io.Writer, v interface{}) error {

@@ -5,12 +5,16 @@ head:
   - - meta
     - name: keywords
       content: Olares, OpenClaw, 沙盒, 安全, 代码执行
-app_version: "1.0.2"
-doc_version: "1.1"
-doc_updated: "2026-06-09"
+app_version: "1.0.17"
+doc_version: "1.3"
+doc_updated: "2026-08-11"
 ---
 
-# 可选：启用沙盒
+:::warning
+本文档由 AI 自动翻译，仅供参考。涉及关键操作或信息时，请以[英文原文](../../use-cases/openclaw-enable-sandbox.md)为准。
+:::
+
+# 启用 OpenClaw 沙盒
 
 默认情况下，OpenClaw 在其主容器内直接执行命令和代码。虽然这对于日常任务通常是安全的，但赋予智能体运行任意代码或安装外部依赖的能力仍存在固有风险。
 
@@ -63,14 +67,14 @@ OpenClaw 沙盒默认处于禁用状态。你可以通过修改配置文件或�
           }
     ```
 
-    ![通过配置文件启用沙盒](/images/zh/manual/use-cases/openclaw-edit-config-file.png#bordered)
+    ![通过配置文件启用沙盒](/images/manual/use-cases/openclaw-edit-config-file.png#bordered)
 
 5. 点击右上角的 <i class="material-symbols-outlined">save</i> 保存。
 6. 重启 OpenClaw 使更改生效。
 </template>
 <template #通过-Control-UI-启用>
 
-1. 打开 Control UI，从左侧边栏选择 **Settings**。
+1. 打开 Control UI，点击左侧边栏的 <i class="material-symbols-outlined">settings</i>。
 2. 点击 **AI & Agents**。
 3. 向下滚动找到 **Sandbox** 部分，然后将其展开。
 4. 按如下方式配置设置：
@@ -86,7 +90,7 @@ OpenClaw 沙盒默认处于禁用状态。你可以通过修改配置文件或�
     - **Scope**：选择 **agent**。
     - **Workspace Access**：选择 **rw**。
 
-    ![在 Control UI 中启用沙盒](/images/manual/use-cases/openclaw-sandbox-enable-ui1.png#bordered)
+    ![在 Control UI 中启用沙盒](/images/manual/use-cases/openclaw-sandbox-enable-ui2.png#bordered)
 
 5. 点击右上角的 **Save**。
 6. 重启 OpenClaw 使更改生效。
@@ -128,11 +132,13 @@ OpenClaw 沙盒默认处于禁用状态。你可以通过修改配置文件或�
 例如，要授予沙盒对 **Home** 目录的只读（`ro`）访问权限：
 1. 确保 OpenClaw 可以通过启用 `ALLOW_HOME_DIR_ACCESS` 环境变量来访问 **Home** 目录中的本地文件：
 
-    a. 打开设置，然后进入**应用** > **OpenClaw** > **管理环境变量**。
+    a. 打开**设置**，然后前往**应用** > **OpenClaw** > **管理环境变量**。
 
-    b. 点击变量 `ALLOW_HOME_DIR_ACCESS` 右侧的 <i class="material-symbols-outlined">edit_square</i>，将变量值修改为 `true`，然后点击**确认**。
+    ![Enable file access settings](/images/manual/use-cases/openclaw-file-access.png#bordered){width=70%}
 
-    c. 点击**应用**。
+    b. 对于变量**ALLOW_HOME_DIR_ACCESS**，点击 <i class="material-symbols-outlined">edit_square</i>，将值设置为 **true**，然后点击 **确认**。
+
+    c. 点击**应用**。等待大约一分钟，让 OpenClaw 容器重启并应用新权限。
 
 2. 打开文件管理器，然后进入**数据** > **clawdbot** > **config**。
 3. 双击打开 `openclaw.json` 文件。

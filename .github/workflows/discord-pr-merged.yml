@@ -1,0 +1,128 @@
+name: Discord PR Merged Notification
+
+on:
+  pull_request_target:
+    types: [closed]
+
+permissions:
+  contents: read
+
+jobs:
+  notify-discord:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+
+    steps:
+      - name: Send notification to Discord
+        shell: bash
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+
+          REPOSITORY: ${{ github.repository }}
+          REPOSITORY_URL: ${{ github.event.repository.html_url }}
+
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          MERGED_BY: ${{ github.event.pull_request.merged_by.login }}
+
+          HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
+          BASE_BRANCH: ${{ github.event.pull_request.base.ref }}
+
+          ADDITIONS: ${{ github.event.pull_request.additions }}
+          DELETIONS: ${{ github.event.pull_request.deletions }}
+          CHANGED_FILES: ${{ github.event.pull_request.changed_files }}
+          MERGED_AT: ${{ github.event.pull_request.merged_at }}
+
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${DISCORD_WEBHOOK}" ]]; then
+            echo "::error::DISCORD_WEBHOOK is not configured"
+            exit 1
+          fi
+
+          jq -n \
+            --arg number "${PR_NUMBER}" \
+            --arg title "${PR_TITLE}" \
+            --arg body "${PR_BODY}" \
+            --arg url "${PR_URL}" \
+            --arg repository "${REPOSITORY}" \
+            --arg repository_url "${REPOSITORY_URL}" \
+            --arg author "${PR_AUTHOR}" \
+            --arg merged_by "${MERGED_BY}" \
+            --arg head "${HEAD_BRANCH}" \
+            --arg base "${BASE_BRANCH}" \
+            --arg additions "${ADDITIONS}" \
+            --arg deletions "${DELETIONS}" \
+            --arg changed_files "${CHANGED_FILES}" \
+            --arg timestamp "${MERGED_AT}" \
+            '
+            # The only template section that reliably carries content. Nothing else from the body is
+            # forwarded: most sections are left empty, so rendering them yields a screen of headings.
+            (
+              $body
+              | gsub("\r"; "")
+              | [scan("Target Version for Merge[*`\\s:]*([^\\n]*)"; "i")]
+              | if length > 0 then (.[0][0] // "") else "" end
+              | gsub("^[\\s*#>`-]+"; "")
+              | gsub("[\\s*`]+$"; "")
+              # An empty section matches the next heading instead, so accept version-shaped values only.
+              | if test("^v?[0-9]") then . else "" end
+            ) as $version |
+
+            (if $version == "" then "" else " · " + $version end) as $target |
+
+            # Authors merge their own work most of the time; name the merger only when it differs.
+            (
+              if $merged_by == "" or $merged_by == $author then ""
+              else " · merged by @" + $merged_by
+              end
+            ) as $merger |
+
+            ($changed_files + " file" + (if $changed_files == "1" then "" else "s" end)) as $files |
+
+            {
+              username: "GitHub",
+              avatar_url: "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
+              allowed_mentions: { parse: [] },
+
+              embeds: [{
+                author: {
+                  name: $repository,
+                  url: $repository_url
+                },
+
+                # Discord caps an embed title at 256; leave room for the number and separator.
+                title: ("#" + $number + " " + ($title[0:230])),
+                url: $url,
+
+                description: (
+                  "`" + $head + "` → `" + $base + "`" + $target + "\n"
+                  + "@" + $author + $merger
+                  + " · +" + $additions + " -" + $deletions
+                  + " · " + $files
+                ),
+
+                # GitHub'"'"'s own merged purple (#8250DF), to read apart from the green of an open PR.
+                color: 8540383,
+                timestamp: $timestamp
+              }]
+            }
+            ' > payload.json
+
+          curl \
+            --fail-with-body \
+            --silent \
+            --show-error \
+            --retry 2 \
+            --retry-all-errors \
+            --connect-timeout 10 \
+            --max-time 30 \
+            -H "Content-Type: application/json" \
+            --data-binary @payload.json \
+            "${DISCORD_WEBHOOK}"

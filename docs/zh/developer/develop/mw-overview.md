@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 了解 Olares 中的 middleware，并快速导航到各个已支持服务的数据访问与集成指南。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 中间件, 数据库, 消息队列, Elasticsearch, Redis, PostgreSQL, MongoDB, MinIO
 ---
 # Olares 中的中间件
 

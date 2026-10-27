@@ -1,6 +1,7 @@
 ---
+noindex: true
 outline: [2, 3]
-description: Compares Olares and general NAS, highlighting key differences in storage solutions, application ecosystem, virtual machine support, network configuration, and AI capabilities.
+description: Compare Olares with traditional NAS platforms across storage, apps, virtual machines, networking, and local AI capabilities.
 ---
 
 
@@ -57,7 +58,7 @@ This document provides a detailed comparison between Olares and general NAS syst
 | Installation format         | Olares package format based<br/> on improved Helm                    | Dockerfile or Docker Compose             | Dockerfile or Docker Compose   |
 | App store         | Rich community app ecosystem<br/> with application sandboxing                            | Rich apps with no sandboxing restrictions.  | Fewer apps, extendable via third-party stores |
 | Application sandbox         | ✅                                              | ❌                                   | ❌                         |
-| Developer tools       | ✅ (Studio)                                    | ❌                                   | ❌                         |
+| Developer tools       | OAC packaging and CLI tools                                    | ❌                                   | ❌                         |
 | Middleware sharing       | Supports mainstream middleware like<br/>PostgreSQL, MongoDB, and Redis | ❌                                   | ❌                         |
 | Cluster application support | ✅                                              | ❌                                   | ❌                         |
 | LDAP integration        | ✅ (Requires third-party adaptation)                              | ❌                                   | ❌                         |
@@ -71,7 +72,7 @@ This document provides a detailed comparison between Olares and general NAS syst
 | Install via ISO | Not yet supported,<br/>will be supported via Kubevirt                                   | ✅                           | ✅          |
 | Windows       | One-click install from<br/> app store, auto-integrates Tailscale,<br/>for secure external RDP access | Install via ISO                  | Install via ISO |
 | Steam         | Supported in app store,<br/>auto-configures GPU mounting,<br/>streaming, and external access             | Requires manual configuration<br/>for GPU passthrough, etc. | ❌    |
-| Linux         | Supported via Dev Containers<br/>in Studio                               | Install via ISO                  | Install via ISO |
+| Linux         | Supported through containerized workloads                               | Install via ISO                  | Install via ISO |
 | Android       | Supported via redroid                                                     | ❌                     | ❌    |
 | Mac           | Coming soon                                                              | ❌                     | ❌    |
 | Openwrt       | Coming soon                                                              | ❌                     | ❌    |

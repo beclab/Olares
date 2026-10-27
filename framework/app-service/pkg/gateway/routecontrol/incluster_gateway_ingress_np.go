@@ -3,6 +3,7 @@ package routecontrol
 import (
 	"context"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/mesh"
 	"github.com/beclab/Olares/framework/app-service/pkg/security"
 	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -47,7 +48,12 @@ func (r *GatewayInClusterIngressNPReconciler) Reconcile(ctx context.Context, _ r
 	}, gw); err != nil {
 		return reconcile.Result{}, client.IgnoreNotFound(err)
 	}
-	return reconcile.Result{}, EnsureInClusterCallerIngressNP(ctx, r.Client)
+	if err := EnsureInClusterCallerIngressNP(ctx, r.Client); err != nil {
+		return reconcile.Result{}, err
+	}
+	// Ensure Linkerd CP / gateway mesh NPs (chart twins); brownfield clusters
+	// often only have others-np and block caller→identity without these.
+	return reconcile.Result{}, mesh.EnsureAppGatewayMeshNetworkPolicies(ctx, r.Client)
 }
 
 // EnsureInClusterCallerIngressNP creates or updates the managed ingress NP.
@@ -94,6 +100,17 @@ func desiredInClusterCallerIngressNP() *networkingv1.NetworkPolicy {
 									{
 										Key:      NamespaceOwnerLabel,
 										Operator: existsOp,
+									},
+								},
+							},
+						},
+						{
+							NamespaceSelector: &metav1.LabelSelector{
+								MatchExpressions: []metav1.LabelSelectorRequirement{
+									{
+										Key:      "bytetrade.io/ns-type",
+										Operator: metav1.LabelSelectorOpIn,
+										Values:   []string{"system"},
 									},
 								},
 							},

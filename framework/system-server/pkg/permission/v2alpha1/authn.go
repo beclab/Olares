@@ -103,9 +103,10 @@ func (a *autheliaNonceAuthenticator) AuthenticateRequest(req *http.Request) (*au
 		return nil, false, fmt.Errorf("invalid nonce")
 	}
 
-	u := req.Header.Get(constants.BflUserKey)
+	// Backend requests or public requests with valid nonce are considered authenticated as the owner user.
+	u := constants.Owner
 	if u == "" {
-		return nil, false, fmt.Errorf("no user found in header")
+		return nil, false, fmt.Errorf("owner is not set in environment variable")
 	}
 
 	klog.Info("authelia nonce verified successfully for user: ", u)

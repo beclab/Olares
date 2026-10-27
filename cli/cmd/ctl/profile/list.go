@@ -2,8 +2,10 @@ package profile
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"text/tabwriter"
 	"time"
@@ -27,27 +29,57 @@ import (
 //	                      (Phase 2 sets this when /api/refresh returns 401/403);
 //	                      takes precedence over `expired`
 //	never               — no stored token for this profile
+//	pending             — the same, for a platform-issued profile, which is
+//	                      never in a "hasn't logged in yet" state
 //	logged-in           — token present but JWT has no exp claim (we can't
 //	                      tell client-side; trust until the server says no)
+//
+// A SOURCE column is added when any profile is platform-issued.
 //
 // Per §7.5 of the design doc, we deliberately do NOT print any other JWT
 // claims (username / groups / mfa / jid). The OlaresID column is the local
 // authoritative identity.
 func NewListCommand(f *cmdutil.Factory) *cobra.Command {
-	return &cobra.Command{
+	var output string
+	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "list all profiles with login status, current marker, and cached backend version",
-		Args:  cobra.NoArgs,
+		Long: `List all profiles with login status, current marker, and cached backend version.
+
+-o json prints an array, one object per profile: name, olaresId, status,
+version ("" when not detected yet), source (local / platform /
+platform(<app>)) and current (true for the active profile).`,
+		Args: cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
 			// --refresh-version is inherited from the `profile` parent's
 			// persistent flags; treat a read error as "no refresh".
 			refresh, _ := c.Flags().GetBool(cmdutil.FlagRefreshVersion)
-			return runList(c.Context(), f, refresh, os.Stdout)
+			return runList(c.Context(), f, refresh, cmdutil.OutputIsJSON(output), os.Stdout)
 		},
 	}
+	cmd.Flags().StringVarP(&output, "output", "o", "table", "output format: table, json")
+	return cmd
 }
 
-func runList(ctx context.Context, f *cmdutil.Factory, refresh bool, out *os.File) error {
+type profileRow struct {
+	Name     string `json:"name"`
+	OlaresID string `json:"olaresId"`
+	Status   string `json:"status"`
+	Version  string `json:"version"`
+	Source   string `json:"source"`
+	Current  bool   `json:"current"`
+}
+
+func writeProfilesJSON(out io.Writer, rows []profileRow) error {
+	if rows == nil {
+		rows = []profileRow{}
+	}
+	enc := json.NewEncoder(out)
+	enc.SetIndent("", "  ")
+	return enc.Encode(rows)
+}
+
+func runList(ctx context.Context, f *cmdutil.Factory, refresh, asJSON bool, out io.Writer) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -67,6 +99,9 @@ func runList(ctx context.Context, f *cmdutil.Factory, refresh bool, out *os.File
 	if err != nil {
 		return err
 	}
+	if len(cfg.Profiles) == 0 && asJSON {
+		return writeProfilesJSON(out, nil)
+	}
 	if len(cfg.Profiles) == 0 {
 		fmt.Fprintln(out, "no profiles configured.")
 		fmt.Fprintln(out, "run `olares-cli profile login --olares-id <id>` or `olares-cli profile import --olares-id <id> --refresh-token <tok>` to add one.")
@@ -78,8 +113,39 @@ func runList(ctx context.Context, f *cmdutil.Factory, refresh bool, out *os.File
 	current := cfg.Current()
 	now := time.Now()
 
+	if asJSON {
+		rows := make([]profileRow, 0, len(cfg.Profiles))
+		for i := range cfg.Profiles {
+			p := &cfg.Profiles[i]
+			rows = append(rows, profileRow{
+				Name:     p.DisplayName(),
+				OlaresID: p.OlaresID,
+				Status:   profileStatus(store, p, now),
+				Version:  p.BackendVersion,
+				Source:   sourceCell(p),
+				Current:  current != nil && current.OlaresID == p.OlaresID,
+			})
+		}
+		return writeProfilesJSON(out, rows)
+	}
+
+	// The SOURCE column appears only when there is something to say in it.
+	// Every profile on a host install is local, and a column that always
+	// reads "local" is a wider table teaching nobody anything.
+	showSource := false
+	for i := range cfg.Profiles {
+		if cfg.Profiles[i].Managed {
+			showSource = true
+			break
+		}
+	}
+
 	w := tabwriter.NewWriter(out, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(w, "  \tNAME\tOLARES-ID\tSTATUS\tVERSION")
+	header := "  \tNAME\tOLARES-ID\tSTATUS\tVERSION"
+	if showSource {
+		header += "\tSOURCE"
+	}
+	fmt.Fprintln(w, header)
 	for i := range cfg.Profiles {
 		p := &cfg.Profiles[i]
 		marker := " "
@@ -87,9 +153,26 @@ func runList(ctx context.Context, f *cmdutil.Factory, refresh bool, out *os.File
 			marker = "*"
 		}
 		status := profileStatus(store, p, now)
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", marker, p.DisplayName(), p.OlaresID, status, backendVersionCell(p))
+		row := fmt.Sprintf("%s\t%s\t%s\t%s\t%s", marker, p.DisplayName(), p.OlaresID, status, backendVersionCell(p))
+		if showSource {
+			row += "\t" + sourceCell(p)
+		}
+		fmt.Fprintln(w, row)
 	}
 	return w.Flush()
+}
+
+// sourceCell says where a profile came from: a login on this machine, or a
+// credential the platform mounted into this container on behalf of an
+// application.
+func sourceCell(p *cliconfig.ProfileConfig) string {
+	if !p.Managed {
+		return "local"
+	}
+	if p.AppName == "" {
+		return "platform"
+	}
+	return fmt.Sprintf("platform(%s)", p.AppName)
 }
 
 // backendVersionCell renders the VERSION column for a profile: the cached
@@ -109,9 +192,20 @@ func profileStatus(store auth.TokenStore, p *cliconfig.ProfileConfig, now time.T
 	tok, err := store.Get(p.OlaresID)
 	if err != nil {
 		if errors.Is(err, auth.ErrTokenNotFound) {
+			if p.Managed {
+				// "never" means "go and log in", which is the one
+				// thing this account cannot do. The credential is
+				// already here; the exchange for an access token
+				// just hasn't succeeded yet, and the next command
+				// retries it.
+				return "pending"
+			}
 			return "never"
 		}
 		return "unknown"
+	}
+	if p.Managed && tok.AccessToken == "" && tok.InvalidatedAt == 0 {
+		return "pending"
 	}
 	// Explicit invalidation wins over JWT-exp inspection: a server-side
 	// rejection of the refresh leg means the entire grant is dead, even if

@@ -64,7 +64,7 @@ spec:
       priorityClassName: "system-cluster-critical"
       containers:
       - name: proxy
-        image: beclab/fsnotify-proxy:0.1.11
+        image: beclab/fsnotify-proxy:0.1.12
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 5079

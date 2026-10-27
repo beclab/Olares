@@ -448,7 +448,7 @@ Validation is organized in three layers:
 | `metadata` | Recursive validation (see §1.2) |
 | `entrances` | **required**, length `1..10`, `name` must be unique (`uniqueEntranceNames`) |
 | `spec` | **required**, recursive validation (see §1.3) |
-| `permission` | Recursive (no additional rules at the permission level today) |
+| `permission` | Recursive; the version and allowlist gates live in §2.3 |
 | `options` | Recursive validation (see §1.4) |
 
 #### 1.2 `metadata` (`AppMetaData`)
@@ -559,6 +559,18 @@ Each `spec.resources[i]` is a `ResourceMode`:
 | Rule 4-empty | Empty entry rejected (`requireResourceEntryFields`) | If the inline `ResourceRequirement` has **no quantity fields at all**, every standard field is reported as missing so that an empty `mode`-only declaration cannot slip through unnoticed. GPU pairs are reported alongside cpu/memory/disk on `nvidia` / `amd-gpu` |
 | Rule 5 | `limited >= required` | For each dimension (cpu/memory/disk/gpu), when both required and limited are declared, limited must be ≥ required |
 | Rule 7 | Mutual exclusion of legacy flat fields (`ensureLegacyAndResourcesAreMutuallyExclusive`) | When `spec.resources[]` is non-empty, the eight legacy flat fields `spec.requiredCpu` / `spec.limitedCpu` / `spec.requiredMemory` / `spec.limitedMemory` / `spec.requiredDisk` / `spec.limitedDisk` / `spec.requiredGpu` / `spec.limitedGpu` **must all be empty**. The two are alternative expressions of the same envelope and cannot coexist on a single manifest. Each violating field reports its own error and `errors.Join` aggregates them. Applies regardless of `olaresManifest.version`. |
+
+#### 2.3 `permission` gates (`validatePermission`)
+
+| Field | Rule |
+|---|---|
+| `permission.externalData` | Only accepted on `olaresManifest.version >= 0.12.0` |
+| `permission.provider` | Must be empty on `olaresManifest.version >= 0.12.0`; cross-app provider access is no longer granted this way |
+| `permission.loginOlaresCLI` | Only accepted for apps on the platform allowlist (`loginOlaresCLIAllowlist` in `internal/manifest/logincli.go`, currently `lares`) |
+
+`permission.appCommon` and `permission.loginOlaresCLI` are both 1.12.6-only feature fields, so their version gate comes from `validateModernFieldRequiresManifestVersion` instead: declaring either one demands `olaresManifest.version >= 0.12.0` **and** `options.dependencies[name=olares].version` locked to `">=1.12.6-0"`. `validatePermission` therefore only owns the allowlist half of the `loginOlaresCLI` rule; adding a version check there would emit a duplicate error.
+
+`permission.loginOlaresCLI` makes app-service mint a ten-year Olares refresh token for the installing user and mount it into every container of the app, so any process in the pod can act as that user until the app is uninstalled. The allowlist is a review gate on that blast radius: adding an app means editing `loginOlaresCLIAllowlist` with the rationale, not flipping a field in a manifest.
 
 **Versioning notes**: `specResourceCrossFieldRules` is partially version-gated.
 

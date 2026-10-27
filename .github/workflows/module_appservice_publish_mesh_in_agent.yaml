@@ -1,0 +1,109 @@
+name: Publish app-service mesh-in-agent to Dockerhub
+
+on:
+  workflow_dispatch:
+    inputs:
+      tags:
+        description: 'Release Tags'
+        required: true
+        type: string
+
+jobs:
+  publish_dockerhub:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v3
+
+      - name: Validate release tag input
+        run: |
+          set -euo pipefail
+          TAG='${{ github.event.inputs.tags }}'
+          TAG="$(echo -n "$TAG" | tr -d '[:space:]')"
+          test -n "$TAG"
+          if [ "$TAG" = "latest" ]; then
+            echo "FATAL: tag 'latest' is forbidden" >&2
+            exit 1
+          fi
+          echo "RELEASE_TAG=${TAG}" >> "$GITHUB_ENV"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASS }}
+
+      - name: Build and push multi-arch mesh-in-agent
+        uses: docker/build-push-action@v3
+        with:
+          push: true
+          tags: beclab/mesh-in-agent:${{ env.RELEASE_TAG }}
+          context: framework/app-service/build/mesh-in-agent
+          file: framework/app-service/build/mesh-in-agent/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          provenance: false
+
+      - name: Verify multi-arch, arm64 ELF, and mesh-in core capabilities
+        run: |
+          set -euo pipefail
+          IMG="beclab/mesh-in-agent:${RELEASE_TAG}"
+          docker buildx imagetools inspect "$IMG"
+          INSPECT="$(docker buildx imagetools inspect "$IMG")"
+          echo "$INSPECT" | grep -q 'linux/amd64'
+          echo "$INSPECT" | grep -q 'linux/arm64'
+
+          verify_arch_elf() {
+            local platform="$1"
+            local expect="$2"
+            local cid bininfo
+            docker pull --platform="$platform" "$IMG"
+            cid="$(docker create --platform="$platform" --entrypoint /bin/true "$IMG")"
+            docker cp "$cid:/usr/sbin/nginx" "/tmp/nginx.${platform##*/}"
+            docker rm -f "$cid" >/dev/null
+            bininfo="$(file "/tmp/nginx.${platform##*/}")"
+            echo "$bininfo"
+            echo "$bininfo" | grep -qiE -- "$expect"
+          }
+          verify_arch_elf linux/amd64 'x86-64|x86_64|Intel 80386'
+          verify_arch_elf linux/arm64 'ARM aarch64|aarch64|ARM64'
+
+          verify_mesh_in_core() {
+            local platform="$1"
+            local nginx_v probe_conf probe_out
+            nginx_v="$(docker run --rm --platform="$platform" "$IMG" nginx -V 2>&1 || true)"
+            for flag in \
+              --with-stream \
+              --with-stream_ssl_module \
+              --with-stream_ssl_preread_module \
+              --with-http_ssl_module \
+              --with-http_v2_module; do
+              echo "$nginx_v" | tr ' ' '\n' | grep -qx -- "$flag" \
+                || (echo "FATAL: ${platform}: nginx -V missing ${flag}" >&2; exit 1)
+            done
+            for so in ngx_stream_js_module.so ngx_http_js_module.so; do
+              docker run --rm --platform="$platform" "$IMG" test -f "/etc/nginx/modules/${so}" \
+                || (echo "FATAL: ${platform}: missing /etc/nginx/modules/${so}" >&2; exit 1)
+            done
+            probe_conf='load_module modules/ngx_stream_js_module.so; load_module modules/ngx_http_js_module.so; events{} stream { js_import probe.js; js_set $probe_v probe.x; server { listen 127.0.0.1:18443; return ok; } } http { js_import probe.js; js_set $probe_h probe.x; server { listen 18080; location / { return 200 $probe_h; } } }'
+            probe_out="$(docker run --rm --platform="$platform" "$IMG" sh -c "printf %s '${probe_conf}' > /tmp/probe.conf && nginx -t -c /tmp/probe.conf 2>&1" || true)"
+            if echo "$probe_out" | grep -qE 'dlopen\(\) .*ngx_(stream|http)_js_module|unknown directive "js_(import|set)"'; then
+              echo "FATAL: ${platform}: njs load/recognition failed" >&2
+              echo "$probe_out" >&2
+              exit 1
+            fi
+            if ! echo "$probe_out" | grep -qEi 'syntax is ok|cannot load module|enoent.*probe\.js|open .*probe\.js'; then
+              echo "FATAL: ${platform}: unexpected nginx -t output" >&2
+              echo "$probe_out" >&2
+              exit 1
+            fi
+          }
+          verify_mesh_in_core linux/amd64
+          verify_mesh_in_core linux/arm64
+
+          docker run --rm --platform=linux/amd64 --entrypoint cat "$IMG" /usr/share/doc/mesh-in-agent/UPSTREAM_SOURCES.txt

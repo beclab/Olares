@@ -168,7 +168,7 @@ func (h *HelmOpsV2) upgrade(values map[string]interface{}) error {
 			h.App().RepoURL,
 			h.App().Namespace,
 			values,
-			true,
+			helm.ReuseValues,
 		)
 		if err != nil {
 			klog.Errorf("Failed to upgrade chart name=%s err=%v", chart.Name, err)

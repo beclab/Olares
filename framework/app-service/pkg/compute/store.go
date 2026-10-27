@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
@@ -14,15 +15,39 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const mib = int64(1024 * 1024)
 
+const (
+	// hamiHandshake* mirror the values HAMi writes into its handshake
+	// annotation and the window it lets a request go unanswered before
+	// declaring the node's devices gone (HAMi pkg/util.CheckHealth). They have
+	// to stay in step with HAMi for the two to agree about a node.
+	hamiHandshakeRequesting = "Requesting"
+	hamiHandshakeDeleted    = "Deleted"
+	hamiHandshakeTimeout    = 60 * time.Second
+)
+
 type allocationMutation func(nodes []Node, allocations []Allocation) ([]Allocation, *Allocation, error)
 
 func FetchNodeComputeAllocations(ctx context.Context, c client.Client) ([]Node, error) {
 	nodes, err := loadNodeResources(ctx, c)
+	if err != nil {
+		return nil, err
+	}
+	allocations, err := loadAllocations(ctx, c)
+	if err != nil {
+		return nil, err
+	}
+	attachBindings(nodes, allocations)
+	return nodes, nil
+}
+
+func FetchSchedulableNodeComputeAllocations(ctx context.Context, c client.Client) ([]Node, error) {
+	nodes, err := loadSchedulableNodeResources(ctx, c)
 	if err != nil {
 		return nil, err
 	}
@@ -201,6 +226,21 @@ func loadNodeResources(ctx context.Context, c client.Client) ([]Node, error) {
 	return out, nil
 }
 
+func loadSchedulableNodeResources(ctx context.Context, c client.Client) ([]Node, error) {
+	var nodes corev1.NodeList
+	if err := c.List(ctx, &nodes); err != nil {
+		return nil, err
+	}
+	out := make([]Node, 0, len(nodes.Items))
+	for i := range nodes.Items {
+		if !utils.IsNodeReady(&nodes.Items[i]) || nodes.Items[i].Spec.Unschedulable {
+			continue
+		}
+		out = append(out, buildNodeResource(&nodes.Items[i]))
+	}
+	return out, nil
+}
+
 // buildNodeResource builds the compute view of a single physical node. A node
 // may advertise several accelerator modes at once (e.g. an Olares One exposing
 // both nvidia and intel): GPUTypes lists them all and Devices holds the devices
@@ -226,57 +266,131 @@ func buildNodeResource(node *corev1.Node) Node {
 	}
 
 	for _, mode := range modes {
-		if IsHAMIMode(mode) {
-			n.Devices = append(n.Devices, decodeHAMINvidiaDevices(node, mode)...)
-			continue
+		register := CapabilityFor(mode).Register
+		switch register.Decoder {
+		case registerHAMI:
+			n.Devices = append(n.Devices, decodeHAMIDevices(node, mode)...)
+		case registerTuple:
+			// Fall back to the single system-memory device when the register
+			// carries no usable discrete entry, so a node that advertises the
+			// mode still has a schedulable device.
+			if devices := decodeTupleRegisterDevices(node, mode, register.Annotation, totalMemory); len(devices) > 0 {
+				n.Devices = append(n.Devices, devices...)
+			} else {
+				n.Devices = append(n.Devices, nonHAMIDevice(node, mode, totalMemory))
+			}
+		default:
+			n.Devices = append(n.Devices, nonHAMIDevice(node, mode, totalMemory))
 		}
-		n.Devices = append(n.Devices, nonHAMIDevice(node, mode, totalMemory))
 	}
 
 	return n
 }
 
+// registeredCard is one card as a device register publishes it. SupportTypes
+// narrows the mode's support types for this card (see cardSupportTypes); it
+// stays empty, and the card offers its mode's full list, unless the mode's
+// register names a Cards annotation listing the card.
+type registeredCard struct {
+	ID           string
+	CardModel    string
+	Memory       int64
+	Health       string
+	SupportTypes []string
+}
+
+func registeredDevice(node *corev1.Node, mode string, card registeredCard) Device {
+	available := cardSupportTypes(mode, card.SupportTypes)
+	return Device{
+		ID:                    card.ID,
+		NodeName:              node.Name,
+		Mode:                  mode,
+		CardModel:             card.CardModel,
+		Memory:                card.Memory,
+		Health:                card.Health,
+		SupportType:           resolveSupportType(available, node.Annotations[shareModeAnnotationKey(card.ID)]),
+		AvailableSupportTypes: available,
+	}
+}
+
+// decodeTupleRegisterDevices builds one device per discrete GPU (dgpu) in a
+// tuple register annotation (bytetrade.io/node-intel-register,
+// bytetrade.io/node-amd-register). Each card's real VRAM (the entry's mem
+// field, in bytes) is used as Memory instead of the node's system RAM.
+// Integrated GPUs (igpu) are unified memory and stay on the nonHAMIDevice
+// path, so they are skipped here. When a discrete entry's VRAM is unknown
+// (mem=0) it falls back to the node's usable system memory so the card remains
+// schedulable. Returns nil when the annotation is missing, malformed, or
+// advertises no discrete card, letting the caller use the legacy device.
+func decodeTupleRegisterDevices(node *corev1.Node, mode, annotation string, totalMemory int64) []Device {
+	entries, err := utils.GPURegisterFromNode(node, annotation)
+	if err != nil {
+		klog.Warningf("compute: node %s has malformed %s annotation: %v", node.Name, annotation, err)
+		return nil
+	}
+
+	var devices []Device
+	for _, e := range entries {
+		if e.Kind != utils.IntelGPUKindDiscrete {
+			continue
+		}
+		memory := int64(e.Mem)
+		if memory <= 0 {
+			memory = totalMemory * 75 / 100
+		}
+		devices = append(devices, registeredDevice(node, mode, registeredCard{
+			ID:        fmt.Sprintf("%s-%s-%s", node.Name, mode, e.Card),
+			CardModel: e.Name,
+			Memory:    memory,
+			Health:    nodeHealth(node),
+		}))
+	}
+	return devices
+}
+
 // nonHAMIDevice builds the single synthetic device used for unified-memory
 // modes (cpu, apple-m, amd, intel, moore-soc, …): the whole node is one
 // schedulable unit drawing from system memory. The support type starts at the
-// mode's default (defaultSupportType) but, for the modes that can switch (intel
-// / amd / moore-soc), honors the per-device share-mode annotation written by
-// SwitchDeviceMode so a switch to Exclusive survives a rebuild of this view.
-// cpu / apple-m / discrete-GPU modes only have a single available support type,
-// so the annotation (if any) is clamped back to their default.
+// mode's default but, for the modes that can switch,
+// honors the per-device share-mode annotation written by SwitchDeviceMode so a
+// switch to Exclusive survives a rebuild of this view. A mode with a single
+// available support type stays pinned to it even if a stale annotation is left
+// behind.
 func nonHAMIDevice(node *corev1.Node, mode string, totalMemory int64) Device {
 	deviceID := fmt.Sprintf("%s-%s-0", node.Name, mode)
+	available := AvailableSupportTypes(mode)
 	return Device{
 		ID:                    deviceID,
 		NodeName:              node.Name,
 		Mode:                  mode,
 		Memory:                totalMemory * 75 / 100,
 		Health:                nodeHealth(node),
-		SupportType:           nonHAMISupportType(mode, node.Annotations[shareModeAnnotationKey(deviceID)]),
-		AvailableSupportTypes: AvailableSupportTypes(mode),
+		SupportType:           resolveSupportType(available, node.Annotations[shareModeAnnotationKey(deviceID)]),
+		AvailableSupportTypes: available,
 	}
 }
 
-// nonHAMISupportType resolves a non-HAMI device's support type from its
-// share-mode annotation: honor the annotation only when it names a support type
-// the mode actually allows, otherwise fall back to the mode's default. This
-// keeps device.SupportType always within AvailableSupportTypes(mode), so a mode
-// with a single available type (cpu / apple-m / discrete GPUs) stays pinned to
-// it even if a stale annotation is left behind.
-func nonHAMISupportType(mode, shareMode string) string {
-	for _, supportType := range AvailableSupportTypes(mode) {
-		if code, _ := supportTypeToShareMode(supportType); code == shareMode {
-			return supportType
-		}
-	}
-	return defaultSupportType(mode)
-}
-
-func decodeHAMINvidiaDevices(node *corev1.Node, mode string) []Device {
-	raw := node.Annotations[constants.NodeNvidiaRegistryKey]
+func decodeHAMIDevices(node *corev1.Node, mode string) []Device {
+	register := CapabilityFor(mode).Register
+	annotation := register.Annotation
+	raw := node.Annotations[annotation]
 	if !strings.Contains(raw, constants.OneContainerMultiDeviceSplitSymbol) {
+		// The node carries the GPU label but the device plugin has not
+		// registered anything usable, so it will appear with zero cards. Common
+		// and transient while the plugin starts; persistent means the plugin is
+		// not running there.
+		klog.Warningf("compute: node %s advertises %s but its %s annotation is missing or unusable, so it exposes no card",
+			node.Name, mode, annotation)
 		return nil
 	}
+	// A card's own health bit is only as fresh as the annotation carrying it,
+	// so it has to be read together with the node-level signals.
+	nodeUsable := hamiNodeHealth(node, register.Handshake) == deviceHealthYes
+	if !nodeUsable {
+		klog.V(2).Infof("compute: every card on node %s is marked unhealthy by node-level signals: nodeReady=%s %s=%q",
+			node.Name, nodeHealth(node), register.Handshake, node.Annotations[register.Handshake])
+	}
+	cardSupport := decodeRegisteredCardInfo(node, register.Cards)
 
 	var devices []Device
 	for _, encoded := range strings.Split(raw, constants.OneContainerMultiDeviceSplitSymbol) {
@@ -285,20 +399,19 @@ func decodeHAMINvidiaDevices(node *corev1.Node, mode string) []Device {
 		}
 		items := strings.Split(encoded, ",")
 		if len(items) != 7 && len(items) != 9 && len(items) != 10 {
+			klog.Warningf("compute: skipping a card on node %s: its %s entry has %d fields, expected 7, 9 or 10",
+				node.Name, annotation, len(items))
 			continue
 		}
 		devmem, _ := strconv.ParseInt(items[2], 10, 64)
 		healthy, _ := strconv.ParseBool(items[6])
-		devices = append(devices, Device{
-			ID:                    items[0],
-			NodeName:              node.Name,
-			Mode:                  mode,
-			CardModel:             items[4],
-			Memory:                devmem * mib,
-			Health:                boolHealth(healthy),
-			SupportType:           shareModeToSupportType(mode, node.Annotations[shareModeAnnotationKey(items[0])]),
-			AvailableSupportTypes: AvailableSupportTypes(mode),
-		})
+		devices = append(devices, registeredDevice(node, mode, registeredCard{
+			ID:           items[0],
+			CardModel:    items[4],
+			Memory:       devmem * mib,
+			Health:       boolHealth(healthy && nodeUsable),
+			SupportTypes: cardSupport[items[0]],
+		}))
 	}
 	return devices
 }
@@ -312,25 +425,93 @@ func nodeHealth(node *corev1.Node) string {
 	return deviceHealthNo
 }
 
+// hamiNodeHealth reports whether the cards HAMi registered on a node can still
+// be trusted. decodeHAMIDevices folds it into every card's own health
+// bit, because that bit cannot express the node being gone: it is parsed out of
+// the register annotation, which the device plugin writes while the node is up
+// and which nothing ever clears — not even HAMi's own cleanup path, which marks
+// the handshake Deleted and leaves the stale card list in place (NodeCleanUp ->
+// MarkAnnotationsToDelete). Read on its own, a powered-off node therefore keeps
+// offering healthy cards indefinitely, and an app bound to one is placed on a
+// node HAMi has already dropped from its scheduler, leaving the pod Pending.
+//
+// The two signals combined here cover different failures and neither subsumes
+// the other: NodeReady catches a node that is gone, the handshake catches a
+// node that is up but whose GPU stack has died.
+func hamiNodeHealth(node *corev1.Node, handshake string) string {
+	if nodeHealth(node) != deviceHealthYes {
+		return deviceHealthNo
+	}
+	return hamiHandshakeHealth(node.Annotations[handshake])
+}
+
+// registeredCardInfo is one entry of a register's Cards annotation.
+type registeredCardInfo struct {
+	UUID         string   `json:"uuid"`
+	Card         string   `json:"card"`
+	BDF          string   `json:"bdf"`
+	SupportTypes []string `json:"supportTypes"`
+}
+
+// decodeRegisteredCardInfo maps card ID to the support types its Cards
+// annotation lists. A missing or malformed annotation narrows nothing.
+func decodeRegisteredCardInfo(node *corev1.Node, annotation string) map[string][]string {
+	if annotation == "" || node.Annotations[annotation] == "" {
+		return nil
+	}
+	var infos []registeredCardInfo
+	if err := json.Unmarshal([]byte(node.Annotations[annotation]), &infos); err != nil {
+		klog.Warningf("compute: node %s has malformed %s annotation: %v", node.Name, annotation, err)
+		return nil
+	}
+	out := make(map[string][]string, len(infos))
+	for _, info := range infos {
+		out[info.UUID] = info.SupportTypes
+	}
+	return out
+}
+
+// hamiHandshakeHealth interprets HAMi's handshake annotation. The exchange it
+// records: the device plugin republishes "Reported <time>" every 30s, HAMi's
+// scheduler answers by stamping "Requesting_<time>" and then waits WITHOUT
+// refreshing that stamp, so a request still unanswered after
+// hamiHandshakeTimeout means no plugin is left to answer it. HAMi reacts by
+// rewriting the value to "Deleted_<time>" and dropping the node.
+//
+// This mirrors HAMi's own util.CheckHealth so the two components cannot
+// disagree about a node, with one deliberate difference: HAMi reports Deleted
+// as healthy because there the branch exists only to stop it re-adding a node
+// it already removed. Read as a statement about the cards, it means the exact
+// opposite, so here it is unhealthy.
+//
+// An empty or unrecognized value is healthy, matching HAMi's own fallback, so a
+// node registered by a plugin that predates the handshake is not taken out of
+// service. Timestamps are compared in UTC, which is what both sides produce as
+// long as neither container sets TZ.
+func hamiHandshakeHealth(handshake string) string {
+	switch {
+	case strings.Contains(handshake, hamiHandshakeDeleted):
+		return deviceHealthNo
+	case strings.Contains(handshake, hamiHandshakeRequesting):
+		_, stamp, ok := strings.Cut(handshake, "_")
+		if !ok {
+			return deviceHealthNo
+		}
+		requestedAt, err := time.Parse(time.DateTime, stamp)
+		if err != nil {
+			return deviceHealthNo
+		}
+		return boolHealth(time.Now().Before(requestedAt.Add(hamiHandshakeTimeout)))
+	default:
+		return deviceHealthYes
+	}
+}
+
 func boolHealth(healthy bool) string {
 	if healthy {
 		return deviceHealthYes
 	}
 	return deviceHealthNo
-}
-
-// shareModeToSupportType maps a device's HAMI share-mode annotation to a
-// support type. An unset / unrecognized annotation falls back to the mode's
-// default (defaultSupportType): nvidia → TimeSlice, nvidia-gb10 → MemorySlice.
-func shareModeToSupportType(gpuType, shareMode string) string {
-	switch shareMode {
-	case "0":
-		return SupportTypeExclusive
-	case "1":
-		return SupportTypeMemorySlice
-	default:
-		return defaultSupportType(gpuType)
-	}
 }
 
 func supportTypeToShareMode(supportType string) (string, bool) {
@@ -351,33 +532,11 @@ func shareModeAnnotationKey(deviceID string) string {
 }
 
 // AvailableSupportTypes lists the support types a device of the given mode may
-// take. The first entry is the mode's default — the one assigned when no share
-// mode is configured (see defaultSupportType). nvidia can switch among all
-// three; nvidia-gb10 defaults to MemorySlice but may switch to Exclusive; the
-// unified-memory integrated accelerators (intel / amd / moore-soc) default to
-// MemorySlice but may also switch to Exclusive; cpu is MemorySlice-only (it has
-// no dedicated device to monopolize); apple-m and any discrete-GPU (intel-gpu /
-// amd-gpu) or future mode are Exclusive-only for now.
+// take, from the mode's capability row. The first entry is the default for a
+// device whose share mode was never configured. A single card may offer fewer
+// (cardSupportTypes).
 func AvailableSupportTypes(mode string) []string {
-	switch mode {
-	case utils.NvidiaCardType:
-		return []string{SupportTypeTimeSlice, SupportTypeMemorySlice, SupportTypeExclusive}
-	case utils.GB10ChipType, utils.IntelType, utils.AMDType, utils.MooreSocType:
-		return []string{SupportTypeMemorySlice, SupportTypeExclusive}
-	case utils.CPUType:
-		return []string{SupportTypeMemorySlice}
-	default:
-		return []string{SupportTypeExclusive}
-	}
-}
-
-// defaultSupportType is the support type a device of the given mode receives
-// when its share mode has not been explicitly configured. It is, by contract,
-// the first entry of AvailableSupportTypes(mode): nvidia → TimeSlice,
-// nvidia-gb10 and the unified-memory modes (cpu / intel / amd / moore-soc) →
-// MemorySlice, apple-m and any discrete-GPU / future mode → Exclusive.
-func defaultSupportType(mode string) string {
-	return AvailableSupportTypes(mode)[0]
+	return CapabilityFor(mode).SupportTypes
 }
 
 func attachBindings(nodes []Node, allocations []Allocation) {
@@ -391,6 +550,11 @@ func attachBindings(nodes []Node, allocations []Allocation) {
 					nodes[ni].Devices[di].Bindings = append(nodes[ni].Devices[di].Bindings, allocations[ai])
 				}
 			}
+		}
+	}
+	for ni := range nodes {
+		for di := range nodes[ni].Devices {
+			nodes[ni].Devices[di].Reserved = bindingsReserve(nodes[ni].Devices[di])
 		}
 	}
 }

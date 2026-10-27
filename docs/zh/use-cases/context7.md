@@ -6,12 +6,12 @@ head:
     - name: keywords
       content: Olares, Context7, MCP, Model Context Protocol, AI coding assistant, documentation, Cursor, Agent Zero, LibreChat, OpenCode
 app_version: "1.0.0"
-doc_version: "1.0"
-doc_updated: "2026-04-02"
+doc_version: "1.1"
+doc_updated: "2026-07-28"
 ---
 
 :::warning
-本页面内容经 AI 翻译生成，仅供参考。具体细节请以[英文原文](../../use-cases/context7.md)为准。
+本文档由 AI 自动翻译，仅供参考。涉及关键操作或信息时，请以[英文原文](../../use-cases/context7.md)为准。
 :::
 
 # 使用 Context7 将 AI 编码助手连接到最新文档
@@ -131,14 +131,16 @@ Context7 支持匿名和认证使用：
 
 开始前，请确保你已在每个代理应用中配置了必要的设置，如模型提供商、模型名称和基础 URL。
 
-### 获取 MCP 端点
+### 获取 Context7 MCP 端点
 
-要将 Context7 与 Olares 托管的 AI 代理一起使用，你需要先获取 MCP 端点 URL，然后在首选的代理应用中配置 Context7。
+<!--@include: ../reusables/ai-service-connections.md#app-endpoint-overview-->
 
-1. 打开 Settings，然后前往 **Applications** > **Context7** > **Context7 MCP**。
-2. 复制端点 URL。例如，`https://f86d25051.olaresdemo.olares.com`。
+对于 Context7：
 
-    ![Context7 MCP 端点](/images/manual/use-cases/context7-mcp-endpoint.png#bordered){width=70%}
+1. 前往 Olares **Settings** > **Applications** > **Context7** > **Entrances**。
+2. 选择 **Context7 MCP**，然后复制 **Endpoint** URL。
+
+在 MCP 客户端中配置时，在该 Endpoint 后添加 `/mcp`。
 
 ### Agent Zero
 
@@ -160,19 +162,6 @@ Context7 支持匿名和认证使用：
       }
     }
     ```
-
-    例如，
-
-    ```json
-    {
-      "mcpServers": {
-        "context7": {
-          "type": "streamable-http",
-          "url": "https://f86d25051.olaresdemo.olares.com/mcp"
-        }
-      }
-    }
-    ```    
 
 3. 点击 **Apply now**，然后关闭窗口。
 4. 点击 **Save**。
@@ -283,7 +272,7 @@ Context7 支持匿名和认证使用：
    ![在桌面上启用 LarePass VPN](/images/manual/get-started/larepass-vpn-desktop.png#bordered)
 
     :::tip 在同一本地网络上？
-    如果你的电脑和 Olares 在同一局域网上，你可以跳过 VPN 而使用 `.local` 域名。在步骤 3 的配置中，将 `https://f86d25051.{username}.olares.com` 替换为 `http://f86d25051.{username}.olares.local`。有关详细信息，请参阅[使用 `.local` 域名](../manual/best-practices/local-access.md#method-2-use-local-domain)。
+    如果你的电脑和 Olares 在同一局域网上，可以跳过 VPN，改用 `.local` 域名。在步骤 3 中，将 `https://<route-id>.<username>.olares.com` 改为 `http://<route-id>.<username>.olares.local`。有关详细信息，请参阅[使用 `.local` 域名](../manual/best-practices/local-access.md#method-2-use-local-domain)。
     :::
 
 2. 打开 Cursor，然后前往 **Settings** > **Tools & MCP** > **Add custom MCP**。
@@ -408,4 +397,4 @@ ctx7 skills remove pdf
 ## 了解更多
 
 - [Context7 文档](https://context7.com/docs)
-- [通过 Ollama 下载和运行本地 AI 模型](ollama.md)
+- [使用 Engine Base 运行本地模型](llm-base-apps.md)：通过 Ollama 等推理引擎部署模型。

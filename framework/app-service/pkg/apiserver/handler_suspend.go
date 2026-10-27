@@ -139,7 +139,7 @@ func (h *Handler) resume(req *restful.Request, resp *restful.Response) {
 	}
 
 	// Unified resume-time resource gate: cluster pressure + k8s request
-	// capacity + user quota. Compute mode and per-node pressure are
+	// capacity. User quota, compute mode and per-node pressure are
 	// skipped (resume reuses the binding chosen at install time).
 	decision, err := validation.Run(req.Request.Context(), validation.Input{
 		Client:    h.ctrlClient,
@@ -233,6 +233,7 @@ func (h *Handler) resume(req *restful.Request, resp *restful.Response) {
 		OpID:       opID,
 		State:      v1alpha1.Resuming,
 		Message:    fmt.Sprintf("app %s was resume by user %s", am.Spec.AppName, am.Spec.AppOwner),
+		Reason:     v1alpha1.Resuming.String(),
 		StatusTime: &now,
 		UpdateTime: &now,
 	}

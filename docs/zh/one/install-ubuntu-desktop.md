@@ -7,11 +7,11 @@ head:
       content: Olares One, Ubuntu Desktop, NVMe SSD, 操作系统安装, 全新安装, 图形化设置
 ---
 
-# 在 Olares One 上安装 Ubuntu Desktop <Badge type="tip" text="30 min" />
-
 :::warning
-本页面为 AI 翻译版本，内容仅供快速参考。关键信息建议以[英文原文](../../one/install-ubuntu-desktop.md)为准。
+本文档由 AI 自动翻译，仅供参考。涉及关键操作或信息时，请以[英文原文](../../one/install-ubuntu-desktop.md)为准。
 :::
+
+# 在 Olares One 上安装 Ubuntu Desktop <Badge type="tip" text="30 min" />
 
 将 Olares One 主 NVMe SSD 上预装的 Olares OS 替换为 Ubuntu Desktop 的全新安装。
 
@@ -79,7 +79,41 @@ head:
 4. 移除安装 U 盘，并在提示时按 **Enter**。系统重新启动并进入全新的 Ubuntu Desktop 环境。
 5. 使用你在配置期间设置的账户凭据登录。
 
+## 配置自动开机
+
+配置后，Olares One 会在接通电源或停电后恢复供电时自动开机。
+
+:::warning 仅适用于 Olares One
+以下命令会直接访问嵌入式控制器（EC），仅适用于 Olares One。请勿在其他设备上运行。
+:::
+
+1. 确认 EC 固件版本为 1.03 或更高版本。如需查看版本或升级固件，请参阅[管理 BIOS 和 EC](update-firmware.md)。
+2. 安装 `ioport`：
+
+   ```bash
+   sudo apt install ioport
+   ```
+
+3. 启用自动开机：
+
+   ```bash
+   sudo outb 0x302 0x5e && sudo outb 0x303 0x01
+   ```
+
+   此命令会将持久化的自动开机设置写入 EC。
+
+此设置在重启、断电和重新安装操作系统后仍然有效。升级 EC 固件后，可能需要重新配置。
+
+如需验证设置是否生效，可执行以下操作：
+
+1. 将 Olares One 完全关机。
+2. 短暂断开交流电源。
+3. 重新接通交流电源。
+
+Olares One 应自动开机。
+
 ## 资源
 
+- [在 Ubuntu 上配置 GPU 模式](configure-gpu-mode.md)
 - [在 Olares One 上安装 Ubuntu Server](install-ubuntu-server.md)
 - [Ubuntu Desktop 文档](https://documentation.ubuntu.com/desktop/en/latest/)

@@ -49,6 +49,13 @@ spec:
         app: tapr-s3
     spec:
       priorityClassName: "system-cluster-critical"
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node-role.kubernetes.io/control-plane
+                    operator: Exists
       containers:
       - name: s3-fake-sidecar
         image: beclab/s3rver:latest

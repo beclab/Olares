@@ -3,6 +3,7 @@ package storage
 import (
 	"fmt"
 	"io/fs"
+	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
@@ -281,6 +282,7 @@ func (t *RemoveJuiceFSFiles) Execute(runtime connector.Runtime) error {
 		"/usr/local/bin/juicefs",
 		"/etc/systemd/system/redis-server.service",
 		"/etc/systemd/system/juicefs.service",
+		MigrateStateFile,
 	}
 
 	for _, f := range files {
@@ -329,11 +331,46 @@ type DeleteTerminusUserData struct {
 	common.KubeAction
 }
 
-func (t *DeleteTerminusUserData) Execute(runtime connector.Runtime) error {
-	userdataDirs := []string{
-		OlaresUserDataDir,
-		JuiceFsCacheDir,
+func removeUserDataPreservingMarketPreinstall() error {
+	cacheDir := filepath.Join(OlaresUserDataDir, "Cache")
+	marketPreinstallDir := filepath.Join(cacheDir, "market-preinstall")
+	if !util.IsExist(marketPreinstallDir) {
+		return util.RemoveDir(OlaresUserDataDir)
 	}
+
+	userdataEntries, err := os.ReadDir(OlaresUserDataDir)
+	if err != nil {
+		return err
+	}
+	for _, entry := range userdataEntries {
+		if entry.Name() != "Cache" {
+			if err := util.RemoveDir(filepath.Join(OlaresUserDataDir, entry.Name())); err != nil {
+				return err
+			}
+		}
+	}
+
+	cacheEntries, err := os.ReadDir(cacheDir)
+	if err != nil {
+		return err
+	}
+	for _, entry := range cacheEntries {
+		if entry.Name() != "market-preinstall" {
+			if err := util.RemoveDir(filepath.Join(cacheDir, entry.Name())); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func (t *DeleteTerminusUserData) Execute(runtime connector.Runtime) error {
+	if err := removeUserDataPreservingMarketPreinstall(); err != nil {
+		logger.Errorf("remove %s failed %v", OlaresUserDataDir, err)
+	}
+
+	userdataDirs := []string{JuiceFsCacheDir}
 
 	if util.IsExist(RedisServiceFile) {
 		userdataDirs = append(userdataDirs, OlaresJuiceFSRootDir)

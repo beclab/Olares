@@ -88,7 +88,7 @@ func runLogin(ctx context.Context, o *loginOptions) error {
 		return err
 	}
 	store := auth.NewTokenStore()
-	profile, err := ensureProfileWritable(cfg, store, o.commonCredFlags, time.Now())
+	profile, err := ensureProfileWritable(cfg, store, o.commonCredFlags, "log in as", time.Now())
 	if err != nil {
 		return err
 	}

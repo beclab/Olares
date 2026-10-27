@@ -10,6 +10,7 @@ import (
 	"github.com/beclab/Olares/cli/pkg/gpu/mtgpu"
 	"github.com/beclab/Olares/cli/pkg/kubesphere/plugins"
 	"github.com/beclab/Olares/cli/pkg/manifest"
+	"github.com/beclab/Olares/cli/pkg/preinstall"
 	"github.com/beclab/Olares/cli/pkg/storage"
 	"github.com/beclab/Olares/cli/pkg/terminus"
 )
@@ -63,7 +64,8 @@ func (l *linuxInstallPhaseBuilder) installGpuPlugin() phase {
 		&gpu.RestartK3sServiceModule{Skip: !(l.runtime.Arg.Kubetype == common.K3s)},
 		&gpu.InstallPluginModule{Skip: skipGpuPlugin},
 		&amdgpu.InstallAmdPluginModule{Skip: func() bool {
-			if l.runtime.GetSystemInfo().IsRyzenAIMax() {
+			si := l.runtime.GetSystemInfo()
+			if si.IsRyzenAIMax() || si.IsAmdGPU() {
 				return false
 			}
 			return true
@@ -75,7 +77,8 @@ func (l *linuxInstallPhaseBuilder) installGpuPlugin() phase {
 			return true
 		}()},
 		&intelgpu.InstallIntelPluginModule{Skip: func() bool {
-			if l.runtime.GetSystemInfo().IsIntelGPU() {
+			si := l.runtime.GetSystemInfo()
+			if si.IsIntelGPU() || si.IsIntelDGPU() {
 				return false
 			}
 			return true
@@ -86,9 +89,14 @@ func (l *linuxInstallPhaseBuilder) installGpuPlugin() phase {
 func (l *linuxInstallPhaseBuilder) installTerminus() phase {
 	return []module.Module{
 		&terminus.GetNATGatewayIPModule{},
+		&terminus.InstallGenericDevicePluginModule{},
 		&terminus.InstallAccountModule{},
 		&terminus.InstallSettingsModule{},
 		&terminus.InstallOsSystemModule{},
+		// WSL shares this builder but is not a preinstall target: its system
+		// phase publishes no declaration, so a materialized cache would have
+		// nothing to serve.
+		&preinstall.HFCacheMaterializeModule{Skip: l.runtime.Arg.SystemInfo.IsWsl()},
 		&terminus.InstallLauncherModule{},
 		&terminus.InstallAppsModule{},
 	}
@@ -111,6 +119,7 @@ func (l *linuxInstallPhaseBuilder) build() []module.Module {
 			return l.storage()
 		}).withJuiceFS(l.runtime)...).
 		addModule(&patch.CorrectHostnameModule{}).
+		addModule(&patch.PatchNfsScriptModule{}).
 		addModule(l.installCluster()...).
 		addModule(gpuModuleBuilder(func() []module.Module {
 			return l.installGpuPlugin()

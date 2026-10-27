@@ -125,6 +125,16 @@ data:
 
     [bytetrade]
     DNS.1 = app-service.os-framework.svc
+    DNS.2 = authz.olares.system
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: login-olares-cli-allow-list
+  namespace: {{ .Release.Namespace }}
+data:
+  LOGIN_OLARES_CLI_ALLOW_LIST: "lares"
 
 ---
 apiVersion: apps/v1
@@ -170,26 +180,20 @@ spec:
       priorityClassName: "system-cluster-critical"
       containers:
       - name: app-service
-        image: beclab/app-service:0.5.63
+        image: beclab/app-service:0.6.57
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 6755
           name: api
         - containerPort: 8433
           name: webhook
-        startupProbe:
-          failureThreshold: 30
-          periodSeconds: 1
-          tcpSocket:
-            port: 8433
-        readinessProbe:
-          failureThreshold: 30
-          initialDelaySeconds: 1
-          periodSeconds: 1
-          tcpSocket:
-            port: 6755
+        - containerPort: 8444
+          name: jwks
         securityContext:
           runAsUser: 0
+        envFrom:
+        - configMapRef:
+            name: login-olares-cli-allow-list
         env:
         {{- range $key, $val := .Values.terminusGlobalEnvs }}
         - name: {{ $key }}
@@ -211,8 +215,14 @@ spec:
           value: "beclab/ws-gateway:v1.0.5"
         - name: UPLOAD_CONTAINER_IMAGE
           value: "beclab/upload:v1.0.3"
+        - name: BLUEZ_DBUS_PROXY_IMAGE
+          value: "beclab/bluez-dbus-proxy:0.1.0"
         - name: JOB_IMAGE
           value: "beclab/upgrade-job:0.1.7"
+        - name: MESH_IN_AGENT_IMAGE
+          value: "beclab/mesh-in-agent:1.30.0-r5"
+        - name: MESH_OUT_AGENT_IMAGE
+          value: "beclab/mesh-out-agent:1.30.0-r4"
         - name: SHARED_LIB_PATH
           value: {{ .Values.sharedlib }}
         - name: CLUSTER_CPU_THRESHOLD
@@ -246,6 +256,10 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: status.hostIP
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
         - name: OLARESD_HOST
           value: master-node:18088
         volumeMounts:
@@ -255,7 +269,7 @@ spec:
           name: user-apps-template
         - mountPath: /etc/certs
           name: certs
-        - mountPath: /etc/containerd/config.toml
+        - mountPath: /etc/containerd
           name: configtoml
         - mountPath: /Cache
           name: app-cache
@@ -288,7 +302,8 @@ spec:
           type: DirectoryOrCreate
       - name: configtoml
         hostPath:
-          path: /etc/containerd/config.toml
+          path: /etc/containerd
+          type: Directory
       - name: charts-store
         persistentVolumeClaim:
           claimName: {{ default $charts_pvc .Values.charts_pvc }}
@@ -320,75 +335,13 @@ spec:
     port: 8433
     protocol: TCP
     targetPort: 8433
+  - name: jwks
+    port: 8444
+    protocol: TCP
+    targetPort: jwks
   selector:
     tier: app-service
   type: ClusterIP
-
----
-apiVersion: apr.bytetrade.io/v1alpha1
-kind: SysEventRegistry
-metadata:
-  name: appservice-backup-new-cb
-  namespace: {{ .Release.Namespace }}
-spec:
-  type: subscriber
-  event: backup.new
-  callback: http://app-service.{{ .Release.Namespace }}:6755/app-service/v1/backup/new
-
----
-apiVersion: apr.bytetrade.io/v1alpha1
-kind: SysEventRegistry
-metadata:
-  name: appservice-backup-finish-cb
-  namespace: {{ .Release.Namespace }}
-spec:
-  type: subscriber
-  event: backup.finish
-  callback: http://app-service.{{ .Release.Namespace }}:6755/app-service/v1/backup/finish
-
----
-apiVersion: apr.bytetrade.io/v1alpha1
-kind: SysEventRegistry
-metadata:
-  name: cluster-memory-usage-high-cb
-  namespace: {{ .Release.Namespace }}
-spec:
-  type: subscriber
-  event: metrics.memory.high
-  callback: http://app-service.os-framework:6755/app-service/v1/metrics/highload
-
----
-apiVersion: apr.bytetrade.io/v1alpha1
-kind: SysEventRegistry
-metadata:
-  name: cluster-cpu-usage-high-cb
-  namespace: {{ .Release.Namespace }}
-spec:
-  type: subscriber
-  event: metrics.cpu.high
-  callback: http://app-service.os-framework:6755/app-service/v1/metrics/highload
-
----
-apiVersion: apr.bytetrade.io/v1alpha1
-kind: SysEventRegistry
-metadata:
-  name: user-memory-usage-high-cb
-  namespace: {{ .Release.Namespace }}
-spec:
-  type: subscriber
-  event: metrics.user.memory.high
-  callback: http://app-service.os-framework:6755/app-service/v1/metrics/user/highload
-
----
-apiVersion: apr.bytetrade.io/v1alpha1
-kind: SysEventRegistry
-metadata:
-  name: user-cpu-usage-high-cb
-  namespace: {{ .Release.Namespace }}
-spec:
-  type: subscriber
-  event: metrics.user.cpu.high
-  callback: http://app-service.os-framework:6755/app-service/v1/metrics/user/highload
 
 ---
 apiVersion: apps/v1
@@ -413,7 +366,7 @@ spec:
       priorityClassName: "system-cluster-critical"
       containers:
         - name: image-service
-          image: beclab/image-service:0.5.63
+          image: beclab/image-service:0.6.55
           imagePullPolicy: IfNotPresent
           securityContext:
             runAsUser: 0

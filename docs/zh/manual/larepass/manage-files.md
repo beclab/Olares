@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 了解如何在 LarePass 桌面端和手机端中执行常用文件操作，包括上传、编辑、删除、下载等。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, LarePass, 文件操作, 上传文件, 下载文件, 删除文件, 文件同步
 ---
 # LarePass 常用文件操作
 

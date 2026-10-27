@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 )
 
@@ -42,6 +43,23 @@ func TestHTTPErrorIsHTTPStatus(t *testing.T) {
 	}
 }
 
+func TestReformatClusterAuthErrHandles459WithoutLeakingBody(t *testing.T) {
+	err := reformatClusterAuthErr(
+		http.MethodGet,
+		"https://controlhub.example/capi/version",
+		459,
+		[]byte(`{"session_id":"secret-edge-jwt"}`),
+		"alice@olares.com",
+	)
+	got := err.Error()
+	if !strings.Contains(got, "profile login --olares-id alice@olares.com") {
+		t.Fatalf("459 should point to login: %q", got)
+	}
+	if strings.Contains(got, "secret-edge-jwt") || strings.Contains(got, "session_id") {
+		t.Fatalf("459 error leaked response body: %q", got)
+	}
+}
+
 // TestIsClientError checks the 4xx-is-terminal rule the watch loops
 // use to short-circuit retries. 408 and 429 are deliberately excluded
 // (both can resolve on a retry); other 4xx and 5xx behave as
@@ -51,18 +69,18 @@ func TestIsClientError(t *testing.T) {
 		status int
 		want   bool
 	}{
-		{http.StatusBadRequest, true},          // 400
-		{http.StatusUnauthorized, true},        // 401
-		{http.StatusForbidden, true},           // 403
-		{http.StatusNotFound, true},            // 404
-		{http.StatusRequestTimeout, false},     // 408 - retryable
-		{http.StatusConflict, true},            // 409
-		{http.StatusGone, true},                // 410
-		{http.StatusTooManyRequests, false},    // 429 - retryable
-		{http.StatusInternalServerError, false},// 500
-		{http.StatusBadGateway, false},         // 502
-		{http.StatusServiceUnavailable, false}, // 503
-		{http.StatusGatewayTimeout, false},     // 504
+		{http.StatusBadRequest, true},           // 400
+		{http.StatusUnauthorized, true},         // 401
+		{http.StatusForbidden, true},            // 403
+		{http.StatusNotFound, true},             // 404
+		{http.StatusRequestTimeout, false},      // 408 - retryable
+		{http.StatusConflict, true},             // 409
+		{http.StatusGone, true},                 // 410
+		{http.StatusTooManyRequests, false},     // 429 - retryable
+		{http.StatusInternalServerError, false}, // 500
+		{http.StatusBadGateway, false},          // 502
+		{http.StatusServiceUnavailable, false},  // 503
+		{http.StatusGatewayTimeout, false},      // 504
 		{200, false},
 	}
 	for _, c := range cases {
@@ -80,6 +98,39 @@ func TestIsClientError(t *testing.T) {
 	}
 	if IsClientError(nil) {
 		t.Fatal("nil error must not be treated as a client error")
+	}
+}
+
+func TestReformatClusterAuthErrDistinguishesAuthenticationAndPermission(t *testing.T) {
+	unauthorized := reformatClusterAuthErr(
+		http.MethodGet,
+		"https://control.example/api/v1/pods",
+		http.StatusUnauthorized,
+		nil,
+		"alice@olares.com",
+	)
+	if got := unauthorized.Error(); !strings.Contains(got, "profile login --olares-id alice@olares.com") {
+		t.Fatalf("401 should point to login, got %q", got)
+	}
+
+	forbidden := reformatClusterAuthErr(
+		http.MethodDelete,
+		"https://control.example/api/v1/nodes/n1",
+		http.StatusForbidden,
+		[]byte(`{"message":"forbidden"}`),
+		"alice@olares.com",
+	)
+	got := forbidden.Error()
+	for _, want := range []string{
+		"profile whoami --refresh",
+		"does not have permission for this resource or action",
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("403 error %q missing %q", got, want)
+		}
+	}
+	if strings.Contains(got, "profile login") {
+		t.Fatalf("403 should not claim re-login fixes RBAC, got %q", got)
 	}
 }
 

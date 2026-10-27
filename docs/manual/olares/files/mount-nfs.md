@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: Mount and access NFS shared directories from NAS devices or servers on Olares.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Files, NFS share, NAS, network storage, mount
 ---
 
 # Mount NFS shares

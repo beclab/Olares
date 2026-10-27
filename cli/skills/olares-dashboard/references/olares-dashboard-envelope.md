@@ -54,6 +54,8 @@ Parent commands aggregate multiple sub-views:
 
 Sections are fetched concurrently. A single failed section degrades to `meta.error` on that section; the other sections still return. Surface partial outputs, do not blackout the whole envelope. To enumerate every live kind: `olares-cli dashboard schema -o json`.
 
+Exit code on a sections envelope: partial failure is `exit 0`, because the surviving sections are real data. Only a run where **every** section carries `meta.error` exits non-zero, and the envelope is still written to stdout first — read it for the per-section cause instead of retrying blind. A gated or empty section (`meta.empty`) is not a failure and never affects the exit code.
+
 ## Empty data and gates
 
 Optional hardware and integrations have three legitimate empty states:
@@ -75,7 +77,7 @@ Specific reasons:
 | `vgpu_unavailable` | gpu list / tasks / get / task HTTP 5xx; `meta.error` carries upstream text |
 | `no_gpu_detected` | gpu list / tasks / get / task HTTP 200 empty body |
 
-Fan is hard-gated: non-Olares-One devices return `empty_reason=not_olares_one` before any fetch and still exit 0. GPU is soft-gated: the CLI always queries HAMI, but `meta.note` records SPA-hidden advisories such as non-admin profile or no node label.
+Fan is hard-gated: non-Olares-One devices return `empty_reason=not_olares_one` before any fetch and still exit 0. GPU is soft-gated: the CLI always queries the vendors' exporters, but `meta.note` records SPA-hidden advisories such as a non-admin profile or no node carrying a `gpu.bytetrade.io/*` GPU label.
 
 ## Agent decision tree
 

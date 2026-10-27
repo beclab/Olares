@@ -3,6 +3,39 @@ import { defineConfig, type DefaultTheme } from "vitepress";
 export const useCaseSidebar: DefaultTheme.Sidebar = {
     "/use-cases/": [
         {
+          text: "Olares essentials",
+          collapsed: false,
+          items: [
+            {
+              text: "Local LLMs",
+              link: "/use-cases/llm-base-apps",
+            },
+            {
+              text: "Olares Router",
+              link: "/use-cases/olares-router",
+            },
+            {
+              text: "Lares",
+              link: "/use-cases/lares",
+            },
+            {
+              text: "FlowStudio",
+              link: "/use-cases/flowstudio",
+              collapsed: false,
+              items: [
+                {
+                  text: "Create in FlowStudio",
+                  link: "/use-cases/flowstudio-create",
+                },
+                {
+                  text: "Use through Lares",
+                  link: "/use-cases/flowstudio-lares",
+                },
+              ],
+            },
+          ],
+        },
+        {
           text: "AI",
           collapsed: false,
           items: [
@@ -15,6 +48,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   link: "/use-cases/openclaw",
                   collapsed: true,
                   items: [
+                    {
+                      text: "Connect using OpenClaw mobile clients",
+                      link: "/use-cases/openclaw-mobile",
+                    },
                     {
                       text: "Integrate with channels",
                       items: [
@@ -40,10 +77,6 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                       text: "Manage Olares with OpenClaw",
                       link: "/use-cases/openclaw-olares-skills",
                     },
-                    //{
-                    //  text: "Enable local file access",
-                    //  link: "/use-cases/openclaw-local-access",
-                    //},
                     {
                       text: "Enable sandbox",
                       link: "/use-cases/openclaw-enable-sandbox",
@@ -80,6 +113,13 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                 {
                   text: "Hermes Agent",
                   link: "/use-cases/hermes",
+                  collapsed: true,
+                  items: [
+                    {
+                      text: "Manage LAN computers over SSH",
+                      link: "/use-cases/hermes-ssh",
+                    },
+                  ],
                 },
                 {
                   text: "OpenCode",
@@ -99,6 +139,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                       link: "/use-cases/opencode-extensions",
                     },
                     {
+                      text: "Manage Olares with Olares CLI",
+                      link: "/use-cases/opencode-olares-cli",
+                    },
+                    {
                       text: "Common issues",
                       link: "/use-cases/opencode-issues",
                     },
@@ -107,6 +151,14 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                 {
                   text: "Claude Code",
                   link: "/use-cases/claude-code",
+                },
+                {
+                  text: "Codex CLI",
+                  link: "/use-cases/codex-cli",
+                },
+                {
+                  text: "Goose",
+                  link: "/use-cases/goose",
                 },
                 {
                   text: "Pool CLI",
@@ -174,12 +226,28 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   link: "/use-cases/anythingllm",
                 },
                 {
+                  text: "Local Deep Research",
+                  link: "/use-cases/local-deep-research",
+                },
+                {
                   text: "Open Notebook",
                   link: "/use-cases/open-notebook",
                 },
                 {
+                  text: "TrustGraph",
+                  link: "/use-cases/trustgraph",
+                },
+                {
                   text: "Vane (Perplexica)",
                   link: "/use-cases/perplexica",
+                },
+                {
+                  text: "Dify",
+                  link: "/use-cases/dify",
+                },
+                {
+                  text: "Unsloth",
+                  link: "/use-cases/unsloth",
                 },
               ],
             },
@@ -187,6 +255,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               text: "Creative media",
               collapsed: true,
               items: [
+                {
+                  text: "Blender",
+                  link: "/use-cases/blender",
+                },
                 {
                   text: "ComfyUI",
                   link: "/use-cases/comfyui",
@@ -205,6 +277,14 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                       link: "/use-cases/comfyui-common-issues",
                     },
                   ]
+                },
+                {
+                  text: "Concat",
+                  link: "/use-cases/concat",
+                },
+                {
+                  text: "Open Design",
+                  link: "/use-cases/open-design",
                 },
                 {
                   text: "ACE-Step 1.5",
@@ -241,10 +321,6 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               collapsed: true,
               items: [
                 {
-                  text: "Ollama",
-                  link: "/use-cases/ollama",
-                },
-                {
                   text: "Bifrost",
                   link: "/use-cases/bifrost",
                 },
@@ -259,6 +335,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                 {
                   text: "LLMFit",
                   link: "/use-cases/llmfit",
+                },
+                {
+                  text: "Xinference",
+                  link: "/use-cases/xinference",
                 },
                 // {
                 //   text: "Dify",
@@ -285,6 +365,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             {
               text: "macOS",
               link: "/use-cases/macos",
+            },
+            {
+              text: "QEMU Server",
+              link: "/use-cases/qemu",
             },
             {
               text: "Windows",
@@ -324,21 +408,7 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             },
             {
               text: "Jellyfin",
-              link: "/use-cases/stream-media",
-            },
-            {
-              text: "Steam",
-              collapsed: true,
-              items: [
-                {
-                  text: "Play directly on Olares",
-                  link: "/use-cases/play-games-directly",
-                },
-                {
-                  text: "Stream to other devices",
-                  link: "/use-cases/stream-game",
-                }
-              ]
+              link: "/use-cases/jellyfin",
             },
             {
               text: "Komga",
@@ -362,6 +432,53 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             {
               text: "*Arrs",
               link: "/use-cases/arrs",
+              collapsed: true,
+              items: [
+                {
+                  text: "*Arr app update notes",
+                  link: "/use-cases/arrs-upgrade",
+                },
+                {
+                  text: "Download client update notes",
+                  link: "/use-cases/download-clients-upgrade",
+                },
+              ]
+            },
+          ]
+        },
+        {
+          text: "Games",
+          collapsed: false,
+          items: [
+            {
+              text: "Minecraft",
+              link: "/use-cases/minecraft",
+            },
+            {
+              text: "Palworld",
+              link: "/use-cases/palworld",
+            },
+            {
+              text: "Pterodactyl Panel",
+              link: "/use-cases/pterodactyl",
+            },
+            {
+              text: "Steam",
+              collapsed: true,
+              items: [
+                {
+                  text: "Play directly on Olares",
+                  link: "/use-cases/steam-direct-play",
+                },
+                {
+                  text: "Stream to other devices",
+                  link: "/use-cases/steam-stream",
+                },
+                {
+                  text: "Common issues",
+                  link: "/use-cases/steam-common-issues",
+                }
+              ]
             },
           ]
         },
@@ -369,10 +486,6 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
           text: "Productivity",
           collapsed: false,
           items: [
-            {
-              text: "Plane",
-              link: "/use-cases/plane",
-            },
             {
               text: "Excalidraw",
               link: "/use-cases/excalidraw",
@@ -382,12 +495,39 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               link: "/use-cases/karakeep",
             },
             {
+              text: "n8n",
+              link: "/use-cases/n8n",
+            },
+            {
+              text: "NocoDB",
+              link: "/use-cases/nocodb",
+            },
+            {
+              text: "Obsidian LiveSync",
+              link: "/use-cases/obsidian-livesync",
+            },
+            {
               text: "Penpot",
               link: "/use-cases/penpot",
             },
             {
+              text: "Plane",
+              link: "/use-cases/plane",
+            },
+            {
               text: "RNA Sequencing",
               link: "/use-cases/rna-sequencing",
+            },
+            {
+              text: "OnlyOffice",
+              link: "/use-cases/onlyoffice",
+              collapsed: true,
+              items: [
+                {
+                  text: "Migration guide",
+                  link: "/use-cases/onlyoffice-migration",
+                },
+              ],
             },
             // {
             //   text: "Stirling PDF",
@@ -418,6 +558,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               link: "/use-cases/context7",
             },
             {
+              text: "Hindsight",
+              link: "/use-cases/hindsight",
+            },
+            {
               text: "Falco",
               link: "/use-cases/falco",
             },
@@ -428,6 +572,14 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             {
               text: "FlareSolverr",
               link: "/use-cases/flaresolverr",
+            },
+            {
+              text: "SearXNG",
+              link: "/use-cases/searxng",
+            },
+            {
+              text: "Home Assistant",
+              link: "/use-cases/home-assistant",
             },
           ]
         },

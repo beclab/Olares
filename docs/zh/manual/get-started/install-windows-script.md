@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 通过 WSL 在 Windows 系统安装配置 Olares 的完整步骤，包括环境要求和激活设置。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Windows 安装, WSL 安装, 安装脚本, PowerShell, 系统要求, 激活设置
 ---
 # 在 Windows 上使用脚本安装 Olares
 本文介绍如何在 Windows （WSL 2）上使用脚本安装 Olares。
@@ -36,6 +40,10 @@ Windows 版 Olares 目前存在以下限制：
 :::tip Windows 上的显卡确认方式
 你也可以在 **任务管理器 > 性能** 中确认显卡型号是否为 NVIDIA，并在 WSL 终端中运行 `nvidia-smi` 检查驱动是否在子系统中可用。
 :::
+
+## 开始之前
+
+<!--@include: ./reusables.md#larepass-prerequisite-->
 
 ## 配置系统环境
 1. 启用虚拟化所需的 Windows 功能。

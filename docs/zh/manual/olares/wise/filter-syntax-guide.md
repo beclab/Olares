@@ -1,6 +1,10 @@
 ---
 outline: [2,4]
 description: 介绍 Wise 过滤视图的关键语法规则。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Wise, 过滤语法, 查询语法, 筛选参数, 高级搜索, 过滤视图
 ---
 # 过滤语法参考
 

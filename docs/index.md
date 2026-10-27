@@ -1,6 +1,9 @@
 ---
 # https://vitepress.dev/reference/default-theme-home-page
 layout: home
+# /docs/ 301-redirects to /manual/overview (see theme/redirects.ts), so keep this
+# redirecting URL out of the sitemap and search index.
+noindex: true
 
 hero:
   name: "Olares"

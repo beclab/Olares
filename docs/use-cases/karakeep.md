@@ -1,16 +1,20 @@
 ---
+connectionVersion: "1.12.7"
+connectionLatestPath: /use-cases/karakeep
 outline: [2, 3]
-description: Run Karakeep on Olares to save links, notes, images, and PDFs in one self-hosted workspace. Access your collection from a phone and add AI auto-tagging with a local model.
+description: Self-host Karakeep on Olares to save links, notes, images, and PDFs. Access your library on mobile and add AI auto-tagging with a local model.
 head:
   - - meta
     - name: keywords
       content: Olares, Karakeep, Hoarder, bookmark manager, self-hosted, AI auto-tag, mobile app, Ollama, video download
 app_version: "1.0.4"
-doc_version: "1.0"
-doc_updated: "2026-05-15"
+doc_version: "1.1"
+doc_updated: "2026-09-23"
 ---
 
 # Save and organize bookmarks with Karakeep
+
+<VersionRouteSelect />
 
 Karakeep (formerly Hoarder) is a self-hosted bookmark and content management app that stores links, notes, images, and PDFs in one place. It automatically fetches page metadata, indexes content for full-text search, supports shared lists, and can auto-tag entries with a local AI model.
 
@@ -26,6 +30,19 @@ In this guide, you will learn how to:
 - Enable AI auto-tagging with a local model.
 - Enable video downloads for bookmarked links.
 - Configure SMTP for email invitations.
+
+## Prerequisites
+
+Before you begin, you need:
+
+<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
+- The following model for AI auto-tagging:
+
+  | Model type | Model | How to get it |
+  | :--- | :--- | :--- |
+  | Chat | Qwen3.8-27B (llama.cpp) | Install from Market |
+
+<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## Install Karakeep
 
@@ -76,13 +93,11 @@ Use a strong account password and keep your API key secure.
 
 ### Get your Karakeep endpoint URL
 
-On the same **Entrances** page, copy the endpoint URL shown for Karakeep. For example:
+<!--@include: ../reusables/ai-service-connections.md#app-endpoint-overview-->
 
-```text
-https://abc123.{username}.olares.com
-```
+On the same **Entrances** page, copy the **Endpoint** URL shown for Karakeep.
 
-Save this URL for later.
+Use this Endpoint as the **Server Address** in the Karakeep mobile app.
 
 ### Generate an API key
 
@@ -102,7 +117,7 @@ Save this URL for later.
 2. Open the Karakeep app, and then select **Use API key instead**.
 3. Enter your details:
 
-   - **Server Address**: Paste the endpoint URL you copied earlier.
+   - **Server Address**: Paste the Karakeep Endpoint you copied earlier.
    - **API Key**: Paste the API key you generated.
 
 4. Tap **Sign in**. You can now save images and links from your phone.
@@ -113,51 +128,33 @@ Karakeep also supports browser extensions and other clients. For the full list, 
 
 ## Auto-tag bookmarks with a local model
 
-Karakeep can use a local model hosted on Olares to generate tags for your saved content. This guide uses Qwen3.5 27B Q4_K_M (Ollama) as the text model.
+Karakeep can use a local model hosted on Olares to generate tags for your saved content. This example uses Router’s OpenAI-compatible API.
 
-### Prerequisites
+This guide uses the pre-built Qwen3.8-27B (llama.cpp) model app from Market.
 
-- A local model app installed from Market with the model fully downloaded. For image tagging, also install [Ollama](ollama.md) and pull a vision model such as `llava`.
+### Get the model connection details
 
-### Get the model endpoint and name
-
-1. Open your model app from the Launchpad. The model name appears on the page (for example, `qwen3.5:27b-q4_K_M`). Note it for later.
-
-   ![Get model name](/images/manual/use-cases/deerflow2-get-model-name.png#bordered)
-
-2. Open Settings, and then go to **Applications** > **Qwen3.5 27B Q4_K_M (Ollama)**.
-3. Under **Shared entrances**, select the model app to view the endpoint URL.
-
-   ![Get shared endpoint](/images/manual/use-cases/ollama-shared.png#bordered){width=70%}
-
-4. Copy the shared endpoint. For example:
-
-   ```text
-   http://94a553e00.shared.olares.com
-   ```
+<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
 ### Connect Karakeep to the local model
 
-1. Open Settings, and then go to **Applications** > **Karakeep** > **Manage environment variables**.
-2. Click <i class="material-symbols-outlined">edit_square</i> next to each variable, enter the value, and then click **Confirm**:
+1. Open **Settings** > **Applications** > **Karakeep** > **Manage environment variables** and configure:
 
-   - **OLLAMA_BASE_URL**: The shared endpoint URL from the previous step. For example:
-     ```text
-     http://94a553e00.shared.olares.com
-     ```
-   - **INFERENCE_TEXT_MODEL**: The model name from the previous step. For example:
-     ```text
-     qwen3.5:27b-q4_K_M
-     ```
-   - **INFERENCE_IMAGE_MODEL** (optional): The name of a vision model pulled in Ollama. Set this only if you want Karakeep to tag images.
+   - **OPENAI_API_KEY**: Enter `olares`. Karakeep requires a non-empty value to enable this provider. Router identifies the Olares app through the platform.
+   - **OLLAMA_BASE_URL**: Clear this field to stop using the old Ollama connection.
+   - **INFERENCE_TEXT_MODEL**: Enter `default-chat`.
+   - **INFERENCE_IMAGE_MODEL**: Leave empty for text-only tagging. For image tagging, enter the full Router name of a vision-capable model.
 
-3. Click **Apply**, and wait for Karakeep to restart.
+2. Click **Apply** and wait for Karakeep to restart.
+3. The current Market app does not expose `OPENAI_BASE_URL` in Settings. Open Control Hub, find the Karakeep project, and edit the **karakeep** deployment YAML under **Deployments**.
+4. In the `env` list of the container named `karakeep`, add the following entry. Replace the example value with the Router Base URL, including `/v1`:
 
-   ![Manage Karakeep environment variables](/images/manual/use-cases/karakeep-manage-env-vars.png#bordered)
+   ```yaml
+   - name: OPENAI_BASE_URL
+     value: "<router-base-url>"
+   ```
 
-:::info Text-only tagging
-If you only need text tagging, leave `INFERENCE_IMAGE_MODEL` empty.
-:::
+5. Save the change and wait for the deployment to run again. Recheck this custom variable after changing app settings or upgrading the app.
 
 ### Generate tags for existing bookmarks
 
@@ -230,7 +227,6 @@ Video sites apply anti-bot measures such as CAPTCHAs, IP blocking, and headless 
 
    ![Check container logs](/images/manual/use-cases/karakeep-container-logs.png#bordered)
 
-
 3. Search for `[VideoCrawler]` to find the specific error.
 
    For example, if you see an error like the following, the source site has blocked the download request:
@@ -246,5 +242,5 @@ Some failures are caused by restrictions on the source website. In these cases, 
 ## Learn more
 
 - [Karakeep documentation](https://docs.karakeep.app/): Official feature reference, API documentation, and third-party client integrations.
-- [Download and run local AI models via Ollama](ollama.md): Install Ollama to host a vision model for image tagging.
+- [Use Olares Router](olares-router.md): Manage chat and vision model connections.
 - [Set up Open WebUI for local AI chat](openwebui.md): Reference workflow for shared model endpoints on Olares.

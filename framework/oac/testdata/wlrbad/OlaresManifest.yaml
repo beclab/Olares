@@ -4,7 +4,7 @@
 # short-circuit the test before the chart-render-time overlay workload
 # check (the actual subject of TestLint_OverlayGatewayWorkloadMissing)
 # ever runs.
-olaresManifest.version: "0.13.0"
+olaresManifest.version: "0.12.0"
 olaresManifest.type: app
 apiVersion: v1
 metadata:
@@ -44,9 +44,7 @@ overlayGateway:
 options:
   policies: []
   resetCookie: { enabled: false }
-  # workloadReplicas + overlayGateway are 1.12.6-only triggers, so the
-  # Olares system dep must lock to the post-v3 window.
   dependencies:
     - name: olares
       type: system
-      version: ">=1.12.6-0"
+      version: ">=1.12.3-0,<1.12.6"

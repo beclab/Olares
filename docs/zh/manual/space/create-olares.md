@@ -1,4 +1,5 @@
 ---
+noindex: true
 outline: [2, 3]
 description: 在云端创建 Olares 实例的操作指南，涵盖环境设置、资源配置、安装进度查看和系统激活步骤，帮助快速部署并开始使用。
 ---
@@ -21,7 +22,7 @@ description: 在云端创建 Olares 实例的操作指南，涵盖环境设置�
 
 ## 创建 Olares
 
-1. 使用 LarePass 扫描二维码登录 [Olares Space](https://space.olares.com/)。
+1. 使用 LarePass 扫描二维码登录 [Olares Space](https://www.olares.com/space)。
 2. 进入**集群**页面，选择第二个选项开始创建。
 
    ![基础配置](/images/how-to/space/basic_configuration.jpg#bordered)

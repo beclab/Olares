@@ -11,8 +11,7 @@ import (
 )
 
 func ConnectWifi(ctx context.Context, ssid, password string) error {
-	klog.Warning("not implement")
-	return nil
+	return errors.New("wifi connection is supported only on linux")
 }
 
 func EnableWifi(ctx context.Context) error {
@@ -35,6 +34,11 @@ func ManagedAllDevices(ctx context.Context) (map[string]Device, error) {
 	return nil, nil
 }
 
+func ManagedDeviceStatus(ctx context.Context) (map[string]Device, error) {
+	klog.Warning("not implement")
+	return nil, nil
+}
+
 func UpdateNetworkTraffic(ctx context.Context) {
 	klog.Warning("not implement")
 }
@@ -45,20 +49,4 @@ func GetInterfaceTraffic(iface string) (rxBytes, txBytes float64, err error) {
 
 func GetEthernetConnection(ctx context.Context) (iface, ifUUID, connection string, err error) {
 	return "", "", "", errors.New("not implemented")
-}
-
-func FindBridgeConnection(ctx context.Context) (*BridgeConnection, error) {
-	return nil, errors.New("not implemented")
-}
-
-func CreateBridgeConnection(ctx context.Context) error {
-	return errors.New("not implemented")
-}
-
-func ResetBridgeConnection(ctx context.Context) error {
-	return errors.New("not implemented")
-}
-
-func CheckOverlayGatewayStatus(ctx context.Context) error {
-	return errors.New("not implemented")
 }

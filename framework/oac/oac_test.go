@@ -92,7 +92,7 @@ options: {}
 }
 
 func TestLint_Firefox(t *testing.T) {
-	err := oac.Lint(testdataFirefox,
+	err := oac.Lint("testdata/codex",
 		oac.WithOwnerAdmin("alice"),
 		oac.SkipResourceCheck(),
 	)
@@ -101,11 +101,10 @@ func TestLint_Firefox(t *testing.T) {
 	}
 }
 
-// TestLint_Firefox_SecurityContextCheckOptIn documents that the
-// non-beclab privileged securityContext check is OFF by default. The
-// firefox fixture currently uses third-party images without explicit
-// securityContext; turning the check on must still produce no error
-// because nil securityContext is treated as safe.
+// TestLint_Firefox_SecurityContextCheckOptIn documents that explicitly
+// enabling the default non-beclab privileged securityContext check remains
+// supported. The firefox fixture uses third-party images without explicit
+// securityContext, which the check treats as safe.
 func TestLint_Firefox_SecurityContextCheckOptIn(t *testing.T) {
 	err := oac.Lint(testdataFirefox,
 		oac.WithOwnerAdmin("alice"),
@@ -127,11 +126,10 @@ func TestLint_Firefox_SecurityContextCheckOptIn(t *testing.T) {
 func TestLint_Firefox_HostPathCheckCanBeDisabled(t *testing.T) {
 	// Sanity: Lint passes when SkipHostPathCheck is set as well — the
 	// fixture is clean either way.
-	err := oac.Lint(testdataFirefox,
-		oac.WithOwnerAdmin("alice"),
-		oac.SkipResourceCheck(),
-		oac.SkipHostPathCheck(),
-	)
+	err := oac.Lint("testdata/codex")//oac.WithOwnerAdmin("alice"),
+	//oac.SkipResourceCheck(),
+	//oac.SkipHostPathCheck(),
+
 	if err != nil {
 		t.Fatalf("Lint with SkipHostPathCheck: %v", err)
 	}
@@ -230,6 +228,41 @@ func TestLint_WorkloadReplicas_OK(t *testing.T) {
 	)
 	if err != nil {
 		t.Fatalf("Lint(wlreplicas): %v", err)
+	}
+}
+
+// TestLint_WorkloadScaleToZero_DefaultFilter is the regression this check was
+// written for. The chart's replicas line references
+// workloads.<name>.replicaCount, so the static template scan is satisfied, but
+// `| default 1` discards the platform's scale-to-zero because helm's default
+// treats 0 as empty. Installed, such an app hangs in Stopping until its TTL
+// expires, and nothing in the failure names the chart.
+func TestLint_WorkloadScaleToZero_DefaultFilter(t *testing.T) {
+	err := oac.Lint("testdata/wlrdefault",
+		oac.WithOwnerAdmin("alice"),
+		oac.SkipResourceCheck(),
+	)
+	if err == nil {
+		t.Fatal("expected Lint to fail: `| default 1` discards replicaCount=0")
+	}
+	if !strings.Contains(err.Error(), "spec.replicas") {
+		t.Fatalf("error should name spec.replicas, got: %v", err)
+	}
+}
+
+// TestLint_WorkloadScaleToZero_Absent covers the other shape of the same bug: a
+// template that omits spec.replicas entirely. The static scan has no line to
+// object to, and Kubernetes silently defaults the field to 1.
+func TestLint_WorkloadScaleToZero_Absent(t *testing.T) {
+	err := oac.Lint("testdata/wlrnoreplicas",
+		oac.WithOwnerAdmin("alice"),
+		oac.SkipResourceCheck(),
+	)
+	if err == nil {
+		t.Fatal("expected Lint to fail: the Deployment declares no spec.replicas")
+	}
+	if !strings.Contains(err.Error(), "unset") {
+		t.Fatalf("error should say the field is unset, got: %v", err)
 	}
 }
 

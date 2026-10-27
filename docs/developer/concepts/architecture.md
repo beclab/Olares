@@ -1,5 +1,6 @@
 ---
-description: Overview of Olares BEC architecture, explaining distributed node implementation for data storage and security. Details three core components Olares ID, Olares OS and LarePass.
+noindex: true
+description: "Explore Olares BEC architecture and its distributed approach to data storage and security across three components: Olares ID, Olares OS, and LarePass."
 ---
 # Olares BEC architecture
 

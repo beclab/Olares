@@ -49,6 +49,9 @@ export const developerSidebar: DefaultTheme.Sidebar = {
           text: "Olares CLI",
           link: "/zh/developer/cli-overview",
           items: [
+            { text: "通过 AI Agent 使用 Olares CLI", link: "/zh/developer/cli-install" },
+            { text: "Olares CLI Agent Skills", link: "/zh/developer/cli-agent-skills" },
+            { text: "Olares CLI 常用命令", link: "/zh/developer/install/cli/olares-cli" },
             {
               text: "集群管理",
               link: "/zh/developer/install/",
@@ -75,7 +78,7 @@ export const developerSidebar: DefaultTheme.Sidebar = {
               link: "/zh/developer/install/cli/olares-cli",
               collapsed: true,
               items: [
-                { text: "访问 Olares 主机终端", link: "/zh/developer/reference/access-olares-terminal" },
+                { text: "访问 Olares 主机终端", link: "/zh/manual/access-olares-terminal" },
                 {
                   text: "backups",
                   link: "/zh/developer/install/cli/backups",
@@ -125,21 +128,13 @@ export const developerSidebar: DefaultTheme.Sidebar = {
             },
               ],
             },
-            {
-              text: "搭配 AI Agent 使用",
-              collapsed: false,
-              items: [
-                { text: "安装 olares-cli", link: "/zh/developer/cli-install" },
-                { text: "登录 Olares", link: "/zh/developer/cli-log-in" },
-                { text: "安装与使用 Agent Skills", link: "/zh/developer/cli-agent-skills" },
-              ],
-            },
           ],
         },
         {
           text: "开发 Olares 应用",
           link: "/zh/developer/develop/",
           items: [
+            /*
             {
               text: "使用 Studio 开发",
               collapsed: true,
@@ -163,6 +158,7 @@ export const developerSidebar: DefaultTheme.Sidebar = {
                 },
               ],
             },
+            */
             {
               text: "应用包管理",
               collapsed: true,
@@ -402,16 +398,17 @@ export const developerSidebar: DefaultTheme.Sidebar = {
               text: "推广应用",
               link:"/zh/developer/develop/promote-apps"
             },
-            {
+            /*{
               text: "发布付费应用",
               link: "/zh/developer/develop/paid-apps",
-            },
-            
+            },*/
+
           ],
         },
         {
           text: "参与贡献",
           items: [
+            /*
             {
               text: "开发系统应用",
               collapsed: true,
@@ -438,6 +435,7 @@ export const developerSidebar: DefaultTheme.Sidebar = {
                 },
               ],
             },
+            */
             {
               text: "开发协议",
               collapsed: true,

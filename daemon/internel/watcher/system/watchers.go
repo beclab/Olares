@@ -2,11 +2,13 @@ package system
 
 import (
 	"context"
+	"sync"
 
 	"github.com/beclab/Olares/daemon/internel/watcher"
 	"github.com/beclab/Olares/daemon/pkg/cluster/state"
 	changeip "github.com/beclab/Olares/daemon/pkg/commands/change_ip"
 	"github.com/beclab/Olares/daemon/pkg/commands/uninstall"
+	"github.com/beclab/Olares/daemon/pkg/nets"
 	"github.com/beclab/Olares/daemon/pkg/utils"
 	"k8s.io/klog/v2"
 )
@@ -31,6 +33,40 @@ func (w *systemWatcher) Watch(ctx context.Context) {
 		_, err := cmd.Execute(ctx, nil)
 		if err != nil {
 			klog.Error("change ip error, ", err)
+		}
+	case state.IPChanging, state.Installing, state.Uninstalling,
+		state.Upgrading, state.Restarting, state.NetworkNotReady:
+		// do nothing, wait for the operation to finish
+	default:
+		client, err := utils.GetKubeClient()
+		if err != nil {
+			klog.V(8).ErrorS(err, "failed to get kube client")
+			// k8s client is not ready, skip the check
+			return
+		}
+
+		masterIp, err := utils.GetMasterNodeIpInCluster(ctx, client)
+		if err != nil {
+			klog.V(8).ErrorS(err, "failed to get master node IP")
+			// master node IP is not available, skip the check
+			return
+		}
+
+		masterIpInHosts, err := nets.GetHostIpFromHostsFile(nets.MASTER_NODE_HOSTNAME)
+		if err != nil {
+			klog.ErrorS(err, "failed to get master node IP from hosts file")
+			// master node IP is not available in hosts file, skip the check
+			return
+		}
+
+		if masterIp != masterIpInHosts {
+			klog.Info("master node IP is invalid, updating hosts file")
+			err := nets.WriteIpToHostsFile(masterIp, nets.MASTER_NODE_HOSTNAME)
+			if err != nil {
+				klog.ErrorS(err, "failed to update hosts file with new master node IP")
+				return
+			}
+			klog.Info("hosts file updated with new master node IP")
 		}
 	}
 }
@@ -57,30 +93,59 @@ func (w *autoRepair) Watch(ctx context.Context) {
 
 type bridgeConnectionWatcher struct {
 	watcher.Watcher
+	mu     sync.Mutex
 	ctx    context.Context
 	cancel context.CancelFunc
 }
 
-func NewBridgeConnectionWatcher() *bridgeConnectionWatcher {
+// NewOverlayParentWatcher watches the carrier of the wired NIC that carries the
+// overlay gateway while the gateway is enabled.
+func NewOverlayParentWatcher() *bridgeConnectionWatcher {
 	return &bridgeConnectionWatcher{}
 }
 
 func (w *bridgeConnectionWatcher) Watch(ctx context.Context) {
-	if c, err := utils.FindBridgeConnection(ctx); err != nil {
-		klog.Error("find bridge connection error, ", err)
-	} else if c == nil {
-		// bridge connection is removed, stop watching
+	device := ""
+	if utils.OverlayGatewayDesired() {
+		if dev, err := utils.ResolveOverlayParent(ctx); err != nil {
+			klog.V(4).Infof("overlay parent %s not resolvable yet: %v", utils.OverlayParentAltname, err)
+		} else {
+			device = dev
+		}
+	}
+	if device == "" {
+		// overlay gateway is off or its parent is gone, stop watching
+		w.mu.Lock()
 		if w.cancel != nil {
 			w.cancel()
 			w.cancel = nil
 			w.ctx = nil
 		}
-	} else if w.ctx == nil {
-		// bridge connection is back, start watching
+		w.mu.Unlock()
+	} else {
+		w.mu.Lock()
+		if w.ctx != nil {
+			w.mu.Unlock()
+			return
+		}
+		// overlay gateway is on, start watching its parent
 		w.ctx, w.cancel = context.WithCancel(context.Background())
-		klog.Info("start watching network carrier changes for bridge connection")
+		watchCtx := w.ctx
+		w.mu.Unlock()
+
+		klog.Infof("start watching network carrier changes for overlay parent %s", device)
 		go func() {
-			err := utils.ListenNetworkCarrierChanges(w.ctx, func() {
+			defer func() {
+				if r := recover(); r != nil {
+					klog.Errorf("overlay parent carrier watch panic recovered: %v", r)
+				}
+				w.mu.Lock()
+				w.cancel = nil
+				w.ctx = nil
+				w.mu.Unlock()
+			}()
+
+			err := utils.ListenNetworkCarrierChanges(watchCtx, device, func() {
 				// disable the overlay gateway supported apps' option for all users
 				apps, err := utils.GetOverlayGatewaySupportedApps(ctx, "")
 				if err != nil {

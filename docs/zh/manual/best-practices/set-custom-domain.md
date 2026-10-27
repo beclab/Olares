@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 详细指导如何为 Olares 设置自定义域名，包括域名验证、组织创建、成员管理和 Olares ID 激活的完整流程。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 自定义域名, Olares Space, 组织, LarePass, 域名验证
 ---
 
 # 为 Olares 设置自定义域名
@@ -56,7 +60,7 @@ description: 详细指导如何为 Olares 设置自定义域名，包括域名�
 
 以下步骤以 `space.n1.monster` 为例。
 
-1. 在浏览器中打开 [Olares Space](https://space.olares.com/)，使用 LarePass 扫码登录。
+1. 在浏览器中打开 [Olares Space](https://www.olares.com/space)，使用 LarePass 扫码登录。
 
    ![LarePass 扫码登录](/images/manual/tutorials/scan-qr-code1.png)
 

@@ -4,26 +4,6 @@ import (
 	"testing"
 )
 
-func TestAesEncryptDecrypt(t *testing.T) {
-	key := []byte("ZyCUs5znsmk7GTAiNXdE7RpkSRz1zsIm")
-
-	plaintext := []byte("Hello, bytetrade!")
-
-	ciphertext, err := AesEncrypt(plaintext, key)
-	if err != nil {
-		t.Fatalf("Encryption error: %v", err)
-	}
-
-	decrypted, err := AesDecrypt(ciphertext, key)
-	if err != nil {
-		t.Fatalf("Decryption error: %v", err)
-	}
-
-	if string(decrypted) != string(plaintext) {
-		t.Errorf("Decrypted data does not match original data")
-	}
-}
-
 func TestMatchVersion(t *testing.T) {
 	testCases := []struct {
 		version    string

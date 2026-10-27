@@ -84,7 +84,7 @@ jobs:
             fi
           elif [ -z "$bin_ver" ]; then
             # Non-publish callers (daily/check/release) build from their own
-            # version forms (1.12.7-<date>, 1.12.7-<random>, a release tag);
+            # version forms (1.12.8-<date>, 1.12.8-<random>, a release tag);
             # keep the previous behavior and reuse the npm version as-is.
             if echo "$npm_ver" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+-cli\.[0-9]+$'; then
               bin_ver=$(echo "$npm_ver" | sed -E 's/^([0-9]+\.[0-9]+\.[0-9]+)-cli\.[0-9]+$/\1/')
@@ -93,7 +93,7 @@ jobs:
             fi
           fi
 
-          checkout_ref="${REF:-${BRANCH:-main}}"
+          checkout_ref="${REF:-${BRANCH}}"
           echo "npm_version=$npm_ver" >> "$GITHUB_OUTPUT"
           echo "binary_version=$bin_ver" >> "$GITHUB_OUTPUT"
           echo "checkout_ref=$checkout_ref" >> "$GITHUB_OUTPUT"
@@ -131,19 +131,55 @@ jobs:
         run: git tag "${NPM_VERSION}" || true
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v3
         with:
-          go-version: 1.24.11
-          cache-dependency-path: cli/go.sum
+          go-version: 1.25.0
 
+      # The suite is compiled into the binary, so the release it ships in is a
+      # fact about this build. It used to be twelve hand-written `version:`
+      # lines edited in the release PR — a step that can be skipped, and one
+      # whose skipping is invisible: the skills ship new content under the
+      # label the user already installed, so nothing tells them their copy is
+      # behind. What is committed is a placeholder; nothing here is preserved.
+      - name: Stamp the release into the embedded skills
+        working-directory: cli
+        env:
+          PUBLISH_NPM: ${{ inputs.publish-npm }}
+          NPM_VERSION: ${{ needs.resolve-versions.outputs.npm_version }}
+          BINARY_VERSION: ${{ needs.resolve-versions.outputs.binary_version }}
+        run: |
+          set -euo pipefail
+          if [ "$PUBLISH_NPM" = "true" ]; then
+            # What a user can ask npm for is what the skills should name.
+            stamp="$NPM_VERSION"
+          else
+            # Every other path — daily, a PR check, a build from a release tag
+            # — names an OS-line release and no CLI iteration inside it, and
+            # .0 says exactly that.
+            release=$(echo "${BINARY_VERSION#v}" | grep -oE '^[0-9]+\.[0-9]+\.[0-9]+' || true)
+            if [ -z "$release" ]; then
+              echo "::warning::binary version '${BINARY_VERSION}' names no X.Y.Z release; the embedded skills keep their placeholder version"
+              exit 0
+            fi
+            stamp="${release}-cli.0"
+          fi
+          python3 skills/stamp.py "$stamp"
+          git --no-pager diff --stat -- skills
+
+      # --skip-validate because the step above leaves the working tree dirty
+      # on purpose. It is the only thing that writes here, the diff it made is
+      # in the log above, and the tag GoReleaser reads was created by this job
+      # at this commit — so the two checks being skipped are ones this job has
+      # already made for itself.
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v3.1.0
         with:
           distribution: goreleaser
           workdir: './cli'
           version: v1.18.2
-          args: release --clean
+          args: release --clean --skip-validate
         env:
+          GORELEASER_CURRENT_TAG: ${{ needs.resolve-versions.outputs.npm_version }}
           OLARES_RELEASE_ID: ${{ inputs.release-id }}
           BINARY_VERSION: ${{ needs.resolve-versions.outputs.binary_version }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -189,6 +225,99 @@ jobs:
           fi
           echo "binary version OK:"
           echo "$actual"
+
+      # The suite is compiled in, so a release can ship a binary that builds,
+      # runs, reports the right version — and carries eleven skills because an
+      # embed pattern stopped matching one. Nothing else in this job would
+      # notice: the missing skill is a file an agent is told to read and
+      # cannot. Counting against the checkout rather than against 12 is the
+      # point; the number is whatever the tree holds.
+      - name: Assert the skills are embedded
+        working-directory: cli
+        run: |
+          set -euo pipefail
+          binary=$(find ./output -type f -name 'olares-cli' -path '*linux_amd64*' | head -n1)
+          expected=$(find skills -mindepth 2 -maxdepth 2 -name SKILL.md -path 'skills/olares-*' | wc -l | tr -d ' ')
+          if [ "$expected" -lt 2 ]; then
+            echo "::error::found $expected skills in the checkout; this assertion is not looking where the suite lives"
+            exit 1
+          fi
+          listed=$("$binary" skills list -o json | jq '.skills | length')
+          if [ "$listed" != "$expected" ]; then
+            echo "::error::the binary carries $listed skills; the checkout has $expected"
+            "$binary" skills list -o json | jq -r '.skills[].name' | sed 's/^/  carried: /'
+            exit 1
+          fi
+          versions=$("$binary" skills list -o json | jq -r '[.skills[].version] | unique | .[]')
+          if [ "$(echo "$versions" | wc -l | tr -d ' ')" != "1" ]; then
+            echo "::error::the embedded suite declares more than one version:"
+            echo "$versions" | sed 's/^/  /'
+            exit 1
+          fi
+          echo "embedded skills OK: $listed at $versions"
+
+      # A skill's version is the release it ships in, and the stamp above is
+      # what puts it there. This asserts the stamp reached the binary — the
+      # same job as `Assert binary version was injected`, for the same reason:
+      # a step that silently did nothing produces a release whose skills name
+      # a version nobody released, and the number is what a user is shown when
+      # their installed copy turns out to be from somewhere else.
+      #
+      # It runs on every path, because every path stamps. Only the X.Y.Z
+      # prefixes are compared: the two lines number differently past that
+      # (1.12.8 and 1.12.8-cli.4 are the same release).
+      - name: Assert the embedded skills name the release being built
+        working-directory: cli
+        env:
+          BINARY_VERSION: ${{ needs.resolve-versions.outputs.binary_version }}
+        run: |
+          set -euo pipefail
+          release=$(echo "${BINARY_VERSION#v}" | grep -oE '^[0-9]+\.[0-9]+\.[0-9]+' || true)
+          if [ -z "$release" ]; then
+            echo "::notice::binary version '${BINARY_VERSION}' names no X.Y.Z release; nothing to compare the skills against"
+            exit 0
+          fi
+          binary=$(find ./output -type f -name 'olares-cli' -path '*linux_amd64*' | head -n1)
+          declared=$("$binary" skills list -o json | jq -r '.skills[0].version')
+          prefix=$(echo "$declared" | grep -oE '^[0-9]+\.[0-9]+\.[0-9]+' || true)
+          if [ "$prefix" != "$release" ]; then
+            echo "::error::the embedded skills declare ${declared}, but this build releases ${release}."
+            echo "The stamp did not reach the binary; check 'Stamp the release into the embedded skills' above."
+            exit 1
+          fi
+          echo "embedded skills name this release: $declared"
+
+      # The publish path can be exact: the npm version is the skill version.
+      - name: Assert the embedded skills name this npm release
+        if: ${{ inputs.publish-npm }}
+        working-directory: cli
+        env:
+          NPM_VERSION: ${{ needs.resolve-versions.outputs.npm_version }}
+        run: |
+          set -euo pipefail
+          binary=$(find ./output -type f -name 'olares-cli' -path '*linux_amd64*' | head -n1)
+          declared=$("$binary" skills list -o json | jq -r '.skills[0].version')
+          if [ "$declared" != "$NPM_VERSION" ]; then
+            echo "::error::the embedded skills declare ${declared}, but this release publishes ${NPM_VERSION}."
+            echo "The stamp did not reach the binary; check 'Stamp the release into the embedded skills' above."
+            exit 1
+          fi
+          echo "embedded skills name this release: $declared"
+
+      # The checksums GoReleaser just computed are the root of trust for the
+      # npm postinstall: it hashes what it downloaded and refuses to extract
+      # an archive that does not match (cli/npm/scripts/install.js). The
+      # publish job checks out the repository fresh, so the file has to
+      # travel as an artifact -- recomputing it there would hash whatever the
+      # CDN served, which is the thing being verified.
+      - name: Upload checksums for the npm package
+        if: ${{ inputs.publish-npm }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: olares-cli-checksums
+          path: cli/output/checksums.txt
+          if-no-files-found: error
+          retention-days: 1
 
       - name: Install coscmd
         run: pip install coscmd
@@ -248,6 +377,41 @@ jobs:
         with:
           node-version: '22'
           registry-url: 'https://registry.npmjs.org'
+
+      # Lands at cli/npm/checksums.txt, which package.json lists under "files"
+      # so it is packed into the published tarball. prepublishOnly
+      # (scripts/check-version.js) fails the publish if it is missing or names
+      # a different build than the version being published.
+      - name: Download checksums into the npm package
+        uses: actions/download-artifact@v4
+        with:
+          name: olares-cli-checksums
+          path: cli/npm
+
+      # The postinstall's integrity check is reached only by `npm install` on
+      # a user's machine, so this is the one place in the pipeline that
+      # exercises it before it ships.
+      - name: Test the postinstall verification
+        working-directory: cli/npm
+        run: npm test
+
+      - name: Verify the checksums match this release
+        working-directory: cli/npm
+        env:
+          NPM_VERSION: ${{ needs.resolve-versions.outputs.npm_version }}
+        run: |
+          set -euo pipefail
+          test -s checksums.txt
+          for arch in linux_amd64 linux_arm64 linux_arm darwin_amd64 darwin_arm64 windows_amd64 windows_arm64; do
+            file="olares-cli-v${NPM_VERSION}_${arch}.tar.gz"
+            if ! grep -qE "^[0-9a-f]{64}  ${file}\$" checksums.txt; then
+              echo "::error::checksums.txt has no entry for ${file}; postinstall would fail closed on that platform"
+              cat checksums.txt
+              exit 1
+            fi
+          done
+          echo "checksums OK for every published platform:"
+          cat checksums.txt
 
       - name: Sync npm package.json version
         working-directory: cli/npm

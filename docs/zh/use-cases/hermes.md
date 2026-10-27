@@ -1,20 +1,24 @@
 ---
+connectionVersion: "1.12.7"
+connectionLatestPath: /zh/use-cases/hermes
 outline: [2,3]
-description: 在 Olares 上安装 Hermes Agent，将其接入 Discord，安装 Olares 技能，并通过 Gateway API 与其他应用打通。
+description: 在 Olares 上安装 Hermes Agent，接入本地模型和 Discord，使用 Olares 技能，并通过 Gateway API 与其他应用连接。
 head:
   - - meta
     - name: keywords
       content: Olares, Hermes, Hermes Agent, 自主 AI, 自我进化 AI, Discord 机器人, 自托管
-app_version: "1.3.9"
-doc_version: "2.0"
-doc_updated: "2026-06-04"
+app_version: "1.3.49"
+doc_version: "3.2"
+doc_updated: "2026-10-21"
 ---
 
 # 用 Hermes 搭建一个自主工作的 AI 助手
 
+<VersionRouteSelect />
+
 Hermes Agent 是一个能够自主执行任务的 AI 助手。接入本地模型后，它可以执行系统任务、编写代码、管理工作流程。它能够在多次对话之间保持记忆，还能根据与你的互动，自动生成可复用的技能。
 
-在 Olares 中，你可以为助手安装专门的 Olares 技能，让它管理设备上的文件和应用程序。你还可以通过 Discord 等聊天软件远程与它对话，或将其接入 Open WebUI 等其他应用。
+在 Olares 中，你可以使用内置的 Olares 技能，让助手管理设备上的文件和应用程序。你还可以通过 Discord 等聊天软件远程与它对话，或将其接入 Open WebUI 等其他应用。
 
 ## 学习目标
 
@@ -22,15 +26,25 @@ Hermes Agent 是一个能够自主执行任务的 AI 助手。接入本地模型
 - 配置 Hermes Agent，连接本地模型
 - 直接在文本用户界面中与它对话
 - 接入 Discord，实现远程聊天
-- 安装 Olares 技能，让助手帮你管理文件和应用程序
+- 使用 Olares 技能，让助手帮你管理文件和应用程序
 - 开启 Gateway API，将 Hermes Agent 与 Open WebUI 等应用对接
 
 ## 前提条件
 
-开始之前，确保满足以下要求：
-- **本地模型**：你已经安装好 [Ollama](./ollama.md)，并至少下载了一个能调用工具的模型，且模型正在运行。这篇教程将以 `qwen3.5:9b` 为例。
+开始前，你需要：
+
+<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - **Discord 账号**：用来创建机器人应用。
 - **Discord 服务器**：确保你在这个服务器上有添加机器人的权限。
+- 以下模型：
+    | 模型类型 | 模型 | 获取方式 |
+    | :--- | :--- | :--- |
+    | 聊天 | Qwen3.8-27B (llama.cpp) | 从应用市场安装 |
+    :::tip
+    Hermes Agent 要求模型的上下文窗口至少为 64K tokens。
+    :::
+
+<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## 安装 Hermes Agent
 
@@ -53,31 +67,17 @@ Olares 支持克隆应用。如果你想同时运行多个独立的 AI 助手，
 
 按照快速设置向导，将 Hermes Agent 连接到你本地的模型。
 
-### 第 1 步：获取模型和端点信息
+### 第 1 步：获取模型连接信息
 
-1. 从桌面打开 Ollama 应用。
-2. 运行以下命令，查看已安装的模型：
+<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
 
-    ```bash
-    ollama list
-    ```
-3. 复制 **NAME** 列中的模型名称并保存，例如 `qwen3.5:9b`。
-4. 运行以下命令，查看模型的上下文窗口大小：
+<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
-    ```bash
-    ollama ps
-    ```
-
-5. 复制 **CONTEXT** 列中的数值并保存，例如 `32768`。
-6. 打开设置，进入**应用** > **Ollama** > **共享入口** > **Ollama API**。
-
-    ![获取 Ollama API 地址](/images/zh/manual/use-cases/ollama-endpoint1.png#bordered){width=70%}
-    
-7. 复制端点地址并保存，例如 `http://d54536a50.shared.olares.com`。
+5. 在 Router 的 **LLM** 页面，点击 Qwen3.8-27B (llama.cpp) 所在行的信息图标，打开 **Model card**。在 **Engine args** 中读取 `-c` 后的数值。例如，`-c 104448` 表示下一步应填写 `104448`。截图说明见[查看实际上下文大小](llm-base-apps.md#在-router-中查看模型详情)。
 
 ### 第 2 步：运行设置向导
 
-1. 从桌面打开 Hermes CLI。
+1. 从启动台打开 Hermes CLI。
 2. 输入以下命令，启动配置向导：
 
    ```bash
@@ -86,16 +86,25 @@ Olares 支持克隆应用。如果你想同时运行多个独立的 AI 助手，
 
 3. 向导会逐步引导你完成设置。使用方向键移动，按**回车**键确认。
 
+    下表中的模型选择提示是不同分支。根据检测到的模型数量完成对应分支，再继续填写 **Context length in tokens**。
+
     | 配置   | 选项   |
     |:-----------|:---------|
-    | How would you like to set up Hermes | 选择 **Quick setup - provider, model & messaging (recommended)**。 |
+    | How would you like to set up Hermes | 选择 **Full setup — configure every provider, tool & option yourself (bring your own keys)**。 |
     | Select provider | 选择 **Custom endpoint (enter URL manually)**。  |
-    | API base URL  | 输入你模型的端点地址，末尾加上 `/v1`。<br>例如 `http://d54536a50.shared.olares.com/v1`。  |
-    | API key  | 可填写任意占位值，例如 `ollama-local`。<br>注意：输入的内容是隐藏的。 |
-    | Available models | 从列表中找到你的目标模型，输入其对应的编号。 |
-    | Context length in tokens | <ul><li>如果你模型的上下文窗口小于 `65536`，<br>填写一个大于 `65536` 的数。</li><li>如果你模型的上下文窗口大于 `65536`，<br>留空，让系统自动检测。</li></ul> |
-    | Display name | 填写一个便于识别的名称，例如 `ollama-local`。|
-    | Connect a messaging platform | 选择 **Skip - set up later with `hermes setup gateway`**。 |
+    | API base URL  | 输入从 Router 复制的 **Base URL**。<br>例如 `https://router.<your-olares-domain>/v1`。  |
+    | API key  | 输入任意占位值，例如 `local`。<br>出于安全考虑，输入内容会被隐藏。 |
+    | Select API compatibility mode | 输入 `1`，选择 **Auto-detect**。 |
+    | Use this model? [Y/n] — 仅检测到一个模型时出现 | 输入 `n`，然后在接下来的 **Model name** 提示中填写 `default-chat`。确认提示只接受是/否，不是在这里输入模型名。 |
+    | Select model [1-N] or type name — 检测到多个模型时出现 | 直接输入 `default-chat`，不要选择列表中的编号。 |
+    | Model name — 未检测到模型时出现 | 输入 `default-chat`。 |
+    | Context length in tokens | 填写 Router 的 **Model card > Engine args** 中的精确上下文大小。例如，`-c 104448` 对应填写 `104448`。Hermes 要求至少 `65536` token，且填写值不能超过引擎实际配置。 |
+    | Display name | 输入一个便于识别该模型的名称，例如 `router-chat`。|
+    | Select terminal backend | 选择 **Local - run directly on this machine**。 |
+    | Select platforms to configure | 按**回车**键暂时跳过。 |
+    | Tools for CLI | 按**回车**键暂时跳过。 |
+    | Choose a provider | 选择 **Skip - keep defaults / configure later**。 |
+    | Select Search Provider | 选择 **Skip - keep defaults / configure later**。 |
 
 4. 保持 Hermes CLI 窗口开启，后续步骤仍需使用。
 
@@ -105,17 +114,21 @@ Olares 支持克隆应用。如果你想同时运行多个独立的 AI 助手，
 
 文本用户界面（TUI）直接在 Hermes CLI 里运行，无需额外配置，适合快速体验。
 
-1. 设置向导完成后，会询问是否启动 `hermes chat`。输入 `y` 并按**回车**键，即可进入文本用户界面。
+1. 设置向导完成后，会显示 `Ready to go` 及以下可用命令：
+
+    - `hermes`：开始聊天。
+    - `hermes gateway`：启动消息网关。
+    - `hermes doctor`：检查问题。
+
+2. 输入 `hermes` 并按**回车**键启动 TUI。
 
    :::tip
-   如果你退出了向导，也可以在 Hermes CLI 里手动输入 `hermes chat` 命令来启动文本用户界面聊天。
+   如果你退出了向导，也可以在 Hermes CLI 里手动输入 `hermes` 命令来启动聊天。
    :::
-
-    ![Hermes 设置完成](/images/manual/use-cases/hermes-setup-complete.png#bordered)
 
 2. 发一条消息，例如 `你当前使用的模型是哪个`，查看助手是否回复正常。
 
-    ![Hermes TUI 聊天界面](/images/manual/use-cases/hermes-tui.png#bordered)
+    ![Hermes TUI 聊天界面](/images/manual/use-cases/hermes-tui1.png#bordered)
 
 3. 如需退出 TUI 回到普通命令行，输入 `/exit` 并按**回车**键。
 
@@ -204,9 +217,9 @@ Olares 支持克隆应用。如果你想同时运行多个独立的 AI 助手，
 
 ## 用 Hermes Agent 管理 Olares
 
-给 Hermes Agent 安装 Olares CLI 技能后，它就能帮你管理 Olares 设备上的文件和应用程序。例如，列出文件、查看日志，或者从应用市场中安装应用。
+Hermes Agent 可以直接使用预装的 Olares CLI 技能，帮你管理 Olares 设备上的文件和应用程序。例如，列出文件、查看日志，或者从应用市场中安装应用。
 
-1. 从桌面打开 Hermes CLI。
+1. 从启动台打开 Hermes CLI。
 2. 依次运行下面两条命令，确认 olares-cli 和它的技能都已经正确安装并启用：
 
    ```bash
@@ -223,6 +236,10 @@ Olares 支持克隆应用。如果你想同时运行多个独立的 AI 助手，
 4. 根据提示输入你的 Olares 登录密码。注意：输入的内容是隐藏的。
 5. 现在你可以进入 TUI 聊天界面，让助手与 Olares 环境互动了。例如，让它从应用市场安装一个应用。
 
+## 通过 SSH 管理内网主机
+
+你还可以让 Hermes 通过 SSH 在局域网主机上运行命令和脚本。有关密钥配置、单机和多机磁盘空间检查示例，以及连接排障，请参阅[使用 Hermes Agent 通过 SSH 管理局域网主机](hermes-ssh.md)。
+
 ## 将 Hermes Agent 接入其他应用
 
 Hermes Agent 提供了兼容 OpenAI 的 API，你可以将其接入 Open WebUI 或 Hermes Workspace 等其他应用。
@@ -237,9 +254,9 @@ Hermes Agent 提供了兼容 OpenAI 的 API，你可以将其接入 Open WebUI �
 3. 点 **确认**。
 4. 找到 **HERMES_API_SERVER_KEY**，点击 <i class="material-symbols-outlined">edit_square</i>，填写一个密钥。密钥需要满足以下要求：
 
-    - 长度至少 8 个字符
+    - 长度至少 16 个字符
     - 只能包含字母、数字和常见符号
-    - 不能是常见的占位符，比如你的 API 密钥
+    - 不能是常见的占位符，比如 `your_API_key`
   
 5. 点击**确认**，然后点击**应用**。
 
@@ -285,7 +302,7 @@ https://{Hermes-Gateway-API-URL}/health
 
 如果想手动调整参数，可以直接编辑配置文件，然后重启 Hermes CLI 使更改生效。
 
-1. 从桌面打开文件管理器。
+1. 从启动台打开文件管理器。
 2. 进入**数据** > **hermesagent** > **home**，找到配置文件，比如 `config.yaml` 和 `.env`。
 
 文件的结构和配置选项与官方默认配置一致。具体参数的含义，可参阅 [Hermes 官方配置指南](https://hermes-agent.nousresearch.com/docs/zh-Hans/user-guide/configuration)。
@@ -298,18 +315,18 @@ https://{Hermes-Gateway-API-URL}/health
 
 - **使用 Hermes CLI**
 
-    此方法速度最快。从桌面打开 Hermes CLI，运行以下命令：
+    此方法速度最快。从启动台打开 Hermes CLI，运行以下命令：
 
     ```bash
     restart-gateway
     ```
 - **使用 Hermes 仪表盘**
 
-    此方法最为直观。从桌面打开 Hermes 的仪表盘，然后在左侧边栏中，选择 **Restart Gateway**。
+    此方法最为直观。从启动台打开 Hermes 的仪表盘，然后在左侧边栏中，选择 **Restart Gateway**。
 
 - **使用控制面板**
 
-    从桌面打开控制面板，进入**浏览** > **{用户名}** > **hermesagent-{用户名}** > **部署** > **hermesagent**，然后点击右上角的**重启**。此方法会完全重启整个服务，耗时稍长。
+    从启动台打开控制面板，进入**浏览** > **{用户名}** > **hermesagent-{用户名}** > **部署** > **hermesagent**，然后点击右上角的**重启**。此方法会完全重启整个服务，耗时稍长。
 
 ### 配置 API 后网关无法启动怎么办？
 
@@ -321,27 +338,23 @@ https://{Hermes-Gateway-API-URL}/health
 1. 打开设置，进入**应用** > **Hermes Agent** > **管理环境变量**。
 2. 为 `HERMES_API_SERVER_KEY` 设置一个新值，需满足以下条件：
 
-    - 长度至少 8 个字符
+    - 长度至少 16 个字符
     - 只能包含字母、数字和常见符号
-    - 不能是常见的占位符，比如你的 API 密钥
+    - 不能是常见的占位符，比如 `your_API_key`
     
- 3. 点击**保存**，再点击**应用**。
-
-## 后续步骤
-
-基础设置完成后，可以查阅官方文档，进一步扩展助手的能力：
-- 高级命令行操作，见 [CLI 界面](https://hermes-agent.nousresearch.com/docs/zh-Hans/user-guide/cli)
-- 接入 Slack、Telegram 等平台，见[消息网关](https://hermes-agent.nousresearch.com/docs/zh-Hans/user-guide/messaging/)
-- 安装技能，见 [Skills 系统](https://hermes-agent.nousresearch.com/docs/zh-Hans/user-guide/features/skills)
-- 安装工具，见[工具与工具集](https://hermes-agent.nousresearch.com/docs/zh-Hans/user-guide/features/tools)
-- 最佳实践和优化技巧，见[技巧与最佳实践](https://hermes-agent.nousresearch.com/docs/zh-Hans/guides/tips)
-
-:::info 关于 sudo 命令的说明
-Olares 环境里的 Hermes CLI 不支持 `sudo` 命令。官方文档中需要 `sudo` 权限的步骤，请忽略。
-:::
+3. 点击**保存**，再点击**应用**。
 
 ## 了解更多
 
-- [如何在 Discord 里创建一个服务器](https://support.discord.com/hc/en-us/articles/204849977-How-do-I-create-a-server)
-- [如何找到频道 ID 编号](https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID)
-- [OpenClaw](/zh/use-cases/openclaw.md)
+:::info 关于 sudo 命令的说明
+Hermes 容器以普通用户运行，不适用需要在容器内执行本地 `sudo` 的操作说明。通过 SSH 执行的命令取决于远端账号的权限，详见[通过 SSH 管理局域网主机](hermes-ssh.md)。
+:::
+
+- [CLI 界面](https://hermes-agent.nousresearch.com/docs/zh-Hans/user-guide/cli)：了解高级命令行操作。
+- [消息网关](https://hermes-agent.nousresearch.com/docs/zh-Hans/user-guide/messaging/)：接入 Slack、Telegram 等平台。
+- [Skills 系统](https://hermes-agent.nousresearch.com/docs/zh-Hans/user-guide/features/skills)：安装和管理技能。
+- [工具与工具集](https://hermes-agent.nousresearch.com/docs/zh-Hans/user-guide/features/tools)：配置助手可用的工具。
+- [技巧与最佳实践](https://hermes-agent.nousresearch.com/docs/zh-Hans/guides/tips)：优化助手的配置和工作流程。
+- [在 Discord 中创建服务器](https://support.discord.com/hc/en-us/articles/204849977-How-do-I-create-a-server)：为机器人创建服务器。
+- [查找 Discord ID](https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID)：获取配置机器人所需的用户、服务器和频道 ID。
+- [OpenClaw](/zh/use-cases/openclaw.md)：在 Olares 上配置另一款 AI 助手。

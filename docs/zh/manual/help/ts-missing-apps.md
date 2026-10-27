@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 当设备上的应用市场缺少官网所列应用时的排查方法。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 应用市场, 缺少应用, chartrepo, market, 控制面板, 重启服务
 ---
 
 # 应用市场中缺少应用

@@ -9,9 +9,17 @@ Two distinct concerns: an image that **won't pull** (blocks an install), and loc
 Symptom on a pod: `ImagePullBackOff`, `ErrImagePull`, `InvalidImageName`, or a runtime arch error (`no match for platform`, `exec format error`). These are hard, never-self-healing conditions — app-service fast-fails them after the 5-minute grace.
 
 ```bash
-olares-cli cluster pod list -n <ns> -o json     # state.waiting.reason on the failing container
+olares-cli cluster pod list -n <ns>             # STATUS = ErrImagePull / ImagePullBackOff on the failing pod
 olares-cli cluster pod events <ns>/<pod>        # "Failed to pull image ...": the registry/auth/arch detail
 ```
+
+**During an `upgrade` there is no failing pod to inspect.** app-service pulls the new images itself before touching the release, so a bad tag fails inside that download while the old pods stay healthy — the two commands above find nothing wrong. The only surface that reports it is the app's own state row, which is what `market status <app>` prints:
+
+```bash
+olares-cli market status <app> -o json          # .state = upgradeFailed, .message = the pull error
+```
+
+Expect it to take a minute or two: the download retries several times before giving up. `market get <app> -s <source> -o json` also shows `registry_error` on the offending image, recorded at upload time — but treat that as a hint, not a verdict, since it does not separate a missing tag from a registry that failed to answer once.
 
 | Reason | Root cause | Next step |
 |---|---|---|

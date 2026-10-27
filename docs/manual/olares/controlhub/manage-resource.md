@@ -1,6 +1,10 @@
 ---
 outline: [2,3]
-description: Learn how to view and manage resource configurations in Control Hub, including namespaces, secrets, configmaps, services, storage, network policies, jobs, and CRDs.
+description: Manage Olares resources in Control Hub, including namespaces, secrets, ConfigMaps, services, storage, network policies, jobs, and CRDs.
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Control Hub, resources, namespaces, Secrets, ConfigMaps, PVC
 ---
 
 # Manage resource configurations

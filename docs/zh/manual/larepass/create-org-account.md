@@ -1,6 +1,10 @@
 ---
 outline: [2, 3]
 description: 使用自定义域名创建 Olares ID。首次设置域名创建组织，或以成员身份使用管理员提供的凭据加入组织。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, 自定义域名, Olares ID, 组织, DID, Olares Space
 ---
 
 # 使用自定义域名创建 Olares ID
