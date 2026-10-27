@@ -5,9 +5,9 @@ head:
   - - meta
     - name: keywords
       content: Olares, Unsloth, Unsloth Studio, fine-tuning, QLoRA, LoRA, GGUF, JupyterLab, local LLM
-app_version: "0.0.5"
-doc_version: "1.0"
-doc_updated: "2026-10-19"
+app_version: "0.0.8"
+doc_version: "1.3"
+doc_updated: "2026-10-27"
 ---
 
 # Fine-tune and run open models with Unsloth
@@ -310,6 +310,36 @@ Use the Unsloth Studio password reset command to generate a new login password. 
 ```
 
 The new password appears in the terminal and takes effect immediately. Log in with it and store it in Vault.
+
+### Does Unsloth reserve 4 GiB of VRAM before loading a model?
+
+Starting with app version 0.0.8, the Olares package supports NVIDIA GPU mode only.
+
+The 4 GiB minimum shown for GPU mode is the quota for the entire app, including its loaded models. It is not a fixed 4 GiB overhead used by Studio before a model loads. In Memory slicing mode, this allocation reduces the quota available to other apps. Actual VRAM use depends on the model and workload. See [Assign GPU memory](#assign-gpu-memory).
+
+### Does Unsloth use the system Hugging Face settings?
+
+Yes. The app maps the system Hugging Face service address to `HF_ENDPOINT` and the system Hugging Face token to `HF_TOKEN`. Studio, its training workers, and JupyterLab inherit these settings. The token is supplied through a Kubernetes Secret. If no system token is configured, public models remain available, but gated models require a token with access to the selected model.
+
+### Why is VRAM still occupied after a response finishes?
+
+Unsloth keeps the model loaded for the next request, even when GPU utilization returns to 0%. Starting with app version 0.0.8, chat models release VRAM after 5 idle minutes by default, without interrupting a response or deleting model files. Training is unaffected.
+
+In Olares **Settings** > **Applications** > **Unsloth**, edit `UNSLOTH_MODEL_IDLE_TTL`: `300` means 5 minutes; `0` disables default automatic unloading; enabled values must be at least `60` seconds. Changes restart the app. Saved Studio settings take precedence; **Keep model in GPU memory** prevents automatic unloading.
+
+To release memory manually, open **Chat** > **model picker** and select **Eject model** or **Eject all** at the bottom right. Reload the model when you need it again.
+
+Unloading does not change the app's Olares Memory slicing quota. To make that quota available to other apps, stop Unsloth or remove its GPU allocation. See [Manage GPU resources](../manual/olares/settings/gpu-resource.md).
+
+### What happens to existing models when I upgrade?
+
+Upgrades retain downloaded model files, application data, and saved Studio settings. The service restarts during the upgrade, so reload your model afterward. The default 5-minute idle timeout applies unless overridden by saved Studio settings.
+
+### Can I update llama.cpp inside Unsloth?
+
+Yes. Use the llama.cpp update button in Unsloth Studio. The updater unloads the current model, so wait for the update to finish and reload your model before sending another request.
+
+Unsloth uses its own copy of llama.cpp. Updating it does not upgrade or replace the standalone Olares llama.cpp engine app. The updated copy is stored in Unsloth's persistent application data and remains available after you stop and resume the app.
 
 ## Learn more
 
