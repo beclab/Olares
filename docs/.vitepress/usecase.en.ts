@@ -404,6 +404,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   text: "Import photos from NAS",
                   link: "/use-cases/immich-import-from-nas",
                 },
+                {
+                  text: "Store uploads on NAS",
+                  link: "/use-cases/immich-store-uploads-on-nas",
+                },
               ]
             },
             {
