@@ -276,6 +276,12 @@ func (r *SecurityReconciler) reconcileNamespaceLabels(ctx context.Context, ns *c
 			updated = true
 		}
 	} else {
+		// For all other namespaces, remove the namespace type label if it exists, and then attempt to find the owner of the namespace.
+		if _, ok := ns.Labels[security.NamespaceTypeLabel]; ok {
+			delete(ns.Labels, security.NamespaceTypeLabel)
+			updated = true
+		}
+
 		owner, internal, system, shared, isMiddleware, requestMiddleware, err := r.findOwnerOfNamespace(ctx, ns)
 		if err != nil {
 			klog.Errorf("Failed to find owner of namespace %s: %v", ns.Name, err)
