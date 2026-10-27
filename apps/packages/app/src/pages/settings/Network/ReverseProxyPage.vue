@@ -1,6 +1,9 @@
 <template>
 	<page-title-component :show-back="true" :title="t('Reverse proxy')" />
 	<bt-scroll-area class="nav-height-scroll-area-conf">
+		<q-banner v-if="networkStore.proxyStatus?.message" class="q-mb-md">{{
+			networkStore.proxyStatus.message
+		}}</q-banner>
 		<bt-list first v-if="networkStore.reverseProxy">
 			<bt-form-item
 				:title="t('Set up a reverse proxy for external access')"
@@ -12,11 +15,9 @@
 				"
 			>
 				<bt-select
-					v-if="reverseProxyMode != ReverseProxyMode.NoNeed"
 					v-model="reverseProxyMode"
 					:options="reverseProxyModelOptions"
 				/>
-				<div v-else>No need (IP Direct)</div>
 			</bt-form-item>
 
 			<bt-form-item
@@ -90,10 +91,7 @@
 				</bt-form-item>
 			</error-message-tip>
 		</bt-list>
-		<div
-			class="row justify-end"
-			v-if="reverseProxyMode != ReverseProxyMode.NoNeed"
-		>
+		<div class="row justify-end">
 			<q-btn
 				dense
 				flat
@@ -159,6 +157,9 @@ const configData = () => {
 				: ReverseProxyMode.SelfBuiltFrp
 			: ReverseProxyMode.NoNeed;
 
+		if (networkStore.reverseProxy.mode === 'public-ip')
+			reverseProxyMode.value = ReverseProxyMode.PublicIP;
+
 		if (
 			reverseProxyMode.value == ReverseProxyMode.OlaresTunnel ||
 			reverseProxyMode.value == ReverseProxyMode.SelfBuiltFrp
@@ -211,7 +212,11 @@ const onSubmit = async () => {
 		if (serverAddress.value.length == 0 || port.value.length == 0) {
 			return;
 		}
-		if (authMethod.value == 'token' && token.value.length == 0) {
+		if (
+			authMethod.value == 'token' &&
+			token.value.length == 0 &&
+			!networkStore.hasProxyToken
+		) {
 			return;
 		}
 	}
@@ -258,6 +263,12 @@ const confirmSwitch = async () => {
 	if (!networkStore.reverseProxy) {
 		return;
 	}
+	networkStore.reverseProxy.mode =
+		reverseProxyMode.value === ReverseProxyMode.NoNeed
+			? 'none'
+			: reverseProxyMode.value === ReverseProxyMode.PublicIP
+			? 'public-ip'
+			: 'frp';
 	if (
 		reverseProxyMode.value == ReverseProxyMode.OlaresTunnel ||
 		reverseProxyMode.value == ReverseProxyMode.SelfBuiltFrp

@@ -563,33 +563,28 @@ export enum ReverseProxyMode {
 	NoNeed = 1,
 	CloudFlare = 2,
 	OlaresTunnel = 3,
-	SelfBuiltFrp = 4
+	SelfBuiltFrp = 4,
+	PublicIP = 5
 }
 
-export const reverseProxyOptions = () => {
-	return [
-		// {
-		// 	label: 'No need (IP Direct)',
-		// 	value: ReverseProxyMode.NoNeed,
-		// 	enable: true
-		// },
-		{
-			label: 'Cloudflare Tunnel',
-			value: ReverseProxyMode.CloudFlare,
-			enable: true
-		},
-		{
-			label: 'Olares Tunnel',
-			value: ReverseProxyMode.OlaresTunnel,
-			enable: true
-		},
-		{
-			label: 'Self-built FRP',
-			value: ReverseProxyMode.SelfBuiltFrp,
-			enable: true
-		}
-	];
-};
+export const reverseProxyOptions = () => [
+	{ label: 'Not configured', value: ReverseProxyMode.NoNeed, enable: true },
+	{
+		label: 'Public IP (automatic)',
+		value: ReverseProxyMode.PublicIP,
+		enable: true
+	},
+	{
+		label: 'Olares Tunnel',
+		value: ReverseProxyMode.OlaresTunnel,
+		enable: true
+	},
+	{
+		label: 'Self-built FRP',
+		value: ReverseProxyMode.SelfBuiltFrp,
+		enable: true
+	}
+];
 
 export const frpAuthMethod = () => {
 	return [

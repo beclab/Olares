@@ -8,6 +8,7 @@ import { OlaresTunneV2Interface } from 'src/utils/interface/frp';
 import { useTerminusDStore } from './terminusd';
 
 export interface ReverseProxy {
+	mode: 'none' | 'public-ip' | 'frp';
 	frp_server: string;
 	frp_port: number;
 	frp_auth_method: string;
@@ -24,6 +25,13 @@ export interface OlaresTunnelInterface {
 
 export type NetworkState = {
 	reverseProxy?: ReverseProxy;
+	proxyStatus?: { phase: string; message?: string };
+	hasProxyToken: boolean;
+	defaultDomain?: {
+		domain: string;
+		username?: string;
+		status: { phase: string; message?: string };
+	};
 	olaresTunnels: OlaresTunnelInterface[];
 	olaresTunnelsV2: OlaresTunneV2Interface[];
 };
@@ -32,6 +40,7 @@ export const useNetworkStore = defineStore('network', {
 	state: () =>
 		({
 			reverseProxy: undefined,
+			hasProxyToken: false,
 			olaresTunnels: [],
 			olaresTunnelsV2: []
 		} as NetworkState),
@@ -46,9 +55,20 @@ export const useNetworkStore = defineStore('network', {
 					await this.getOlaresTunnelsV2();
 				}
 				const proxyData: any = await axios.get(
-					`${tokenStore.url}/api/reverse-proxy`
+					`${tokenStore.url}/api/network/reverse-proxy`
 				);
-				this.reverseProxy = proxyData;
+				this.reverseProxy = {
+					...proxyData.config,
+					frp_server: proxyData.config.frp_server || '',
+					frp_port: proxyData.config.frp_port || 7000,
+					frp_auth_method: proxyData.config.frp_auth_method || 'jws',
+					frp_auth_token: '',
+					ip: proxyData.entrance?.public_ip || '',
+					enable_frp: proxyData.config.mode === 'frp',
+					enable_cloudflare_tunnel: false
+				};
+				this.proxyStatus = proxyData.status;
+				this.hasProxyToken = proxyData.has_auth_token;
 			} catch (error) {
 				console.log(error);
 			}
@@ -56,8 +76,34 @@ export const useNetworkStore = defineStore('network', {
 
 		async updateReverseProxy(proxy: ReverseProxy) {
 			const tokenStore = useTokenStore();
-			await axios.post(`${tokenStore.url}/api/reverse-proxy`, proxy);
+			await axios.post(`${tokenStore.url}/api/network/reverse-proxy`, {
+				mode: proxy.mode,
+				...(proxy.mode === 'frp'
+					? {
+							frp_server: proxy.frp_server,
+							frp_port: proxy.frp_port,
+							frp_auth_method: proxy.frp_auth_method || 'jws',
+							frp_auth_token: proxy.frp_auth_token
+					  }
+					: {})
+			});
 			return await this.configReverseProxy();
+		},
+
+		async getDefaultDomain() {
+			const tokenStore = useTokenStore();
+			this.defaultDomain = (await axios.get(
+				`${tokenStore.url}/api/network/domain`
+			)) as any;
+			return this.defaultDomain;
+		},
+		async bindDefaultDomain(domain: string) {
+			const tokenStore = useTokenStore();
+			this.defaultDomain = (await axios.post(
+				`${tokenStore.url}/api/network/domain`,
+				{ domain }
+			)) as any;
+			return this.defaultDomain;
 		},
 
 		async getOlaresTunnels() {
