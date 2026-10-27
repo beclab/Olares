@@ -63,7 +63,7 @@ spec:
             privileged: true
       containers:
         - name: api
-          image: beclab/bfl:v0.4.53-user-domain-027f68075-alpha-1
+          image: beclab/bfl:v0.4.53-user-domain-1dbafb27f-alpha-2
           imagePullPolicy: IfNotPresent
           command: [/bfl-api, --log-level, debug]
           securityContext:
