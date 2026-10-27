@@ -24,7 +24,7 @@ spec:
       priorityClassName: "system-cluster-critical"
       containers:
       - name: daemon
-        image: beclab/osnode-init:v0.0.13
+        image: beclab/osnode-init:v0.0.13-user-domain-027f68075-alpha-1
         imagePullPolicy: IfNotPresent
         args:
         - --metrics-bind-address

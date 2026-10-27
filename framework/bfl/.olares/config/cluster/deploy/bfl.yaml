@@ -63,7 +63,7 @@ spec:
             privileged: true
       containers:
         - name: api
-          image: beclab/bfl:v0.4.53-alpha2
+          image: beclab/bfl:v0.4.53-user-domain-027f68075-alpha-1
           imagePullPolicy: IfNotPresent
           command: [/bfl-api, --log-level, debug]
           securityContext:
@@ -91,8 +91,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
+            - name: REVERSE_PROXY_AGENT_IMAGE_NAME
+              value: beclab/frpc
             - name: REVERSE_PROXY_AGENT_IMAGE_VERSION
-              value: v0.1.12
+              value: user-domain-027f68075-alpha-1
 ---
 apiVersion: v1
 kind: Service
