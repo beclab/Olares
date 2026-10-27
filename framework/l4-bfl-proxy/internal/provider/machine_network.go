@@ -36,10 +36,7 @@ func (p *Provider) readMachineNetwork(ctx context.Context, res *message.Resource
 		if err != nil {
 			return err
 		}
-		domain = strings.ToLower(strings.TrimSuffix(strings.TrimSpace(domain), "."))
-		if domain != "olares.local" {
-			res.DefaultDomain = domain
-		}
+		res.DefaultDomain = strings.ToLower(strings.TrimSuffix(strings.TrimSpace(domain), "."))
 		localName, _, err := unstructured.NestedString(terminus.Object, "spec", "localName")
 		if err != nil {
 			return err
