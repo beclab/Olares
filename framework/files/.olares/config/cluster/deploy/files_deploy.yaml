@@ -65,25 +65,6 @@ spec:
         runAsUser: 0
         runAsNonRoot: false
       initContainers:
-        - name: init-data
-          image: busybox:1.28
-          securityContext:
-            privileged: true
-            runAsNonRoot: false
-            runAsUser: 0
-          volumeMounts:
-            - name: userspace-dir
-              mountPath: /data
-            - name: fb-data
-              mountPath: /appdata
-            - name: upload-appdata
-              mountPath: /appcache
-            - mountPath: /data/appcache
-              name: upload-appdata
-          command:
-          - sh
-          - -c
-          - env
         - name: init-container
           image: 'postgres:16.0-alpine3.18'
           command:
@@ -102,7 +83,10 @@ spec:
             - name: PGUSER
               value: files_os_framework
             - name: PGPASSWORD
-              value: {{ $files_postgres_password | b64dec }}
+              valueFrom:
+                secretKeyRef:
+                  name: files-secrets
+                  key: files_postgres_password
             - name: PGDB1
               value: os_framework_files
 
@@ -111,7 +95,7 @@ spec:
           - /rclone
           - rcd
           - --rc-addr
-          - :5572
+          - 127.0.0.1:5572
           - --rc-no-auth
           - --no-check-certificate
           - --s3-directory-markers
@@ -124,10 +108,22 @@ spec:
           image: beclab/rclone:v1.73.0
           imagePullPolicy: IfNotPresent
           name: rclone
-          ports:
-            - containerPort: 5572
-              protocol: TCP
-          resources: {}
+          resources:
+            requests:
+              cpu: 20m
+              memory: 64Mi
+          livenessProbe:
+            exec:
+              command:
+                - /rclone
+                - rc
+                - --url
+                - http://127.0.0.1:5572/
+                - rc/noop
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
           securityContext:
             allowPrivilegeEscalation: true
             privileged: true
@@ -176,6 +172,21 @@ spec:
 {{ end }}
           ports:
             - containerPort: 445
+          resources:
+            requests:
+              cpu: 20m
+              memory: 64Mi
+          startupProbe:
+            tcpSocket:
+              port: 445
+            periodSeconds: 5
+            failureThreshold: 60
+          livenessProbe:
+            tcpSocket:
+              port: 445
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
           env:
             - name: FILES_SECRET_KEY
               valueFrom:
@@ -206,7 +217,10 @@ spec:
             - name: REDIS_USERNAME
               value: ''
             - name: REDIS_PASSWORD
-              value: {{ $files_redis_password | b64dec }}
+              valueFrom:
+                secretKeyRef:
+                  name: files-secrets
+                  key: files_redis_password
             - name: REDIS_USE_SSL
               value: 'false'
               # use redis db 0 for redis cache
@@ -219,7 +233,10 @@ spec:
             - name: PGUSER
               value: files_os_framework
             - name: PGPASSWORD
-              value: {{ $files_postgres_password | b64dec }}
+              valueFrom:
+                secretKeyRef:
+                  name: files-secrets
+                  key: files_postgres_password
             - name: PGDB1
               value: os_framework_files
           command:
@@ -249,19 +266,39 @@ spec:
               mountPath: /data/External
               mountPropagation: Bidirectional
 {{ end }}
-          ports:
-            - containerPort: 8110
+          # The backend listens on 127.0.0.1:8080 only (FB_ADDRESS); every
+          # request, probes included, goes through the nginx sidecar.
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: 80
+            periodSeconds: 5
+            failureThreshold: 60
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 80
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 6
           env:
             - name: FILES_SECRET_KEY
               valueFrom:
                 secretKeyRef:
                   name: files-secrets
                   key: files_secret_key
-{{ if .Values.sharedlib }}        
+            - name: FB_ADDRESS
+              value: "127.0.0.1"
+            # files matches mount state reports against this node's IP.
             - name: NODE_IP
               valueFrom:
                 fieldRef:
                   fieldPath: status.hostIP
+{{ if .Values.sharedlib }}        
             - name: NODE_NAME
               valueFrom:
                 fieldRef:
@@ -313,7 +350,10 @@ spec:
             - name: REDIS_USERNAME
               value: ''
             - name: REDIS_PASSWORD
-              value: {{ $files_redis_password | b64dec }}
+              valueFrom:
+                secretKeyRef:
+                  name: files-secrets
+                  key: files_redis_password
             - name: REDIS_USE_SSL
               value: 'false'
               # use redis db 0 for redis cache
@@ -351,7 +391,10 @@ spec:
             - name: PGUSER
               value: files_os_framework
             - name: PGPASSWORD
-              value: {{ $files_postgres_password | b64dec }}
+              valueFrom:
+                secretKeyRef:
+                  name: files-secrets
+                  key: files_postgres_password
             - name: PGDB1
               value: os_framework_files
             - name: FB_SEAFILE_RPC_PATH
@@ -387,6 +430,21 @@ spec:
           ports:
             - containerPort: 80
               protocol: TCP
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 256Mi
+          readinessProbe:
+            tcpSocket:
+              port: 80
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 80
+            periodSeconds: 20
+            failureThreshold: 3
           volumeMounts:
             - name: files-nginx-config
               readOnly: true
@@ -664,6 +722,11 @@ data:
       gzip_types *;
       client_max_body_size 100M;
       root /app;
+
+      # liveness of the backend, which only listens on loopback
+      location = /healthz {
+          proxy_pass http://127.0.0.1:8080/healthz;
+      }
 
       # normal routes
       # serve given url and default to index.html if not found
@@ -955,12 +1018,6 @@ data:
       location ~ ^/(assets|js|css|fonts|img)/.*.(js|css|png|jpg|svg|woff|woff2)$
       {
           add_header Cache-Control "public, max-age=2678400";
-      }
-
-      location ~ ^/resources/Home/Pictures/(.*.(png|jpg|svg|gif|jpeg))$
-      {
-          alias /data/Pictures/$1;
-          autoindex off;
       }
 
     }
