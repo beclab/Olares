@@ -1321,7 +1321,7 @@ func TestBuildExtAuthzFilter_DefaultVerifyPath(t *testing.T) {
 	clusterMap := map[string]*ir.ClusterIR{
 		"authelia_backend_alice": {Name: "authelia_backend_alice", Host: "authelia-backend.os-framework.svc.cluster.local", Port: 9091},
 	}
-	filter := buildExtAuthzFilter("authelia_backend_alice", clusterMap, "alice")
+	filter := buildExtAuthzFilter("authelia_backend_alice", clusterMap)
 	require.NotNil(t, filter)
 	var extAuthz extauthzv3.ExtAuthz
 	require.NoError(t, filter.GetTypedConfig().UnmarshalTo(&extAuthz))

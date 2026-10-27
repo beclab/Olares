@@ -670,7 +670,6 @@ func buildMultiUserHTTPSListener(port uint32, proxyProtocol bool, httpListeners 
 		// cluster, and each route overrides with its own Authelia. A route that
 		// does not override is denied instead of being checked as someone else.
 		autheliaClusterName := ""
-		filterUser := ""
 		if httpIR.ExtAuthCluster != "" {
 			autheliaClusterName = httpIR.ExtAuthCluster
 		} else if plainHTTP {
@@ -687,7 +686,6 @@ func buildMultiUserHTTPSListener(port uint32, proxyProtocol bool, httpListeners 
 			if _, ok := clusterMap[autheliaClusterName]; !ok {
 				autheliaClusterName = ""
 			}
-			filterUser = httpIR.UserName
 		}
 
 		// Build HTTP filters.
@@ -698,7 +696,7 @@ func buildMultiUserHTTPSListener(port uint32, proxyProtocol bool, httpListeners 
 		// config change — the filter chain itself is byte-identical → no
 		// Envoy listener drain on deny_all policy switch.
 		httpFilters := []*hcmv3.HttpFilter{buildClientIdentityStripFilter()}
-		extAuthzFilter := buildExtAuthzFilter(autheliaClusterName, clusterMap, filterUser)
+		extAuthzFilter := buildExtAuthzFilter(autheliaClusterName, clusterMap)
 		if extAuthzFilter != nil {
 			httpFilters = append(httpFilters, extAuthzFilter)
 		}
@@ -1045,12 +1043,8 @@ func translateRoute(routeIR *ir.HTTPRouteIR, clusterMap map[string]*ir.ClusterIR
 				path = autheliaVerifyPathPrefix
 			}
 			if c, ok := clusterMap[routeIR.ExtAuth.Cluster]; ok && c.Host != "" {
-				userName := routeIR.ExtAuth.User
-				if userName == "" && routeIR.RequestHeaders != nil {
-					userName = routeIR.RequestHeaders["X-BFL-USER"]
-				}
 				checkSettings.ServiceOverride = &extauthzv3.CheckSettings_HttpService{
-					HttpService: buildAutheliaHttpService(routeIR.ExtAuth.Cluster, c.Host, path, userName),
+					HttpService: buildAutheliaHttpService(routeIR.ExtAuth.Cluster, c.Host, path),
 				}
 			}
 		}
@@ -1086,7 +1080,7 @@ func translateRoute(routeIR *ir.HTTPRouteIR, clusterMap map[string]*ir.ClusterIR
 // FailureModeAllow is false so a broken Authelia causes requests to be denied
 // rather than passed through. ClearRouteCache is false because auth decisions
 // do not change the selected route.
-func buildExtAuthzFilter(autheliaClusterName string, clusterMap map[string]*ir.ClusterIR, userName string) *hcmv3.HttpFilter {
+func buildExtAuthzFilter(autheliaClusterName string, clusterMap map[string]*ir.ClusterIR) *hcmv3.HttpFilter {
 	if autheliaClusterName == "" {
 		return nil
 	}
@@ -1101,7 +1095,7 @@ func buildExtAuthzFilter(autheliaClusterName string, clusterMap map[string]*ir.C
 
 	extAuthz := &extauthzv3.ExtAuthz{
 		Services: &extauthzv3.ExtAuthz_HttpService{
-			HttpService: buildAutheliaHttpService(autheliaClusterName, host, autheliaVerifyPathPrefix, userName),
+			HttpService: buildAutheliaHttpService(autheliaClusterName, host, autheliaVerifyPathPrefix),
 		},
 		// AllowedHeaders is filter-level (not part of HttpService); per-route
 		// CheckSettings.http_service does not override it.
@@ -1155,7 +1149,7 @@ var (
 	}
 )
 
-func autheliaAuthorizationRequest(userName string) *extauthzv3.AuthorizationRequest {
+func autheliaAuthorizationRequest() *extauthzv3.AuthorizationRequest {
 	headers := []*corev3.HeaderValue{
 		{Key: "X-Forwarded-Proto", Value: xForwardedProtoValue},
 		// Authelia ForwardAuth/Verify uses these for the post-login rd=
@@ -1166,9 +1160,6 @@ func autheliaAuthorizationRequest(userName string) *extauthzv3.AuthorizationRequ
 		{Key: "X-Forwarded-Host", Value: "%REQ(:AUTHORITY)%"},
 		{Key: "X-Original-Method", Value: "%REQ(:METHOD)%"},
 		{Key: "X-Forwarded-Method", Value: "%REQ(:METHOD)%"},
-	}
-	if userName != "" {
-		headers = append(headers, &corev3.HeaderValue{Key: "X-BFL-USER", Value: userName})
 	}
 	return &extauthzv3.AuthorizationRequest{HeadersToAdd: headers}
 }
@@ -1185,7 +1176,7 @@ func autheliaAuthorizationResponse() *extauthzv3.AuthorizationResponse {
 // and per-route CheckSettings overrides. Envoy replaces the filter HttpService
 // entirely when CheckSettings.http_service is set, so PathPrefix overrides must
 // carry the same AuthorizationRequest/Response as buildExtAuthzFilter.
-func buildAutheliaHttpService(clusterName, host, pathPrefix, userName string) *extauthzv3.HttpService {
+func buildAutheliaHttpService(clusterName, host, pathPrefix string) *extauthzv3.HttpService {
 	return &extauthzv3.HttpService{
 		ServerUri: &corev3.HttpUri{
 			Uri:              fmt.Sprintf("http://%s", host),
@@ -1193,7 +1184,7 @@ func buildAutheliaHttpService(clusterName, host, pathPrefix, userName string) *e
 			Timeout:          durationpb.New(15 * time.Second),
 		},
 		PathPrefix:            pathPrefix,
-		AuthorizationRequest:  autheliaAuthorizationRequest(userName),
+		AuthorizationRequest:  autheliaAuthorizationRequest(),
 		AuthorizationResponse: autheliaAuthorizationResponse(),
 	}
 }
