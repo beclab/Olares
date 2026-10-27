@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"runtime"
+	"strings"
 	"time"
 
 	"bytetrade.io/web3os/bfl/internal/log"
@@ -50,7 +51,7 @@ func cors(req *restful.Request, resp *restful.Response, chain *restful.FilterCha
 
 	resp.AddHeader("Content-Type", "application/json, application/x-www-form-urlencoded")
 	resp.AddHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-	resp.AddHeader("Access-Control-Allow-Headers", "Accept, Content-Type, Accept-Encoding, X-Authorization")
+	resp.AddHeader("Access-Control-Allow-Headers", "Accept, Content-Type, Accept-Encoding, X-Authorization, X-BFL-USER, Client-Host")
 
 	if req.Request.Method == "OPTIONS" {
 		resp.WriteHeader(http.StatusOK)
@@ -71,27 +72,26 @@ func authenticate(req *restful.Request, resp *restful.Response, chain *restful.F
 		}
 	}
 
-	if needAuth {
-		log.Debugw("request headers", "requestURL", req.Request.URL, "headers", req.Request.Header)
-
-		user := req.HeaderParameter(constants.HeaderBflUserKey)
-		if user == "" {
-			tokenStr := req.HeaderParameter(constants.UserAuthorizationTokenKey)
-			if tokenStr == "" {
-				response.HandleUnauthorized(resp, response.NewTokenValidationError("user not found"))
-				return
-			}
-
-			claims, err := apiRuntime.ParseToken(tokenStr)
-			if err != nil {
+	user := strings.TrimSpace(req.HeaderParameter(constants.HeaderBflUserKey))
+	if user == "" {
+		if token := req.HeaderParameter(constants.UserAuthorizationTokenKey); token != "" {
+			claims, err := apiRuntime.ParseToken(token)
+			if err != nil && needAuth {
 				response.HandleUnauthorized(resp, response.NewTokenValidationError("parse token", err))
 				return
 			}
-
-			user = claims.Username
+			if err == nil {
+				user = claims.Username
+			}
 		}
-
+	}
+	if user == "" && needAuth {
+		response.HandleUnauthorized(resp, response.NewTokenValidationError("user not found"))
+		return
+	}
+	if user != "" {
 		req.SetAttribute(constants.UserContextAttribute, user)
+		req.Request = req.Request.WithContext(apiRuntime.WithUser(req.Request.Context(), user))
 	}
 
 	chain.ProcessFilter(req, resp)

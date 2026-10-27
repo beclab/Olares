@@ -115,6 +115,7 @@ data:
         }
     }
   legacy-providers.conf: |-
+    map "" $bfl_backend { default bfl.os-frontend.svc.cluster.local:80; }
     # These provider services have no shared replacement yet. Resolve them on
     # demand so they do not block installation before any user exists. Keep
     # these routes behind providers; do not bypass authorization via backends.
@@ -1355,14 +1356,14 @@ data:
         add_header Access-Control-Allow-Methods "GET, HEAD, OPTIONS" always;
         add_header Access-Control-Allow-Headers $http_access_control_request_headers always;
         add_header Vary "Origin" always;
-        proxy_pass http://bfl.user-space-$profile_info_user.svc.cluster.local:80/bfl/info/v1/olares-info;
+        proxy_pass http://$bfl_backend/bfl/info/v1/olares-info;
         proxy_read_timeout 10s;
         proxy_pass_request_body off;
         proxy_set_header Content-Length "";
         proxy_set_header Cookie "";
         proxy_set_header Authorization "";
         proxy_set_header X-Authorization "";
-        proxy_set_header X-Bfl-User "";
+        proxy_set_header X-Bfl-User $profile_info_user;
         proxy_set_header Authelia-Nonce "";
         proxy_set_header            Host $host;
         proxy_set_header            X-real-ip $remote_addr;
@@ -1693,13 +1694,13 @@ data:
         location ~ "^/bfl/info/v1/olares-info/(?<share_profile_user>[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)$" {
             limit_except GET OPTIONS { deny all; }
             if ($request_method = OPTIONS) { return 204; }
-            proxy_pass http://bfl.user-space-$share_profile_user.svc.cluster.local:80/bfl/info/v1/olares-info;
+            proxy_pass http://$bfl_backend/bfl/info/v1/olares-info;
             proxy_pass_request_body off;
             proxy_set_header Content-Length "";
             proxy_set_header Cookie "";
             proxy_set_header Authorization "";
             proxy_set_header X-Authorization "";
-            proxy_set_header X-Bfl-User "";
+            proxy_set_header X-Bfl-User $share_profile_user;
             proxy_set_header X-Provider-Proxy "";
             proxy_set_header Authelia-Nonce "";
             proxy_set_header Host $host;
@@ -1922,14 +1923,14 @@ data:
             add_header Access-Control-Allow-Methods "GET, HEAD, OPTIONS" always;
             add_header Access-Control-Allow-Headers $http_access_control_request_headers always;
             add_header Vary "Origin" always;
-            proxy_pass http://bfl.user-space-$login_info_user.svc.cluster.local:80/bfl/info/v1/olares-info;
+            proxy_pass http://$bfl_backend/bfl/info/v1/olares-info;
             proxy_read_timeout 10s;
             proxy_pass_request_body off;
             proxy_set_header Content-Length "";
             proxy_set_header Cookie "";
             proxy_set_header Authorization "";
             proxy_set_header X-Authorization "";
-            proxy_set_header X-Bfl-User "";
+            proxy_set_header X-Bfl-User $login_info_user;
             proxy_set_header Authelia-Nonce "";
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;

@@ -172,7 +172,6 @@ func GenerateTerminusComponentsModules(runtime connector.Runtime, manifestMap ma
 		&InstallAccountModule{},
 		&InstallSettingsModule{},
 		&InstallOsSystemModule{},
-		&PrepareUserChartsModule{},
 	}
 	modules = append(modules, baseModules...)
 
@@ -851,8 +850,8 @@ func (m *ChangeHostIPModule) Init() {
 			Action: new(GetNATGatewayIP),
 		},
 		&task.LocalTask{
-			Name:   "UpdateNATGatewayIPForUser",
-			Action: new(UpdateNATGatewayForUser),
+			Name:   "UpdateNATGatewayIP",
+			Action: new(UpdateNATGatewayIP),
 		},
 	)
 }

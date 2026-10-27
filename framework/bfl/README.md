@@ -2,4 +2,13 @@
 
 ## Overview
 
-The `bfl` (Backend For Launcher) component is a crucial part of the Olares framework's service architecture. It acts as an aggregator for various backend interfaces, and as a proxy for all system service requests. This simplifies the interaction between the launcher and the backend services, providing a single point of contact and streamlining the overall system design.
+BFL provides backend APIs for the system frontend. One instance runs in
+`os-frontend`; each request identifies its user through the request context.
+
+Deployment resources are in `.olares/config/cluster/deploy/bfl.yaml` and are
+packaged into `os-framework`. BFL does not create personal volumes or initialize
+user directories.
+
+The network controllers manage the shared entrance addresses, default domain,
+certificate and reverse proxy. Application custom domains and user settings
+remain associated with their respective users.

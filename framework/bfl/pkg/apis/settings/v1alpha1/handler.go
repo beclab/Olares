@@ -6,107 +6,36 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
-	"time"
 
 	"bytetrade.io/web3os/bfl/internal/log"
 	"bytetrade.io/web3os/bfl/pkg/api/response"
 	"bytetrade.io/web3os/bfl/pkg/apis"
 	"bytetrade.io/web3os/bfl/pkg/apis/iam/v1alpha1/operator"
-	external_network "bytetrade.io/web3os/bfl/pkg/apis/settings/v1alpha1/external_network"
 	"bytetrade.io/web3os/bfl/pkg/apiserver/runtime"
-	app_service "bytetrade.io/web3os/bfl/pkg/app_service/v1"
 	"bytetrade.io/web3os/bfl/pkg/constants"
 	"bytetrade.io/web3os/bfl/pkg/userenv"
 	"bytetrade.io/web3os/bfl/pkg/utils"
-	"bytetrade.io/web3os/bfl/pkg/utils/certmanager"
 
 	iamV1alpha2 "github.com/beclab/api/iam/v1alpha2"
 	restful "github.com/emicklei/go-restful/v3"
-	"github.com/go-resty/resty/v2"
 	"github.com/pkg/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog/v2"
 )
 
 type Handler struct {
 	apis.Base
-	appServiceClient *app_service.Client
-	httpClient       *resty.Client
 }
 
 func New() *Handler {
-	return &Handler{
-		appServiceClient: app_service.NewAppServiceClient(),
-		httpClient:       resty.New().SetTimeout(30 * time.Second),
-	}
-}
-
-func (h *Handler) handleUnbindingUserZone(req *restful.Request, resp *restful.Response) {
-	ctx := req.Request.Context()
-
-	k8sClient, err := runtime.NewKubeClientWithToken(req.HeaderParameter(constants.UserAuthorizationTokenKey))
-	if err != nil {
-		response.HandleError(resp, errors.Wrap(err, "failed to get kube client"))
-		return
-	}
-	// delete user annotations
-	userOp, err := operator.NewUserOperator()
-	if err != nil {
-		response.HandleError(resp, errors.Errorf("unbind user zone: %v", err))
-		return
-	}
-
-	var terminusName string
-
-	var user *iamV1alpha2.User
-	user, err = userOp.GetUser("")
-	if err != nil {
-		response.HandleError(resp, errors.Errorf("unbind user zone: get user err, %v", err))
-		return
-	}
-
-	if terminusName = userOp.GetTerminusName(user); terminusName != "" {
-		cm := certmanager.NewCertManager(constants.TerminusName(terminusName))
-		if err = cm.DeleteDNSRecord(); err != nil {
-			log.Warnf("unbind user zone, delete dns record err, %v", err)
-		}
-	}
-
-	// remove annotations
-	userOp.UpdateUser(user, []func(*iamV1alpha2.User){
-		func(u *iamV1alpha2.User) {
-			delete(u.Annotations, constants.UserAnnotationTerminusNameKey)
-			delete(u.Annotations, constants.UserAnnotationZoneKey)
-			delete(u.Annotations, constants.EnableSSLTaskResultAnnotationKey)
-		},
-	})
-
-	// remove frp-agent
-	if err = k8sClient.Kubernetes().AppsV1().Deployments(constants.Namespace).Delete(ctx,
-		ReverseProxyAgentDeploymentName, metav1.DeleteOptions{}); err != nil {
-		log.Warnf("unbind user zone, delete frp-agent err, %v", err)
-	}
-
-	// delete ssl config
-	err = k8sClient.Kubernetes().CoreV1().ConfigMaps(constants.Namespace).Delete(ctx,
-		constants.NameSSLConfigMapName, metav1.DeleteOptions{})
-	if err != nil {
-		log.Warnf("unbind user zone, delete ssl configmap err, %v", err)
-	}
-
-	// delete re download cert cronjob
-	err = k8sClient.Kubernetes().BatchV1().CronJobs(constants.Namespace).Delete(ctx,
-		certmanager.ReDownloadCertCronJobName, metav1.DeleteOptions{})
-	if err != nil {
-		log.Warnf("unbind user zone, delete cronjob err, %v", err)
-	}
-
-	log.Info("finish unbind user user zone")
-
-	response.SuccessNoData(resp)
+	return &Handler{}
 }
 
 func (h *Handler) handleBindingUserZone(req *restful.Request, resp *restful.Response) {
+	username, userErr := runtime.RequestUser(req)
+	if userErr != nil {
+		response.HandleBadRequest(resp, userErr)
+		return
+	}
 	var post PostTerminusName
 	err := req.ReadEntity(&post)
 	if err != nil {
@@ -114,13 +43,13 @@ func (h *Handler) handleBindingUserZone(req *restful.Request, resp *restful.Resp
 		return
 	}
 
-	op, err := operator.NewUserOperator()
+	op, err := operator.NewUserOperatorWithContext(req.Request.Context())
 	if err != nil {
 		response.HandleBadRequest(resp, errors.Errorf("binding zone: %v", err))
 		return
 	}
 
-	user, err := op.GetUser(constants.Username)
+	user, err := op.GetUser(username)
 	if err != nil {
 		response.HandleError(resp, errors.Errorf("binding user zone: get user err, %v", err))
 		return
@@ -133,19 +62,9 @@ func (h *Handler) handleBindingUserZone(req *restful.Request, resp *restful.Resp
 		}
 	}
 
-	domain, err := op.GetDomain()
-	if err != nil {
-		response.HandleError(resp, errors.Errorf("user '%s' get olares domain error, %v", user.Name, err))
-		return
-	}
-
 	userPatches := []func(*iamV1alpha2.User){
 		func(u *iamV1alpha2.User) {
-			if domain == "" || domain == "olares.local" {
-				u.Annotations[constants.UserAnnotationTerminusNameKey] = u.Name
-			} else {
-				u.Annotations[constants.UserAnnotationTerminusNameKey] = string(constants.NewTerminusName(u.Name, domain))
-			}
+			u.Annotations[constants.UserAnnotationTerminusNameKey] = u.Name
 		},
 	}
 
@@ -173,265 +92,18 @@ func (h *Handler) handleBindingUserZone(req *restful.Request, resp *restful.Resp
 	response.SuccessNoData(resp)
 }
 
-func (h *Handler) handleActivate(req *restful.Request, resp *restful.Response) {
-	ctx := req.Request.Context()
-
-	var terminusName string
-	userOp, err := operator.NewUserOperator()
-	if err != nil {
-		err = fmt.Errorf("activate system: failed to create user operator: %v", err)
-		klog.Error(err)
-		response.HandleError(resp, err)
-		return
-	}
-	user, err := userOp.GetUser("")
-	if err != nil {
-		err = fmt.Errorf("activate system: failed to get user: %v", err)
-		klog.Error(err)
-		response.HandleError(resp, err)
-		return
-	}
-
-	terminusName = userOp.GetTerminusName(user)
-	if terminusName == "" {
-		response.HandleError(resp, errors.New("activate system: no olares name, please ensure olares name is bound first"))
-		return
-	}
-	if userOp.GetUserAnnotation(user, constants.UserAnnotationZoneKey) != "" || userOp.GetUserAnnotation(user, constants.UserTerminusWizardStatus) == string(constants.NetworkActivating) {
-		// already activated, or already in the process of activating, return success idempotently
-		response.SuccessNoData(resp)
-		return
-	}
-
-	if userOp.GetUserAnnotation(user, constants.UserTerminusWizardStatus) == string(constants.NetworkActivateFailed) {
-		// all the settings already persisted, just retry without reading payload
-		if e := userOp.UpdateUser(user, []func(*iamV1alpha2.User){
-			func(u *iamV1alpha2.User) {
-				u.Annotations[constants.UserTerminusWizardStatus] = string(constants.NetworkActivating)
-			},
-		}); e != nil {
-			err = fmt.Errorf("activate system: failed to mark status as activating: %v", e)
-			klog.Error(err)
-			response.HandleError(resp, err)
-			return
-		}
-		response.SuccessNoData(resp)
-		return
-	}
-
-	payload := ActivateRequest{}
-	if err := req.ReadEntity(&payload); err != nil {
-		err = fmt.Errorf("activate system: failed to parse activate request: %v", err)
-		klog.Error(err)
-		response.HandleError(resp, err)
-		return
-	}
-
-	log.Infow("activate system request", payload)
-
-	if err = userOp.UpdateUser(user, []func(*iamV1alpha2.User){
-		func(u *iamV1alpha2.User) {
-			if payload.Language != "" {
-				u.Annotations[constants.UserLanguage] = payload.Language
-			}
-			if payload.Location != "" {
-				u.Annotations[constants.UserLocation] = payload.Location
-			}
-			if payload.Timezone != "" {
-				u.Annotations[constants.UserTimezone] = payload.Timezone
-			}
-			if payload.Theme == "" {
-				payload.Theme = "light"
-			}
-			u.Annotations[constants.UserTheme] = payload.Theme
-		},
-	}); err != nil {
-		err = fmt.Errorf("activate system: failed to update user's locale settings: %v", err)
-		klog.Error(err)
-		response.HandleError(resp, err)
-		return
-	}
-
-	// for owner user, use the reverse proxy config from the payload
-	// for non-owner user, reuse the owner's reverse proxy config
-	isOwner := userOp.GetUserAnnotation(user, constants.UserAnnotationOwnerRole) == constants.RoleOwner
-
-	reverseProxyConf := &ReverseProxyConfig{}
-	if isOwner {
-		if payload.FRP.Host != "" {
-			reverseProxyConf.EnableFRP = true
-			reverseProxyConf.FRPServer = payload.FRP.Host
-			reverseProxyConf.FRPAuthMethod = FRPAuthMethodJWS
-		}
-	} else {
-		ownerUser, ownerErr := userOp.GetOwnerUser()
-		if ownerErr != nil {
-			err = fmt.Errorf("activate system: failed to get owner user for reverse proxy config: %v", ownerErr)
-			klog.Error(err)
-			response.HandleError(resp, err)
-			return
-		}
-		ownerNamespace := fmt.Sprintf(constants.UserspaceNameFormat, ownerUser.Name)
-		ownerConf, ownerConfErr := GetReverseProxyConfigFromNamespace(ctx, ownerNamespace)
-		if ownerConfErr != nil {
-			err = fmt.Errorf("activate system: failed to get owner's reverse proxy config: %v", ownerConfErr)
-			klog.Error(err)
-			response.HandleError(resp, err)
-			return
-		}
-		reverseProxyConf = ownerConf
-	}
-	// no matter whether the reverse proxy is enabled, we need to persist the configuration
-	// so that the configuration can be fetched by the frontend
-	// and the reverse proxy type can be set, enabling the ip watching mechanism to function normally
-	if err = reverseProxyConf.writeToReverseProxyConfigMap(ctx); err != nil {
-		err = fmt.Errorf("activate system: failed to persist network settings: %v", err)
-		klog.Error(err)
-		response.HandleError(resp, err)
-		return
-	}
-
-	// all settings persisted, mark the status as activating
-	// to trigger the activation watcher
-	if err = userOp.UpdateUser(user, []func(*iamV1alpha2.User){
-		func(u *iamV1alpha2.User) {
-			u.Annotations[constants.UserTerminusWizardStatus] = string(constants.NetworkActivating)
-		},
-	}); err != nil {
-		err = fmt.Errorf("activate system: failed to mark status as activating: %v", err)
-		klog.Error(err)
-		response.HandleError(resp, err)
-		return
-	}
-
-	response.SuccessNoData(resp)
-}
-
-func (h *Handler) handleChangeReverseProxyConfig(req *restful.Request, resp *restful.Response) {
-	ctx := req.Request.Context()
-	conf := &ReverseProxyConfig{}
-	if err := req.ReadEntity(conf); err != nil {
-		response.HandleError(resp, err)
-		return
-	}
-	// external_network_off is an internal field controlled by the owner BFL only.
-	// Preserve the existing value if present to prevent frontend from modifying it.
-	{
-		existing, err := GetReverseProxyConfig(ctx)
-		if err == nil && existing != nil {
-			conf.ExternalNetworkOff = existing.ExternalNetworkOff
-		}
-	}
-	if err := conf.Check(); err != nil {
-		response.HandleError(resp, errors.Wrap(err, "invalid reverse proxy config"))
-		return
-	}
-
-	if err := conf.writeToReverseProxyConfigMap(ctx); err != nil {
-		response.HandleError(resp, errors.Wrap(err, "failed to write reverse proxy config"))
-		return
-	}
-
-	response.SuccessNoData(resp)
-}
-
-func (h *Handler) handleGetReverseProxyConfig(req *restful.Request, resp *restful.Response) {
-	ctx := req.Request.Context()
-	conf, err := GetReverseProxyConfig(ctx)
-	if err != nil {
-		response.HandleError(resp, errors.Wrap(err, "failed to get reverse proxy config"))
-		return
-	}
-	response.Success(resp, conf)
-}
-
-func (h *Handler) handleGetExternalNetworkSwitch(req *restful.Request, resp *restful.Response) {
-	ctx := req.Request.Context()
-	cfg, _, err := external_network.Load(ctx)
-	if err != nil {
-		response.HandleError(resp, err)
-		return
-	}
-	view := ExternalNetworkSwitchView{
-		Spec: ExternalNetworkSwitchSpecView{Disabled: cfg.Spec.Disabled},
-		Status: ExternalNetworkSwitchStatusView{
-			Phase:     cfg.Status.Phase,
-			Message:   cfg.Status.Message,
-			UpdatedAt: cfg.Status.UpdatedAt,
-		},
-	}
-	response.Success(resp, view)
-}
-
-func (h *Handler) handleUpdateExternalNetworkSwitch(req *restful.Request, resp *restful.Response) {
-	ctx := req.Request.Context()
-
-	userOp, err := operator.NewUserOperator()
-	if err != nil {
-		response.HandleError(resp, err)
-		return
-	}
-	user, err := userOp.GetUser("")
-	if err != nil {
-		response.HandleError(resp, err)
-		return
-	}
-	if userOp.GetUserAnnotation(user, constants.UserAnnotationOwnerRole) != constants.RoleOwner {
-		response.HandleBadRequest(resp, errors.New("only owner can update external network switch"))
-		return
-	}
-
-	var payload ExternalNetworkSwitchUpdateRequest
-	if err := req.ReadEntity(&payload); err != nil {
-		response.HandleBadRequest(resp, err)
-		return
-	}
-
-	current, _, err := external_network.Load(ctx)
-	if err != nil {
-		response.HandleError(resp, err)
-		return
-	}
-	// idempotent: if the intended spec is already set and not failed, return success
-	if payload.Disabled == current.Spec.Disabled && current.Status.Phase != external_network.PhaseFailed {
-		response.SuccessNoData(resp)
-		return
-	}
-	if current.Spec.Disabled != payload.Disabled && current.Status.Phase == external_network.PhaseProcessing {
-		response.HandleError(resp, errors.New("external network config is being processed"))
-		return
-	}
-
-	terminusName := userOp.GetUserAnnotation(user, constants.UserAnnotationTerminusNameKey)
-	// validate the integration account is available before updating spec.
-	if _, err := external_network.GetIntegrationAccount(ctx, user.Name, terminusName); err != nil {
-		response.HandleError(resp, errors.Wrap(err, "failed to retrieve integration account token"))
-		return
-	}
-
-	_, err = external_network.Upsert(ctx, func(sw *external_network.SwitchConfig) error {
-		sw.Spec.Disabled = payload.Disabled
-		sw.Status.StartedAt = time.Now().UTC().Format(time.RFC3339)
-		sw.Status.Phase = external_network.PhaseProcessing
-		sw.Status.TaskID = ""
-		sw.Status.Message = ""
-		return nil
-	})
-	if err != nil {
-		response.HandleError(resp, err)
-		return
-	}
-
-	response.SuccessNoData(resp)
-}
-
 func (h *Handler) handleGetLauncherAccessPolicy(req *restful.Request, resp *restful.Response) {
-	userOp, err := operator.NewUserOperator()
+	username, userErr := runtime.RequestUser(req)
+	if userErr != nil {
+		response.HandleBadRequest(resp, userErr)
+		return
+	}
+	userOp, err := operator.NewUserOperatorWithContext(req.Request.Context())
 	if err != nil {
 		response.HandleError(resp, errors.Errorf("get launcher access policy: new user operator err, %v", err))
 		return
 	}
-	user, err := userOp.GetUser(constants.Username)
+	user, err := userOp.GetUser(username)
 	if err != nil {
 		response.HandleError(resp, errors.Errorf("get launcher access policy: get user err, %v", err))
 		return
@@ -483,6 +155,11 @@ func (h *Handler) configDefaultAllowCIDR(req *restful.Request, level AccessLevel
 }
 
 func (h *Handler) handleUpdateLauncherAccessPolicy(req *restful.Request, resp *restful.Response) {
+	username, userErr := runtime.RequestUser(req)
+	if userErr != nil {
+		response.HandleBadRequest(resp, userErr)
+		return
+	}
 	var policy LauncherAccessPolicy
 	req.ReadEntity(&policy)
 
@@ -498,11 +175,11 @@ func (h *Handler) handleUpdateLauncherAccessPolicy(req *restful.Request, resp *r
 	}
 
 	err := func() error {
-		userOp, err := operator.NewUserOperator()
+		userOp, err := operator.NewUserOperatorWithContext(req.Request.Context())
 		if err != nil {
 			return errors.Errorf("new user operator err, %v", err)
 		}
-		user, err := userOp.GetUser(constants.Username)
+		user, err := userOp.GetUser(username)
 		if err != nil {
 			return errors.Errorf("get user err, %v", err)
 		}
@@ -566,12 +243,17 @@ func (h *Handler) handleUpdateLauncherAccessPolicy(req *restful.Request, resp *r
 }
 
 func (h *Handler) handleGetPublicDomainAccessPolicy(req *restful.Request, resp *restful.Response) {
-	userOp, err := operator.NewUserOperator()
+	username, userErr := runtime.RequestUser(req)
+	if userErr != nil {
+		response.HandleBadRequest(resp, userErr)
+		return
+	}
+	userOp, err := operator.NewUserOperatorWithContext(req.Request.Context())
 	if err != nil {
 		response.HandleError(resp, errors.Errorf("get public domain access policy: new user operator err, %v", err))
 		return
 	}
-	user, err := userOp.GetUser(constants.Username)
+	user, err := userOp.GetUser(username)
 	if err != nil {
 		response.HandleError(resp, errors.Errorf("get public domain access policy: get user err, %v", err))
 		return
@@ -585,6 +267,11 @@ func (h *Handler) handleGetPublicDomainAccessPolicy(req *restful.Request, resp *
 }
 
 func (h *Handler) handleUpdatePublicDomainAccessPolicy(req *restful.Request, resp *restful.Response) {
+	username, userErr := runtime.RequestUser(req)
+	if userErr != nil {
+		response.HandleBadRequest(resp, userErr)
+		return
+	}
 	var policy PublicDomainAccessPolicy
 	req.ReadEntity(&policy)
 
@@ -596,11 +283,11 @@ func (h *Handler) handleUpdatePublicDomainAccessPolicy(req *restful.Request, res
 	}
 
 	err := func() error {
-		userOp, err := operator.NewUserOperator()
+		userOp, err := operator.NewUserOperatorWithContext(req.Request.Context())
 		if err != nil {
 			return errors.Errorf("new user operator err, %v", err)
 		}
-		user, err := userOp.GetUser(constants.Username)
+		user, err := userOp.GetUser(username)
 		if err != nil {
 			return errors.Errorf("get user err, %v", err)
 		}
@@ -624,45 +311,22 @@ func (h *Handler) handleUpdatePublicDomainAccessPolicy(req *restful.Request, res
 }
 
 func (h *Handler) handleUpdateLocale(req *restful.Request, resp *restful.Response) {
+	username, userErr := runtime.RequestUser(req)
+	if userErr != nil {
+		response.HandleBadRequest(resp, userErr)
+		return
+	}
 	var locale apis.PostLocale
-	userOp, err := operator.NewUserOperator()
+	userOp, err := operator.NewUserOperatorWithContext(req.Request.Context())
 	if err != nil {
 		response.HandleError(resp, errors.Errorf("update user locale err: new user operator err, %v", err))
 		return
 	}
 
-	user, err := userOp.GetUser(constants.Username)
+	user, err := userOp.GetUser(username)
 	if err != nil {
 		response.HandleError(resp, errors.Errorf("update user locale err: get user err, %v", err))
 		return
-	}
-
-	defer func() {
-		if err != nil {
-			if user.Annotations[constants.UserTerminusWizardStatus] != string(constants.Completed) {
-				if e := userOp.UpdateUser(user, []func(*iamV1alpha2.User){
-					func(u *iamV1alpha2.User) {
-						u.Annotations[constants.UserTerminusWizardStatus] = string(constants.SystemActivateFailed)
-					},
-				}); e != nil {
-					klog.Errorf("update user err, %v", err)
-				}
-			}
-		}
-	}()
-
-	if user.Annotations[constants.UserTerminusWizardStatus] != string(constants.Completed) {
-		err = userOp.UpdateUser(user, []func(*iamV1alpha2.User){
-			func(u *iamV1alpha2.User) {
-				u.Annotations[constants.UserTerminusWizardStatus] = string(constants.SystemActivating)
-			},
-		})
-
-		if err != nil {
-			klog.Errorf("update user err, %v", err)
-			response.HandleError(resp, errors.Errorf("update user locale data error: %v", err))
-			return
-		}
 	}
 
 	err = req.ReadEntity(&locale)
@@ -672,29 +336,16 @@ func (h *Handler) handleUpdateLocale(req *restful.Request, resp *restful.Respons
 		return
 	}
 
-	// Location has no backing UserEnv, so it stays on the user annotation; also
-	// advance the wizard status here. language/theme/timezone are persisted to
-	// the UserEnv CRs below.
-	err = func() error {
-		if err = userOp.UpdateUser(user, []func(*iamV1alpha2.User){
+	if locale.Location != "" {
+		err = userOp.UpdateUser(user, []func(*iamV1alpha2.User){
 			func(u *iamV1alpha2.User) {
-				if locale.Location != "" {
-					u.Annotations[constants.UserLocation] = locale.Location
-				}
-
-				if u.Annotations[constants.UserTerminusWizardStatus] != string(constants.Completed) {
-					u.Annotations[constants.UserTerminusWizardStatus] = string(constants.WaitActivateNetwork)
-				}
+				u.Annotations[constants.UserLocation] = locale.Location
 			},
-		}); err != nil {
-			return errors.Errorf("update user err, %v", err)
+		})
+		if err != nil {
+			response.HandleError(resp, errors.Wrap(err, "update user location"))
+			return
 		}
-		return nil
-	}()
-
-	if err != nil {
-		response.HandleError(resp, errors.Errorf("update user locale err: %v", err))
-		return
 	}
 
 	// language/theme/timezone are owned by the per-user UserEnvs (see
@@ -721,7 +372,7 @@ func (h *Handler) handleUpdateLocale(req *restful.Request, resp *restful.Respons
 		if ev.val == "" {
 			continue
 		}
-		ok, e := userenv.SetValue(ctx, c, constants.Username, ev.env, ev.val)
+		ok, e := userenv.SetValue(ctx, c, username, ev.env, ev.val)
 		if e != nil {
 			err = e
 			response.HandleError(resp, errors.Errorf("update user locale err: set userenv %s err, %v", ev.env, e))
@@ -738,6 +389,11 @@ func (h *Handler) handleUpdateLocale(req *restful.Request, resp *restful.Respons
 }
 
 func (h *Handler) handlerUpdateUserLoginBackground(req *restful.Request, resp *restful.Response) {
+	username, userErr := runtime.RequestUser(req)
+	if userErr != nil {
+		response.HandleBadRequest(resp, userErr)
+		return
+	}
 	var background struct {
 		Background string `json:"background"`
 		Style      string `json:"style"`
@@ -750,13 +406,13 @@ func (h *Handler) handlerUpdateUserLoginBackground(req *restful.Request, resp *r
 		return
 	}
 
-	userOp, err := operator.NewUserOperator()
+	userOp, err := operator.NewUserOperatorWithContext(req.Request.Context())
 	if err != nil {
 		response.HandleError(resp, errors.Errorf("update user login background err: new user operator err, %v", err))
 		return
 	}
 
-	user, err := userOp.GetUser(constants.Username)
+	user, err := userOp.GetUser(username)
 	if err != nil {
 		response.HandleError(resp, errors.Errorf("update user login background err: get user err, %v", err))
 		return
@@ -779,6 +435,11 @@ func (h *Handler) handlerUpdateUserLoginBackground(req *restful.Request, resp *r
 }
 
 func (h *Handler) handlerUpdateUserAvatar(req *restful.Request, resp *restful.Response) {
+	username, userErr := runtime.RequestUser(req)
+	if userErr != nil {
+		response.HandleBadRequest(resp, userErr)
+		return
+	}
 	var avatar struct {
 		Avatar string `json:"avatar"`
 	}
@@ -790,13 +451,13 @@ func (h *Handler) handlerUpdateUserAvatar(req *restful.Request, resp *restful.Re
 		return
 	}
 
-	userOp, err := operator.NewUserOperator()
+	userOp, err := operator.NewUserOperatorWithContext(req.Request.Context())
 	if err != nil {
 		response.HandleError(resp, errors.Errorf("update user avatar err: new user operator err, %v", err))
 		return
 	}
 
-	user, err := userOp.GetUser(constants.Username)
+	user, err := userOp.GetUser(username)
 	if err != nil {
 		response.HandleError(resp, errors.Errorf("update user avatar err: get user err, %v", err))
 		return

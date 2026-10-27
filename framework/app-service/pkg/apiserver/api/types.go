@@ -85,23 +85,6 @@ type ReleaseVersionData struct {
 	Version string `json:"version"`
 }
 
-type UserAppsResponse struct {
-	Response
-	Data UserAppsStatusRespData `json:"data"`
-}
-
-type UserAppsStatusRespData struct {
-	User   string        `json:"user"`
-	Status string        `json:"status"`
-	Ports  UserAppsPorts `json:"ports"`
-	Error  string        `json:"error"`
-}
-
-type UserAppsPorts struct {
-	Desktop int32 `json:"desktop"`
-	Wizard  int32 `json:"wizard"`
-}
-
 // RequirementResp represents a response for application requirement.
 type RequirementResp struct {
 	Response

@@ -3,8 +3,12 @@ package systemcomponents
 import "testing"
 
 func TestDefaultReadinessDoesNotWaitForPersonalServices(t *testing.T) {
+	bfl := false
 	network := map[string]bool{"headscale": false, "tailscale": false}
 	for _, c := range Default() {
+		if c.Name == "bfl" && c.Namespace == NamespaceOsFrontend && c.Kind == Deployment && c.Presence == Required {
+			bfl = true
+		}
 		if c.isPerUser() {
 			t.Fatalf("requires a user before setup: %+v", c)
 		}
@@ -17,9 +21,12 @@ func TestDefaultReadinessDoesNotWaitForPersonalServices(t *testing.T) {
 			}
 			network[c.Name] = true
 		}
-		if c.Namespace == "user-space" || c.Namespace == "user-system" || c.Namespace == NamespaceOsFrontend {
+		if c.Namespace == "user-space" || c.Namespace == "user-system" {
 			t.Fatalf("base readiness assumes a shared user component: %+v", c)
 		}
+	}
+	if !bfl {
+		t.Fatal("missing shared BFL")
 	}
 	for name, found := range network {
 		if !found {

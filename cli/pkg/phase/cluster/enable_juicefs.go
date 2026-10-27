@@ -18,14 +18,7 @@ import (
 	"github.com/beclab/Olares/cli/pkg/storage"
 	"github.com/beclab/Olares/cli/pkg/terminus"
 	"github.com/beclab/Olares/cli/pkg/utils"
-	iamv1alpha2 "github.com/beclab/api/iam/v1alpha2"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kruntime "k8s.io/apimachinery/pkg/runtime"
-	k8sclientset "k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
-	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // EnableJuiceFS builds the pipeline that converts a single-node Olares master
@@ -320,17 +313,8 @@ func (m *ReRenderFsnotifyChartsModule) Init() {
 	}
 }
 
-// ReRenderFsnotifyCharts re-upgrades, with fs_type=jfs and --reuse-values:
-//   - the os-platform release, which carries the cluster-scoped fsnotify proxy
-//     and daemon (gated on fs_type==jfs);
-//   - each user's per-user fsnotify release (fsnotify for the admin/owner,
-//     fsnotify-<user> for others).
-//
-// Only the fs_type-gated templates change; everything else renders identically
-// thanks to --reuse-values, so this is effectively a no-op for the rest of the
-// release. fsnotify is the only consumer of fs_type that actually changes
-// behavior (the file-watch bridge needed because inotify does not work over the
-// JuiceFS FUSE mount).
+// ReRenderFsnotifyCharts upgrades the os-platform release with fs_type=jfs
+// and --reuse-values to deploy the shared fsnotify proxy and daemon.
 type ReRenderFsnotifyCharts struct {
 	common.KubeAction
 }
@@ -348,7 +332,7 @@ func (t *ReRenderFsnotifyCharts) Execute(runtime connector.Runtime) error {
 
 	jfsVals := map[string]interface{}{"fs_type": "jfs"}
 
-	// 1. cluster-scoped fsnotify lives in the os-platform release
+	// Shared fsnotify lives in the os-platform release.
 	platformActionConfig, platformSettings, err := utils.InitConfig(config, common.NamespaceOsPlatform)
 	if err != nil {
 		return err
@@ -361,42 +345,6 @@ func (t *ReRenderFsnotifyCharts) Execute(runtime connector.Runtime) error {
 		return fmt.Errorf("failed to re-render %s release: %w", common.ChartNameOSPlatform, err)
 	}
 
-	// 2. per-user fsnotify charts
-	users, adminUser, err := listOlaresUsers(config)
-	if err != nil {
-		// the cluster-level component is the critical one; don't fail the whole
-		// migration if user enumeration has a transient problem
-		logger.Warnf("failed to list users for per-user fsnotify re-render: %v", err)
-		return nil
-	}
-	fsnotifyChartPath := path.Join(runtime.GetInstallerDir(), "wizard", "config", "apps", "fsnotify")
-	for _, user := range users {
-		ns := fmt.Sprintf("user-space-%s", user)
-		releaseName := "fsnotify"
-		if user != adminUser {
-			releaseName = fmt.Sprintf("fsnotify-%s", user)
-		}
-		userActionConfig, userSettings, err := utils.InitConfig(config, ns)
-		if err != nil {
-			logger.Warnf("failed to init helm config for user %s: %v", user, err)
-			continue
-		}
-		// Explicitly pin bfl.username to this user. The per-user fsnotify chart
-		// derives its target namespace (user-system-<username>) from this value;
-		// relying on --reuse-values alone proved unreliable and could render a
-		// user's resources into another user's namespace.
-		userVals := map[string]interface{}{
-			"fs_type": "jfs",
-			"bfl":     map[string]interface{}{"username": user},
-		}
-		uctx, ucancel := context.WithTimeout(context.Background(), 3*time.Minute)
-		logger.Infof("re-rendering fsnotify release %q in %s with fs_type=jfs", releaseName, ns)
-		if err := utils.UpgradeCharts(uctx, userActionConfig, userSettings, releaseName, fsnotifyChartPath, "", ns, userVals, true); err != nil {
-			logger.Warnf("failed to re-render fsnotify for user %s: %v", user, err)
-		}
-		ucancel()
-	}
-
 	// The cluster-scoped fsnotify re-render (the critical step) succeeded, so
 	// the migration is now fully finalized. Record it so subsequent
 	// enable-juicefs runs short-circuit instead of resuming finalization.
@@ -405,48 +353,4 @@ func (t *ReRenderFsnotifyCharts) Execute(runtime connector.Runtime) error {
 	}
 
 	return nil
-}
-
-// listOlaresUsers returns the names of all active Olares users (those with a
-// user-space namespace) and the name of the admin/owner user.
-func listOlaresUsers(config *rest.Config) (users []string, adminUser string, err error) {
-	scheme := kruntime.NewScheme()
-	if err := iamv1alpha2.AddToScheme(scheme); err != nil {
-		return nil, "", fmt.Errorf("failed to add user scheme: %w", err)
-	}
-	userClient, err := ctrlclient.New(config, ctrlclient.Options{Scheme: scheme})
-	if err != nil {
-		return nil, "", fmt.Errorf("failed to create user client: %w", err)
-	}
-	k8sClient, err := k8sclientset.NewForConfig(config)
-	if err != nil {
-		return nil, "", fmt.Errorf("failed to create kubernetes client: %w", err)
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
-	defer cancel()
-	var userList iamv1alpha2.UserList
-	if err := userClient.List(ctx, &userList); err != nil {
-		return nil, "", fmt.Errorf("failed to list users: %w", err)
-	}
-
-	for _, user := range userList.Items {
-		if user.Status.State == "Failed" || user.Status.State == "Deleting" || user.DeletionTimestamp != nil {
-			continue
-		}
-		nsCtx, nsCancel := context.WithTimeout(context.Background(), 1*time.Minute)
-		_, nsErr := k8sClient.CoreV1().Namespaces().Get(nsCtx, fmt.Sprintf("user-space-%s", user.Name), metav1.GetOptions{})
-		nsCancel()
-		if nsErr != nil {
-			if apierrors.IsNotFound(nsErr) {
-				continue
-			}
-			return nil, "", fmt.Errorf("failed to get user-space namespace for %s: %w", user.Name, nsErr)
-		}
-		users = append(users, user.Name)
-		if role, ok := user.Annotations["bytetrade.io/owner-role"]; ok && role == "owner" {
-			adminUser = user.Name
-		}
-	}
-	return users, adminUser, nil
 }

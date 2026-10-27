@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"io"
@@ -40,6 +41,10 @@ func RemoteIp(req *http.Request) string {
 
 // GetMyExternalIPAddr get my network outgoing ip address
 func GetMyExternalIPAddr() string {
+	return GetExternalIPAddr(context.Background())
+}
+
+func GetExternalIPAddr(ctx context.Context) string {
 	type httpBin struct {
 		Origin string `json:"origin"`
 	}
@@ -110,7 +115,14 @@ func GetMyExternalIPAddr() string {
 		},
 	}
 	for _, site := range sites {
-		resp, err := client.Get(site.url)
+		if ctx.Err() != nil {
+			return ""
+		}
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, site.url, nil)
+		if err != nil {
+			continue
+		}
+		resp, err := client.Do(req)
 		if err != nil {
 			log.Warnf("failed to get external ip from %s, %v", site.url, err)
 			continue

@@ -15,7 +15,6 @@ import (
 	"bytetrade.io/web3os/bfl/pkg/app_service/v1"
 	"bytetrade.io/web3os/bfl/pkg/constants"
 	"bytetrade.io/web3os/bfl/pkg/utils"
-	"bytetrade.io/web3os/bfl/pkg/utils/certmanager"
 	appv1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	iamV1alpha2 "github.com/beclab/api/iam/v1alpha2"
@@ -32,6 +31,11 @@ import (
 )
 
 func (h *Handler) setupAppPolicy(req *restful.Request, resp *restful.Response) {
+	username, userErr := runtime.RequestUser(req)
+	if userErr != nil {
+		response.HandleBadRequest(resp, userErr)
+		return
+	}
 	appname := req.PathParameter(ParamAppName)
 
 	// fetch token from request
@@ -48,7 +52,7 @@ func (h *Handler) setupAppPolicy(req *restful.Request, resp *restful.Response) {
 		app_service.ApplicationSettingsPolicyKey: policy,
 	}
 
-	appServiceClient := app_service.NewAppServiceClient()
+	appServiceClient := app_service.NewAppServiceClient().ForUser(username)
 
 	ret, err := appServiceClient.SetupAppPolicy(appname, token, settings)
 	if err != nil {
@@ -60,12 +64,17 @@ func (h *Handler) setupAppPolicy(req *restful.Request, resp *restful.Response) {
 }
 
 func (h *Handler) getAppPolicy(req *restful.Request, resp *restful.Response) {
+	username, userErr := runtime.RequestUser(req)
+	if userErr != nil {
+		response.HandleBadRequest(resp, userErr)
+		return
+	}
 	appname := req.PathParameter(ParamAppName)
 
 	// fetch token from request
 	token := req.Request.Header.Get(constants.UserAuthorizationTokenKey)
 
-	appServiceClient := app_service.NewAppServiceClient()
+	appServiceClient := app_service.NewAppServiceClient().ForUser(username)
 
 	settings, err := appServiceClient.GetAppPolicy(appname, token)
 	if err != nil {
@@ -89,7 +98,7 @@ func (h *Handler) getAppPolicy(req *restful.Request, resp *restful.Response) {
 	response.Success(resp, policy)
 }
 
-func (h *Handler) handleCertConfig(ctx context.Context, customDomain map[string]interface{}) error {
+func (h *Handler) handleCertConfig(ctx context.Context, username string, customDomain map[string]interface{}) error {
 	cert, key, thirdPartyDomain := customDomain[constants.AppEntranceCertConfigMapCertKey], customDomain[constants.AppEntranceCertConfigMapKeyKey], customDomain[constants.ApplicationThirdPartyDomain]
 	if cert == nil || key == nil || thirdPartyDomain == nil {
 		log.Infof("skip storing empty cert config, cert: %s, key: %s, thirdPartyDomain: %s", cert, key, thirdPartyDomain)
@@ -118,14 +127,14 @@ func (h *Handler) handleCertConfig(ctx context.Context, customDomain map[string]
 	if err != nil {
 		return err
 	}
-	err = client.Kubernetes().CoreV1().ConfigMaps(constants.Namespace).Delete(ctx, configMapName, metav1.DeleteOptions{})
+	err = client.Kubernetes().CoreV1().ConfigMaps(runtime.UserNamespace(username)).Delete(ctx, configMapName, metav1.DeleteOptions{})
 	if err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      configMapName,
-			Namespace: constants.Namespace,
+			Namespace: runtime.UserNamespace(username),
 			Labels: map[string]string{
 				constants.AppEntranceCertConfigMapLabel: "true",
 			},
@@ -136,17 +145,17 @@ func (h *Handler) handleCertConfig(ctx context.Context, customDomain map[string]
 			constants.AppEntranceCertConfigMapZoneKey: zoneData,
 		},
 	}
-	_, err = client.Kubernetes().CoreV1().ConfigMaps(constants.Namespace).Create(ctx, configMap, metav1.CreateOptions{})
+	_, err = client.Kubernetes().CoreV1().ConfigMaps(runtime.UserNamespace(username)).Create(ctx, configMap, metav1.CreateOptions{})
 	return err
 }
 
-func (h *Handler) checkCertExists(ctx context.Context, domainName string) error {
+func (h *Handler) checkCertExists(ctx context.Context, username, domainName string) error {
 	configMapName := fmt.Sprintf(constants.AppEntranceCertConfigMapNameTpl, domainName)
 	client, err := runtime.NewKubeClientInCluster()
 	if err != nil {
 		return err
 	}
-	_, err = client.Kubernetes().CoreV1().ConfigMaps(constants.Namespace).Get(ctx, configMapName, metav1.GetOptions{})
+	_, err = client.Kubernetes().CoreV1().ConfigMaps(runtime.UserNamespace(username)).Get(ctx, configMapName, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			return errors.New("current reverse proxy mode is FRP, the HTTPS certificate and key for custom domain must be uploaded")
@@ -157,6 +166,11 @@ func (h *Handler) checkCertExists(ctx context.Context, domainName string) error 
 }
 
 func (h *Handler) setupAppCustomDomain(req *restful.Request, resp *restful.Response) {
+	username, userErr := runtime.RequestUser(req)
+	if userErr != nil {
+		response.HandleBadRequest(resp, userErr)
+		return
+	}
 	appName := req.PathParameter(ParamAppName)
 	entranceName := req.PathParameter(ParamEntranceName)
 
@@ -176,10 +190,10 @@ func (h *Handler) setupAppCustomDomain(req *restful.Request, resp *restful.Respo
 	}
 
 	var settings app_service.ApplicationsSettings
-	appServiceClient := app_service.NewAppServiceClient()
+	appServiceClient := app_service.NewAppServiceClient().ForUser(username)
 
 	var zone string
-	_, zone, err = h.getUserInfo()
+	_, zone, err = h.getUserInfo(username)
 	if err != nil {
 		response.HandleError(resp, err)
 		return
@@ -211,7 +225,7 @@ func (h *Handler) setupAppCustomDomain(req *restful.Request, resp *restful.Respo
 			response.HandleError(resp, errors.New("custom domain can not be set when auth level is private"))
 			return
 		}
-		if err := h.handleCertConfig(req.Request.Context(), customDomain); err != nil {
+		if err := h.handleCertConfig(req.Request.Context(), username, customDomain); err != nil {
 			response.HandleError(resp, err)
 			return
 		}
@@ -262,16 +276,18 @@ func (h *Handler) setupAppCustomDomain(req *restful.Request, resp *restful.Respo
 	case constants.CustomDomainAdd:
 		formatSettings(customDomain, zone, "", "")
 		if operate == constants.CustomDomainUpdate || operate == constants.CustomDomainAdd {
-			op, err := operator.NewUserOperator()
+			op, err := operator.NewUserOperatorWithContext(req.Request.Context())
 			if err != nil {
 				response.HandleError(resp, fmt.Errorf("create user operator failed: %v", err))
+				return
 			}
 			reverseProxyType, err := op.GetReverseProxyType()
 			if err != nil {
 				response.HandleError(resp, fmt.Errorf("get reverse proxy type failed: %v", err))
+				return
 			}
 			if reverseProxyType == constants.ReverseProxyTypeFRP {
-				err := h.checkCertExists(req.Request.Context(), reqCustomDomain)
+				err := h.checkCertExists(req.Request.Context(), username, reqCustomDomain)
 				if err != nil {
 					response.HandleError(resp, err)
 					return
@@ -299,6 +315,11 @@ func (h *Handler) setupAppCustomDomain(req *restful.Request, resp *restful.Respo
 }
 
 func (h *Handler) listEntrancesWithCustomDomain(req *restful.Request, resp *restful.Response) {
+	username, userErr := runtime.RequestUser(req)
+	if userErr != nil {
+		response.HandleBadRequest(resp, userErr)
+		return
+	}
 	config, err := ctrl.GetConfig()
 	if err != nil {
 		response.HandleError(resp, err)
@@ -326,11 +347,11 @@ func (h *Handler) listEntrancesWithCustomDomain(req *restful.Request, resp *rest
 		isShared := appv1.IsShared(app)
 		// v1/v2: only this user's apps. shared: every app is shared but the
 		// caller's customDomain blob lives under UserSettings[Username].
-		if !isShared && app.Spec.Owner != constants.Username {
+		if !isShared && app.Spec.Owner != username {
 			continue
 		}
 
-		effectiveSettings := app.EffectiveSettings(constants.Username)
+		effectiveSettings := app.EffectiveSettings(username)
 		customDomainSettingsStr, ok := effectiveSettings[constants.ApplicationCustomDomain]
 		if !ok || customDomainSettingsStr == "" {
 			continue
@@ -342,7 +363,7 @@ func (h *Handler) listEntrancesWithCustomDomain(req *restful.Request, resp *rest
 			continue
 		}
 		// EffectiveEntrances picks up per-user AuthLevel overlays for shared.
-		for _, entrance := range app.EffectiveEntrances(constants.Username) {
+		for _, entrance := range app.EffectiveEntrances(username) {
 			entranceSetting := customDomainSettings[entrance.Name]
 			if entranceSetting == nil {
 				continue
@@ -362,6 +383,11 @@ func (h *Handler) listEntrancesWithCustomDomain(req *restful.Request, resp *rest
 }
 
 func (h *Handler) finishAppCustomDomainCnameTarget(req *restful.Request, resp *restful.Response) {
+	username, userErr := runtime.RequestUser(req)
+	if userErr != nil {
+		response.HandleBadRequest(resp, userErr)
+		return
+	}
 	appName := req.PathParameter(ParamAppName)
 	entranceName := req.PathParameter(ParamEntranceName)
 	// fetch token from request
@@ -369,7 +395,7 @@ func (h *Handler) finishAppCustomDomainCnameTarget(req *restful.Request, resp *r
 	var err error
 
 	var settings app_service.ApplicationsSettings
-	appServiceClient := app_service.NewAppServiceClient()
+	appServiceClient := app_service.NewAppServiceClient().ForUser(username)
 	ret, _ := appServiceClient.GetAppCustomDomain(appName, token)
 	if ret == nil {
 		response.HandleError(resp, errors.New("app custom domain not found"))
@@ -423,12 +449,17 @@ func (h *Handler) finishAppCustomDomainCnameTarget(req *restful.Request, resp *r
 }
 
 func (h *Handler) getAppCustomDomain(req *restful.Request, resp *restful.Response) {
+	username, userErr := runtime.RequestUser(req)
+	if userErr != nil {
+		response.HandleBadRequest(resp, userErr)
+		return
+	}
 	appname := req.PathParameter(ParamAppName)
 
 	// fetch token from request
 	token := req.Request.Header.Get(constants.UserAuthorizationTokenKey)
 
-	appServiceClient := app_service.NewAppServiceClient()
+	appServiceClient := app_service.NewAppServiceClient().ForUser(username)
 	entrances, err := appServiceClient.GetAppEntrances(appname, token)
 	if err != nil {
 		response.HandleError(resp, err)
@@ -440,7 +471,7 @@ func (h *Handler) getAppCustomDomain(req *restful.Request, resp *restful.Respons
 	}
 
 	var zone string
-	_, zone, err = h.getUserInfo()
+	_, zone, err = h.getUserInfo(username)
 	if err != nil {
 		klog.Errorf("getAppCustomDomain: get user info error %v", err)
 		response.HandleError(resp, err)
@@ -484,11 +515,16 @@ func (h *Handler) getAppCustomDomain(req *restful.Request, resp *restful.Respons
 }
 
 func (h *Handler) getAppEntrances(req *restful.Request, resp *restful.Response) {
+	username, userErr := runtime.RequestUser(req)
+	if userErr != nil {
+		response.HandleBadRequest(resp, userErr)
+		return
+	}
 	appName := req.PathParameter(ParamAppName)
 	// fetch token from request
 	token := req.Request.Header.Get(constants.UserAuthorizationTokenKey)
 
-	appServiceClient := app_service.NewAppServiceClient()
+	appServiceClient := app_service.NewAppServiceClient().ForUser(username)
 
 	entrances, err := appServiceClient.GetAppEntrances(appName, token)
 	if err != nil {
@@ -499,6 +535,11 @@ func (h *Handler) getAppEntrances(req *restful.Request, resp *restful.Response) 
 }
 
 func (h *Handler) setupAppAuthorizationLevel(req *restful.Request, resp *restful.Response) {
+	username, userErr := runtime.RequestUser(req)
+	if userErr != nil {
+		response.HandleBadRequest(resp, userErr)
+		return
+	}
 	appName := req.PathParameter(ParamAppName)
 	entranceName := req.PathParameter(ParamEntranceName)
 
@@ -523,7 +564,7 @@ func (h *Handler) setupAppAuthorizationLevel(req *restful.Request, resp *restful
 		app_service.ApplicationAuthorizationLevelKey: authLevel,
 	}
 
-	appServiceClient := app_service.NewAppServiceClient()
+	appServiceClient := app_service.NewAppServiceClient().ForUser(username)
 
 	ret, err := appServiceClient.SetupAppAuthorizationLevel(appName, entranceName, token, settings)
 	if err != nil {
@@ -535,6 +576,11 @@ func (h *Handler) setupAppAuthorizationLevel(req *restful.Request, resp *restful
 }
 
 func (h *Handler) setupAppEntrancePolicy(req *restful.Request, resp *restful.Response) {
+	username, userErr := runtime.RequestUser(req)
+	if userErr != nil {
+		response.HandleBadRequest(resp, userErr)
+		return
+	}
 	appName := req.PathParameter(ParamAppName)
 	entranceName := req.PathParameter(ParamEntranceName)
 
@@ -552,7 +598,7 @@ func (h *Handler) setupAppEntrancePolicy(req *restful.Request, resp *restful.Res
 		app_service.ApplicationSettingsPolicyKey: policy,
 	}
 
-	appServiceClient := app_service.NewAppServiceClient()
+	appServiceClient := app_service.NewAppServiceClient().ForUser(username)
 
 	ret, err := appServiceClient.SetupAppEntrancePolicy(appName, entranceName, token, settings)
 	if err != nil {
@@ -563,7 +609,7 @@ func (h *Handler) setupAppEntrancePolicy(req *restful.Request, resp *restful.Res
 	response.Success(resp, ret)
 }
 
-func (h *Handler) getUserInfo() (string, string, error) {
+func (h *Handler) getUserInfo(username string) (string, string, error) {
 	var terminusName string
 	var zone string
 	var err error
@@ -575,7 +621,7 @@ func (h *Handler) getUserInfo() (string, string, error) {
 		return "", "", fmt.Errorf("new user operator: %v", err)
 	}
 
-	user, err = op.GetUser(constants.Username)
+	user, err = op.GetUser(username)
 	if err != nil {
 		return "", "", fmt.Errorf("new user operator, and get user err: %v", err)
 	}
@@ -653,44 +699,6 @@ func (h *Handler) getExistsCustomDomain(appServiceClient *app_service.Client, ap
 	return custdomDomainEntrance[constants.ApplicationThirdPartyDomain], nil
 }
 
-func (h *Handler) updateAppCustomDomain(cm certmanager.Interface, entranceName string, customDomain map[string]interface{}) map[string]interface{} {
-	var thirdParty = h.getCustomDomainValue(customDomain, constants.ApplicationThirdPartyDomain)
-	if thirdParty == "" {
-		return nil
-	}
-
-	cnameStatus, err := cm.GetCustomDomainCnameStatus(thirdParty)
-	if err != nil {
-		h.setCustomDomainValue(customDomain, constants.ApplicationCustomDomainCnameTargetStatus, constants.CustomDomainCnameStatusNotset)
-		h.setCustomDomainValue(customDomain, constants.ApplicationCustomDomainCnameStatus, constants.CustomDomainCnameStatusNotset)
-		return customDomain
-	}
-	log.Infof("reloadAppCustomDomain: get cname status %v, entranceName: %s", cnameStatus.Success, entranceName)
-	if !cnameStatus.Success {
-		h.setCustomDomainValue(customDomain, constants.ApplicationCustomDomainCnameTargetStatus, constants.CustomDomainCnameStatusNotset)
-		h.setCustomDomainValue(customDomain, constants.ApplicationCustomDomainCnameStatus, constants.CustomDomainCnameStatusNotset)
-		return customDomain
-	}
-
-	getStatus, _ := cm.GetCustomDomainOnCloudflare(thirdParty)
-	if getStatus != nil {
-		log.Infof("reloadAppCustomDomain: get ssl status ssl: %s  hostname: %s, entranceName: %s", getStatus.SSLStatus, getStatus.HostnameStatus, entranceName)
-		h.setCustomDomainValue(customDomain, constants.ApplicationCustomDomainCnameTargetStatus, constants.CustomDomainCnameStatusSet)
-		h.setCustomDomainValue(customDomain, constants.ApplicationCustomDomainCnameStatus, h.setCustomDomainCnameStatus(getStatus.SSLStatus, getStatus.HostnameStatus))
-		return customDomain
-	}
-
-	_, err = cm.AddCustomDomainOnCloudflare(thirdParty)
-	if err != nil {
-		log.Errorf("reloadAppCustomDomain: add custom domain error %v", err)
-	}
-
-	h.setCustomDomainValue(customDomain, constants.ApplicationCustomDomainCnameTargetStatus, constants.CustomDomainCnameStatusSet)
-	h.setCustomDomainValue(customDomain, constants.ApplicationCustomDomainCnameStatus, constants.CustomDomainCnameStatusPending)
-
-	return customDomain
-}
-
 func (h *Handler) getCustomDomainValue(data map[string]interface{}, key string) string {
 	v, ok := data[key]
 	if !ok {
@@ -709,50 +717,17 @@ func (h *Handler) setCustomDomainValue(data map[string]interface{}, key string, 
 	}
 }
 
-func (h *Handler) setCustomDomainCnameStatus(sslStatus, hostnameStatus string) string {
-	switch {
-	case hostnameStatus == sslStatus && sslStatus == "active":
-		return constants.CustomDomainCnameStatusActive
-	default:
-		return constants.CustomDomainCnameStatusPending
-	}
-}
-
-func (h *Handler) applicationPermissionList(req *restful.Request, resp *restful.Response) {
-	// fetch token from request
-	token := req.Request.Header.Get(constants.UserAuthorizationTokenKey)
-
-	appServiceClient := app_service.NewAppServiceClient()
-
-	aps, err := appServiceClient.GetApplicationPermissionList(token)
-	if err != nil {
-		response.HandleError(resp, err)
-		return
-	}
-	response.Success(resp, api.NewListResult(aps))
-}
-
-func (h *Handler) getApplicationProviderList(req *restful.Request, resp *restful.Response) {
-	// fetch token from request
-	token := req.Request.Header.Get(constants.UserAuthorizationTokenKey)
-	appName := req.PathParameter(ParamAppName)
-
-	appServiceClient := app_service.NewAppServiceClient()
-
-	aps, err := appServiceClient.GetApplicationProviderList(appName, token)
-	if err != nil {
-		response.HandleError(resp, err)
-		return
-	}
-	response.Success(resp, api.NewListResult(aps))
-}
-
 func (h *Handler) getApplicationSubjectList(req *restful.Request, resp *restful.Response) {
+	username, userErr := runtime.RequestUser(req)
+	if userErr != nil {
+		response.HandleBadRequest(resp, userErr)
+		return
+	}
 	// fetch token from request
 	token := req.Request.Header.Get(constants.UserAuthorizationTokenKey)
 	appName := req.PathParameter(ParamAppName)
 
-	appServiceClient := app_service.NewAppServiceClient()
+	appServiceClient := app_service.NewAppServiceClient().ForUser(username)
 
 	aps, err := appServiceClient.GetApplicationSubjectList(appName, token)
 	if err != nil {
@@ -763,12 +738,17 @@ func (h *Handler) getApplicationSubjectList(req *restful.Request, resp *restful.
 }
 
 func (h *Handler) applicationPermission(req *restful.Request, resp *restful.Response) {
+	username, userErr := runtime.RequestUser(req)
+	if userErr != nil {
+		response.HandleBadRequest(resp, userErr)
+		return
+	}
 	appName := req.PathParameter(ParamAppName)
 
 	// fetch token from request
 	token := req.Request.Header.Get(constants.UserAuthorizationTokenKey)
 
-	appServiceClient := app_service.NewAppServiceClient()
+	appServiceClient := app_service.NewAppServiceClient().ForUser(username)
 
 	ap, err := appServiceClient.GetApplicationPermission(token, appName)
 	if err != nil {
@@ -776,22 +756,4 @@ func (h *Handler) applicationPermission(req *restful.Request, resp *restful.Resp
 		return
 	}
 	response.Success(resp, ap)
-}
-
-func (h *Handler) getProviderRegistry(req *restful.Request, resp *restful.Response) {
-	// fetch token from request
-	token := req.Request.Header.Get(constants.UserAuthorizationTokenKey)
-
-	dataType := req.PathParameter(ParamDataType)
-	group := req.PathParameter(ParamGroup)
-	version := req.PathParameter(ParamVersion)
-
-	appServiceClient := app_service.NewAppServiceClient()
-
-	pr, err := appServiceClient.GetProviderRegistry(token, dataType, group, version)
-	if err != nil {
-		response.HandleError(resp, err)
-		return
-	}
-	response.Success(resp, pr)
 }

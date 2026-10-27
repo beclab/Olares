@@ -329,12 +329,12 @@ func (s *Service) Status(ctx context.Context) (Status, error) {
 			return out, nil
 		}
 
-		ready, err := s.userReady(ctx, out.Username)
+		ready, err := s.bflReady(ctx)
 		if err != nil {
 			return Status{}, err
 		}
 		if !ready {
-			out.Reason = "waiting for the first user services"
+			out.Reason = "waiting for BFL"
 			return out, nil
 		}
 		out.Reason = ""
@@ -351,8 +351,8 @@ func (s *Service) Status(ctx context.Context) (Status, error) {
 	return out, nil
 }
 
-func (s *Service) userReady(ctx context.Context, name string) (bool, error) {
-	bfl, err := s.Kube.AppsV1().StatefulSets("user-space-"+name).Get(ctx, "bfl", metav1.GetOptions{})
+func (s *Service) bflReady(ctx context.Context) (bool, error) {
+	bfl, err := s.Kube.AppsV1().Deployments("os-frontend").Get(ctx, "bfl", metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
 		return false, nil
 	}

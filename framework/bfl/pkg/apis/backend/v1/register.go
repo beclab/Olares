@@ -41,7 +41,7 @@ func AddContainer(c *restful.Container) error {
 		Returns(http.StatusOK, "", response.Response{}))
 
 	ws.Route(ws.GET("/re-download-cert").
-		To(handler.handleReDownloadCert).
+		To(handler.NetworkUnavailable).
 		Doc("Re-download ssl certificate").
 		Metadata(restfulspec.KeyOpenAPITags, tags).
 		Returns(http.StatusOK, "", response.Response{}))

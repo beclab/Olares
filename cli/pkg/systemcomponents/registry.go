@@ -47,6 +47,7 @@ func All(cfg Config) []Component {
 	components = append(components, osPlatform()...)
 	components = append(components, osFramework()...)
 	components = append(components, osProtected()...)
+	components = append(components, Component{Namespace: NamespaceOsFrontend, Kind: Deployment, Name: "bfl"})
 	components = append(components, gateway(cfg.GatewayNamespace)...)
 	components = append(components, mesh(cfg.MeshNamespace)...)
 	components = append(components, network()...)
@@ -206,9 +207,6 @@ const (
 	// waits for it on its own before continuing, because everything installed
 	// afterwards is reconciled by it.
 	AppServiceName = "app-service"
-
-	// LauncherName is the personal BFL workload, created after installation.
-	LauncherName = "bfl"
 )
 
 // AppService returns the app-service component on its own.

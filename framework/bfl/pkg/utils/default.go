@@ -10,15 +10,3 @@ func EnvOrDefault(name, def string) string {
 	}
 	return v
 }
-
-func StringOrDefault(val, def string) string {
-	if val != "" {
-		return val
-	}
-
-	if def != "" {
-		return def
-	}
-
-	return ""
-}

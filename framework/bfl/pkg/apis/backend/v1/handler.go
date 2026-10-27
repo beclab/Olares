@@ -15,14 +15,10 @@ import (
 	monitov1alpha1 "bytetrade.io/web3os/bfl/pkg/apis/monitor/v1alpha1"
 	"bytetrade.io/web3os/bfl/pkg/apiserver/runtime"
 	"bytetrade.io/web3os/bfl/pkg/app_service/v1"
-	"bytetrade.io/web3os/bfl/pkg/client/clientset/v1alpha1"
 	"bytetrade.io/web3os/bfl/pkg/constants"
-	"bytetrade.io/web3os/bfl/pkg/utils/certmanager"
 
-	iamV1alpha2 "github.com/beclab/api/iam/v1alpha2"
 	"github.com/emicklei/go-restful/v3"
 	"github.com/pkg/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 )
 
@@ -39,25 +35,30 @@ func New() *Handler {
 }
 
 func (h *Handler) handleUserInfo(req *restful.Request, resp *restful.Response) {
+	username, userErr := runtime.RequestUser(req)
+	if userErr != nil {
+		response.HandleBadRequest(resp, userErr)
+		return
+	}
 	var (
 		isEphemeral                           bool
 		terminusName, zone, role, createdUser string
 		accessLevel                           *int
 	)
 
-	userOp, err := operator.NewUserOperator()
+	userOp, err := operator.NewUserOperatorWithContext(req.Request.Context())
 	if err != nil {
 		response.HandleError(resp, errors.Errorf("user info: new user operator err: %v", err))
 		return
 	}
 
-	user, err := userOp.GetUser("")
+	user, err := userOp.GetUser(username)
 	if err != nil {
 		response.HandleError(resp, errors.Errorf("user info: get user err: %v", err))
 		return
 	}
 
-	terminusName = normalizeLocalOlaresID(userOp.GetTerminusName(user))
+	terminusName = user.Name
 
 	isEphemeral, zone, err = userOp.GetUserDomainType(user)
 	if err != nil {
@@ -76,7 +77,7 @@ func (h *Handler) handleUserInfo(req *restful.Request, resp *restful.Response) {
 	}
 
 	uInfo := UserInfo{
-		Name:         constants.Username,
+		Name:         username,
 		OwnerRole:    role,
 		TerminusName: terminusName,
 		IsEphemeral:  isEphemeral,
@@ -84,7 +85,7 @@ func (h *Handler) handleUserInfo(req *restful.Request, resp *restful.Response) {
 		CreatedUser:  createdUser,
 	}
 
-	if status := userOp.GetTerminusStatus(user); status == string(constants.Completed) || status == string(constants.WaitResetPassword) {
+	if status := userOp.GetTerminusStatus(user); status == string(constants.Completed) {
 		uInfo.WizardComplete = true
 	}
 
@@ -94,146 +95,27 @@ func (h *Handler) handleUserInfo(req *restful.Request, resp *restful.Response) {
 	response.Success(resp, uInfo)
 }
 
-func (h *Handler) handleReDownloadCert(req *restful.Request, resp *restful.Response) {
-	var (
-		ctx   = req.Request.Context()
-		force = req.QueryParameter("force")
-		from  = req.HeaderParameter("X-FROM-CRONJOB")
-	)
-
-	if from == "" && force != "true" {
-		response.HandleError(resp, errors.New("re-download certificate: do not allowed"))
-		return
-	}
-
-	var (
-		terminusName string
-		op           *operator.UserOperator
-		user         *iamV1alpha2.User
-		client       v1alpha1.ClientInterface
-	)
-
-	log.Infow("expired re-download certificate", "force", force, "from", from)
-
-	err := func() error {
-		var err error
-		op, err = operator.NewUserOperator()
-		if err != nil {
-			return err
-		}
-
-		user, err = op.GetUser(constants.Username)
-		if err != nil {
-			return errors.Errorf("new user operator, and get user err: %v", err)
-		}
-		terminusName = op.GetTerminusName(user)
-		if terminusName == "" {
-			return errors.New("no olares name has binding")
-		}
-
-		client, err = runtime.NewKubeClientInCluster()
-		if err != nil {
-			return errors.Errorf("init kubeclient err, %v", err)
-		}
-
-		return nil
-	}()
-	if err != nil {
-		response.HandleError(resp, errors.Errorf("re-download cert err: %v", err))
-		return
-	}
-
-	// certificate manager
-	cm := certmanager.NewCertManager(constants.TerminusName(terminusName))
-
-	err = func() error {
-		var (
-			cronjobs   = client.Kubernetes().BatchV1().CronJobs(constants.Namespace)
-			configmaps = client.Kubernetes().CoreV1().ConfigMaps(constants.Namespace)
-		)
-
-		cronjob, err := cronjobs.Get(ctx, certmanager.ReDownloadCertCronJobName, metav1.GetOptions{})
-		if err != nil {
-			return errors.Errorf("get cronjob err, %v", err)
-		}
-
-		sslCm, err := configmaps.Get(ctx, constants.NameSSLConfigMapName, metav1.GetOptions{})
-		if err != nil {
-			return errors.Errorf("get ssl configmap err, %v", err)
-		}
-
-		if force != "true" {
-			if v, ok := sslCm.Data["expired_at"]; ok {
-				vt, err := time.Parse(certmanager.CertExpiredDateTimeLayout, v)
-				if err != nil {
-					return errors.Errorf("parse expired_at time err, %v", err)
-				}
-
-				if time.Now().Before(vt.AddDate(0, 0, certmanager.DefaultAheadRenewalCertDays-1)) {
-					return errors.Errorf("the certificate renewal date has not been reached")
-				}
-			}
-		}
-
-		// re download cert
-		r, err := cm.DownloadCert()
-		if err != nil {
-			return errors.Errorf("download cert err, %v", err)
-		}
-
-		// update ssl configmap
-		sslCm.Data = map[string]string{
-			"zone":       r.Zone,
-			"cert":       r.Cert,
-			"key":        r.Key,
-			"expired_at": r.ExpiredAt,
-		}
-		if _, err = configmaps.Update(ctx, sslCm, metav1.UpdateOptions{}); err != nil {
-			return errors.Errorf("update ssl configmap err, %v", err)
-		}
-
-		// update cronjob schedule
-		parsedTime, err := time.Parse(certmanager.CertExpiredDateTimeLayout, r.ExpiredAt)
-		if err != nil {
-			return errors.Errorf("parse expired time err, %v", err)
-		}
-
-		expiredTime := parsedTime.AddDate(0, 0, certmanager.DefaultAheadRenewalCertDays)
-		cronjob.Spec.Schedule = fmt.Sprintf(certmanager.ReDownloadCertCronJobScheduleFormat,
-			expiredTime.Minute(), expiredTime.Hour(), expiredTime.Day(), int(expiredTime.Month()))
-
-		if _, err = cronjobs.Update(ctx, cronjob, metav1.UpdateOptions{}); err != nil {
-			return errors.Errorf("update cronjob err, %v", err)
-		}
-		return nil
-	}()
-
-	if err != nil {
-		response.HandleError(resp, errors.Errorf("re-download cert: %v", err))
-		return
-	}
-
-	log.Info("re download cert successfully")
-	response.SuccessNoData(resp)
-}
-
-// Deprecated: use handleOlaresInfo instead
 func (h *Handler) handleTerminusInfo(req *restful.Request, resp *restful.Response) {
+	username, userErr := runtime.RequestUser(req)
+	if userErr != nil {
+		response.HandleBadRequest(resp, userErr)
+		return
+	}
 
-	userOp, err := operator.NewUserOperator()
+	userOp, err := operator.NewUserOperatorWithContext(req.Request.Context())
 	if err != nil {
 		response.HandleError(resp, errors.Errorf("olares info: new user operator err: %v", err))
 		return
 	}
 
-	user, err := userOp.GetUser("")
+	user, err := userOp.GetUser(username)
 	if err != nil {
 		response.HandleError(resp, errors.Errorf("olares info: get user err: %v", err))
 		return
 	}
 
 	tInfo := TerminusInfo{}
-	tInfo.TerminusName = userOp.GetTerminusName(user)
+	tInfo.TerminusName = user.Name
 
 	status := userOp.GetTerminusStatus(user)
 	if status == "" {
@@ -276,7 +158,7 @@ func (h *Handler) handleTerminusInfo(req *restful.Request, resp *restful.Respons
 	tInfo.Avatar = userOp.GetAvatar(user)
 	tInfo.UserDID = userOp.GetUserDID(user)
 
-	if reverseProxy := userOp.GetUserAnnotation(user, constants.UserAnnotationReverseProxyType); reverseProxy != "" {
+	if reverseProxy, err := userOp.GetReverseProxyType(); err == nil {
 		tInfo.ReverseProxy = reverseProxy
 	}
 
@@ -285,21 +167,26 @@ func (h *Handler) handleTerminusInfo(req *restful.Request, resp *restful.Respons
 }
 
 func (h *Handler) handleOlaresInfo(req *restful.Request, resp *restful.Response) {
+	username, userErr := runtime.RequestUser(req)
+	if userErr != nil {
+		response.HandleBadRequest(resp, userErr)
+		return
+	}
 
-	userOp, err := operator.NewUserOperator()
+	userOp, err := operator.NewUserOperatorWithContext(req.Request.Context())
 	if err != nil {
 		response.HandleError(resp, errors.Errorf("olares info: new user operator err: %v", err))
 		return
 	}
 
-	user, err := userOp.GetUser("")
+	user, err := userOp.GetUser(username)
 	if err != nil {
 		response.HandleError(resp, errors.Errorf("olares info: get user err: %v", err))
 		return
 	}
 
 	tInfo := OlaresInfo{}
-	tInfo.OlaresID = normalizeLocalOlaresID(userOp.GetTerminusName(user))
+	tInfo.OlaresID = user.Name
 
 	status := userOp.GetTerminusStatus(user)
 	if status == "" {
@@ -308,7 +195,7 @@ func (h *Handler) handleOlaresInfo(req *restful.Request, resp *restful.Response)
 		tInfo.WizardStatus = constants.WizardStatus(status)
 	}
 
-	tInfo.ClusterName, tInfo.VaultURL, err = clusterConnectionInfo(req.Request.Context(), tInfo.OlaresID, tInfo.WizardStatus)
+	tInfo.ClusterName, tInfo.VaultURL, err = clusterConnectionInfo(req.Request.Context(), tInfo.WizardStatus)
 	if err != nil {
 		response.HandleError(resp, errors.Errorf("olares info: get cluster connection info err: %v", err))
 		return
@@ -353,7 +240,11 @@ func (h *Handler) handleOlaresInfo(req *restful.Request, resp *restful.Response)
 }
 
 func (h *Handler) myapps(req *restful.Request, resp *restful.Response) {
-	// provider api
+	username, userErr := runtime.RequestUser(req)
+	if userErr != nil {
+		response.HandleBadRequest(resp, userErr)
+		return
+	}
 	var opt MyAppsParam
 	if err := req.ReadEntity(&opt); err != nil {
 		response.HandleError(resp, err)
@@ -362,8 +253,10 @@ func (h *Handler) myapps(req *restful.Request, resp *restful.Response) {
 
 	req.SetAttribute(constants.MyAppsIsLocalKey, opt.IsLocal)
 
-	list, err := h.Base.GetAppListAndServicePort(req, h.appService,
-		func() (string, []*app_service.AppInfo, error) { return h.Base.GetAppViaOwner(h.appService) })
+	list, err := h.Base.GetAppListAndServicePort(req,
+		func() (string, []*app_service.AppInfo, error) {
+			return h.Base.GetAppForUser(username, h.appService.ForUser(username))
+		})
 	if err != nil {
 		response.HandleInternalError(resp, fmt.Errorf("list apps: %v", err))
 		return

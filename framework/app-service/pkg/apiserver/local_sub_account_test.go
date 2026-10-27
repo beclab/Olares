@@ -20,12 +20,15 @@ import (
 )
 
 func TestCreateSubAccountWithoutDID(t *testing.T) {
-	for _, tc := range []struct{ domain, wantName, ephemeral string }{
-		{"", "member", "false"},
-		{"olares.local", "member", "false"},
-		{"olares.com", "member@olares.com", "true"},
+	for _, tc := range []struct{ name, domain, role, wantName string }{
+		{"member", "", "normal", "member"},
+		{"member", "olares.local", "normal", "member"},
+		{"member", "owner.olares.com", "normal", "member"},
+		{"member", "owner.olares.com", "admin", "member"},
+		{"member", "owner.olares.com", "owner", "member"},
+		{"Member", "owner.olares.com", "normal", "member"},
 	} {
-		t.Run(tc.domain, func(t *testing.T) {
+		t.Run(tc.name+"/"+tc.domain+"/"+tc.role, func(t *testing.T) {
 			scheme := runtime.NewScheme()
 			if err := sysv1alpha1.AddToScheme(scheme); err != nil {
 				t.Fatal(err)
@@ -37,7 +40,7 @@ func TestCreateSubAccountWithoutDID(t *testing.T) {
 			terminus.Spec.Settings = map[string]string{"domainName": tc.domain}
 			ctrlClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(terminus).Build()
 			handler := &Handler{ctrlClient: ctrlClient}
-			body, err := json.Marshal(UserCreateRequest{Name: "member", OwnerRole: "normal", Password: "encoded-final-password", CpuLimit: "1", MemoryLimit: "4G"})
+			body, err := json.Marshal(UserCreateRequest{Name: tc.name, OwnerRole: tc.role, Password: "encoded-final-password", CpuLimit: "1", MemoryLimit: "4G"})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -57,14 +60,53 @@ func TestCreateSubAccountWithoutDID(t *testing.T) {
 			if got := user.Annotations[users.UserAnnotationTerminusNameKey]; got != tc.wantName {
 				t.Fatalf("identity=%q, want %q", got, tc.wantName)
 			}
-			if got := user.Annotations[users.UserAnnotationIsEphemeral]; got != tc.ephemeral {
-				t.Fatalf("ephemeral=%q, want %q", got, tc.ephemeral)
+			if _, exists := user.Annotations[users.UserAnnotationIsEphemeral]; exists {
+				t.Fatal("local accounts must not have an ephemeral annotation")
+			}
+			if user.Spec.Email != tc.wantName || user.Annotations[users.UserAnnotationOwnerRole] != tc.role {
+				t.Fatalf("unexpected local account: %#v", user)
+			}
+			if (tc.role == "admin" || tc.role == "owner") != (len(user.Spec.Groups) == 1 && user.Spec.Groups[0] == "lldap_admin") {
+				t.Fatalf("unexpected role groups: %v", user.Spec.Groups)
 			}
 			if user.Spec.InitialPassword != "encoded-final-password" {
 				t.Fatal("creation did not preserve the supplied final password")
 			}
 			if user.Annotations["bytetrade.io/user-did"] != "" {
 				t.Fatal("DID must remain unbound until scanning")
+			}
+		})
+	}
+}
+
+func TestCreateSubAccountRejectsCloudIdentity(t *testing.T) {
+	for _, name := range []string{"member@owner.olares.com", "member@olares.local", "member@", "@olares.com"} {
+		t.Run(name, func(t *testing.T) {
+			scheme := runtime.NewScheme()
+			if err := iamv1alpha2.AddToScheme(scheme); err != nil {
+				t.Fatal(err)
+			}
+			ctrlClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+			handler := &Handler{ctrlClient: ctrlClient}
+			body, err := json.Marshal(UserCreateRequest{Name: name, OwnerRole: "normal", Password: "encoded-final-password", CpuLimit: "1", MemoryLimit: "4G"})
+			if err != nil {
+				t.Fatal(err)
+			}
+			raw := httptest.NewRequest(http.MethodPost, "/users", bytes.NewReader(body))
+			raw.Header.Set("Content-Type", "application/json")
+			req := restful.NewRequest(raw)
+			req.SetAttribute(constants.UserContextAttribute, "owner")
+			recorder := httptest.NewRecorder()
+			handler.createUser(req, restful.NewResponse(recorder))
+			if recorder.Code != http.StatusBadRequest {
+				t.Fatalf("status=%d body=%s", recorder.Code, recorder.Body.String())
+			}
+			var users iamv1alpha2.UserList
+			if err := ctrlClient.List(context.Background(), &users); err != nil {
+				t.Fatal(err)
+			}
+			if len(users.Items) != 0 {
+				t.Fatalf("invalid identity created users: %#v", users.Items)
 			}
 		})
 	}

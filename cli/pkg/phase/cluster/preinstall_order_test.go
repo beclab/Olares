@@ -27,7 +27,7 @@ func runtimeOn(osPlatform string) *olarescommon.KubeRuntime {
 	}
 }
 
-func TestLinuxInstallMaterializesHFCacheAfterCommonBeforeUserCharts(t *testing.T) {
+func TestLinuxInstallMaterializesHFCacheAfterSystem(t *testing.T) {
 	modules := (&linuxInstallPhaseBuilder{runtime: runtimeOn("")}).installTerminus()
 	index := func(match func(any) bool) int {
 		for i, module := range modules {
@@ -45,15 +45,8 @@ func TestLinuxInstallMaterializesHFCacheAfterCommonBeforeUserCharts(t *testing.T
 		_, ok := value.(*preinstall.HFCacheMaterializeModule)
 		return ok
 	})
-	charts := index(func(value any) bool {
-		_, ok := value.(*terminus.PrepareUserChartsModule)
-		return ok
-	})
-	if osSystem < 0 || hfCache < 0 || charts < 0 {
-		t.Fatalf("module indexes: osSystem=%d hfCache=%d charts=%d", osSystem, hfCache, charts)
-	}
-	if !(osSystem < hfCache && hfCache < charts) {
-		t.Fatalf("unexpected module order: osSystem=%d hfCache=%d charts=%d", osSystem, hfCache, charts)
+	if osSystem < 0 || hfCache < 0 || osSystem >= hfCache {
+		t.Fatalf("unexpected module order: osSystem=%d hfCache=%d", osSystem, hfCache)
 	}
 	if modules[hfCache].IsSkip() {
 		t.Fatalf("HF cache module is skipped on a plain Linux install: %#v", modules[hfCache])

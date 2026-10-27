@@ -8,7 +8,7 @@ import (
 	"k8s.io/utils/pointer"
 )
 
-var cm = NewCertManager("d1x5")
+var cm = NewCertManager("d1x5", "d1x5")
 
 func TestCertManager(t *testing.T) {
 	t.Log("generate cert, and wait for it complete")

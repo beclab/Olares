@@ -29,14 +29,6 @@ func NewResourceUserClient() (*ResourceUserClient, error) {
 	return &ResourceUserClient{c: ri}, nil
 }
 
-func NewResourceUserClientOrDie() *ResourceUserClient {
-	c, err := NewResourceUserClient()
-	if err != nil {
-		panic(err)
-	}
-	return c
-}
-
 func (u *ResourceUserClient) Create(ctx context.Context, user iamV1alpha2.User, options metav1.CreateOptions) (*iamV1alpha2.User, error) {
 	obj, err := dynamic_client.ToUnstructured(user)
 	if err != nil {

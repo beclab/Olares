@@ -1,7 +1,6 @@
 package apis
 
 import (
-	"context"
 	"encoding/json"
 
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
@@ -12,10 +11,8 @@ import (
 	"bytetrade.io/web3os/bfl/pkg/app_service/v1"
 	"bytetrade.io/web3os/bfl/pkg/constants"
 	"bytetrade.io/web3os/bfl/pkg/userenv"
-	iamV1alpha2 "github.com/beclab/api/iam/v1alpha2"
 	"github.com/emicklei/go-restful/v3"
 	"github.com/pkg/errors"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
 )
 
@@ -30,13 +27,13 @@ type PostLocale struct {
 	Theme string `json:"theme"`
 }
 
-func (b *Base) GetAppViaOwner(appService *app_service.Client) (string, []*app_service.AppInfo, error) {
-	apps, err := appService.ListAppInfosByUser(constants.Username)
+func (b *Base) GetAppForUser(username string, appService *app_service.Client) (string, []*app_service.AppInfo, error) {
+	apps, err := appService.ListAppInfosByUser(username)
 
-	return constants.Username, apps, err
+	return username, apps, err
 }
 
-func (h *Base) GetAppListAndServicePort(req *restful.Request, appService *app_service.Client, getApps func() (string, []*app_service.AppInfo, error)) ([]*app_service.AppInfo, error) {
+func (h *Base) GetAppListAndServicePort(req *restful.Request, getApps func() (string, []*app_service.AppInfo, error)) ([]*app_service.AppInfo, error) {
 
 	user, apps, err := getApps()
 	if err != nil {
@@ -100,25 +97,12 @@ func (h *Base) GetAppListAndServicePort(req *restful.Request, appService *app_se
 	return apps, nil
 }
 
-func (b *Base) IsAdminUser(ctx context.Context) (bool, error) {
-	kc, err := runtime.NewKubeClientInCluster()
-	if err != nil {
-		return false, err
-	}
-
-	var user iamV1alpha2.User
-	err = kc.CtrlClient().Get(ctx, types.NamespacedName{Name: constants.Username}, &user)
-	if err != nil {
-		return false, err
-	}
-	role, ok := user.Annotations[constants.UserAnnotationOwnerRole]
-	if !ok {
-		return false, errors.Errorf("invalid user %q, no owner role annotation", user.Name)
-	}
-	return role == constants.RoleOwner || role == constants.RoleAdmin, nil
-}
-
 func (b *Base) HandleGetSysConfig(req *restful.Request, resp *restful.Response) {
+	username, userErr := runtime.RequestUser(req)
+	if userErr != nil {
+		response.HandleBadRequest(resp, userErr)
+		return
+	}
 	kc, err := runtime.NewKubeClientInCluster()
 	if err != nil {
 		response.HandleError(resp, errors.Errorf("get user sys config err: new kube client err, %v", err))
@@ -140,7 +124,7 @@ func (b *Base) HandleGetSysConfig(req *restful.Request, resp *restful.Response) 
 		{userenv.EnvTheme, &cfg.Theme},
 	}
 	for _, t := range targets {
-		v, _, e := userenv.GetValue(ctx, c, constants.Username, t.env)
+		v, _, e := userenv.GetValue(ctx, c, username, t.env)
 		if e != nil {
 			response.HandleError(resp, errors.Errorf("get user sys config err: read userenv %s err, %v", t.env, e))
 			return
@@ -149,12 +133,12 @@ func (b *Base) HandleGetSysConfig(req *restful.Request, resp *restful.Response) 
 	}
 
 	// Location has no backing UserEnv; it still lives on the user annotation.
-	userOp, err := operator.NewUserOperator()
+	userOp, err := operator.NewUserOperatorWithContext(req.Request.Context())
 	if err != nil {
 		response.HandleError(resp, errors.Errorf("get user sys config err: new user operator err, %v", err))
 		return
 	}
-	user, err := userOp.GetUser(constants.Username)
+	user, err := userOp.GetUser(username)
 	if err != nil {
 		response.HandleError(resp, errors.Errorf("get user sys config err: get user err, %v", err))
 		return

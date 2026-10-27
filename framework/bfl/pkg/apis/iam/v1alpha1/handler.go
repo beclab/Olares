@@ -2,35 +2,24 @@ package v1alpha1
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
-	"time"
 
 	"bytetrade.io/web3os/bfl/internal/log"
 	"bytetrade.io/web3os/bfl/pkg/api"
 	"bytetrade.io/web3os/bfl/pkg/api/response"
-	"bytetrade.io/web3os/bfl/pkg/apiserver/runtime"
 	app_service "bytetrade.io/web3os/bfl/pkg/app_service/v1"
 	"bytetrade.io/web3os/bfl/pkg/constants"
 	"bytetrade.io/web3os/bfl/pkg/lldap"
-	"bytetrade.io/web3os/bfl/pkg/utils/httpclient"
 	iamV1alpha2 "github.com/beclab/api/iam/v1alpha2"
 	"github.com/emicklei/go-restful/v3"
 	"github.com/go-resty/resty/v2"
 	"github.com/pkg/errors"
-	"go.uber.org/atomic"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-)
-
-const (
-	kubeSphereAPIToken = "/oauth/token"
-
-	kubeSphereAPILogout = "/oauth/logout"
 )
 
 var defaultGlobalRoles = []string{
@@ -42,14 +31,12 @@ var defaultGlobalRoles = []string{
 }
 
 type Handler struct {
-	userCreatingCount *atomic.Int32
-	ctrlClient        client.Client
+	ctrlClient client.Client
 }
 
 func New(ctrlClient client.Client) *Handler {
 	return &Handler{
-		userCreatingCount: &atomic.Int32{},
-		ctrlClient:        ctrlClient,
+		ctrlClient: ctrlClient,
 	}
 }
 
@@ -134,7 +121,7 @@ func (h *Handler) handleListUsers(req *restful.Request, resp *restful.Response) 
 			u.LastLoginTime = pointer.Int64(user.Status.LastLoginTime.Unix())
 		}
 
-		if status := user.Annotations[constants.UserTerminusWizardStatus]; status == string(constants.Completed) || status == string(constants.WaitResetPassword) {
+		if status := user.Annotations[constants.UserTerminusWizardStatus]; status == string(constants.Completed) {
 			u.WizardComplete = true
 		}
 
@@ -229,20 +216,7 @@ func (h *Handler) handleResetUserPassword(req *restful.Request, resp *restful.Re
 		return
 	}
 
-	// Reset Password
-	//user.Spec.EncryptedPassword = passwordReset.Password
-	if user.Annotations[constants.UserTerminusWizardStatus] != string(constants.Completed) {
-		// only initializing in progress
-		user.Annotations[constants.UserTerminusWizardStatus] = string(constants.Completed)
-
-		err = h.ctrlClient.Update(req.Request.Context(), &user)
-		if err != nil {
-			response.HandleError(resp, errors.Errorf("reset password: update user err, %v", err))
-			return
-		}
-
-	}
-	url := fmt.Sprintf("http://authelia-backend-provider.user-system-%s:28080/api/reset/%s/password", userName, userName)
+	url := fmt.Sprintf("http://authelia-backend.os-framework:9091/api/reset/%s/password", userName)
 	client := resty.New()
 	res, err := client.R().
 		SetHeader("Content-Type", "application/json").
@@ -262,62 +236,10 @@ func (h *Handler) handleResetUserPassword(req *restful.Request, resp *restful.Re
 	response.SuccessNoData(resp)
 }
 
-func RequestToken(token string, data map[string]string) (*TokenResponse, int, error) {
-	c := httpclient.New(&httpclient.Option{
-		Debug:   true,
-		Timeout: 30 * time.Second},
-	)
-
-	if token != "" {
-		c.Header.Add("Authorization", fmt.Sprintf("Bearer %s", token))
-	}
-
-	c.SetFormData(data)
-
-	_url := fmt.Sprintf("%s://%s%s", constants.KubeSphereAPIScheme, constants.KubeSphereAPIHost, kubeSphereAPIToken)
-	respToken, err := c.R().Post(_url)
-	if err != nil {
-		return nil, -1, err
-	}
-
-	respBytes := respToken.Body()
-
-	log.Debugw("request token", "requestUrl", _url,
-		"requestHeader", c.Header,
-		"requestData", data,
-		"responseCode", respToken.StatusCode(),
-		"responseBody", string(respBytes))
-
-	if respToken.StatusCode() != http.StatusOK {
-		var e KubesphereError
-		if err := json.Unmarshal(respBytes, &e); err == nil && e.Error != "" {
-			return nil, respToken.StatusCode(), errors.Errorf("%s, %s", e.Error, e.ErrorDescription)
-		}
-		return nil, respToken.StatusCode(), errors.Errorf("request kubesphere api err: %v", http.StatusText(respToken.StatusCode()))
-	}
-
-	var t TokenResponse
-	if err = json.Unmarshal(respBytes, &t); err == nil {
-		if t.AccessToken == "" {
-			return nil, -1, errors.New("got empty access token")
-		}
-
-		claims, err := runtime.ParseToken(t.AccessToken)
-		if err != nil {
-			return nil, -1, errors.Errorf("parse access token err: %v", err)
-		}
-		if claims.ExpiresAt != nil {
-			t.ExpiresAt = claims.ExpiresAt.Unix()
-		}
-		return &t, 200, nil
-	}
-	return nil, -1, err
-}
-
 func (h *Handler) handleGetUserMetrics(req *restful.Request, resp *restful.Response) {
 	user := req.PathParameter("user")
 	token := req.HeaderParameter(constants.UserAuthorizationTokenKey)
-	appServiceClient := app_service.NewAppServiceClient()
+	appServiceClient := app_service.NewAppServiceClient().ForUser(user)
 
 	r, err := appServiceClient.GetUserMetrics(user, token)
 	if err != nil {

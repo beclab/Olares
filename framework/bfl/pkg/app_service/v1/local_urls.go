@@ -1,7 +1,9 @@
 package app_service
 
 import (
+	"bytetrade.io/web3os/bfl/pkg/constants"
 	"fmt"
+	"net/url"
 	"strings"
 
 	"bytetrade.io/web3os/bfl/pkg/client/dynamic_client/users"
@@ -37,4 +39,24 @@ func localURLGenerators(localName string) (URLGenerator, URLGeneratorMultiEntran
 		return fmt.Sprintf("%s.%s", prefix, zone)
 	}
 	return single, multi, nil
+}
+
+// The request may arrive through a shared frontend or a Provider.
+func requestUsesLocalURLs(req *restful.Request) bool {
+	if local, _ := req.Attribute(constants.MyAppsIsLocalKey).(bool); local {
+		return true
+	}
+	host := req.HeaderParameter("Client-Host")
+	if host == "" {
+		host = req.HeaderParameter("X-Forwarded-Host")
+	}
+	if host == "" {
+		host = req.Request.Host
+	}
+	u, err := url.Parse("//" + host)
+	if err != nil {
+		return false
+	}
+	hostname := strings.TrimSuffix(strings.ToLower(u.Hostname()), ".")
+	return hostname == "olares.local" || strings.HasSuffix(hostname, ".olares.local")
 }

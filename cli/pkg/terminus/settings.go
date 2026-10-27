@@ -117,5 +117,6 @@ func (m *InstallSettingsModule) Init() {
 	m.Tasks = []task.Interface{
 		setSettingsValues,
 		installSettings,
+		&task.LocalTask{Name: "UpdateNATGatewayIP", Action: new(UpdateNATGatewayIP), Retry: 1},
 	}
 }

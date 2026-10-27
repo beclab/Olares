@@ -2,10 +2,12 @@ package operator
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
 
+	"bytetrade.io/web3os/bfl/pkg/apiserver/runtime"
 	"bytetrade.io/web3os/bfl/pkg/client/dynamic_client/users"
 	"bytetrade.io/web3os/bfl/pkg/constants"
 
@@ -49,13 +51,6 @@ func NewUserOperatorWithContext(ctx context.Context) (*UserOperator, error) {
 	return uop, nil
 }
 
-func NewUserOperatorOrDie() *UserOperator {
-	return &UserOperator{
-		client: users.NewResourceUserClientOrDie(),
-		ctx:    context.TODO(),
-	}
-}
-
 func (o *UserOperator) ListUsers() ([]*iamV1alpha2.User, error) {
 	_users, err := o.client.List(o.ctx, metav1.ListOptions{})
 	if err != nil {
@@ -64,23 +59,9 @@ func (o *UserOperator) ListUsers() ([]*iamV1alpha2.User, error) {
 	return _users, nil
 }
 
-func (o *UserOperator) GetOwnerUser() (*iamV1alpha2.User, error) {
-	userList, err := o.ListUsers()
-	if err != nil {
-		klog.Errorf("get user list error %v", err)
-		return nil, err
-	}
-	for _, u := range userList {
-		if u.Annotations[constants.UserAnnotationOwnerRole] == constants.RoleOwner {
-			return u, nil
-		}
-	}
-	return nil, errors.New("owner user not found")
-}
-
 func (o *UserOperator) GetUser(name string) (*iamV1alpha2.User, error) {
 	if name == "" {
-		name = constants.Username
+		return nil, errors.New("username is required")
 	}
 
 	user, err := o.client.Get(o.ctx, name, metav1.GetOptions{})
@@ -98,6 +79,9 @@ RETRY:
 		return err
 	}
 
+	if userNew.Annotations == nil {
+		userNew.Annotations = make(map[string]string)
+	}
 	for _, p := range applyPatches {
 		p(userNew)
 	}
@@ -120,11 +104,35 @@ func (o *UserOperator) GetTerminusStatus(user *iamV1alpha2.User) string {
 }
 
 func (o *UserOperator) GetReverseProxyType() (string, error) {
-	user, err := o.GetUser("")
+	kc, err := runtime.NewKubeClientInCluster()
 	if err != nil {
 		return "", err
 	}
-	return o.GetUserAnnotation(user, constants.UserAnnotationReverseProxyType), nil
+	cm, err := kc.Kubernetes().CoreV1().ConfigMaps("os-network").Get(o.ctx, "default-network", metav1.GetOptions{})
+	if apierrors.IsNotFound(err) {
+		return constants.ReverseProxyTypeNone, nil
+	}
+	if err != nil {
+		return "", err
+	}
+	var spec struct {
+		Config struct {
+			Mode string `json:"mode"`
+		} `json:"config"`
+	}
+	if raw := cm.Data["proxy"]; raw != "" {
+		if err := json.Unmarshal([]byte(raw), &spec); err != nil {
+			return "", err
+		}
+	}
+	switch spec.Config.Mode {
+	case "frp":
+		return constants.ReverseProxyTypeFRP, nil
+	case "public-ip":
+		return constants.ReverseProxyTypePublic, nil
+	default:
+		return constants.ReverseProxyTypeNone, nil
+	}
 }
 
 func (o *UserOperator) GetLoginBackground(user *iamV1alpha2.User) (string, string) {
@@ -149,40 +157,6 @@ func (o *UserOperator) GetUserDID(user *iamV1alpha2.User) string {
 	return o.GetUserAnnotation(user, constants.UserCertManagerDID)
 }
 
-func (o *UserOperator) BindingTerminusName(user *iamV1alpha2.User, domain string) error {
-	if v, ok := user.Annotations[constants.UserAnnotationTerminusNameKey]; ok {
-		return fmt.Errorf("user '%s' olaresName is already bind, olaresName: %s", user.Name, v)
-	}
-
-	// update terminus name to user annotation
-	return o.UpdateUser(user, []func(*iamV1alpha2.User){
-		func(u *iamV1alpha2.User) {
-			u.Annotations[constants.UserAnnotationTerminusNameKey] = string(constants.NewTerminusName(user.Name, domain))
-		},
-	})
-}
-
-func (o *UserOperator) UnbindingTerminusName(user *iamV1alpha2.User) error {
-	return o.UpdateUser(user, []func(*iamV1alpha2.User){
-		func(u *iamV1alpha2.User) {
-			delete(u.Annotations, constants.UserAnnotationTerminusNameKey)
-		},
-	})
-}
-
-func (o *UserOperator) UpdateAnnotation(user *iamV1alpha2.User, key, value string) error {
-	return o.UpdateUser(user, []func(*iamV1alpha2.User){
-		func(u *iamV1alpha2.User) {
-			u.Annotations[key] = value
-		},
-	})
-}
-
-func (o *UserOperator) AnnotationExists(user *iamV1alpha2.User, key string) bool {
-	_, ok := user.Annotations[key]
-	return ok
-}
-
 func (o *UserOperator) GetUserAnnotation(user *iamV1alpha2.User, name string) string {
 	if v, ok := user.Annotations[name]; ok {
 		return v
@@ -190,53 +164,31 @@ func (o *UserOperator) GetUserAnnotation(user *iamV1alpha2.User, name string) st
 	return ""
 }
 
-func (o *UserOperator) GetUserZone(user *iamV1alpha2.User) string {
-	zone := o.GetUserAnnotation(user, constants.UserAnnotationZoneKey)
-	if zone != "" {
-		return zone
-	}
-	creator := o.GetUserAnnotation(user, constants.AnnotationUserCreator)
-	// cli creates the first local admin, which has no domain to inherit.
-	if creator == "" || creator == "cli" {
+func (o *UserOperator) GetUserZone(_ *iamV1alpha2.User) string {
+	domain, err := o.GetDefaultDomain()
+	if err != nil {
+		klog.Errorf("get default domain: %v", err)
 		return ""
 	}
-	creatorUser, err := o.GetUser(creator)
-	if err != nil {
-		klog.Errorf("failed to get creator user %v", err)
-	}
-	if err == nil && creatorUser != nil {
-		return o.GetUserAnnotation(creatorUser, constants.UserAnnotationZoneKey)
-	}
-	return ""
+	return domain
 }
 
-func (o *UserOperator) UserIsEphemeralDomain(user *iamV1alpha2.User) (bool, error) {
-	isEphemeralAnnotation := o.GetUserAnnotation(user, constants.UserAnnotationIsEphemeral)
-	if isEphemeralAnnotation == "" {
-		return false, nil
-	}
-	return strconv.ParseBool(isEphemeralAnnotation)
+func (o *UserOperator) GetUserDomainType(_ *iamV1alpha2.User) (bool, string, error) {
+	// App IDs already identify their owner; all users share the machine domain.
+	domain, err := o.GetDefaultDomain()
+	return false, domain, err
 }
 
-func (o *UserOperator) GetUserDomainType(user *iamV1alpha2.User) (bool, string, error) {
-	zone := o.GetUserAnnotation(user, constants.UserAnnotationZoneKey)
-	if zone != "" {
-		return false, zone, nil
-	}
-	// Find the creator user's zone
-	creatorUserName := o.GetUserAnnotation(user, constants.AnnotationUserCreator)
-	if creatorUserName == "" || creatorUserName == "cli" {
-		return false, "", nil
-	}
-	creatorUser, err := o.GetUser(creatorUserName)
+func (o *UserOperator) GetDefaultDomain() (string, error) {
+	domain, err := o.GetDomain()
 	if err != nil {
-		return false, "", err
+		return "", err
 	}
-	if v := o.GetUserAnnotation(creatorUser, constants.UserAnnotationZoneKey); v != "" {
-		return true, v, nil
+	domain = strings.TrimSuffix(domain, ".")
+	if domain == "olares.local" {
+		return "", nil
 	}
-
-	return false, "", nil
+	return domain, nil
 }
 
 func (o *UserOperator) GetLauncherAccessLevel(user *iamV1alpha2.User) (*uint64, error) {
@@ -274,11 +226,7 @@ func (o *UserOperator) GetDomain() (string, error) {
 		return "", err
 	}
 
-	if name, ok := terminus.Spec.Settings[users.SettingsDomainNameKey]; !ok {
-		return "", errors.New("olares domain name not found")
-	} else {
-		return name, nil
-	}
+	return terminus.Spec.Settings[users.SettingsDomainNameKey], nil
 
 }
 

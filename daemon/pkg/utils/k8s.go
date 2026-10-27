@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/userstorage"
 	"k8s.io/klog"
 
 	bflconst "bytetrade.io/web3os/bfl/pkg/constants"
@@ -587,19 +588,11 @@ func GetThisNodeName(ctx context.Context, client kubernetes.Interface) (nodeName
 }
 
 func GetUserspacePvcHostPath(ctx context.Context, user string, client kubernetes.Interface) (string, error) {
-	namespace := "user-space-" + user
-	bfl, err := client.AppsV1().StatefulSets(namespace).Get(ctx, "bfl", metav1.GetOptions{})
+	layout, err := userstorage.Load(ctx, client, user)
 	if err != nil {
-		klog.Error("find bfl error, ", err)
 		return "", err
 	}
-
-	hostpath, ok := bfl.Annotations["userspace_hostpath"]
-	if !ok {
-		return "", errors.New("hostpath not found")
-	}
-
-	return hostpath, nil
+	return layout.Userspace.Path, nil
 }
 
 func GetNodesPressure(ctx context.Context, client kubernetes.Interface) (map[string][]NodePressure, error) {

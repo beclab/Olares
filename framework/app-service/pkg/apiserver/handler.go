@@ -12,7 +12,6 @@ import (
 	lister_v1alpha1 "github.com/beclab/api/pkg/generated/listers/app.bytetrade.io/v1alpha1"
 
 	// upgrade removed from direct usage in handlers
-	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace/v1"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	"github.com/beclab/Olares/framework/app-service/pkg/webhook"
 	"k8s.io/client-go/kubernetes"
@@ -26,7 +25,6 @@ import (
 type Handler struct {
 	kubeHost           string
 	serviceCtx         context.Context
-	userspaceManager   *userspace.Manager
 	kubeConfig         *rest.Config // helm's kubeConfig. TODO: insecure
 	sidecarWebhook     *webhook.Webhook
 	ctrlClient         client.Client
@@ -161,7 +159,6 @@ func (b *handlerBuilder) Build() (*Handler, error) {
 		kubeHost:           b.ksHost,
 		serviceCtx:         b.ctx,
 		kubeConfig:         b.kubeConfig,
-		userspaceManager:   userspace.NewManager(b.ctx),
 		sidecarWebhook:     wh,
 		ctrlClient:         b.ctrlClient,
 		informer:           b.informer,

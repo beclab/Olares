@@ -49,19 +49,3 @@ func IsGeneratedApp(name string) bool {
 	}
 	return false
 }
-
-// GetAppsFromDirectory returns all system applications.
-func GetAppsFromDirectory(directory string) ([]string, error) {
-	subDirectories := make([]string, 0)
-	dirEntries, err := os.ReadDir(directory)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, entry := range dirEntries {
-		if entry.IsDir() && !strings.HasPrefix(entry.Name(), ".") {
-			subDirectories = append(subDirectories, entry.Name())
-		}
-	}
-	return subDirectories, nil
-}

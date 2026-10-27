@@ -9,7 +9,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"os"
 
 	"bytetrade.io/web3os/bfl/pkg/constants"
 	appv1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
@@ -17,29 +16,6 @@ import (
 
 	"k8s.io/klog/v2"
 )
-
-func (c *Client) fetchAppInfoFromAppService(appname, token string) (map[string]interface{}, error) {
-	appServiceHost := os.Getenv(AppServiceHostEnv)
-	appServicePort := os.Getenv(AppServicePortEnv)
-	urlStr := fmt.Sprintf(AppServiceGetURLTempl, appServiceHost, appServicePort, appname)
-
-	return c.doHttpGetOne(urlStr, token)
-}
-
-func (c *Client) getAppInfoFromData(data map[string]interface{}) (*AppInfo, error) {
-	appSpec, ok := data["spec"].(map[string]interface{})
-	if !ok {
-		klog.Error("get app info error: ", data)
-		return nil, errors.New("app info is invalid")
-	}
-
-	return &AppInfo{
-		ID:             genAppID(appSpec),
-		Name:           appSpec["name"].(string),
-		Namespace:      appSpec["namespace"].(string),
-		DeploymentName: appSpec["deployment"].(string),
-		Owner:          appSpec["owner"].(string)}, nil
-}
 
 func (c *Client) getAppListFromData(apps []appv1.Application) ([]*AppInfo, error) {
 
@@ -57,7 +33,7 @@ func (c *Client) getAppListFromData(apps []appv1.Application) ([]*AppInfo, error
 		// get app settings to filter system service not to list
 		var title, target, state, requiredGPU, defaultThirdLevelDomainConfig string
 		isClusterScoped, mobileSupported := false, false
-		settingsMap := appSpec.Settings
+		settingsMap := app.EffectiveSettings(c.username)
 		if settingsMap != nil {
 			if _, ok := settingsMap["system_service"]; ok {
 				// It is the system service, not app
@@ -92,7 +68,7 @@ func (c *Client) getAppListFromData(apps []appv1.Application) ([]*AppInfo, error
 		}
 		klog.Infof("entranceStatusesMap: %v", entranceStatusesMap)
 
-		for _, entrance := range appSpec.Entrances {
+		for _, entrance := range app.EffectiveEntrances(c.username) {
 			var appEntrance Entrance
 			appEntrance.Name = entrance.Name
 			appEntrance.Title = entrance.Title
@@ -192,6 +168,9 @@ func (c *Client) getAppListFromData(apps []appv1.Application) ([]*AppInfo, error
 func (c *Client) addTokenHeader(req *http.Request, token string) (*http.Request, error) {
 	if req.Header == nil {
 		req.Header = make(http.Header)
+	}
+	if c.username != "" {
+		req.Header.Set(constants.HeaderBflUserKey, c.username)
 	}
 	if len(token) > 0 {
 		req.Header.Add(constants.UserAuthorizationTokenKey, token)
@@ -355,17 +334,4 @@ func (c *Client) doHttpPost(urlStr, token string, bodydata interface{}) (map[str
 	}
 
 	return c.readHttpResponse(resp)
-}
-
-func stringOrEmpty(value interface{}) string {
-	if value == nil {
-		return ""
-	}
-
-	return value.(string)
-}
-
-// TODO: get app listing id
-func genAppID(appSpec map[string]interface{}) string {
-	return appSpec["appid"].(string)
 }

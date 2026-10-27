@@ -11,6 +11,8 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	utilerrors "k8s.io/apimachinery/pkg/util/errors"
+	"sort"
 	"strings"
 	"time"
 
@@ -40,6 +42,7 @@ var GVR = schema.GroupVersionResource{
 type Subscriber struct {
 	*watchers.Subscriber
 	client        clientset.ClientInterface
+	username      string
 	dynamicClient *dynamic_client.ResourceClient[appv1.Application]
 }
 
@@ -58,7 +61,7 @@ func (s *Subscriber) HandleEvent() cache.ResourceEventHandler {
 				return false
 			}
 
-			if strings.HasPrefix(app.Namespace, "user-space-") || strings.HasPrefix(app.Namespace, "user-system-") {
+			if strings.HasPrefix(app.Namespace, "user-space-") {
 				return false
 			}
 
@@ -95,35 +98,48 @@ func (s *Subscriber) HandleEvent() cache.ResourceEventHandler {
 }
 
 func (s *Subscriber) Do(ctx context.Context, obj interface{}, action watchers.Action) error {
-	var err error
-	var request, ok = obj.(*appv1.Application)
+	app, ok := obj.(*appv1.Application)
 	if !ok {
-		return errors.New("invalid object")
+		return errors.New("invalid application object")
 	}
-
-	if ok = s.isOwnerApp(request); !ok {
-		return nil
+	var usernames []string
+	if appv1.IsShared(app) {
+		for username, settings := range app.Spec.UserSettings {
+			if username != "" && settings[constants.ApplicationCustomDomain] != "" {
+				usernames = append(usernames, username)
+			}
+		}
+		sort.Strings(usernames)
+	} else if app.Spec.Owner != "" {
+		usernames = append(usernames, app.Spec.Owner)
 	}
-
-	klog.Infof("customdomain-status-check queue request: app: %s_%s, action: %d", request.Spec.Name, request.Spec.Namespace, action)
-
-	switch action {
-	case watchers.ADD, watchers.UPDATE:
-		request, err = s.getObj(request.GetName())
+	var errs []error
+	for _, username := range usernames {
+		// The informer and clients are shared; user state belongs to this task.
+		scoped := *s
+		scoped.username = username
+		var err error
+		if action == watchers.DELETE {
+			err = scoped.removeCustomDomainRetry(ctx, app)
+		} else {
+			current, getErr := scoped.getObj(app.Name)
+			if kerrors.IsNotFound(getErr) {
+				continue
+			}
+			if getErr != nil {
+				err = getErr
+			} else {
+				err = scoped.checkCustomDomainStatus(ctx, current)
+			}
+		}
 		if err != nil {
-			return err
+			errs = append(errs, fmt.Errorf("user %s, app %s: %w", username, app.Name, err))
 		}
-		obj = request
-		if err := s.checkCustomDomainStatus(request); err != nil {
-			return fmt.Errorf("%s, app: %s-%s", err.Error(), request.Spec.Name, request.Spec.Namespace)
-		}
-	case watchers.DELETE:
-		return s.removeCustomDomainRetry(request)
 	}
-	return nil
+	return utilerrors.NewAggregate(errs)
 }
 
-func (s *Subscriber) removeCustomDomainRetry(request *appv1.Application) error {
+func (s *Subscriber) removeCustomDomainRetry(ctx context.Context, request *appv1.Application) error {
 	backoff := wait.Backoff{
 		Duration: 2 * time.Second,
 		Factor:   2,
@@ -132,24 +148,24 @@ func (s *Subscriber) removeCustomDomainRetry(request *appv1.Application) error {
 	}
 
 	var err = retry.OnError(backoff, func(err error) bool {
-		return true
+		return ctx.Err() == nil
 	}, func() error {
-		return s.removeCustomDomainCnameData(request)
+		return s.removeCustomDomainCnameData(ctx, request)
 	})
 
 	if err != nil {
 		klog.Errorf("remove custom domain error: %v", err)
 	}
 
-	return nil
+	return err
 }
 
-func (s *Subscriber) checkCustomDomainStatus(app *appv1.Application) error {
+func (s *Subscriber) checkCustomDomainStatus(ctx context.Context, app *appv1.Application) error {
 	var err error
 	// For shared apps the customDomain blob lives in
-	// Spec.UserSettings[constants.Username]; for v1/v2 it's still
+	// Spec.UserSettings[s.username]; for v1/v2 it's still
 	// Spec.Settings. EffectiveSettings hides the difference.
-	effective := app.EffectiveSettings(constants.Username)
+	effective := app.EffectiveSettings(s.username)
 	customDomains, ok := effective[constants.ApplicationCustomDomain]
 	if !ok || customDomains == "" {
 		return nil
@@ -179,7 +195,7 @@ func (s *Subscriber) checkCustomDomainStatus(app *appv1.Application) error {
 		}
 
 		existsCustomDomain = true
-		domainStatus, err = s.checkStatus(customDomainName)
+		domainStatus, err = s.checkStatus(ctx, customDomainName)
 		if err != nil {
 			break
 		}
@@ -216,10 +232,10 @@ func (s *Subscriber) checkCustomDomainStatus(app *appv1.Application) error {
 		if app.Spec.UserSettings == nil {
 			app.Spec.UserSettings = make(map[string]map[string]string)
 		}
-		if app.Spec.UserSettings[constants.Username] == nil {
-			app.Spec.UserSettings[constants.Username] = make(map[string]string)
+		if app.Spec.UserSettings[s.username] == nil {
+			app.Spec.UserSettings[s.username] = make(map[string]string)
 		}
-		app.Spec.UserSettings[constants.Username][constants.ApplicationCustomDomain] = string(cdos)
+		app.Spec.UserSettings[s.username][constants.ApplicationCustomDomain] = string(cdos)
 	} else {
 		app.Spec.Settings[constants.ApplicationCustomDomain] = string(cdos)
 	}
@@ -242,12 +258,11 @@ func (s *Subscriber) updateApp(app *appv1.Application) error {
 	return nil
 }
 
-func (s *Subscriber) checkStatus(domainName string) (string, error) {
-	terminusName, err := s.getTerminusName()
+func (s *Subscriber) checkStatus(ctx context.Context, domainName string) (string, error) {
+	cm, err := certmanager.NewCertManagerForUser(ctx, s.username)
 	if err != nil {
 		return constants.CustomDomainCnameStatusEmpty, err
 	}
-	cm := certmanager.NewCertManager(constants.TerminusName(terminusName))
 
 	domainCnameStatus, err := cm.GetCustomDomainCnameStatus(domainName)
 	if err != nil {
@@ -289,7 +304,7 @@ func (s *Subscriber) checkStatus(domainName string) (string, error) {
 
 func (s *Subscriber) getStatusByCustomDomainCert(domainName string) (string, error) {
 	certConfigMapName := fmt.Sprintf(constants.AppEntranceCertConfigMapNameTpl, domainName)
-	certConfigMap, err := s.client.Kubernetes().CoreV1().ConfigMaps(constants.Namespace).Get(context.Background(), certConfigMapName, metav1.GetOptions{})
+	certConfigMap, err := s.client.Kubernetes().CoreV1().ConfigMaps(fmt.Sprintf(constants.UserspaceNameFormat, s.username)).Get(context.Background(), certConfigMapName, metav1.GetOptions{})
 	if err != nil {
 		if kerrors.IsNotFound(err) {
 			return constants.CustomDomainCnameStatusCertNotFound, nil
@@ -403,15 +418,12 @@ func CheckSSLCertificate(cert, key []byte, hostname string) error {
 	return nil
 }
 
-func (s *Subscriber) removeCustomDomainCnameData(app *appv1.Application) error {
-	var terminusName, err = s.getTerminusName()
-	if err != nil {
-		return nil
-	}
+func (s *Subscriber) removeCustomDomainCnameData(ctx context.Context, app *appv1.Application) error {
+	var err error
 
 	// Reflect per-user storage when reading the customDomain blob so
 	// we delete the right user's cloudflare CNAMEs on app delete.
-	customDomainData := app.EffectiveSettings(constants.Username)[constants.ApplicationCustomDomain]
+	customDomainData := app.EffectiveSettings(s.username)[constants.ApplicationCustomDomain]
 	if customDomainData == "" {
 		return nil
 	}
@@ -425,7 +437,11 @@ func (s *Subscriber) removeCustomDomainCnameData(app *appv1.Application) error {
 		return nil
 	}
 
-	cm := certmanager.NewCertManager(constants.TerminusName(terminusName))
+	cm, err := certmanager.NewCertManagerForUser(ctx, s.username)
+	if err != nil {
+		return err
+	}
+
 	for _, entranceCustomDomain := range entrancesCustomDomain {
 		customDomainName, ok := entranceCustomDomain[constants.ApplicationThirdPartyDomain]
 		if !ok || customDomainName == nil {
@@ -454,22 +470,6 @@ func (s *Subscriber) mergeCnameStatus(sslStatus, hostnameStatus string) string {
 	}
 }
 
-func (s *Subscriber) getTerminusName() (string, error) {
-	op, err := operator.NewUserOperator()
-	if err != nil {
-		return "", err
-	}
-	user, err := op.GetUser("")
-	if err != nil {
-		return "", err
-	}
-	terminusName := op.GetTerminusName(user)
-	if terminusName == "" {
-		return "", errors.New("olares name not found")
-	}
-	return terminusName, nil
-}
-
 func (s *Subscriber) getReverseProxyType() (string, error) {
 	op, err := operator.NewUserOperator()
 	if err != nil {
@@ -480,15 +480,4 @@ func (s *Subscriber) getReverseProxyType() (string, error) {
 
 func (s *Subscriber) getObj(appName string) (*appv1.Application, error) {
 	return s.dynamicClient.Get(context.Background(), appName, metav1.GetOptions{})
-}
-
-// isOwnerApp reports whether this BFL instance should react to the given
-// Application. For v1/v2 it's the legacy Spec.Owner check; for shared the CR
-// is cluster-wide and every BFL instance is a stake-holder (each BFL
-// manages its own user's per-user overlay).
-func (s *Subscriber) isOwnerApp(app *appv1.Application) bool {
-	if appv1.IsShared(app) {
-		return true
-	}
-	return app.Spec.Owner == constants.Username
 }

@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -13,15 +14,14 @@ import (
 	"bytetrade.io/web3os/osnode-init/pkg/log"
 	"github.com/pkg/errors"
 	"github.com/robfig/cron/v3"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/util/retry"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -139,76 +139,115 @@ func (r *NodeInitController) Reconcile(ctx context.Context, req ctrl.Request) (c
 		log.Warnf("not current node %q, ignore", NodeIP)
 		return ctrl.Result{}, nil
 	}
-	nodeList.Items = nil
 
-	var statefulSets appsv1.StatefulSetList
-
-	if err = r.List(ctx, &statefulSets, client.MatchingLabels{"tier": "bfl"}); err != nil {
-		return ctrl.Result{Requeue: true, RequeueAfter: 10 * time.Second}, errors.WithStack(err)
-	} else {
-		for _, sts := range statefulSets.Items {
-			if !isUserNamespaceBfl(sts.Namespace, sts.Name) {
-				continue
+	nodeName := ""
+	for _, node := range nodeList.Items {
+		for _, address := range node.Status.Addresses {
+			if address.Type == corev1.NodeInternalIP && address.Address == NodeIP {
+				nodeName = node.Name
 			}
-			log.Debugf("creating %q bfl userdata dirs", sts.Namespace)
-			if !hasAllAnnotations(sts.Annotations, BflAnnotationAppCache, BflAnnotationDbData) {
-				return ctrl.Result{}, errors.Errorf("namespace %q bfl has no userdata annotation", sts.Namespace)
+		}
+	}
+	if nodeName == "" {
+		return ctrl.Result{}, fmt.Errorf("cannot identify current node")
+	}
+	var claims corev1.PersistentVolumeClaimList
+	if err = r.List(ctx, &claims, client.HasLabels{UserStorageRoleLabel}); err != nil {
+		return ctrl.Result{}, err
+	}
+	for _, claim := range claims.Items {
+		if claim.DeletionTimestamp != nil || !strings.HasPrefix(claim.Namespace, "user-space-") {
+			continue
+		}
+		if err := createDataDirs(&claim); err != nil {
+			return ctrl.Result{RequeueAfter: 10 * time.Second}, err
+		}
+		if err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			var current corev1.PersistentVolumeClaim
+			if err := r.Get(ctx, client.ObjectKeyFromObject(&claim), &current); err != nil {
+				return client.IgnoreNotFound(err)
 			}
-			if err = createDataDirs(&sts); err != nil {
-				return ctrl.Result{}, errors.Errorf("creating %q bfl userdata dirs, %v", sts.Namespace, err)
+			var initialized map[string]bool
+			raw := current.Annotations[InitializedNodesAnnotation]
+			if raw != "" {
+				if err := json.Unmarshal([]byte(raw), &initialized); err != nil {
+					return err
+				}
 			}
+			if initialized[nodeName] {
+				return nil
+			}
+			if initialized == nil {
+				initialized = map[string]bool{}
+			}
+			initialized[nodeName] = true
+			data, err := json.Marshal(initialized)
+			if err != nil {
+				return err
+			}
+			if current.Annotations == nil {
+				current.Annotations = map[string]string{}
+			}
+			current.Annotations[InitializedNodesAnnotation] = string(data)
+			return r.Update(ctx, &current)
+		}); err != nil {
+			return ctrl.Result{RequeueAfter: 10 * time.Second}, err
 		}
 	}
 
 	return ctrl.Result{}, nil
 }
 
-func createDataDirs(sts *appsv1.StatefulSet) error {
-	var err error
-
-	mkDirs := func(perm []int, dirs ...string) (err error) {
-		for _, dir := range dirs {
-			if !filePathExists(dir) {
-				err = os.MkdirAll(dir, 0755)
-				if err != nil {
-					return errors.WithStack(err)
-				}
-			}
-
-			var di os.FileInfo
-			di, err = os.Stat(dir)
-			if err != nil {
-				return errors.WithStack(err)
-			} else {
-				stat := di.Sys().(*syscall.Stat_t)
-				if stat.Uid == uint32(perm[0]) && stat.Gid == uint32(perm[1]) {
-					return
-				}
-				if err = os.Chown(dir, perm[0], perm[1]); err != nil {
-					return errors.WithStack(err)
-				}
-				log.Debugf("%q created, and set uid: %v, gid: %v ", dir, perm[0], perm[1])
-			}
-		}
-		return
+func createDataDirs(claim *corev1.PersistentVolumeClaim) error {
+	role := claim.Labels[UserStorageRoleLabel]
+	directories := map[string]string{"userspace": "rootfs/userspace", "appcache": "userdata/Cache", "dbdata": "userdata/dbdata"}
+	directory, ok := directories[role]
+	if !ok {
+		return fmt.Errorf("unknown personal storage role %q", role)
 	}
-
-	appDir, dbDir := sts.Annotations[BflAnnotationAppCache], sts.Annotations[BflAnnotationDbData]
-
-	// appdata
-	for name, perm := range AppSubDirs {
-		if err = mkDirs(perm, filepath.Join(appDir, name)); err != nil {
+	relative := claim.Annotations[StorageRelativePathAnnotation]
+	if relative != filepath.Join(directory, claim.Name) {
+		return fmt.Errorf("invalid relative path on PVC %s/%s", claim.Namespace, claim.Name)
+	}
+	root := filepath.Join("/olares", relative)
+	type ownedDir struct {
+		path     string
+		uid, gid int
+	}
+	dirs := []ownedDir{{root, 1000, 1000}}
+	switch role {
+	case "userspace":
+		for _, subdir := range []string{"Home", "Home/Documents", "Home/Downloads", "Home/Pictures", "Home/Movies", "Home/Music", "Home/Code", "Data"} {
+			dirs = append(dirs, ownedDir{filepath.Join(root, subdir), 1000, 1000})
+		}
+	case "appcache":
+		for name, perm := range AppSubDirs {
+			dirs = append(dirs, ownedDir{filepath.Join(root, name), perm[0], perm[1]})
+		}
+	case "dbdata":
+		dirs[0].uid, dirs[0].gid = 0, 0
+		for name, perm := range DbDataSubDirs {
+			dirs = append(dirs, ownedDir{filepath.Join(root, name), perm[0], perm[1]})
+		}
+	}
+	for _, dir := range dirs {
+		if err := os.MkdirAll(dir.path, 0755); err != nil {
 			return err
 		}
-	}
-
-	// create dbData sub dirs and set permissions
-	for name, perm := range DbDataSubDirs {
-		if err = mkDirs(perm, filepath.Join(dbDir, name)); err != nil {
+		info, err := os.Lstat(dir.path)
+		if err != nil {
 			return err
 		}
+		if info.Mode()&os.ModeSymlink != 0 {
+			continue
+		}
+		stat := info.Sys().(*syscall.Stat_t)
+		if stat.Uid != uint32(dir.uid) || stat.Gid != uint32(dir.gid) {
+			if err := os.Chown(dir.path, dir.uid, dir.gid); err != nil {
+				return err
+			}
+		}
 	}
-
 	return nil
 }
 
@@ -263,47 +302,18 @@ func (r *NodeInitController) SetupWithManager(mgr ctrl.Manager) error {
 		return errors.WithStack(err)
 	}
 
-	return c.Watch(&source.Kind{Type: &appsv1.StatefulSet{}},
+	return c.Watch(&source.Kind{Type: &corev1.PersistentVolumeClaim{}},
 		handler.EnqueueRequestsFromMapFunc(func(o client.Object) []reconcile.Request {
 			return []reconcile.Request{{NamespacedName: types.NamespacedName{
 				Namespace: o.GetNamespace(),
 				Name:      o.GetName()}},
 			}
 		}), newCreateOnlyPredicate(func(e event.CreateEvent) bool {
-			sts, ok := e.Object.(*appsv1.StatefulSet)
-			if ok && isUserNamespaceBfl(sts.Namespace, sts.Name) {
+			claim, ok := e.Object.(*corev1.PersistentVolumeClaim)
+			if ok && claim.Labels[UserStorageRoleLabel] != "" && strings.HasPrefix(claim.Namespace, "user-space-") {
 				return true
 			}
 			return false
 		}),
 	)
-}
-
-func filePathExists(name string) bool {
-	_, err := os.Stat(name)
-	if err != nil && os.IsNotExist(err) {
-		return false
-	}
-	return true
-}
-
-func isUserNamespaceBfl(namespace, name string) bool {
-	return name == BflStatefulSetName && strings.HasPrefix(namespace, "user-space")
-}
-
-func hasAllAnnotations(annotations map[string]string, keys ...string) bool {
-	if annotations == nil {
-		return false
-	}
-
-	sb := sets.NewByte()
-
-	for _, key := range keys {
-		if v, ok := annotations[key]; ok && v != "" {
-			sb.Insert('y')
-		} else {
-			sb.Insert('n')
-		}
-	}
-	return sb.HasAll('y')
 }

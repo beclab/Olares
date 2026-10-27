@@ -11,7 +11,6 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/prometheus"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/users"
-	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 
 	iamv1alpha2 "github.com/beclab/api/iam/v1alpha2"
 	"github.com/emicklei/go-restful/v3"
@@ -88,11 +87,6 @@ type UserCreateRequest struct {
 	CpuLimit    string `json:"cpu_limit"`
 }
 
-type UserCreateOption struct {
-	UserCreateRequest
-	TerminusName string
-}
-
 func (h *Handler) createUser(req *restful.Request, resp *restful.Response) {
 	owner := req.Attribute(constants.UserContextAttribute).(string)
 
@@ -127,24 +121,9 @@ func (h *Handler) createUser(req *restful.Request, resp *restful.Response) {
 	}
 
 	username := strings.ToLower(userReq.Name)
-	// get terminusName
-	var olaresName users.OlaresName
 	if strings.Contains(username, "@") {
-		olaresName = users.OlaresName(username)
-		username = strings.Split(username, "@")[0]
-	} else {
-		olares, err := utils.GetTerminus(req.Request.Context(), h.ctrlClient)
-		if err != nil {
-			api.HandleError(resp, req, err)
-			return
-		}
-		domainName := olares.Spec.Settings["domainName"]
-		olaresName = subAccountOlaresName(username, domainName)
-	}
-
-	isEphemeral := "true"
-	if !strings.Contains(string(olaresName), "@") {
-		isEphemeral = "false"
+		api.HandleBadRequest(resp, req, errors.New("user create: username must be a local account name without a domain"))
+		return
 	}
 	user := iamv1alpha2.User{
 		TypeMeta: metav1.TypeMeta{
@@ -152,14 +131,13 @@ func (h *Handler) createUser(req *restful.Request, resp *restful.Response) {
 			Kind:       iamv1alpha2.ResourceKindUser,
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: userReq.Name,
+			Name: username,
 			Annotations: map[string]string{
 				"iam.kubesphere.io/uninitialized":   "true",
 				users.AnnotationUserCreator:         owner,
 				users.UserAnnotationUninitialized:   "true",
 				users.UserAnnotationOwnerRole:       userReq.OwnerRole,
-				users.UserAnnotationIsEphemeral:     isEphemeral,
-				users.UserAnnotationTerminusNameKey: string(olaresName),
+				users.UserAnnotationTerminusNameKey: username,
 				users.UserLauncherAuthPolicy:        "two_factor",
 				users.UserLauncherAccessLevel:       "1",
 				users.UserAnnotationLimitsMemoryKey: userReq.MemoryLimit,
@@ -170,7 +148,7 @@ func (h *Handler) createUser(req *restful.Request, resp *restful.Response) {
 		},
 		Spec: iamv1alpha2.UserSpec{
 			DisplayName:     userReq.DisplayName,
-			Email:           string(olaresName),
+			Email:           username,
 			InitialPassword: userReq.Password,
 			Description:     userReq.Description,
 		},
@@ -187,7 +165,7 @@ func (h *Handler) createUser(req *restful.Request, resp *restful.Response) {
 	resp.WriteAsJson(map[string]interface{}{
 		"code": 200,
 		"data": map[string]string{
-			"name": userReq.Name,
+			"name": username,
 		},
 	})
 	return
@@ -267,15 +245,8 @@ func (h *Handler) userStatus(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	isEphemeral, zone, err := h.getUserDomainType(&user)
-	if err != nil {
-		api.HandleError(resp, req, err)
-		return
-	}
-	var address string
-	if isEphemeral {
-		address = fmt.Sprintf("wizard-%s.%s", username, zone)
-	}
+	// Personal wizard entrances were removed; onboarding now uses shared services.
+	address := ""
 
 	resp.WriteAsJson(map[string]interface{}{
 		"code": 200,
@@ -290,23 +261,6 @@ func (h *Handler) userStatus(req *restful.Request, resp *restful.Response) {
 		"message": user.Status.Reason,
 	})
 	return
-}
-
-func (h *Handler) getUserDomainType(user *iamv1alpha2.User) (bool, string, error) {
-	zone := user.Annotations[users.UserAnnotationZoneKey]
-	if zone != "" {
-		return false, zone, nil
-	}
-	creatorUser, err := utils.FindOwnerUser(h.ctrlClient, user)
-	if err != nil {
-		klog.Error(err)
-		return false, "", err
-	}
-	if v := creatorUser.Annotations[users.UserAnnotationZoneKey]; v != "" {
-		return true, v, nil
-	}
-
-	return false, "", nil
 }
 
 type UserResourceLimit struct {

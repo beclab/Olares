@@ -1,6 +1,7 @@
 package terminus
 
 import (
+	"encoding/json"
 	"fmt"
 	"net"
 	"os"
@@ -101,49 +102,42 @@ func (s *GetNATGatewayIP) Execute(runtime connector.Runtime) error {
 	return nil
 }
 
-type UpdateNATGatewayForUser struct {
+type UpdateNATGatewayIP struct {
 	common.KubeAction
 }
 
-func (a *UpdateNATGatewayForUser) Execute(runtime connector.Runtime) error {
+func (a *UpdateNATGatewayIP) Execute(runtime connector.Runtime) error {
 	hostIP := runtime.GetSystemInfo().GetNATGateway()
 	if hostIP == "" {
-		return errors.New("NAT gateway is not set")
+		return nil
 	}
-	si := runtime.GetSystemInfo()
 	var kubectlCMD string
-	var kubectlCMDDefaultArgs []string
+	var kubectlArgs []string
 	var err error
-	if si.IsDarwin() {
+	if runtime.GetSystemInfo().IsWindows() {
+		kubectlCMD = "cmd"
+		kubectlArgs = []string{"/C", "wsl", "-d", a.KubeConf.Arg.WSLDistribution, "-u", "root", common.CommandKubectl}
+	} else {
 		kubectlCMD, err = util.GetCommand(common.CommandKubectl)
 		if err != nil {
-			return errors.Wrap(errors.WithStack(err), "kubectl not found")
+			return errors.Wrap(err, "kubectl not found")
 		}
-	} else if si.IsWindows() {
-		kubectlCMD = "cmd"
-		kubectlCMDDefaultArgs = []string{"/C", "wsl", "-d", a.KubeConf.Arg.WSLDistribution, "-u", "root", common.CommandKubectl}
 	}
-
-	getUserArgs := []string{"get", "user", "-o", "jsonpath='{.items[0].metadata.name}'"}
-	getUserCMD := exec.Command(kubectlCMD, append(kubectlCMDDefaultArgs, getUserArgs...)...)
-	usernameBytes, err := getUserCMD.Output()
+	// Server-side apply owns only this key, preserving the controller's config
+	// and observed addresses. This also works before the first user exists.
+	payload, err := json.Marshal(map[string]interface{}{
+		"apiVersion": "v1", "kind": "ConfigMap",
+		"metadata": map[string]string{"name": "default-network", "namespace": "os-network"},
+		"data":     map[string]string{"nat-gateway-ip": hostIP},
+	})
 	if err != nil {
-		return errors.Wrap(err, "failed to get user for updating")
+		return err
 	}
-	username := strings.TrimSpace(string(usernameBytes))
-	username = strings.TrimPrefix(username, "'")
-	username = strings.TrimSuffix(username, "'")
-	if len(username) == 0 {
-		return errors.New("failed to get user for updating: got empty username")
-	}
-	logger.Infof("updating user: %s", username)
-
-	jsonPatch := fmt.Sprintf(`{"metadata":{"annotations":{"bytetrade.io/nat-gateway-ip":"%s"}}}`, hostIP)
-	patchUserArgs := []string{"patch", "user", username, "-p", jsonPatch, "--type=merge"}
-	patchUserCMD := exec.Command(kubectlCMD, append(kubectlCMDDefaultArgs, patchUserArgs...)...)
-	output, err := patchUserCMD.CombinedOutput()
-	if err != nil {
-		return errors.Wrapf(err, "failed to update nat gateway for user, output: %s", output)
+	args := append(kubectlArgs, "apply", "--server-side", "--field-manager=olares-cli-network", "-f", "-")
+	cmd := exec.Command(kubectlCMD, args...)
+	cmd.Stdin = strings.NewReader(string(payload))
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return errors.Wrapf(err, "failed to update global NAT gateway, output: %s", output)
 	}
 	return nil
 }

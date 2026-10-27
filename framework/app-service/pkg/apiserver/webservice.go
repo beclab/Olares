@@ -86,35 +86,35 @@ func addServiceToContainer(c *restful.Container, handler *Handler) error {
 	// handler_user
 	ws.Route(ws.POST("/users").
 		To(handler.createUser).
-		Doc("create new user's launcher and apps").
+		Doc("create a user").
 		Param(ws.PathParameter(ParamAppName, "the name of the user")).
 		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
 		Returns(http.StatusOK, "Success to create", nil))
 
 	ws.Route(ws.DELETE("/users/{"+ParamUserName+"}").
 		To(handler.deleteUser).
-		Doc("delete a user's launcher and apps").
+		Doc("delete a user and their resources").
 		Param(ws.PathParameter(ParamUserName, "the name of the user")).
 		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
 		Returns(http.StatusOK, "Success to delete", nil))
 
 	ws.Route(ws.GET("/users/{"+ParamUserName+"}/status").
 		To(handler.userStatus).
-		Doc("get a user's launcher and apps creating or deleting status").
+		Doc("get a user's creation or deletion status").
 		Param(ws.PathParameter(ParamUserName, "the name of the user")).
 		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
 		Returns(http.StatusOK, "Success to get", nil))
 
 	ws.Route(ws.GET("/users").
 		To(handler.handleUsers).
-		Doc("get a user's launcher and apps creating or deleting status").
+		Doc("list users").
 		Param(ws.PathParameter(ParamUserName, "the name of the user")).
 		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
 		Returns(http.StatusOK, "Success to get", nil))
 
 	ws.Route(ws.GET("/users/{"+ParamUserName+"}").
 		To(handler.handleUser).
-		Doc("get a user's launcher and apps creating or deleting status").
+		Doc("get a user").
 		Param(ws.PathParameter(ParamUserName, "the name of the user")).
 		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
 		Returns(http.StatusOK, "Success to get", nil))

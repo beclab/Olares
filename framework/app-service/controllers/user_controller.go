@@ -13,6 +13,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/users"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/activeusers"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace/v1"
+	"github.com/beclab/Olares/framework/app-service/pkg/userstorage"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils/sliceutil"
 
@@ -31,14 +32,10 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
 	utilwait "k8s.io/apimachinery/pkg/util/wait"
-	applyCorev1 "k8s.io/client-go/applyconfigurations/core/v1"
-	applyMetav1 "k8s.io/client-go/applyconfigurations/meta/v1"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	toolscache "k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/retry"
 	"k8s.io/klog/v2"
-	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -353,7 +350,7 @@ func (r *UserController) handleUserCreation(ctx context.Context, user *iamv1alph
 
 // waitForUserPodsReady polls until every pod in the user's namespaces is
 // serving, or userPodsReadyTimeout elapses. A list error stops the poll, the
-// same way checkLauncher does.
+// same way storage creation does.
 func (r *UserController) waitForUserPodsReady(ctx context.Context, user *iamv1alpha2.User) error {
 	var lastReason string
 	err := utilwait.PollImmediate(userPodsReadyInterval, userPodsReadyTimeout, func() (bool, error) {
@@ -376,9 +373,20 @@ func (r *UserController) waitForUserPodsReady(ctx context.Context, user *iamv1al
 	return err
 }
 
-// userPodsReady reports whether every pod in user-space-<name> is serving. An empty namespace is not ready: the charts
-// return before their controllers have created the pods.
+// userPodsReady waits for personal storage and any optional personal workloads.
+// A user may have no pods now that system services are shared.
 func (r *UserController) userPodsReady(ctx context.Context, user *iamv1alpha2.User) (bool, string, error) {
+	layout, err := userstorage.Read(ctx, r.Client, user.Name)
+	if errors.Is(err, userstorage.ErrNotReady) {
+		return false, err.Error(), nil
+	}
+	if err != nil {
+		return false, "", err
+	}
+	if !layout.Ready() {
+		return false, "waiting for personal storage initialization", nil
+	}
+
 	namespaces := []string{
 		fmt.Sprintf("user-space-%s", user.Name),
 	}
@@ -386,9 +394,6 @@ func (r *UserController) userPodsReady(ctx context.Context, user *iamv1alpha2.Us
 		var pods corev1.PodList
 		if err := r.List(ctx, &pods, client.InNamespace(ns)); err != nil {
 			return false, "", err
-		}
-		if len(pods.Items) == 0 {
-			return false, fmt.Sprintf("no pod in %s yet", ns), nil
 		}
 		for i := range pods.Items {
 			if err := podhealth.AssertPodReady(&pods.Items[i]); err != nil {
@@ -407,27 +412,8 @@ func (r *UserController) publish(topic, user, operator string) {
 // besides the first one. A non-nil result means creation must stop. A nil error
 // with that result means the user was marked Failed and should not be requeued.
 func (r *UserController) checkAdditionalUserCapacity(ctx context.Context, user *iamv1alpha2.User) (*ctrl.Result, error) {
-	klog.Infof("start check cluster pod capacity.....")
-	isSatisfied, err := r.checkClusterPodCapacity(ctx)
-	if err != nil {
-		message := fmt.Sprintf("failed to check cluster capacity %v", err)
-		klog.Error(message)
-		updateErr := r.updateUserStatus(ctx, user, "Failed", message)
-		if updateErr != nil {
-			klog.Errorf("failed to update user status to Failed %v", updateErr)
-		}
-		return &ctrl.Result{}, updateErr
-	}
-	if !isSatisfied {
-		updateErr := r.updateUserStatus(ctx, user, "Failed", "Insufficient pods can allocate in the cluster")
-		if updateErr != nil {
-			klog.Errorf("failed to update user status to Failed %v", updateErr)
-		}
-		return &ctrl.Result{}, updateErr
-	}
-
 	klog.Infof("start to validate resource limits.....")
-	err = r.validateResourceLimits(user)
+	err := r.validateResourceLimits(user)
 	if err != nil {
 		klog.Errorf("failed to validate resource limits %v", err)
 		updateErr := r.updateUserStatus(ctx, user, "Failed", err.Error())
@@ -558,7 +544,6 @@ func (r *UserController) waitForDeleteFromLLDAP(username string) error {
 }
 
 func (r *UserController) createUserResources(ctx context.Context, user *iamv1alpha2.User) error {
-	// Create user using userspace manager
 	klog.Infof("creating user resources for %s", user.Name)
 
 	// create globalrolebinding
@@ -595,21 +580,9 @@ func (r *UserController) createUserResources(ctx context.Context, user *iamv1alp
 		return err
 	}
 
-	// The first user's zone-ssl-config does not exist yet; BFL writes it during
-	// network activation. Later users copy that cert. There is no owner User CR.
-	first, err := r.isFirstUser(ctx, user)
+	err = r.createUserStorage(ctx, user)
 	if err != nil {
-		return err
-	}
-	if !first {
-		if err = r.copyZoneSSLConfig(ctx, user); err != nil {
-			return err
-		}
-	}
-
-	err = r.createUserApps(ctx, user)
-	if err != nil {
-		klog.Errorf("failed to create user apps %v", err)
+		klog.Errorf("failed to create user storage %v", err)
 		return err
 	}
 
@@ -665,51 +638,12 @@ func (r *UserController) namespaceCreator(ctx context.Context, user *iamv1alpha2
 	return firstUser.Name, nil
 }
 
-func (r *UserController) copyZoneSSLConfig(ctx context.Context, user *iamv1alpha2.User) error {
-	ksClient, err := kubernetes.NewForConfig(r.KubeConfig)
-	if err != nil {
-		klog.Errorf("make ksClient failed %v", err)
-		return err
-	}
-
-	firstUser, err := r.findFirstUser(ctx, user)
-	if err != nil {
-		klog.Errorf("failed to find first user %v", err)
-		return err
-	}
-
-	ownerUserspace := fmt.Sprintf("user-space-%s", firstUser.Name)
-	nsName := fmt.Sprintf("user-space-%s", user.Name)
-	sslConfig, err := ksClient.CoreV1().ConfigMaps(ownerUserspace).Get(ctx, "zone-ssl-config", metav1.GetOptions{})
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			klog.Infof("owner zone-ssl-config not found, skip copy for %s", user.Name)
-			return nil
-		}
-		klog.Errorf("failed to get owner zone-ssl-config %v", err)
-		return err
-	}
-	if sslConfig.Data == nil {
-		return nil
-	}
-	sslConfig.Data["ephemeral"] = "true"
-
-	applyCm := NewApplyConfigmap(nsName, sslConfig.Data)
-	_, err = ksClient.CoreV1().ConfigMaps(nsName).Apply(ctx, applyCm, metav1.ApplyOptions{
-		FieldManager: "application/apply-patch"})
-	if err != nil {
-		klog.Errorf("failed to apply configmap %v", err)
-		return err
-	}
-	return nil
-}
-
-func (r *UserController) createUserApps(ctx context.Context, user *iamv1alpha2.User) error {
-	creator := userspace.NewCreator(r.Client, r.KubeConfig, user.Name)
-	err := creator.CreateUserApps(ctx)
+func (r *UserController) createUserStorage(ctx context.Context, user *iamv1alpha2.User) error {
+	creator := userspace.NewCreator(r.Client, user.Name)
+	err := creator.CreateStorage(ctx)
 
 	if err != nil {
-		klog.Errorf("failed to create user apps %v", err)
+		klog.Errorf("failed to create user storage %v", err)
 		return err
 	}
 	return nil
@@ -724,10 +658,6 @@ func (r *UserController) cleanupUserResources(ctx context.Context, user *iamv1al
 	}
 
 	return nil
-}
-
-func (r *UserController) checkClusterPodCapacity(ctx context.Context) (bool, error) {
-	return users.CheckClusterPodCapacity(ctx, r.Client)
 }
 
 func (r *UserController) updateUserStatus(ctx context.Context, user *iamv1alpha2.User, state, reason string) error {
@@ -926,33 +856,6 @@ func (r *UserController) waitForSyncToLLDAP(user *iamv1alpha2.User) error {
 	})
 	klog.V(0).Infof("poll result %v", err)
 	return err
-}
-
-// UserCreateOption represents the options for creating a user
-type UserCreateOption struct {
-	Name         string
-	OwnerRole    string
-	DisplayName  string
-	Email        string
-	Password     string
-	Description  string
-	TerminusName string
-	MemoryLimit  string
-	CpuLimit     string
-}
-
-func NewApplyConfigmap(namespace string, data map[string]string) *applyCorev1.ConfigMapApplyConfiguration {
-	return &applyCorev1.ConfigMapApplyConfiguration{
-		TypeMetaApplyConfiguration: applyMetav1.TypeMetaApplyConfiguration{
-			Kind:       pointer.String("ConfigMap"),
-			APIVersion: pointer.String(corev1.SchemeGroupVersion.String()),
-		},
-		ObjectMetaApplyConfiguration: &applyMetav1.ObjectMetaApplyConfiguration{
-			Name:      pointer.String("zone-ssl-config"),
-			Namespace: pointer.String(namespace),
-		},
-		Data: data,
-	}
 }
 
 func getGlobalRole(role string) string {

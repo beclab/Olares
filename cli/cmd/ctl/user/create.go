@@ -7,9 +7,6 @@ import (
 	"strings"
 
 	"github.com/beclab/Olares/cli/pkg/utils"
-	"github.com/beclab/Olares/framework/app-service/api/sys.bytetrade.io/v1alpha1"
-	"github.com/pkg/errors"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation"
 
 	iamv1alpha2 "github.com/beclab/api/iam/v1alpha2"
@@ -20,7 +17,6 @@ import (
 type createUserOptions struct {
 	name        string
 	displayName string
-	domain      string
 	role        string
 	resourceLimit
 	password    string
@@ -51,7 +47,6 @@ func NewCmdCreateUser() *cobra.Command {
 
 func (o *createUserOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.displayName, "display-name", "", "display name (optional)")
-	cmd.Flags().StringVar(&o.domain, "domain", "", "domain (optional, defaults to the Olares system's domain)")
 	cmd.Flags().StringVarP(&o.role, "role", "r", "normal", "owner role (optional, one of owner, admin, normal)")
 	cmd.Flags().StringVarP(&o.memoryLimit, "memory-limit", "m", defaultMemoryLimit, "memory limit (optional)")
 	cmd.Flags().StringVarP(&o.cpuLimit, "cpu-limit", "c", defaultCPULimit, "cpu limit (optional)")
@@ -67,20 +62,6 @@ func (o *createUserOptions) Validate() error {
 
 	if errs := validation.IsDNS1123Subdomain(o.name); len(errs) > 0 {
 		return fmt.Errorf("invalid name: %s", strings.Join(errs, ","))
-	}
-
-	if o.domain != "" {
-		if errs := validation.IsDNS1123Subdomain(o.domain); len(errs) > 0 {
-			return fmt.Errorf("invalid domain: %s", strings.Join(errs, ","))
-		}
-		if len(strings.Split(o.domain, ".")) < 2 {
-			return errors.New("invalid domain: should be a domain with at least two segments separated by dots")
-		}
-		for _, label := range strings.Split(o.domain, ".") {
-			if errs := validation.IsDNS1123Label(label); len(errs) > 0 {
-				return fmt.Errorf("invalid domain: %s", strings.Join(errs, ","))
-			}
-		}
 	}
 
 	if o.role != "" {
@@ -109,15 +90,6 @@ func (o *createUserOptions) Run() error {
 
 	if o.cpuLimit == "" {
 		o.cpuLimit = defaultCPULimit
-	}
-
-	if o.domain == "" {
-		var system v1alpha1.Terminus
-		err := userClient.Get(ctx, types.NamespacedName{Name: systemObjectName}, &system)
-		if err != nil {
-			return fmt.Errorf("failed to get system info: %v", err)
-		}
-		o.domain = system.Spec.Settings[systemObjectDomainKey]
 	}
 
 	var userList iamv1alpha2.UserList
@@ -149,8 +121,6 @@ func (o *createUserOptions) Run() error {
 		o.password = utils.MD5(o.password + "@Olares2025")
 	}
 
-	olaresName := fmt.Sprintf("%s@%s", o.name, o.domain)
-
 	user := &iamv1alpha2.User{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: iamv1alpha2.SchemeGroupVersion.String(),
@@ -161,8 +131,7 @@ func (o *createUserOptions) Run() error {
 			Annotations: map[string]string{
 				"bytetrade.io/creator":               creatorCLI,
 				annotationKeyRole:                    o.role,
-				"bytetrade.io/is-ephemeral":          "true",
-				"bytetrade.io/terminus-name":         olaresName,
+				"bytetrade.io/terminus-name":         o.name,
 				"bytetrade.io/launcher-auth-policy":  "two_factor",
 				"bytetrade.io/launcher-access-level": "1",
 				annotationKeyMemoryLimit:             o.memoryLimit,
@@ -173,7 +142,7 @@ func (o *createUserOptions) Run() error {
 		},
 		Spec: iamv1alpha2.UserSpec{
 			DisplayName:     o.displayName,
-			Email:           olaresName,
+			Email:           o.name,
 			InitialPassword: o.password,
 			Description:     o.description,
 		},

@@ -3,7 +3,6 @@ package utils
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 )
 
 func ToJSON(v any) string {
@@ -31,14 +30,4 @@ func ListContains[T comparable](items []T, v T) bool {
 		}
 	}
 	return false
-}
-
-func DashedOption(option string) string {
-	return fmt.Sprintf("-%s", option)
-}
-
-type DefaultThirdLevelDomainConfig struct {
-	AppName          string `json:"appName"`
-	EntranceName     string `json:"entranceName"`
-	ThirdLevelDomain string `json:"thirdLevelDomain"`
 }

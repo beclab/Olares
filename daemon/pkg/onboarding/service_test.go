@@ -33,10 +33,10 @@ func newTestService(t *testing.T) (*Service, map[string]string) {
 		WithObjects(&sysv1.Terminus{ObjectMeta: metav1.ObjectMeta{Name: "terminus"}}).Build()
 	replicas := int32(1)
 	kube := kubefake.NewSimpleClientset(
-		&appsv1.StatefulSet{
-			ObjectMeta: metav1.ObjectMeta{Name: "bfl", Namespace: "user-space-owner", Generation: 1},
-			Spec:       appsv1.StatefulSetSpec{Replicas: &replicas},
-			Status:     appsv1.StatefulSetStatus{ObservedGeneration: 1, ReadyReplicas: 1},
+		&appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{Name: "bfl", Namespace: "os-frontend", Generation: 1},
+			Spec:       appsv1.DeploymentSpec{Replicas: &replicas},
+			Status:     appsv1.DeploymentStatus{ObservedGeneration: 1, ReadyReplicas: 1},
 		},
 	)
 	release := make(map[string]string)

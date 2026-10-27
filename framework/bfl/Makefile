@@ -15,4 +15,4 @@ bfl: fmt vet ;$(info $(M)...Begin to build bfl.) @
 	go build -o output/bfl cmd/apiserver/main.go
 
 run: fmt vet; $(info $(M)...Run bfl.)
-	go run cmd/apiserver/main.go -u admin -v 4
+	go run cmd/apiserver/main.go --namespace os-frontend --log-level debug

@@ -25,11 +25,7 @@ func init() {
 
 var ModuleVersion = runtime.ModuleVersion{Name: "iam", Version: "v1alpha1"}
 
-var (
-	iamTags = []string{"iam"}
-
-	userTags = []string{"users"}
-)
+var userTags = []string{"users"}
 
 func AddToContainer(c *restful.Container) error {
 	ws := runtime.NewWebService(ModuleVersion)

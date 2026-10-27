@@ -8,34 +8,29 @@ import (
 )
 
 func TestClusterConnectionURLs(t *testing.T) {
-	for _, tc := range []struct{ name, zone, clusterName, vaultURL string }{
-		{"owner", "", "owner", "http://vault.owner.olares.local/server"},
-		{"owner", "olares.com", "owner.olares.com", "https://vault.owner.olares.com/server"},
-		{"owner", "example.org", "owner.example.org", "https://vault.owner.example.org/server"},
-		{"owner", "example.org.", "owner.example.org", "https://vault.owner.example.org/server"},
-		{"owner", "olares.local", "owner.olares.local", "http://vault.owner.olares.local/server"},
+	for _, tc := range []struct{ name, vaultURL string }{
+		{"owner", "http://vault.owner.olares.local/server"},
+		{"cluster-2", "http://vault.cluster-2.olares.local/server"},
 	} {
-		name, url, err := clusterConnectionURLs(tc.name, tc.zone, constants.WaitActivateVault)
-		if err != nil || name != tc.clusterName || url != tc.vaultURL {
-			t.Errorf("clusterConnectionURLs(%q, %q) = %q %q %v", tc.name, tc.zone, name, url, err)
+		name, url, err := clusterConnectionURLs(tc.name, constants.WaitActivateVault)
+		if err != nil || name != tc.name || url != tc.vaultURL {
+			t.Errorf("clusterConnectionURLs(%q) = %q %q %v", tc.name, name, url, err)
 		}
 	}
 }
 
 func TestClusterConnectionURLsRejectInvalidSettings(t *testing.T) {
-	for _, tc := range []struct{ name, zone string }{
-		{"", ""}, {"invalid/path", ""}, {"owner@olares.local", ""}, {"bad.local", ""},
-		{"owner", "https://example.org"}, {"owner", "example.org/path"},
-		{"owner", ".example.org"}, {"owner", "bad zone"}, {"owner", "."},
+	for _, name := range []string{
+		"", "invalid/path", "owner@olares.local", "bad.local", "https://example.org", "bad name", ".",
 	} {
-		if _, _, err := clusterConnectionURLs(tc.name, tc.zone, constants.WaitActivateVault); err == nil {
-			t.Errorf("invalid cluster endpoint input %#v accepted", tc)
+		if _, _, err := clusterConnectionURLs(name, constants.WaitActivateVault); err == nil {
+			t.Errorf("invalid cluster local name %q accepted", name)
 		}
 	}
 }
 
 func TestOlaresInfoUsesClusterNameJSON(t *testing.T) {
-	data, err := json.Marshal(OlaresInfo{ClusterName: "owner.example.org", VaultURL: "https://vault.owner.example.org/server"})
+	data, err := json.Marshal(OlaresInfo{OlaresID: "member", ClusterName: "owner", VaultURL: "http://vault.owner.olares.local/server"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -43,25 +38,11 @@ func TestOlaresInfoUsesClusterNameJSON(t *testing.T) {
 	if err := json.Unmarshal(data, &info); err != nil {
 		t.Fatal(err)
 	}
-	if info["clusterName"] != "owner.example.org" {
+	if info["clusterName"] != "owner" {
 		t.Fatalf("missing cluster name: %s", data)
 	}
 	if _, ok := info["localName"]; ok {
 		t.Fatalf("old field still exposed: %s", data)
-	}
-}
-
-func TestNormalizeLegacyLocalOlaresID(t *testing.T) {
-	for _, tc := range []struct{ id, want string }{
-		{"owner", "owner"}, {"owner@", "owner"},
-		{"member@olares.local", "member"},
-		{"member@olares.com", "member@olares.com"},
-		{"member@@olares.local", "member@@olares.local"},
-		{"@", "@"}, {"", ""},
-	} {
-		if got := normalizeLocalOlaresID(tc.id); got != tc.want {
-			t.Errorf("normalizeLocalOlaresID(%q) = %q, want %q", tc.id, got, tc.want)
-		}
 	}
 }
 
@@ -71,29 +52,27 @@ func TestOlaresInfoVaultURLOnlyWhileWaitingForVault(t *testing.T) {
 		constants.WaitActivateNetwork, constants.SystemActivateFailed, constants.NetworkActivating,
 		constants.NetworkActivateFailed, constants.WaitResetPassword, constants.Completed, "", "unknown",
 	}
-	for _, zone := range []string{"", "example.org"} {
-		for _, status := range statuses {
-			t.Run(zone+"/"+string(status), func(t *testing.T) {
-				name, url, err := clusterConnectionURLs("owner", zone, status)
-				if err != nil {
-					t.Fatal(err)
-				}
-				data, err := json.Marshal(OlaresInfo{ClusterName: name, VaultURL: url, WizardStatus: status})
-				if err != nil {
-					t.Fatal(err)
-				}
-				var info map[string]any
-				if err := json.Unmarshal(data, &info); err != nil {
-					t.Fatal(err)
-				}
-				_, hasURL := info["vaultUrl"]
-				if hasURL != (status == constants.WaitActivateVault) {
-					t.Fatalf("unexpected vaultUrl presence: %s", data)
-				}
-				if info["clusterName"] != name || name == "" {
-					t.Fatalf("clusterName must remain available: %s", data)
-				}
-			})
-		}
+	for _, status := range statuses {
+		t.Run(string(status), func(t *testing.T) {
+			name, url, err := clusterConnectionURLs("owner", status)
+			if err != nil {
+				t.Fatal(err)
+			}
+			data, err := json.Marshal(OlaresInfo{ClusterName: name, VaultURL: url, WizardStatus: status})
+			if err != nil {
+				t.Fatal(err)
+			}
+			var info map[string]any
+			if err := json.Unmarshal(data, &info); err != nil {
+				t.Fatal(err)
+			}
+			_, hasURL := info["vaultUrl"]
+			if hasURL != (status == constants.WaitActivateVault) {
+				t.Fatalf("unexpected vaultUrl presence: %s", data)
+			}
+			if info["clusterName"] != "owner" || name != "owner" {
+				t.Fatalf("clusterName must remain available: %s", data)
+			}
+		})
 	}
 }

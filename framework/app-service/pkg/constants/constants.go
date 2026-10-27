@@ -67,8 +67,6 @@ const (
 
 	UserAppDataDirPVC = "appcache-dir"
 
-	UserChartsPath = "./userapps"
-
 	EnvoyUID int64 = 1555
 	// LinkerdProxyUID is the upstream linkerd-proxy default runAsUser.
 	LinkerdProxyUID int64 = 2102

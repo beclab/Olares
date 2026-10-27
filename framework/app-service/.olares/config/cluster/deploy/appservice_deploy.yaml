@@ -1,13 +1,8 @@
 {{ $charts_rootpath := printf "%s%s" .Values.rootPath "/rootfs/charts" }}
-{{ $usertmpl_rootpath := printf "%s%s" .Values.rootPath "/rootfs/usertemplate" }}
 {{ $charts_pv := "pv-charts" }}
 {{ $charts_pvc := "pvc-charts" }}
 {{ $charts_sc := "juicefs-localpath-charts" }}
 {{ $charts_storage := "100Mi" }}
-{{ $usertmpl_pv := "pv-usertmpl" }}
-{{ $usertmpl_pvc := "pvc-usertmpl" }}
-{{ $usertmpl_sc := "juicefs-localpath-usertmpl" }}
-{{ $usertmpl_storage := "100Mi" }}
 
 {{- $namespace := printf "%s" "os-framework" -}}
 {{- $app_service_nats_secret := (lookup "v1" "Secret" $namespace "app-service-nats-secret") -}}
@@ -62,42 +57,6 @@ spec:
   volumeName: {{ default $charts_pv .Values.charts_pv }}
   storageClassName: {{ default $charts_sc .Values.charts_sc }}
 
-# usertmpl
-
----
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: {{ default $usertmpl_pv .Values.usertmpl_pv }}
-spec:
-  accessModes:
-  - ReadWriteOnce
-  capacity:
-    storage: 100Mi
-  hostPath:
-    path: '{{ $usertmpl_rootpath }}/{{ default $usertmpl_pvc .Values.usertmpl_pvc }}'
-    type: DirectoryOrCreate
-  persistentVolumeReclaimPolicy: Delete
-  volumeMode: Filesystem
-  storageClassName: {{ default $usertmpl_sc .Values.usertmpl_sc }}
-
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: {{ default $usertmpl_pvc .Values.usertmpl_pvc }}
-  namespace: {{ .Release.Namespace }}
-spec:
-  accessModes:
-  - ReadWriteOnce
-  resources:
-    requests:
-      storage: 100Mi
-  volumeMode: Filesystem
-  volumeName: {{ default $usertmpl_pv .Values.usertmpl_pv }}
-  storageClassName: {{ default $usertmpl_sc .Values.usertmpl_sc }}
-
-
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -151,12 +110,6 @@ metadata:
     charts_pvc: {{ default $charts_pvc .Values.charts_pvc }}
     charts_sc: {{ default $charts_sc .Values.charts_sc }}
     charts_hostpath: '{{ $charts_rootpath }}/{{ default $charts_pvc .Values.charts_pvc }}'
-
-    usertmpl_storage: {{ $usertmpl_storage }}
-    usertmpl_pv: {{ default $usertmpl_pv .Values.usertmpl_pv }}
-    usertmpl_pvc: {{ default $usertmpl_pvc .Values.usertmpl_pvc }}
-    usertmpl_sc: {{ default $usertmpl_sc .Values.usertmpl_sc }}
-    usertmpl_hostpath: '{{ $usertmpl_rootpath }}/{{ default $usertmpl_pvc .Values.usertmpl_pvc }}'
 spec:
   replicas: 1
   selector:
@@ -199,12 +152,12 @@ spec:
         - name: {{ $key }}
           value: {{ $val | quote }}
         {{- end }}
+        - name: OLARES_SYSTEM_ROOT_PATH
+          value: {{ .Values.rootPath | quote }}
         - name: KS_APISERVER_SERVICE_HOST
           value: 'ks-apiserver.kubesphere-system'
         - name: KS_APISERVER_SERVICE_PORT
           value: '80'
-        - name: REQUIRE_PERMISSION_APPS
-          value: "vault,desktop,message,search,appstore,notification,dashboard,settings,profile"
         - name: SYS_APPS
           value: "market,auth,citus,desktop,did,docs,files,fsnotify,headscale,infisical,intentprovider,ksserver,message,mongo,monitoring,notifications,profile,redis,recommend,seafile,search,search-admin,settings,systemserver,tapr,vault,video,zinc,accounts,control-hub,dashboard,nitro,olares-app"
         - name: KB_MIDDLEWARES
@@ -265,8 +218,6 @@ spec:
         volumeMounts:
         - mountPath: /charts
           name: charts-store
-        - mountPath: /userapps
-          name: user-apps-template
         - mountPath: /etc/certs
           name: certs
         - mountPath: /etc/containerd
@@ -307,9 +258,6 @@ spec:
       - name: charts-store
         persistentVolumeClaim:
           claimName: {{ default $charts_pvc .Values.charts_pvc }}
-      - name: user-apps-template
-        persistentVolumeClaim:
-          claimName: {{ default $usertmpl_pvc .Values.usertmpl_pvc }}
       - name: config-san
         configMap:
           name: san-cnf

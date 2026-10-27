@@ -10,6 +10,7 @@ rules:
   - '*'
   resources:
   - users
+  - terminus
   - syseventregistries
   - applications
   - loginrecords

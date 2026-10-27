@@ -1377,7 +1377,7 @@ _END
     log_info 'waiting for app-service ready and create pv'
     check_sts_app_service_ready
 
-    for vl in charts usertmpl; do
+    for vl in charts; do
         pv=$(get_k8s_annotation os-system sts app-service ${vl}_pv)
         sc=$(get_k8s_annotation os-system sts app-service ${vl}_sc)
         path=$(get_k8s_annotation os-system sts app-service ${vl}_hostpath)

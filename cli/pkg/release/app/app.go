@@ -49,11 +49,7 @@ func (m *Manager) Package() error {
 		}
 	}
 
-	// Package launcher and GPU
-	if err := m.packageLauncher(); err != nil {
-		return err
-	}
-
+	// Package GPU
 	if err := m.packageGPU(); err != nil {
 		return err
 	}
@@ -91,12 +87,6 @@ func (m *Manager) packageModule(mod string) error {
 
 		fmt.Printf("packaging %s ... \n", path)
 
-		// Package user app charts
-		chartPath := filepath.Join(path, "config/user/helm-charts")
-		if err := util.CopyDirectoryIfExists(chartPath, filepath.Join(m.distPath, "wizard/config/apps")); err != nil {
-			return err
-		}
-
 		// Package cluster CRDs
 		crdPath := filepath.Join(path, "config/cluster/crds")
 		if err := util.CopyDirectoryIfExists(crdPath, filepath.Join(m.distPath, "wizard/config/settings/templates/crds")); err != nil {
@@ -113,14 +103,6 @@ func (m *Manager) packageModule(mod string) error {
 	})
 
 	return err
-}
-
-func (m *Manager) packageLauncher() error {
-	fmt.Println("packaging launcher ...")
-	return util.CopyDirectory(
-		filepath.Join(m.olaresRepoRoot, "framework/bfl/.olares/config/launcher"),
-		filepath.Join(m.distPath, "wizard/config/launcher"),
-	)
 }
 
 func (m *Manager) packageGPU() error {

@@ -4,37 +4,24 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
-
-	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/helm"
-	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	iamv1alpha2 "github.com/beclab/api/iam/v1alpha2"
 
 	"helm.sh/helm/v3/pkg/storage/driver"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-)
-
-const (
-	checkLauncherRunning  = "Running"
-	checkLauncherNoExists = "NotExists"
 )
 
 type Deleter struct {
 	client.Client              // k8s session client
 	k8sConfig     *rest.Config // k8s service account config
 	user          string
-	helmCfg       helm.Config
 }
 
 func NewDeleter(client client.Client, config *rest.Config, user string) *Deleter {
@@ -49,25 +36,6 @@ func (d *Deleter) DeleteUserResource(ctx context.Context) error {
 	err := d.uninstallUserApps(ctx)
 	if err != nil {
 		klog.Infof("failed to uninstall user apps %v", err)
-		return err
-	}
-
-	userspaceName := utils.UserspaceName(d.user)
-
-	actionCfg, settings, err := helm.InitConfig(d.k8sConfig, userspaceName)
-
-	if err != nil {
-		return err
-	}
-	d.helmCfg.ActionCfg = actionCfg
-	d.helmCfg.Settings = settings
-
-	err = d.uninstallSysApps(ctx)
-	if err != nil {
-		return err
-	}
-	err = d.clearLauncher(fmt.Sprintf("launcher-%s", d.user))
-	if err != nil {
 		return err
 	}
 
@@ -109,62 +77,6 @@ func (d *Deleter) deleteNamespace(ctx context.Context) error {
 	}
 
 	return nil
-}
-
-func (d *Deleter) clearLauncher(launchername string) error {
-
-	err := helm.UninstallCharts(d.helmCfg.ActionCfg, launchername)
-	if err != nil && !errors.Is(err, driver.ErrReleaseNotFound) {
-		klog.Errorf("failed to uninstall %s", launchername)
-		return err
-	}
-
-	return nil
-}
-
-func (d *Deleter) findPVC(ctx context.Context, userspace string) (
-	res *struct{ userspacePvc, userspacePv, appCachePvc, appCacheHostPath, dbdataPvc, dbdataHostPath string },
-	err error) {
-	var sts appsv1.StatefulSet
-	err = d.Get(ctx, types.NamespacedName{Name: "bfl", Namespace: userspace}, &sts)
-	if err != nil {
-		klog.Errorf("Failed to get sts bfl userspace=%s err=%v", userspace, err)
-		return nil, err
-	}
-
-	var ok bool
-	res = &struct{ userspacePvc, userspacePv, appCachePvc, appCacheHostPath, dbdataPvc, dbdataHostPath string }{}
-	res.userspacePvc, ok = sts.Annotations["userspace_pvc"]
-	if !ok {
-		return nil, errors.New("userspace PVC not found")
-	}
-
-	res.userspacePv, ok = sts.Annotations["userspace_pv"]
-	if !ok {
-		return nil, errors.New("userspace PV not found")
-	}
-
-	res.appCachePvc, ok = sts.Annotations["appcache_pvc"]
-	if !ok {
-		return nil, errors.New("appcache PVC not found")
-	}
-
-	res.appCacheHostPath, ok = sts.Annotations["appcache_hostpath"]
-	if !ok {
-		return nil, errors.New("appcache PVC not found")
-	}
-
-	res.dbdataPvc, ok = sts.Annotations["dbdata_pvc"]
-	if !ok {
-		return nil, errors.New("dbdata PVC not found")
-	}
-
-	res.dbdataHostPath, ok = sts.Annotations["dbdata_hostpath"]
-	if !ok {
-		return nil, errors.New("dbdata PVC not found")
-	}
-
-	return res, nil
 }
 
 func (d *Deleter) uninstallUserApps(ctx context.Context) error {
@@ -210,90 +122,6 @@ func (d *Deleter) uninstallUserApps(ctx context.Context) error {
 	}
 
 	return nil
-}
-
-func (d *Deleter) uninstallSysApps(ctx context.Context) error {
-	sysApps, err := userspace.GetAppsFromDirectory(constants.UserChartsPath + "/apps")
-	if err != nil {
-		return err
-	}
-
-	//var errsCount int
-
-	for _, appname := range sysApps {
-		appReleaseName := helm.ReleaseName(appname, d.user)
-		err = helm.UninstallCharts(d.helmCfg.ActionCfg, appReleaseName)
-		if err != nil && !errors.Is(err, driver.ErrReleaseNotFound) {
-			klog.Errorf("Failed to uninstall chart user=%s appName=%s err=%v", d.user, appname, err)
-			return fmt.Errorf("failed to uninstall chart user=%s app=%s err=%w", d.user, appname, err)
-		}
-
-	}
-	var appmgrs appv1alpha1.ApplicationManagerList
-
-	err = d.List(ctx, &appmgrs)
-	if err != nil {
-		return err
-	}
-
-	for _, am := range appmgrs.Items {
-		if am.Spec.AppOwner == d.user {
-			var appmgr appv1alpha1.ApplicationManager
-			err = d.Get(ctx, types.NamespacedName{Name: am.Name}, &appmgr)
-			if err != nil && !apierrors.IsNotFound(err) {
-				klog.Errorf("failed to get appmgr %s %v", am.Name, err)
-				return err
-			}
-			if err == nil {
-				e := d.Delete(ctx, &appmgr)
-				if e != nil && !apierrors.IsNotFound(err) {
-					klog.Errorf("Failed to delete user's sys applicationmanager user=%s err=%v", d.user, err)
-					return e
-				}
-			}
-		}
-	}
-	return nil
-}
-
-func (d *Deleter) checkLauncher(ctx context.Context, userspace string, runningOrExists string) (*corev1.Pod, error) {
-	var (
-		bfl          *corev1.Pod
-		observations int
-	)
-
-	err := wait.PollImmediate(time.Second, 5*time.Minute, func() (bool, error) {
-		var pods corev1.PodList
-		selector, _ := labels.Parse("tier=bfl")
-
-		err := d.List(ctx, &pods, &client.ListOptions{LabelSelector: selector, Namespace: userspace})
-		if err != nil {
-			return true, err
-		}
-
-		// check not exists
-		if len(pods.Items) == 0 && runningOrExists == checkLauncherNoExists {
-			return true, nil
-		}
-
-		if err == nil && len(pods.Items) > 0 {
-			observations++
-		}
-
-		if observations >= 2 {
-			if len(pods.Items) > 0 {
-				pod := pods.Items[0]
-				// check bfl is running, and return the bfl
-				if pod.Status.Phase == corev1.PodRunning && runningOrExists == checkLauncherRunning {
-					bfl = &pod
-					return true, nil
-				}
-			}
-		}
-		return false, nil
-	})
-
-	return bfl, err
 }
 
 func (d *Deleter) isSysApps(app *appv1alpha1.Application) bool {
