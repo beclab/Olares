@@ -8,22 +8,19 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-const (
-	UserDBDataPVC = "dbdata_hostpath"
-)
-
 func GetUserDBPVCName(ctx context.Context, client *kubernetes.Clientset, namespace string) (string, error) {
-	bflSts, err := client.AppsV1().StatefulSets(namespace).Get(ctx, "bfl", metav1.GetOptions{})
+	claims, err := client.CoreV1().PersistentVolumeClaims(namespace).List(ctx, metav1.ListOptions{LabelSelector: "bytetrade.io/user-storage=dbdata"})
 	if err != nil {
 		return "", err
 	}
-
-	pvc, ok := bflSts.Annotations[UserDBDataPVC]
-	if !ok {
-		return "", fmt.Errorf("cannot find user db data pvc, %s", UserDBDataPVC)
+	if len(claims.Items) != 1 || claims.Items[0].DeletionTimestamp != nil {
+		return "", fmt.Errorf("expected one dbdata PVC in %s", namespace)
 	}
-
-	return pvc, nil
+	path := claims.Items[0].Annotations["bytetrade.io/host-path"]
+	if path == "" {
+		return "", fmt.Errorf("dbdata PVC in %s has no host path", namespace)
+	}
+	return path, nil
 }
 
 func AnyPtr[T any](t T) *T {
