@@ -785,7 +785,7 @@ func TestShareFileserverRoutesUseNodePodsAndExistingEntranceAuth(t *testing.T) {
 	for _, route := range routes {
 		prefixes[route.PathPrefix] = route
 		require.NotNil(t, route.ExtAuth)
-		assert.Equal(t, buildAppExtAuthConfig(user), route.ExtAuth, "preserve the share entrance's existing verification rules")
+		assert.Equal(t, buildAppExtAuthConfig(), route.ExtAuth, "preserve the share entrance's existing verification rules")
 		assert.NotContains(t, route.RequestHeaders, "X-BFL-USER", "do not replace the verified caller with the zone owner")
 		assert.Equal(t, "%REQ(:AUTHORITY)%", route.RequestHeaders["X-Forwarded-Host"])
 		assert.Equal(t, "", route.RequestHeaders["X-Internal-Share-Token"])

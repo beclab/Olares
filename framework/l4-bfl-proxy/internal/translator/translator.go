@@ -185,10 +185,6 @@ func (t *Translator) Translate(resources *message.Resources) *ir.Xds {
 	clusterSet := make(map[string]*ir.ClusterIR)
 	xds.Listeners = append(xds.Listeners, t.buildHTTPRedirectListener())
 	clusterSet[autheliaClusterPrefix] = &ir.ClusterIR{Name: autheliaClusterPrefix, Host: autheliaBackendHost, Port: autheliaPort, UseDNS: true}
-	for _, user := range resources.Users {
-		name := fmt.Sprintf("%s_%s", autheliaClusterPrefix, user.Name)
-		clusterSet[name] = &ir.ClusterIR{Name: name, Host: autheliaBackendHost, Port: autheliaPort, UseDNS: true}
-	}
 	vhosts, customVhosts := t.machineVirtualHosts(resources, clusterSet)
 	if local := t.buildSharedLocalHTTPListener(filterLocalDomains(vhosts)); local != nil {
 		local.ExtAuthCluster = autheliaClusterPrefix
@@ -478,7 +474,7 @@ func (t *Translator) buildAppVirtualHosts(user *message.UserInfo, app *message.A
 					PathExact:        path,
 					Cluster:          target,
 					HeaderMatches:    []ir.HeaderMatchIR{{Name: ":method", Exact: method}},
-					ExtAuth:          buildAppExtAuthConfig(user),
+					ExtAuth:          buildAppExtAuthConfig(),
 					WebSocketUpgrade: upgrade,
 					BypassSourceCIDR: true,
 				}
@@ -499,7 +495,7 @@ func (t *Translator) buildAppVirtualHosts(user *message.UserInfo, app *message.A
 			WebSocketUpgrade: true,
 		}
 
-		defaultRoute.ExtAuth = buildAppExtAuthConfig(user)
+		defaultRoute.ExtAuth = buildAppExtAuthConfig()
 
 		// F3: Exact probe paths with signed UA bypass ExtAuth (oes parity).
 		// Emit before the catch-all so Envoy matches them first.
@@ -565,13 +561,9 @@ func sanitizeProbePath(path string) string {
 
 // buildAppExtAuthConfig returns Authelia ext_auth for app routes.
 // All non-public routes use Legacy /api/verify/ (filter default; no path split).
-func buildAppExtAuthConfig(user *message.UserInfo) *ir.ExtAuthConfigIR {
-	cluster := autheliaClusterPrefix
-	if user.Name != "" {
-		cluster = fmt.Sprintf("%s_%s", autheliaClusterPrefix, user.Name)
-	}
+func buildAppExtAuthConfig() *ir.ExtAuthConfigIR {
 	return &ir.ExtAuthConfigIR{
-		Cluster:    cluster,
+		Cluster:    autheliaClusterPrefix,
 		PathPrefix: autheliaVerifyPathPrefix,
 		RequestHeaders: []string{
 			"X-Original-URL",
@@ -587,12 +579,8 @@ func buildAppExtAuthConfig(user *message.UserInfo) *ir.ExtAuthConfigIR {
 func (t *Translator) buildFileserverRoutes(user *message.UserInfo, clusterSet map[string]*ir.ClusterIR) []*ir.HTTPRouteIR {
 	var routes []*ir.HTTPRouteIR
 
-	autheliaClName := autheliaClusterPrefix
-	if user.Name != "" {
-		autheliaClName = fmt.Sprintf("%s_%s", autheliaClusterPrefix, user.Name)
-	}
 	extAuthCfg := &ir.ExtAuthConfigIR{
-		Cluster:    autheliaClName,
+		Cluster:    autheliaClusterPrefix,
 		PathPrefix: autheliaVerifyPathPrefix,
 		RequestHeaders: []string{
 			"X-Original-URL",
@@ -735,7 +723,7 @@ func (t *Translator) buildCustomDomainVirtualHosts(user *message.UserInfo, app *
 			WebSocketUpgrade: true,
 		}
 
-		customRoute.ExtAuth = buildAppExtAuthConfig(user)
+		customRoute.ExtAuth = buildAppExtAuthConfig()
 
 		routes := buildProbeBypassRoutes(
 			fmt.Sprintf("custom_%s_%s_%s", user.Name, app.Name, entrance.Name),

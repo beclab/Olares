@@ -78,7 +78,7 @@ func (t *Translator) buildMachineSystemVirtualHosts(domain, localZone string, cl
 		zones = append(zones, domain)
 	}
 	clusters["profile_service"] = &ir.ClusterIR{Name: "profile_service", Host: "profile-service.os-frontend.svc.cluster.local", Port: 3000, UseDNS: true}
-	result := []*ir.VirtualHostIR{{Name: "profile", Domains: zones, UserZone: domain, Language: "en-US", Priority: systemServicePriority, Routes: []*ir.HTTPRouteIR{{Name: "profile_root", PathPrefix: "/", Cluster: "profile_service", ExtAuth: buildAppExtAuthConfig(&message.UserInfo{})}}}}
+	result := []*ir.VirtualHostIR{{Name: "profile", Domains: zones, UserZone: domain, Language: "en-US", Priority: systemServicePriority, Routes: []*ir.HTTPRouteIR{{Name: "profile_root", PathPrefix: "/", Cluster: "profile_service", ExtAuth: buildAppExtAuthConfig()}}}}
 	for _, def := range systemServices {
 		name := "nonapp_" + def.Name
 		namespace := def.Namespace
@@ -92,7 +92,7 @@ func (t *Translator) buildMachineSystemVirtualHosts(domain, localZone string, cl
 		}
 		route := &ir.HTTPRouteIR{Name: name + "_root", PathPrefix: "/", Cluster: name, WebSocketUpgrade: true}
 		if def.Name != "auth" {
-			route.ExtAuth = buildAppExtAuthConfig(&message.UserInfo{})
+			route.ExtAuth = buildAppExtAuthConfig()
 		}
 		result = append(result, &ir.VirtualHostIR{Name: name, Domains: domains, UserZone: domain, Language: "en-US", Priority: systemServicePriority, Routes: []*ir.HTTPRouteIR{route}})
 	}
