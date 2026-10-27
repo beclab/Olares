@@ -21,6 +21,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
 	ctrlcache "sigs.k8s.io/controller-runtime/pkg/cache"
@@ -31,15 +32,10 @@ const (
 	retryDelay       = time.Second
 	debounceInterval = 100 * time.Millisecond
 
-	userAnnotationDid         = "bytetrade.io/did"
-	userAnnotationZone        = "bytetrade.io/zone"
-	userAnnotationOwnerRole   = "bytetrade.io/owner-role"
-	userLauncherAccessLevel   = "bytetrade.io/launcher-access-level"
-	userLauncherAllowCIDR     = "bytetrade.io/launcher-allow-cidr"
-	userAnnotationCreator     = "bytetrade.io/creator"
-	userAnnotationIsEphemeral = "bytetrade.io/is-ephemeral"
-	userDenyAllPolicy         = "bytetrade.io/deny-all"
-	userLocalDomainIPDns      = "bytetrade.io/local-domain-dns-record"
+	userAnnotationDid       = "bytetrade.io/did"
+	userLauncherAccessLevel = "bytetrade.io/launcher-access-level"
+	userLauncherAllowCIDR   = "bytetrade.io/launcher-allow-cidr"
+	userDenyAllPolicy       = "bytetrade.io/deny-all"
 
 	settingsCustomDomain                 = "customDomain"
 	settingsCustomDomainThirdLevelDomain = "third_level_domain"
@@ -48,9 +44,8 @@ const (
 	settingsCustomDomainKey              = "key"
 	applicationAuthLevelPublic           = "public"
 
-	nameSSLConfigMapName = "zone-ssl-config"
-	userEnvLanguage      = "olares-user-language"
-	defaultUserLanguage  = "en-US"
+	userEnvLanguage     = "olares-user-language"
+	defaultUserLanguage = "en-US"
 )
 
 type Config struct {
@@ -86,6 +81,15 @@ func (p *Provider) SetupWithManager(ctx context.Context) error {
 	cmInformer, err := p.cache.GetInformer(ctx, &corev1.ConfigMap{})
 	if err != nil {
 		return fmt.Errorf("get configmap informer: %w", err)
+	}
+
+	secretInformer, err := p.cache.GetInformer(ctx, &corev1.Secret{})
+	if err != nil {
+		return fmt.Errorf("get secret informer: %w", err)
+	}
+	terminusInformer, err := p.cache.GetInformer(ctx, machineTerminus())
+	if err != nil {
+		return fmt.Errorf("get Terminus informer: %w", err)
 	}
 
 	appInformer, err := p.cache.GetInformer(ctx, &appv1alpha1.Application{})
@@ -125,11 +129,28 @@ func (p *Provider) SetupWithManager(ctx context.Context) error {
 			if !ok {
 				return false
 			}
-			return isSSLConfigMap(cm, p.cfg.UserNamespacePrefix)
+			return cm.Namespace == "os-network" && cm.Name == "default-network"
 		},
 		Handler: baseHandler,
 	}); err != nil {
 		return fmt.Errorf("add configmap event handler: %w", err)
+	}
+
+	if _, err = secretInformer.AddEventHandler(toolscache.FilteringResourceEventHandler{
+		FilterFunc: func(obj interface{}) bool {
+			secret, ok := obj.(*corev1.Secret)
+			return ok && secret.Namespace == "os-network" && secret.Name == defaultDomainTLSName
+		}, Handler: baseHandler,
+	}); err != nil {
+		return fmt.Errorf("add default TLS secret handler: %w", err)
+	}
+	if _, err = terminusInformer.AddEventHandler(toolscache.FilteringResourceEventHandler{
+		FilterFunc: func(obj interface{}) bool {
+			terminus, ok := obj.(*unstructured.Unstructured)
+			return ok && terminus.GetName() == "terminus"
+		}, Handler: baseHandler,
+	}); err != nil {
+		return fmt.Errorf("add Terminus handler: %w", err)
 	}
 
 	if _, err := appInformer.AddEventHandler(toolscache.FilteringResourceEventHandler{
@@ -289,6 +310,17 @@ func (p *Provider) publishResources(ctx context.Context) error {
 
 func (p *Provider) buildResources(ctx context.Context) (*message.Resources, error) {
 	res := &message.Resources{}
+	if err := p.readMachineNetwork(ctx, res); err != nil {
+		return nil, err
+	}
+	var entrance corev1.ConfigMap
+	if err := p.cache.Get(ctx, client.ObjectKey{Namespace: "os-network", Name: "default-network"}, &entrance); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return nil, err
+		}
+	} else {
+		res.LocalDomainIP = entrance.Data["local-dns-ip"]
+	}
 	rawAppsMap, err := p.getAppsMap(ctx)
 	if err != nil {
 		return nil, err
@@ -302,7 +334,7 @@ func (p *Provider) buildResources(ctx context.Context) (*message.Resources, erro
 		return nil, err
 	}
 	rawAppsMap = fanOutSharedApps(rawAppsMap, userList)
-	users, err := p.listUsers(ctx, userList, rawAppsMap, userEnvList)
+	users, err := p.listUsers(ctx, userList, rawAppsMap, userEnvList, res.DefaultDomain, res.LocalZone)
 	if err != nil {
 		return nil, err
 	}
@@ -501,7 +533,7 @@ func (p *Provider) buildAppInfos(username string, appList []*appv1alpha1.Applica
 	return result
 }
 
-func (p *Provider) listUsers(ctx context.Context, userList []iamv1alpha2.User, rawAppsMap map[string][]*appv1alpha1.Application, userEnvList []sysv1alpha1.UserEnv) ([]*message.UserInfo, error) {
+func (p *Provider) listUsers(ctx context.Context, userList []iamv1alpha2.User, rawAppsMap map[string][]*appv1alpha1.Application, userEnvList []sysv1alpha1.UserEnv, defaultDomain, localZone string) ([]*message.UserInfo, error) {
 	var result []*message.UserInfo
 
 	// Fetch cluster-wide data once; reused for every user below.
@@ -510,17 +542,6 @@ func (p *Provider) listUsers(ctx context.Context, userList []iamv1alpha2.User, r
 		return nil, err
 	}
 
-	getUserByName := func(name string) *iamv1alpha2.User {
-		for i := range userList {
-			if userList[i].Name == name {
-				return &userList[i]
-			}
-			if name == "cli" && userList[i].Annotations[userAnnotationOwnerRole] == "owner" {
-				return &userList[i]
-			}
-		}
-		return nil
-	}
 	getUserEnvByName := func(name string) *sysv1alpha1.UserEnv {
 		for i := range userEnvList {
 			if userEnvList[i].Namespace != fmt.Sprintf("%s-%s", p.cfg.UserNamespacePrefix, name) {
@@ -547,59 +568,16 @@ func (p *Provider) listUsers(ctx context.Context, userList []iamv1alpha2.User, r
 	}
 
 	for _, user := range userList {
-		publicAppIDs, publicCustomDomainApps, _, customDomainAppsWithUsers := p.listApplicationDetails(user.Name, rawAppsMap[user.Name])
+		publicAppIDs, publicCustomDomainApps := p.listApplicationDetails(user.Name, rawAppsMap[user.Name])
 
-		isEphemeralAnno := getAnnotation(&user, userAnnotationIsEphemeral)
-		//if !isValidUser(&user) && isEphemeralAnno == "" {
-		//	continue
-		//}
-
-		isEphemeral := false
-		if ok, parseErr := strconv.ParseBool(isEphemeralAnno); parseErr == nil && ok {
-			isEphemeral = true
-		}
-
-		var (
-			did, zone, localDomainIP string
-			accLevel, allowCIDR      string
-			denyAllStatus            string
-			allowedDomains           []string
-			serverNameDomains        []string
-		)
-		annoUser := &user
-
-		if isEphemeral {
-			creator := getAnnotation(&user, userAnnotationCreator)
-			creatorUser := getUserByName(creator)
-			if creatorUser == nil {
-				klog.Warningf("provider: ephemeral user %q has no creator", user.Name)
-				continue
-			}
-			annoUser = creatorUser
-		}
-		did = getAnnotation(annoUser, userAnnotationDid)
-		zone = getAnnotation(annoUser, userAnnotationZone)
-		localDomainIP = getAnnotation(annoUser, userLocalDomainIPDns)
-		accLevel = getAnnotation(annoUser, userLauncherAccessLevel)
-		allowCIDR = getAnnotation(annoUser, userLauncherAllowCIDR)
-		serverNameDomains = []string{zone, annoUser.Name + ".olares.local"}
-		denyAllStatus = getAnnotation(annoUser, userDenyAllPolicy)
-		allowedDomains = getPublicAccessDomain(zone, publicAppIDs, publicCustomDomainApps, denyAllStatus)
+		did := getAnnotation(&user, userAnnotationDid)
+		zone := defaultDomain
+		accLevel := getAnnotation(&user, userLauncherAccessLevel)
+		allowCIDR := getAnnotation(&user, userLauncherAllowCIDR)
+		denyAllStatus := getAnnotation(&user, userDenyAllPolicy)
+		allowedDomains := getPublicAccessDomain(zone, publicAppIDs, publicCustomDomainApps, denyAllStatus)
 
 		customDomainCerts := customDomainCertsForUser(user.Name, rawAppsMap[user.Name])
-		validCustomDomains := make(map[string]bool, len(customDomainCerts))
-		for _, c := range customDomainCerts {
-			validCustomDomains[c.Domain] = true
-		}
-		// Only advertise custom domains that have a loadable TLS key pair.
-		// Otherwise buildUserFilterChains would attach them to the zone cert.
-		if userCustomDomains, ok := customDomainAppsWithUsers[annoUser.Name]; ok {
-			for _, d := range userCustomDomains {
-				if validCustomDomains[d] {
-					serverNameDomains = append(serverNameDomains, d)
-				}
-			}
-		}
 
 		var accessLevel uint64
 		if accLevel != "" {
@@ -619,17 +597,7 @@ func (p *Provider) listUsers(ctx context.Context, userList []iamv1alpha2.User, r
 		cidrs := parseAllowCIDRs(allowCIDR)
 
 		language := getUserLanguage(getUserEnvByName(user.Name))
-		sslConfig, err := p.getSSLConfig(ctx, user.Name)
-		if err != nil {
-			if !apierrors.IsNotFound(err) {
-				return nil, err
-			}
-			klog.V(4).Infof("provider: user %s has no SSL configmap yet, local HTTP only", user.Name)
-			sslConfig = nil
-		} else if err := tlsutil.ValidateKeyPair(sslConfig.CertData, sslConfig.KeyData); err != nil {
-			klog.Warningf("provider: user %s SSL cert/key invalid, local HTTP only: %v", user.Name, err)
-			sslConfig = nil
-		}
+
 		fileserverNodes := fileserverNodes(fsGlobal)
 		masterNodeCIDR, err := p.getMasterNodeCIDR(ctx)
 		if err != nil {
@@ -641,17 +609,13 @@ func (p *Provider) listUsers(ctx context.Context, userList []iamv1alpha2.User, r
 			Namespace:         fmt.Sprintf("%s-%s", p.cfg.UserNamespacePrefix, user.Name),
 			Did:               did,
 			Zone:              zone,
-			IsEphemeral:       isEphemeral,
 			AccessLevel:       accessLevel,
 			AllowCIDRs:        cidrs,
 			DenyAll:           denyAll == 1,
 			AllowedDomains:    allowedDomains,
-			ServerNameDomains: serverNameDomains,
-			LocalDomainIP:     localDomainIP,
 			CreateTimestamp:   user.CreationTimestamp.Unix(),
 			Language:          language,
 			Apps:              p.buildAppInfos(user.Name, rawAppsMap[user.Name]),
-			SSL:               sslConfig,
 			CustomDomainCerts: customDomainCerts,
 			FileserverNodes:   fileserverNodes,
 			MasterNodeCIDR:    masterNodeCIDR,
@@ -710,34 +674,6 @@ func customDomainCertsForUser(username string, appList []*appv1alpha1.Applicatio
 	return certs
 }
 
-func (p *Provider) getSSLConfig(ctx context.Context, username string) (*message.SSLConfig, error) {
-	var cm corev1.ConfigMap
-	key := client.ObjectKey{
-		Namespace: fmt.Sprintf("%s-%s", p.cfg.UserNamespacePrefix, username),
-		Name:      nameSSLConfigMapName,
-	}
-	if err := p.cache.Get(ctx, key, &cm); err != nil {
-		return nil, fmt.Errorf("get ssl configmap: %w", err)
-	}
-
-	if cm.Data == nil {
-		return nil, fmt.Errorf("ssl configmap with empty data")
-	}
-	zone := cm.Data["zone"]
-	if zone == "" {
-		return nil, fmt.Errorf("ssl configmap with empty zone")
-	}
-	cfg := &message.SSLConfig{
-		Zone:     zone,
-		CertData: cm.Data["cert"],
-		KeyData:  cm.Data["key"],
-	}
-	if ephStr, ok := cm.Data["ephemeral"]; ok {
-		cfg.Ephemeral, _ = strconv.ParseBool(ephStr)
-	}
-	return cfg, nil
-}
-
 func getUserLanguage(userEnv *sysv1alpha1.UserEnv) string {
 	if userEnv == nil {
 		return defaultUserLanguage
@@ -745,17 +681,12 @@ func getUserLanguage(userEnv *sysv1alpha1.UserEnv) string {
 	return userEnv.GetEffectiveValue()
 }
 
-// listApplicationDetails summarises the viewer's per-user view of a set
-// of Applications. For v3 apps the Settings/Entrances overlays are
-// applied so the customDomain / authLevel slots read from
-// UserSettings[username] instead of the global Settings. The viewer is
-// also recorded as the per-domain "owner" so the rest of the pipeline
-// associates this user's frontends with their own server_name list.
-func (p *Provider) listApplicationDetails(username string, appList []*appv1alpha1.Application) ([]string, []string, []string, map[string][]string) {
+// listApplicationDetails returns the public entrance IDs and custom domains
+// in the user's view of the applications. For v3 apps it uses the user's
+// effective entrances and customDomain settings.
+func (p *Provider) listApplicationDetails(username string, appList []*appv1alpha1.Application) ([]string, []string) {
 	var publicApps []string
 	var publicCustomDomainApps []string
-	var customDomainApps []string
-	customDomainAppsWithUsers := make(map[string][]string)
 
 	getAppPrefix := func(entranceCount, index int, appid string) string {
 		if entranceCount == 1 {
@@ -773,13 +704,6 @@ func (p *Provider) listApplicationDetails(username string, appList []*appv1alpha
 		var customDomains []string
 		var customDomainsPrefix []string
 		entranceCount := len(effectiveEntrances)
-		// For v3 the install-owner is irrelevant — every user observing
-		// the app gets their own customDomain bucket. For v1/v2 keep
-		// the legacy behaviour: customDomain is keyed by install-owner.
-		owner := app.Spec.Owner
-		if isSharedApp(app) {
-			owner = username
-		}
 		customDomainEntrancesMap := getSettingsKeyMap(app, username, settingsCustomDomain)
 
 		for index, entrance := range effectiveEntrances {
@@ -793,11 +717,6 @@ func (p *Provider) listApplicationDetails(username string, appList []*appv1alpha
 					}
 				}
 				if entranceCustomDomain := cdEntrance[settingsCustomDomainThirdPartyDomain]; entranceCustomDomain != "" {
-					customDomainApps = append(customDomainApps, entranceCustomDomain)
-
-					val := customDomainAppsWithUsers[owner]
-					customDomainAppsWithUsers[owner] = append(val, entranceCustomDomain)
-
 					if authLevel == applicationAuthLevelPublic {
 						customDomains = append(customDomains, entranceCustomDomain)
 					}
@@ -813,7 +732,7 @@ func (p *Provider) listApplicationDetails(username string, appList []*appv1alpha
 		publicCustomDomainApps = append(publicCustomDomainApps, customDomains...)
 	}
 
-	return publicApps, publicCustomDomainApps, customDomainApps, customDomainAppsWithUsers
+	return publicApps, publicCustomDomainApps
 }
 
 func (p *Provider) getAppsMap(ctx context.Context) (map[string][]*appv1alpha1.Application, error) {
@@ -888,10 +807,6 @@ func getAnnotation(user *iamv1alpha2.User, key string) string {
 	return ""
 }
 
-func isValidUser(user *iamv1alpha2.User) bool {
-	return getAnnotation(user, userAnnotationDid) != "" && getAnnotation(user, userAnnotationZone) != ""
-}
-
 // getSettingsKeyMap unmarshals a Settings blob (e.g. "customDomain" or
 // "policy") into a map keyed by entrance name. For v3 apps it reads the
 // per-user overlay (Spec.UserSettings[username][key]) first; for v1/v2 it
@@ -925,10 +840,6 @@ func parseAllowCIDRs(raw string) []string {
 	}
 	sort.Strings(cidrs)
 	return cidrs
-}
-
-func isSSLConfigMap(cm *corev1.ConfigMap, namespacePrefix string) bool {
-	return strings.HasPrefix(cm.Namespace, namespacePrefix) && cm.Name == nameSSLConfigMapName
 }
 
 func isFileServerPod(pod *corev1.Pod) bool {

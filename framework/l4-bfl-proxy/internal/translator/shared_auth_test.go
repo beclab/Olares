@@ -12,12 +12,14 @@ import (
 
 func TestSharedAutheliaBackendRetainsUserContexts(t *testing.T) {
 	tr := &Translator{cfg: &Config{SSLServerPort: 443, LocalHTTPProxyPort: 82}}
-	resources := &message.Resources{}
+	resources := &message.Resources{LocalZone: "lab.olares.local"}
 	for _, name := range []string{"alice", "bob"} {
 		resources.Users = append(resources.Users, &message.UserInfo{
 			Name: name, Namespace: "user-space-" + name,
-			Zone:              name + ".example.com",
-			ServerNameDomains: []string{name + ".example.com", name + ".olares.local"},
+			Apps: []*message.AppInfo{{
+				Name: name + "-app", Appid: name + "-app", Namespace: name + "-app",
+				Entrances: []*message.EntranceInfo{{Name: "web", Host: "web", Port: 8080}},
+			}},
 		})
 	}
 	xds := tr.Translate(resources)

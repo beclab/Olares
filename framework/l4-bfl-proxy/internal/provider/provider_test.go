@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -8,12 +9,19 @@ import (
 	"crypto/x509/pkix"
 	"encoding/json"
 	"encoding/pem"
+	"fmt"
 	"math/big"
 	"testing"
 	"time"
 
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
+	iamv1alpha2 "github.com/beclab/api/iam/v1alpha2"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	ctrlcache "sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // customDomainJSON marshals a per-entrance customDomain settings blob.
@@ -291,8 +299,83 @@ func TestCustomDomainCertsForUser(t *testing.T) {
 
 func TestListApplicationDetails_NoImplicitHeadscalePublicApp(t *testing.T) {
 	p := &Provider{}
-	publicApps, _, _, _ := p.listApplicationDetails("alice", nil)
+	publicApps, _ := p.listApplicationDetails("alice", nil)
 	if len(publicApps) != 0 {
 		t.Fatalf("publicApps = %v, want empty", publicApps)
+	}
+}
+
+// Only the cluster data used by listUsers is needed for this policy test.
+type userPolicyCache struct {
+	ctrlcache.Cache
+}
+
+func (c *userPolicyCache) List(_ context.Context, list client.ObjectList, _ ...client.ListOption) error {
+	switch dst := list.(type) {
+	case *corev1.PodList:
+		*dst = corev1.PodList{}
+	case *corev1.NodeList:
+		*dst = corev1.NodeList{Items: []corev1.Node{{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   "control-plane",
+				Labels: map[string]string{"node-role.kubernetes.io/control-plane": ""},
+			},
+		}}}
+	default:
+		return fmt.Errorf("unexpected list %T", list)
+	}
+	return nil
+}
+
+func TestListUsersKeepsEachUsersIdentityAndPolicy(t *testing.T) {
+	creator := iamv1alpha2.User{ObjectMeta: metav1.ObjectMeta{
+		Name: "alice",
+		Annotations: map[string]string{
+			userAnnotationDid:       "did:example:alice",
+			userLauncherAccessLevel: "1",
+			userLauncherAllowCIDR:   "192.168.1.0/24",
+			userDenyAllPolicy:       "0",
+		},
+	}}
+	child := iamv1alpha2.User{ObjectMeta: metav1.ObjectMeta{
+		Name: "bob",
+		Annotations: map[string]string{
+			"bytetrade.io/creator":      "alice",
+			"bytetrade.io/is-ephemeral": "true",
+			userAnnotationDid:           "did:example:bob",
+			userLauncherAccessLevel:     "3",
+			userLauncherAllowCIDR:       "10.0.0.0/24, 172.16.0.0/16",
+			userDenyAllPolicy:           "1",
+		},
+	}}
+	for _, tc := range []struct {
+		name  string
+		users []iamv1alpha2.User
+	}{
+		{name: "creator exists", users: []iamv1alpha2.User{creator, child}},
+		{name: "creator deleted", users: []iamv1alpha2.User{child}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			p := New(&userPolicyCache{}, nil, &Config{UserNamespacePrefix: "user-space"})
+			users, err := p.listUsers(context.Background(), tc.users, nil, nil, "machine.olares.cn", "machine.olares.local")
+			require.NoError(t, err)
+			require.Len(t, users, len(tc.users), "a user must not disappear with its creator")
+			for i, user := range users {
+				assert.Equal(t, "machine.olares.cn", user.Zone)
+				assert.Equal(t, tc.users[i].Annotations[userAnnotationDid], user.Did)
+				switch user.Name {
+				case "alice":
+					assert.Equal(t, uint64(1), user.AccessLevel)
+					assert.Equal(t, []string{"192.168.1.0/24"}, user.AllowCIDRs)
+					assert.False(t, user.DenyAll)
+				case "bob":
+					assert.Equal(t, uint64(3), user.AccessLevel)
+					assert.Equal(t, []string{"10.0.0.0/24", "172.16.0.0/16"}, user.AllowCIDRs)
+					assert.True(t, user.DenyAll)
+				default:
+					t.Fatalf("unexpected user %q", user.Name)
+				}
+			}
+		})
 	}
 }

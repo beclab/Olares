@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net"
 	"sort"
 	"strings"
 
@@ -32,8 +33,8 @@ const (
 	// `<appid>-<port>.<zone>` alias routed to the same upstream.
 	entranceTypeDev = "dev"
 
-	// systemServicePriority makes system-service virtual hosts (auth/desktop/
-	// wizard) outrank apps and custom domains when a domain is claimed by more
+	// systemServicePriority makes shared system-service virtual hosts outrank
+	// apps and custom domains when a domain is claimed by more
 	// than one virtual host in the same route config.
 	systemServicePriority = 100
 )
@@ -94,14 +95,13 @@ var nodeRegexSharePrefixes = []string{
 type systemServiceDef struct {
 	Name      string
 	SvcFormat string
-	// Namespace overrides the user namespace for shared frontends.
+	// Namespace contains the shared frontend service.
 	Namespace string
 }
 
 var systemServices = []systemServiceDef{
 	{Name: "auth", SvcFormat: "authelia-svc.%s.svc.cluster.local", Namespace: "os-frontend"},
 	{Name: "desktop", SvcFormat: "edge-desktop.%s.svc.cluster.local", Namespace: "os-frontend"},
-	{Name: "wizard", SvcFormat: "wizard.%s.svc.cluster.local"},
 }
 
 var fileserverPatchApps = map[string]bool{
@@ -178,126 +178,60 @@ func (t *Translator) handleUpdate(key string, resources *message.Resources) {
 
 func (t *Translator) Translate(resources *message.Resources) *ir.Xds {
 	xds := &ir.Xds{}
+	if resources == nil {
+		resources = &message.Resources{}
+	}
+	resources.Sort()
 	clusterSet := make(map[string]*ir.ClusterIR)
-
-	// HTTP redirect listener (port 81 -> HTTPS)
 	xds.Listeners = append(xds.Listeners, t.buildHTTPRedirectListener())
-
-	// Group ephemeral users by the owner's zone, so we can merge their wizard
-	// virtual host into the owner's filter chain instead of creating a
-	// separate filter chain that would cause SNI overlap with the owner's
-	// zone wildcard (*.alice.zone) and force Envoy to reject the listener.
-	ephemeralsByZone := make(map[string][]*message.UserInfo)
-	for _, u := range resources.Users {
-		if !u.IsEphemeral {
-			continue
-		}
-		z := userZone(u)
-		if z == "" {
-			continue
-		}
-		ephemeralsByZone[z] = append(ephemeralsByZone[z], u)
-	}
-
-	var sharedLocal []*ir.VirtualHostIR
+	clusterSet[autheliaClusterPrefix] = &ir.ClusterIR{Name: autheliaClusterPrefix, Host: autheliaBackendHost, Port: autheliaPort, UseDNS: true}
 	for _, user := range resources.Users {
-		if user.IsEphemeral {
-			// Ephemeral users are merged into the owner's filter chain below.
-			// A separate filter chain would conflict with the owner's
-			// *.zone wildcard → Envoy "overlapping matching rules" error.
-			continue
+		name := fmt.Sprintf("%s_%s", autheliaClusterPrefix, user.Name)
+		clusterSet[name] = &ir.ClusterIR{Name: name, Host: autheliaBackendHost, Port: autheliaPort, UseDNS: true}
+	}
+	vhosts, customVhosts := t.machineVirtualHosts(resources, clusterSet)
+	if local := t.buildSharedLocalHTTPListener(filterLocalDomains(vhosts)); local != nil {
+		local.ExtAuthCluster = autheliaClusterPrefix
+		localZone := resources.LocalZone
+		if localZone == "" {
+			localZone = "olares.local"
 		}
-		zone := userZone(user)
-		if zone == "" {
-			if user.Name == "" {
-				klog.V(4).Info("translator: user has no zone and no name, skipping")
-				continue
-			}
-			// No public zone yet. Local names are still <user>.olares.local.
-			zone = user.Name + ".olares.local"
+		for _, host := range local.VirtualHosts {
+			host.UserZone = localZone
 		}
-
-		// Build wizard virtual hosts for any ephemeral users whose zone
-		// matches this owner's zone, to be merged into the owner's HCM.
-		var ephemeralVHosts []*ir.VirtualHostIR
-		for _, ephUser := range ephemeralsByZone[zone] {
-			if wvh := t.buildEphemeralWizardVHost(ephUser, zone, clusterSet); wvh != nil {
-				ephemeralVHosts = append(ephemeralVHosts, wvh)
-			}
-		}
-
-		vhosts := t.buildUserVirtualHosts(user, zone, false, clusterSet)
-		vhosts = append(vhosts, ephemeralVHosts...)
-		t.applyDenyAllRestrictions(user, vhosts, ephemeralVHosts)
-
-		if user.SSL == nil || user.SSL.CertData == "" {
-			klog.V(4).Infof("translator: user %s has no SSL config, skipping HTTPS listeners", user.Name)
-		} else {
-			// HTTPS listeners on port 443 and 444 (with proxy_protocol).
-			for _, portCfg := range []struct {
-				port          uint32
-				proxyProtocol bool
-			}{
-				{uint32(t.cfg.SSLServerPort), false},
-				{uint32(t.cfg.SSLProxyServerPort), true},
-			} {
-				listeners := t.buildUserFilterChains(user, vhosts, portCfg.port, portCfg.proxyProtocol)
-				xds.HTTPListeners = append(xds.HTTPListeners, listeners...)
-			}
-
-			xds.Secrets = append(xds.Secrets, &ir.SecretIR{
-				Name:     fmt.Sprintf("main-tls-%s", user.Name),
-				CertData: user.SSL.CertData,
-				KeyData:  user.SSL.KeyData,
-			})
-			for _, cert := range user.CustomDomainCerts {
-				xds.Secrets = append(xds.Secrets, &ir.SecretIR{
-					Name:     fmt.Sprintf("custom-tls-%s-%s", user.Name, cert.Domain),
-					CertData: cert.CertData,
-					KeyData:  cert.KeyData,
-				})
-			}
-		}
-
-		if local := filterLocalDomains(vhosts); len(local) > 0 {
-			sharedLocal = append(sharedLocal, local...)
-		}
-
-		// Keep per-user ExtAuth contexts while dialing the shared backend directly.
-		// User-system services are backed by the removed system-server proxy.
-		autheliaClName := fmt.Sprintf("%s_%s", autheliaClusterPrefix, user.Name)
-		clusterSet[autheliaClName] = &ir.ClusterIR{
-			Name:   autheliaClName,
-			Host:   autheliaBackendHost,
-			Port:   autheliaPort,
-			UseDNS: true,
+		xds.HTTPListeners = append(xds.HTTPListeners, local)
+	}
+	ports := []struct {
+		port  uint32
+		proxy bool
+	}{{uint32(t.cfg.SSLServerPort), false}, {uint32(t.cfg.SSLProxyServerPort), true}}
+	if resources.DefaultDomain != "" && resources.SSL != nil && resources.SSL.CertData != "" {
+		cert := &ir.SecretIR{Name: "default-domain-tls", CertData: resources.SSL.CertData, KeyData: resources.SSL.KeyData}
+		xds.Secrets = append(xds.Secrets, cert)
+		for _, port := range ports {
+			xds.HTTPListeners = append(xds.HTTPListeners, t.machineTLSListener(fmt.Sprintf("https_%d_default", port.port), port.port, port.proxy, vhosts, cert, []string{resources.DefaultDomain, "*." + resources.DefaultDomain}))
 		}
 	}
-
-	if localListener := t.buildSharedLocalHTTPListener(sharedLocal); localListener != nil {
-		xds.HTTPListeners = append(xds.HTTPListeners, localListener)
+	for _, user := range resources.Users {
+		for _, cert := range user.CustomDomainCerts {
+			secret := &ir.SecretIR{Name: fmt.Sprintf("custom-tls-%s-%s", user.Name, cert.Domain), CertData: cert.CertData, KeyData: cert.KeyData}
+			xds.Secrets = append(xds.Secrets, secret)
+			// Keep the custom domain's own user context and the shared system
+			// reservations, without inheriting another user's custom routes.
+			custom := uniqueMachineVirtualHosts(append(append([]*ir.VirtualHostIR{}, vhosts...), customVhosts[user.Name]...))
+			for _, port := range ports {
+				listener := t.machineTLSListener(fmt.Sprintf("https_%d_%s_custom_%s", port.port, user.Name, sanitizeName(cert.Domain)), port.port, port.proxy, custom, secret, []string{cert.Domain})
+				listener.CreatedAt = cert.CreatedAt
+				xds.HTTPListeners = append(xds.HTTPListeners, listener)
+			}
+		}
 	}
-
-	// Stream listeners (TCP/UDP) for all users' apps — route directly to services
 	xds.StreamListeners = t.buildStreamListeners(resources, clusterSet)
-
-	for _, c := range clusterSet {
-		xds.Clusters = append(xds.Clusters, c)
+	for _, cluster := range clusterSet {
+		xds.Clusters = append(xds.Clusters, cluster)
 	}
-	sort.Slice(xds.Clusters, func(i, j int) bool {
-		return xds.Clusters[i].Name < xds.Clusters[j].Name
-	})
-
+	sort.Slice(xds.Clusters, func(i, j int) bool { return xds.Clusters[i].Name < xds.Clusters[j].Name })
 	return xds
-}
-
-// buildEphemeralWizardVHost builds the single wizard virtual host for an
-// ephemeral user.  This VH is merged into the owner's filter chain rather
-// than creating a separate filter chain — the owner's *.zone wildcard already
-// covers wizard-{guest}.zone so no extra filter chain is needed.
-func (t *Translator) buildEphemeralWizardVHost(ephUser *message.UserInfo, zone string, clusterSet map[string]*ir.ClusterIR) *ir.VirtualHostIR {
-	wizardDef := systemServiceDef{Name: "wizard", SvcFormat: "wizard.%s.svc.cluster.local"}
-	return t.buildSystemVirtualHost(ephUser, wizardDef, zone, true, ephUser.Namespace, clusterSet)
 }
 
 // buildHTTPRedirectListener creates the HTTP->HTTPS redirect on port 81.
@@ -317,7 +251,7 @@ func (t *Translator) buildHTTPRedirectListener() *ir.ListenerIR {
 // applyDenyAllRestrictions stamps SourceCIDRs onto restricted VHs so the xDS
 // translator can generate per-VH RBAC rules in the RDS route config.
 // extraVHosts are ephemeral wizard VHs that should always be publicly accessible.
-func (t *Translator) applyDenyAllRestrictions(user *message.UserInfo, vhosts []*ir.VirtualHostIR, extraVHosts []*ir.VirtualHostIR) {
+func (t *Translator) applyDenyAllRestrictions(user *message.UserInfo, vhosts []*ir.VirtualHostIR, extraVHosts []*ir.VirtualHostIR, localDomainIP string) {
 	if !user.DenyAll {
 		return
 	}
@@ -334,8 +268,12 @@ func (t *Translator) applyDenyAllRestrictions(user *message.UserInfo, vhosts []*
 	}
 
 	restrictCIDRs := []string{vpnCIDR}
-	if user.LocalDomainIP != "" {
-		restrictCIDRs = append(restrictCIDRs, user.LocalDomainIP+"/32")
+	if ip := net.ParseIP(localDomainIP); ip != nil {
+		bits := 128
+		if ip.To4() != nil {
+			bits = 32
+		}
+		restrictCIDRs = append(restrictCIDRs, fmt.Sprintf("%s/%d", ip.String(), bits))
 	}
 	if user.MasterNodeCIDR != "" {
 		restrictCIDRs = append(restrictCIDRs, user.MasterNodeCIDR)
@@ -354,16 +292,6 @@ func (t *Translator) applyDenyAllRestrictions(user *message.UserInfo, vhosts []*
 			vh.SourceCIDRs = restrictCIDRs
 		}
 	}
-}
-
-func userZone(u *message.UserInfo) string {
-	if u == nil {
-		return ""
-	}
-	if u.SSL != nil && u.SSL.Zone != "" {
-		return u.SSL.Zone
-	}
-	return u.Zone
 }
 
 func (t *Translator) localHTTPPort() uint32 {
@@ -445,179 +373,11 @@ func filterLocalDomains(vhosts []*ir.VirtualHostIR) []*ir.VirtualHostIR {
 	return out
 }
 
-// buildUserFilterChains produces one or more HTTPListenerIR entries for a
-// single user on a given port, using pre-built virtual hosts.
-//
-// SNI strategy: one filter chain per ServerNameDomain entry, each matching
-// exactly zoneDomain + *.zoneDomain. Custom domains get separate chains with
-// their own TLS cert.
-func (t *Translator) buildUserFilterChains(user *message.UserInfo, vhosts []*ir.VirtualHostIR, port uint32, proxyProtocol bool) []*ir.HTTPListenerIR {
-	defaultResponse := &ir.DirectResponseIR{
-		Status:      421,
-		Body:        "<h1><a href='https://www.olares.com/'>Olares</a></h1>",
-		ContentType: "text/html",
+func (t *Translator) buildAppVirtualHosts(user *message.UserInfo, app *message.AppInfo, zone string, clusterSet map[string]*ir.ClusterIR, localZones ...string) []*ir.VirtualHostIR {
+	localZone := "olares.local"
+	if len(localZones) > 0 && localZones[0] != "" {
+		localZone = localZones[0]
 	}
-
-	tlsCert := &ir.SecretIR{
-		Name:     fmt.Sprintf("main-tls-%s", user.Name),
-		CertData: user.SSL.CertData,
-		KeyData:  user.SSL.KeyData,
-	}
-
-	makeListener := func(name string, snis []string) *ir.HTTPListenerIR {
-		return &ir.HTTPListenerIR{
-			Name:            name,
-			Address:         "0.0.0.0",
-			Port:            port,
-			TLS:             true,
-			ProxyProtocol:   proxyProtocol,
-			VirtualHosts:    vhosts,
-			DefaultResponse: defaultResponse,
-			PingRoute:       true,
-			SNIMatches:      snis,
-			TLSCert:         tlsCert,
-			UserName:        user.Name,
-		}
-	}
-
-	customDomainSet := make(map[string]bool, len(user.CustomDomainCerts))
-	for _, cert := range user.CustomDomainCerts {
-		customDomainSet[cert.Domain] = true
-	}
-
-	// One filter chain per zone domain — identical for both deny_all and
-	// non-deny_all users.  Each chain matches exactly two SNI patterns:
-	//   zoneDomain  +  *.zoneDomain
-	//
-	// This makes every filter chain stable and independent:
-	//   • Adding/removing an app   → RDS update only, filter chain unchanged.
-	//   • Rotating a cert          → SDS update only, filter chain unchanged.
-	//   • Adding a zone            → NEW filter chain added in-place.
-	//   • Changing AllowedDomains  → RDS only (per-VH RBAC changes).
-	//   • Adding ephemeral user    → RDS only (wizard VH added).
-	//   • Changing AllowCIDRs      → RDS only (per-VH RBAC changes).
-	//
-	// For deny_all users the access control that was previously implemented
-	// via separate allowed/restricted filter chains with SourceCIDRs is now
-	// handled by per-VH RBAC rules in the route config (see SourceCIDRs on
-	// VirtualHostIR above).
-	var result []*ir.HTTPListenerIR
-	for _, zoneDomain := range user.ServerNameDomains {
-		if customDomainSet[zoneDomain] {
-			continue
-		}
-		snis := []string{"*." + zoneDomain, zoneDomain}
-		result = append(result, makeListener(
-			fmt.Sprintf("https_%d_%s_%s", port, user.Name, sanitizeName(zoneDomain)),
-			snis,
-		))
-	}
-
-	// Custom domain filter chains (separate TLS certs, same virtual hosts)
-	for _, cert := range user.CustomDomainCerts {
-		customTLS := &ir.SecretIR{
-			Name:     fmt.Sprintf("custom-tls-%s-%s", user.Name, cert.Domain),
-			CertData: cert.CertData,
-			KeyData:  cert.KeyData,
-		}
-		result = append(result, &ir.HTTPListenerIR{
-			Name:            fmt.Sprintf("https_%d_%s_custom_%s", port, user.Name, sanitizeName(cert.Domain)),
-			Address:         "0.0.0.0",
-			Port:            port,
-			TLS:             true,
-			ProxyProtocol:   proxyProtocol,
-			VirtualHosts:    vhosts,
-			DefaultResponse: defaultResponse,
-			PingRoute:       true,
-			SNIMatches:      []string{cert.Domain},
-			TLSCert:         customTLS,
-			UserName:        user.Name,
-			CreatedAt:       cert.CreatedAt,
-		})
-	}
-
-	return result
-}
-
-// buildZoneWildcardSNI returns the two SNI patterns for every domain in
-// serverNameDomains: the exact domain and a single-label wildcard (*.domain).
-// The output is sorted for deterministic comparison.
-// Used by tests; production code now calls this per-zone (one entry at a time).
-func buildZoneWildcardSNI(serverNameDomains []string) []string {
-	seen := make(map[string]bool, len(serverNameDomains)*2)
-	snis := make([]string, 0, len(serverNameDomains)*2)
-	for _, d := range serverNameDomains {
-		for _, s := range []string{d, "*." + d} {
-			if !seen[s] {
-				seen[s] = true
-				snis = append(snis, s)
-			}
-		}
-	}
-	sort.Strings(snis)
-	return snis
-}
-
-func (t *Translator) buildUserVirtualHosts(user *message.UserInfo, zone string, isEphemeral bool, clusterSet map[string]*ir.ClusterIR) []*ir.VirtualHostIR {
-	var vhosts []*ir.VirtualHostIR
-	namespace := user.Namespace
-
-	// Profile/root server
-	profileCluster := fmt.Sprintf("profile_service_%s", user.Name)
-	profileHost := "profile-service.os-frontend.svc.cluster.local"
-	clusterSet[profileCluster] = &ir.ClusterIR{
-		Name: profileCluster, Host: profileHost, Port: 3000, UseDNS: true,
-	}
-
-	var zoneAliases []string
-	zoneTokens := strings.Split(zone, ".")
-	if len(zoneTokens) > 1 {
-		alias := fmt.Sprintf("%s.%s", zoneTokens[0], "olares.local")
-		if alias != zone {
-			zoneAliases = append(zoneAliases, alias)
-		}
-	}
-
-	profileVHost := &ir.VirtualHostIR{
-		Name:     fmt.Sprintf("profile_%s", user.Name),
-		Domains:  append([]string{zone}, zoneAliases...),
-		Language: user.Language,
-		UserZone: zone,
-		UserName: user.Name,
-		Routes: []*ir.HTTPRouteIR{{
-			Name:       fmt.Sprintf("profile_root_%s", user.Name),
-			PathPrefix: "/",
-			Cluster:    profileCluster,
-			// Outbound X-BFL-USER is set by Authelia on ExtAuth allow (session user);
-			// do not stamp zone owner here.
-			ExtAuth: buildAppExtAuthConfig(user),
-		}},
-		Priority: systemServicePriority,
-	}
-	vhosts = append(vhosts, profileVHost)
-
-	// Application servers
-	for _, app := range user.Apps {
-		appVhosts := t.buildAppVirtualHosts(user, app, zone, isEphemeral, clusterSet)
-		vhosts = append(vhosts, appVhosts...)
-	}
-
-	// System services (auth, desktop, wizard)
-	for _, def := range systemServices {
-		vhost := t.buildSystemVirtualHost(user, def, zone, isEphemeral, namespace, clusterSet)
-		vhosts = append(vhosts, vhost)
-	}
-
-	// Custom domain virtual hosts
-	for _, app := range user.Apps {
-		cvhosts := t.buildCustomDomainVirtualHosts(user, app, clusterSet)
-		vhosts = append(vhosts, cvhosts...)
-	}
-
-	return vhosts
-}
-
-func (t *Translator) buildAppVirtualHosts(user *message.UserInfo, app *message.AppInfo, zone string, isEphemeral bool, clusterSet map[string]*ir.ClusterIR) []*ir.VirtualHostIR {
 	var vhosts []*ir.VirtualHostIR
 
 	var appDomainConfigs []appv1alpha1.DefaultThirdLevelDomainConfig
@@ -639,11 +399,8 @@ func (t *Translator) buildAppVirtualHosts(user *message.UserInfo, app *message.A
 		prefix := appv1alpha1.ResolveEntranceIDWithDefaultThirdLevelDomainOverride(app.Entrances, index, app.Appid, appDomainConfigs)
 
 		hostname := fmt.Sprintf("%s.%s", prefix, zone)
-		if isEphemeral {
-			hostname = fmt.Sprintf("%s-%s.%s", prefix, user.Name, zone)
-		}
 
-		localHost := toLocalDomain(hostname)
+		localHost := prefix + "." + localZone
 		domains := []string{hostname}
 		if localHost != hostname {
 			domains = append(domains, localHost)
@@ -652,10 +409,7 @@ func (t *Translator) buildAppVirtualHosts(user *message.UserInfo, app *message.A
 		if entranceMap, ok := customDomainMap[entrance.Name]; ok {
 			if thirdLevel := entranceMap[settingsCustomDomainThirdLevelDomain]; thirdLevel != "" {
 				extHostname := fmt.Sprintf("%s.%s", thirdLevel, zone)
-				if isEphemeral {
-					extHostname = fmt.Sprintf("%s-%s.%s", thirdLevel, user.Name, zone)
-				}
-				domains = append(domains, extHostname, toLocalDomain(extHostname))
+				domains = append(domains, extHostname, thirdLevel+"."+localZone)
 			}
 		}
 
@@ -667,7 +421,7 @@ func (t *Translator) buildAppVirtualHosts(user *message.UserInfo, app *message.A
 			devHostname := fmt.Sprintf("%s.%s", devPrefix, zone)
 
 			domains = append(domains, devHostname)
-			if devLocal := toLocalDomain(devHostname); devLocal != devHostname {
+			if devLocal := devPrefix + "." + localZone; devLocal != devHostname {
 				domains = append(domains, devLocal)
 			}
 		}
@@ -812,8 +566,12 @@ func sanitizeProbePath(path string) string {
 // buildAppExtAuthConfig returns Authelia ext_auth for app routes.
 // All non-public routes use Legacy /api/verify/ (filter default; no path split).
 func buildAppExtAuthConfig(user *message.UserInfo) *ir.ExtAuthConfigIR {
+	cluster := autheliaClusterPrefix
+	if user.Name != "" {
+		cluster = fmt.Sprintf("%s_%s", autheliaClusterPrefix, user.Name)
+	}
 	return &ir.ExtAuthConfigIR{
-		Cluster:    fmt.Sprintf("%s_%s", autheliaClusterPrefix, user.Name),
+		Cluster:    cluster,
 		PathPrefix: autheliaVerifyPathPrefix,
 		RequestHeaders: []string{
 			"X-Original-URL",
@@ -829,7 +587,10 @@ func buildAppExtAuthConfig(user *message.UserInfo) *ir.ExtAuthConfigIR {
 func (t *Translator) buildFileserverRoutes(user *message.UserInfo, clusterSet map[string]*ir.ClusterIR) []*ir.HTTPRouteIR {
 	var routes []*ir.HTTPRouteIR
 
-	autheliaClName := fmt.Sprintf("%s_%s", autheliaClusterPrefix, user.Name)
+	autheliaClName := autheliaClusterPrefix
+	if user.Name != "" {
+		autheliaClName = fmt.Sprintf("%s_%s", autheliaClusterPrefix, user.Name)
+	}
 	extAuthCfg := &ir.ExtAuthConfigIR{
 		Cluster:    autheliaClName,
 		PathPrefix: autheliaVerifyPathPrefix,
@@ -936,64 +697,6 @@ func (t *Translator) buildShareFileserverRoutes(user *message.UserInfo, clusterS
 		routes = append(routes, route)
 	}
 	return routes
-}
-
-func (t *Translator) buildSystemVirtualHost(user *message.UserInfo, def systemServiceDef, zone string, isEphemeral bool, namespace string, clusterSet map[string]*ir.ClusterIR) *ir.VirtualHostIR {
-	hostname := fmt.Sprintf("%s.%s", def.Name, zone)
-	if isEphemeral {
-		hostname = fmt.Sprintf("%s-%s.%s", def.Name, user.Name, zone)
-	}
-
-	clusterName := fmt.Sprintf("nonapp_%s_%s", def.Name, user.Name)
-	if def.Namespace != "" {
-		namespace = def.Namespace
-	}
-	upstreamHost := fmt.Sprintf(def.SvcFormat, namespace)
-	clusterSet[clusterName] = &ir.ClusterIR{
-		Name: clusterName, Host: upstreamHost, Port: 80, UseDNS: true,
-	}
-	localHost := toLocalDomain(hostname)
-	domains := []string{hostname}
-	if localHost != hostname {
-		domains = append(domains, localHost)
-	}
-
-	route := &ir.HTTPRouteIR{
-		Name:             fmt.Sprintf("nonapp_%s_root_%s", def.Name, user.Name),
-		PathPrefix:       "/",
-		Cluster:          clusterName,
-		WebSocketUpgrade: true,
-	}
-	// desktop is system human HTTP and must use Authelia /api/verify/.
-	// wizard is pre-auth activation UI — no ExtAuth (cookie chicken-egg).
-	// auth is the IdP itself — do not attach ExtAuth (loop risk).
-	//
-	// auth/wizard have no ExtAuth, so Authelia Bridge never receives the
-	// ExtAuth HeadersToAdd owner stamp. Stamp zone-owner X-BFL-USER on those
-	// routes only (after early client-header strip) so /api/firstfactor and
-	// similar IdP APIs can resolve the user. desktop keeps no IR stamp:
-	// ExtAuth supplies the bridge header; outbound session identity comes
-	// from Authelia on allow.
-	if def.Name == "auth" || def.Name == "wizard" {
-		route.RequestHeaders = map[string]string{
-			"X-BFL-USER": user.Name,
-		}
-	}
-	if def.Name == "desktop" {
-		route.ExtAuth = buildAppExtAuthConfig(user)
-	}
-
-	return &ir.VirtualHostIR{
-		Name:     fmt.Sprintf("nonapp_%s_%s", def.Name, user.Name),
-		Domains:  domains,
-		Language: user.Language,
-		UserZone: zone,
-		UserName: user.Name,
-		// System services (auth/desktop/wizard) outrank apps and custom domains
-		// when claiming a domain, so a misconfigured app cannot hijack them.
-		Priority: systemServicePriority,
-		Routes:   []*ir.HTTPRouteIR{route},
-	}
 }
 
 func (t *Translator) buildCustomDomainVirtualHosts(user *message.UserInfo, app *message.AppInfo, clusterSet map[string]*ir.ClusterIR) []*ir.VirtualHostIR {
@@ -1109,14 +812,6 @@ func (t *Translator) buildStreamListeners(resources *message.Resources, clusterS
 	}
 
 	return listeners
-}
-
-func toLocalDomain(hostname string) string {
-	tokens := strings.Split(hostname, ".")
-	if len(tokens) < 2 {
-		return hostname
-	}
-	return strings.Join([]string{tokens[0], tokens[1], "olares", "local"}, ".")
 }
 
 func parseSettingsJSON(settings map[string]string, key string) map[string]map[string]string {

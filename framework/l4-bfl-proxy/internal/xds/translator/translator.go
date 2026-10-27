@@ -1156,20 +1156,21 @@ var (
 )
 
 func autheliaAuthorizationRequest(userName string) *extauthzv3.AuthorizationRequest {
-	return &extauthzv3.AuthorizationRequest{
-		HeadersToAdd: []*corev3.HeaderValue{
-			{Key: "X-Forwarded-Proto", Value: xForwardedProtoValue},
-			// Authelia ForwardAuth/Verify uses these for the post-login rd=
-			// target. Values are Envoy formatters evaluated from the original
-			// downstream request (not the /api/verify/<path> check URI).
-			{Key: "X-Original-URL", Value: xOriginalURLValue},
-			{Key: "X-Forwarded-Uri", Value: "%REQ(:PATH)%"},
-			{Key: "X-Forwarded-Host", Value: "%REQ(:AUTHORITY)%"},
-			{Key: "X-Original-Method", Value: "%REQ(:METHOD)%"},
-			{Key: "X-Forwarded-Method", Value: "%REQ(:METHOD)%"},
-			{Key: "X-BFL-USER", Value: userName},
-		},
+	headers := []*corev3.HeaderValue{
+		{Key: "X-Forwarded-Proto", Value: xForwardedProtoValue},
+		// Authelia ForwardAuth/Verify uses these for the post-login rd=
+		// target. Values are Envoy formatters evaluated from the original
+		// downstream request (not the /api/verify/<path> check URI).
+		{Key: "X-Original-URL", Value: xOriginalURLValue},
+		{Key: "X-Forwarded-Uri", Value: "%REQ(:PATH)%"},
+		{Key: "X-Forwarded-Host", Value: "%REQ(:AUTHORITY)%"},
+		{Key: "X-Original-Method", Value: "%REQ(:METHOD)%"},
+		{Key: "X-Forwarded-Method", Value: "%REQ(:METHOD)%"},
 	}
+	if userName != "" {
+		headers = append(headers, &corev3.HeaderValue{Key: "X-BFL-USER", Value: userName})
+	}
+	return &extauthzv3.AuthorizationRequest{HeadersToAdd: headers}
 }
 
 func autheliaAuthorizationResponse() *extauthzv3.AuthorizationResponse {

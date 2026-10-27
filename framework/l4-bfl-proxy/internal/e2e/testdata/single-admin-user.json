@@ -1,11 +1,11 @@
 {
   "clusters": [
     {
-      "name": "profile_service_alice",
+      "name": "nonapp_auth",
       "type": "STRICT_DNS",
       "connectTimeout": "5s",
       "loadAssignment": {
-        "clusterName": "profile_service_alice",
+        "clusterName": "nonapp_auth",
         "endpoints": [
           {
             "lbEndpoints": [
@@ -13,8 +13,8 @@
                 "endpoint": {
                   "address": {
                     "socketAddress": {
-                      "address": "profile-service.user-space-alice.svc.cluster.local",
-                      "portValue": 3000
+                      "address": "authelia-svc.os-frontend.svc.cluster.local",
+                      "portValue": 80
                     }
                   }
                 }
@@ -28,11 +28,38 @@
       }
     },
     {
-      "name": "authelia_backend_alice",
+      "name": "nonapp_desktop",
       "type": "STRICT_DNS",
       "connectTimeout": "5s",
       "loadAssignment": {
-        "clusterName": "authelia_backend_alice",
+        "clusterName": "nonapp_desktop",
+        "endpoints": [
+          {
+            "lbEndpoints": [
+              {
+                "endpoint": {
+                  "address": {
+                    "socketAddress": {
+                      "address": "edge-desktop.os-frontend.svc.cluster.local",
+                      "portValue": 80
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "commonHttpProtocolOptions": {
+        "idleTimeout": "10s"
+      }
+    },
+    {
+      "name": "authelia_backend",
+      "type": "STRICT_DNS",
+      "connectTimeout": "5s",
+      "loadAssignment": {
+        "clusterName": "authelia_backend",
         "endpoints": [
           {
             "lbEndpoints": [
@@ -42,6 +69,33 @@
                     "socketAddress": {
                       "address": "authelia-backend.os-framework.svc.cluster.local",
                       "portValue": 9091
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "commonHttpProtocolOptions": {
+        "idleTimeout": "10s"
+      }
+    },
+    {
+      "name": "profile_service",
+      "type": "STRICT_DNS",
+      "connectTimeout": "5s",
+      "loadAssignment": {
+        "clusterName": "profile_service",
+        "endpoints": [
+          {
+            "lbEndpoints": [
+              {
+                "endpoint": {
+                  "address": {
+                    "socketAddress": {
+                      "address": "profile-service.os-frontend.svc.cluster.local",
+                      "portValue": 3000
                     }
                   }
                 }
@@ -82,11 +136,11 @@
       }
     },
     {
-      "name": "nonapp_auth_alice",
+      "name": "authelia_backend_alice",
       "type": "STRICT_DNS",
       "connectTimeout": "5s",
       "loadAssignment": {
-        "clusterName": "nonapp_auth_alice",
+        "clusterName": "authelia_backend_alice",
         "endpoints": [
           {
             "lbEndpoints": [
@@ -94,8 +148,8 @@
                 "endpoint": {
                   "address": {
                     "socketAddress": {
-                      "address": "authelia-svc.os-frontend.svc.cluster.local",
-                      "portValue": 80
+                      "address": "authelia-backend.os-framework.svc.cluster.local",
+                      "portValue": 9091
                     }
                   }
                 }
@@ -103,71 +157,6 @@
             ]
           }
         ]
-      },
-      "commonHttpProtocolOptions": {
-        "idleTimeout": "10s"
-      }
-    },
-    {
-      "name": "nonapp_desktop_alice",
-      "type": "STRICT_DNS",
-      "connectTimeout": "5s",
-      "loadAssignment": {
-        "clusterName": "nonapp_desktop_alice",
-        "endpoints": [
-          {
-            "lbEndpoints": [
-              {
-                "endpoint": {
-                  "address": {
-                    "socketAddress": {
-                      "address": "edge-desktop.user-space-alice.svc.cluster.local",
-                      "portValue": 80
-                    }
-                  }
-                }
-              }
-            ]
-          }
-        ]
-      },
-      "commonHttpProtocolOptions": {
-        "idleTimeout": "10s"
-      }
-    },
-    {
-      "name": "nonapp_wizard_alice",
-      "type": "STRICT_DNS",
-      "connectTimeout": "5s",
-      "loadAssignment": {
-        "clusterName": "nonapp_wizard_alice",
-        "endpoints": [
-          {
-            "lbEndpoints": [
-              {
-                "endpoint": {
-                  "address": {
-                    "socketAddress": {
-                      "address": "wizard.user-space-alice.svc.cluster.local",
-                      "portValue": 80
-                    }
-                  }
-                }
-              }
-            ]
-          }
-        ]
-      },
-      "commonHttpProtocolOptions": {
-        "idleTimeout": "10s"
-      }
-    },
-    {
-      "name": "local_ext_authz_deny",
-      "type": "STATIC",
-      "connectTimeout": "5s",
-      "loadAssignment": {
-        "clusterName": "local_ext_authz_deny"
       },
       "commonHttpProtocolOptions": {
         "idleTimeout": "10s"
@@ -301,8 +290,8 @@
                       "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz",
                       "httpService": {
                         "serverUri": {
-                          "uri": "http://localhost",
-                          "cluster": "local_ext_authz_deny",
+                          "uri": "http://authelia-backend.os-framework.svc.cluster.local",
+                          "cluster": "authelia_backend",
                           "timeout": "15s"
                         },
                         "pathPrefix": "/api/verify/",
@@ -331,9 +320,6 @@
                             {
                               "key": "X-Forwarded-Method",
                               "value": "%REQ(:METHOD)%"
-                            },
-                            {
-                              "key": "X-BFL-USER"
                             }
                           ]
                         },
@@ -505,8 +491,8 @@
         {
           "filterChainMatch": {
             "serverNames": [
-              "*.alice.snowinning.com",
-              "alice.snowinning.com"
+              "lab.example.com",
+              "*.lab.example.com"
             ]
           },
           "filters": [
@@ -514,13 +500,13 @@
               "name": "envoy.filters.network.http_connection_manager",
               "typedConfig": {
                 "@type": "type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager",
-                "statPrefix": "https_443_alice_alice_snowinning_com",
+                "statPrefix": "https_443_default",
                 "rds": {
                   "configSource": {
                     "ads": {},
                     "resourceApiVersion": "V3"
                   },
-                  "routeConfigName": "https_443_alice_alice_snowinning_com_routes"
+                  "routeConfigName": "https_443_default_routes"
                 },
                 "httpFilters": [
                   {
@@ -546,7 +532,7 @@
                       "httpService": {
                         "serverUri": {
                           "uri": "http://authelia-backend.os-framework.svc.cluster.local",
-                          "cluster": "authelia_backend_alice",
+                          "cluster": "authelia_backend",
                           "timeout": "15s"
                         },
                         "pathPrefix": "/api/verify/",
@@ -575,10 +561,6 @@
                             {
                               "key": "X-Forwarded-Method",
                               "value": "%REQ(:METHOD)%"
-                            },
-                            {
-                              "key": "X-BFL-USER",
-                              "value": "alice"
                             }
                           ]
                         },
@@ -732,7 +714,7 @@
               "commonTlsContext": {
                 "tlsCertificateSdsSecretConfigs": [
                   {
-                    "name": "main-tls-alice",
+                    "name": "default-domain-tls",
                     "sdsConfig": {
                       "ads": {},
                       "resourceApiVersion": "V3"
@@ -746,7 +728,7 @@
               }
             }
           },
-          "name": "https_443_alice_alice_snowinning_com"
+          "name": "https_443_default"
         }
       ],
       "perConnectionBufferLimitBytes": 32768,
@@ -771,8 +753,8 @@
         {
           "filterChainMatch": {
             "serverNames": [
-              "*.alice.snowinning.com",
-              "alice.snowinning.com"
+              "lab.example.com",
+              "*.lab.example.com"
             ]
           },
           "filters": [
@@ -780,13 +762,13 @@
               "name": "envoy.filters.network.http_connection_manager",
               "typedConfig": {
                 "@type": "type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager",
-                "statPrefix": "https_444_alice_alice_snowinning_com",
+                "statPrefix": "https_444_default",
                 "rds": {
                   "configSource": {
                     "ads": {},
                     "resourceApiVersion": "V3"
                   },
-                  "routeConfigName": "https_444_alice_alice_snowinning_com_routes"
+                  "routeConfigName": "https_444_default_routes"
                 },
                 "httpFilters": [
                   {
@@ -812,7 +794,7 @@
                       "httpService": {
                         "serverUri": {
                           "uri": "http://authelia-backend.os-framework.svc.cluster.local",
-                          "cluster": "authelia_backend_alice",
+                          "cluster": "authelia_backend",
                           "timeout": "15s"
                         },
                         "pathPrefix": "/api/verify/",
@@ -841,10 +823,6 @@
                             {
                               "key": "X-Forwarded-Method",
                               "value": "%REQ(:METHOD)%"
-                            },
-                            {
-                              "key": "X-BFL-USER",
-                              "value": "alice"
                             }
                           ]
                         },
@@ -998,7 +976,7 @@
               "commonTlsContext": {
                 "tlsCertificateSdsSecretConfigs": [
                   {
-                    "name": "main-tls-alice",
+                    "name": "default-domain-tls",
                     "sdsConfig": {
                       "ads": {},
                       "resourceApiVersion": "V3"
@@ -1012,7 +990,7 @@
               }
             }
           },
-          "name": "https_444_alice_alice_snowinning_com"
+          "name": "https_444_default"
         }
       ],
       "perConnectionBufferLimitBytes": 32768,
@@ -1075,19 +1053,73 @@
       "name": "http_82_routes",
       "virtualHosts": [
         {
-          "name": "profile_alice",
+          "name": "nonapp_auth",
           "domains": [
-            "alice.olares.local"
+            "auth.lab.olares.local"
           ],
           "routes": [
             {
-              "name": "profile_root_alice",
+              "name": "nonapp_auth_root",
               "match": {
                 "prefix": "/"
               },
               "route": {
-                "cluster": "profile_service_alice",
-                "timeout": "300s"
+                "cluster": "nonapp_auth",
+                "timeout": "300s",
+                "upgradeConfigs": [
+                  {
+                    "upgradeType": "websocket"
+                  },
+                  {
+                    "upgradeType": "tailscale-control-protocol"
+                  }
+                ]
+              },
+              "metadata": {
+                "filterMetadata": {
+                  "envoy.filters.http.lua": {
+                    "language": "en-US"
+                  }
+                }
+              }
+            }
+          ],
+          "typedPerFilterConfig": {
+            "envoy.filters.http.ext_authz": {
+              "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+              "disabled": true
+            }
+          }
+        },
+        {
+          "name": "nonapp_desktop",
+          "domains": [
+            "desktop.lab.olares.local"
+          ],
+          "routes": [
+            {
+              "name": "nonapp_desktop_root",
+              "match": {
+                "prefix": "/"
+              },
+              "route": {
+                "cluster": "nonapp_desktop",
+                "timeout": "300s",
+                "upgradeConfigs": [
+                  {
+                    "upgradeType": "websocket"
+                  },
+                  {
+                    "upgradeType": "tailscale-control-protocol"
+                  }
+                ]
+              },
+              "metadata": {
+                "filterMetadata": {
+                  "envoy.filters.http.lua": {
+                    "language": "en-US"
+                  }
+                }
               },
               "typedPerFilterConfig": {
                 "envoy.filters.http.ext_authz": {
@@ -1096,7 +1128,7 @@
                     "httpService": {
                       "serverUri": {
                         "uri": "http://authelia-backend.os-framework.svc.cluster.local",
-                        "cluster": "authelia_backend_alice",
+                        "cluster": "authelia_backend",
                         "timeout": "15s"
                       },
                       "pathPrefix": "/api/verify/",
@@ -1125,10 +1157,121 @@
                           {
                             "key": "X-Forwarded-Method",
                             "value": "%REQ(:METHOD)%"
+                          }
+                        ]
+                      },
+                      "authorizationResponse": {
+                        "allowedUpstreamHeaders": {
+                          "patterns": [
+                            {
+                              "exact": "authorization"
+                            },
+                            {
+                              "exact": "proxy-authorization"
+                            },
+                            {
+                              "exact": "x-bfl-user"
+                            },
+                            {
+                              "prefix": "remote-"
+                            },
+                            {
+                              "prefix": "authelia-"
+                            }
+                          ]
+                        },
+                        "allowedClientHeaders": {
+                          "patterns": [
+                            {
+                              "exact": "set-cookie"
+                            },
+                            {
+                              "exact": "location"
+                            },
+                            {
+                              "exact": "www-authenticate"
+                            }
+                          ]
+                        },
+                        "allowedClientHeadersOnSuccess": {
+                          "patterns": [
+                            {
+                              "exact": "set-cookie"
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          ],
+          "typedPerFilterConfig": {
+            "envoy.filters.http.ext_authz": {
+              "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+              "disabled": true
+            }
+          }
+        },
+        {
+          "name": "profile",
+          "domains": [
+            "lab.olares.local"
+          ],
+          "routes": [
+            {
+              "name": "profile_root",
+              "match": {
+                "prefix": "/"
+              },
+              "route": {
+                "cluster": "profile_service",
+                "timeout": "300s"
+              },
+              "metadata": {
+                "filterMetadata": {
+                  "envoy.filters.http.lua": {
+                    "language": "en-US"
+                  }
+                }
+              },
+              "typedPerFilterConfig": {
+                "envoy.filters.http.ext_authz": {
+                  "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+                  "checkSettings": {
+                    "httpService": {
+                      "serverUri": {
+                        "uri": "http://authelia-backend.os-framework.svc.cluster.local",
+                        "cluster": "authelia_backend",
+                        "timeout": "15s"
+                      },
+                      "pathPrefix": "/api/verify/",
+                      "authorizationRequest": {
+                        "headersToAdd": [
+                          {
+                            "key": "X-Forwarded-Proto",
+                            "value": "%REQ(x-forwarded-proto?:SCHEME)%"
                           },
                           {
-                            "key": "X-BFL-USER",
-                            "value": "alice"
+                            "key": "X-Original-URL",
+                            "value": "%REQ(x-forwarded-proto?:SCHEME)%://%REQ(:AUTHORITY)%%REQ(:PATH)%"
+                          },
+                          {
+                            "key": "X-Forwarded-Uri",
+                            "value": "%REQ(:PATH)%"
+                          },
+                          {
+                            "key": "X-Forwarded-Host",
+                            "value": "%REQ(:AUTHORITY)%"
+                          },
+                          {
+                            "key": "X-Original-Method",
+                            "value": "%REQ(:METHOD)%"
+                          },
+                          {
+                            "key": "X-Forwarded-Method",
+                            "value": "%REQ(:METHOD)%"
                           }
                         ]
                       },
@@ -1189,7 +1332,7 @@
         {
           "name": "app_alice_vault_vault-frontend",
           "domains": [
-            "vault.alice.olares.local"
+            "vault.lab.olares.local"
           ],
           "routes": [
             {
@@ -1297,208 +1440,6 @@
                   }
                 }
               }
-            }
-          ],
-          "typedPerFilterConfig": {
-            "envoy.filters.http.ext_authz": {
-              "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
-              "disabled": true
-            }
-          }
-        },
-        {
-          "name": "nonapp_auth_alice",
-          "domains": [
-            "auth.alice.olares.local"
-          ],
-          "routes": [
-            {
-              "name": "nonapp_auth_root_alice",
-              "match": {
-                "prefix": "/"
-              },
-              "route": {
-                "cluster": "nonapp_auth_alice",
-                "timeout": "300s",
-                "upgradeConfigs": [
-                  {
-                    "upgradeType": "websocket"
-                  },
-                  {
-                    "upgradeType": "tailscale-control-protocol"
-                  }
-                ]
-              },
-              "requestHeadersToAdd": [
-                {
-                  "header": {
-                    "key": "X-BFL-USER",
-                    "value": "alice"
-                  },
-                  "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-                }
-              ]
-            }
-          ],
-          "typedPerFilterConfig": {
-            "envoy.filters.http.ext_authz": {
-              "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
-              "disabled": true
-            }
-          }
-        },
-        {
-          "name": "nonapp_desktop_alice",
-          "domains": [
-            "desktop.alice.olares.local"
-          ],
-          "routes": [
-            {
-              "name": "nonapp_desktop_root_alice",
-              "match": {
-                "prefix": "/"
-              },
-              "route": {
-                "cluster": "nonapp_desktop_alice",
-                "timeout": "300s",
-                "upgradeConfigs": [
-                  {
-                    "upgradeType": "websocket"
-                  },
-                  {
-                    "upgradeType": "tailscale-control-protocol"
-                  }
-                ]
-              },
-              "typedPerFilterConfig": {
-                "envoy.filters.http.ext_authz": {
-                  "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
-                  "checkSettings": {
-                    "httpService": {
-                      "serverUri": {
-                        "uri": "http://authelia-backend.os-framework.svc.cluster.local",
-                        "cluster": "authelia_backend_alice",
-                        "timeout": "15s"
-                      },
-                      "pathPrefix": "/api/verify/",
-                      "authorizationRequest": {
-                        "headersToAdd": [
-                          {
-                            "key": "X-Forwarded-Proto",
-                            "value": "%REQ(x-forwarded-proto?:SCHEME)%"
-                          },
-                          {
-                            "key": "X-Original-URL",
-                            "value": "%REQ(x-forwarded-proto?:SCHEME)%://%REQ(:AUTHORITY)%%REQ(:PATH)%"
-                          },
-                          {
-                            "key": "X-Forwarded-Uri",
-                            "value": "%REQ(:PATH)%"
-                          },
-                          {
-                            "key": "X-Forwarded-Host",
-                            "value": "%REQ(:AUTHORITY)%"
-                          },
-                          {
-                            "key": "X-Original-Method",
-                            "value": "%REQ(:METHOD)%"
-                          },
-                          {
-                            "key": "X-Forwarded-Method",
-                            "value": "%REQ(:METHOD)%"
-                          },
-                          {
-                            "key": "X-BFL-USER",
-                            "value": "alice"
-                          }
-                        ]
-                      },
-                      "authorizationResponse": {
-                        "allowedUpstreamHeaders": {
-                          "patterns": [
-                            {
-                              "exact": "authorization"
-                            },
-                            {
-                              "exact": "proxy-authorization"
-                            },
-                            {
-                              "exact": "x-bfl-user"
-                            },
-                            {
-                              "prefix": "remote-"
-                            },
-                            {
-                              "prefix": "authelia-"
-                            }
-                          ]
-                        },
-                        "allowedClientHeaders": {
-                          "patterns": [
-                            {
-                              "exact": "set-cookie"
-                            },
-                            {
-                              "exact": "location"
-                            },
-                            {
-                              "exact": "www-authenticate"
-                            }
-                          ]
-                        },
-                        "allowedClientHeadersOnSuccess": {
-                          "patterns": [
-                            {
-                              "exact": "set-cookie"
-                            }
-                          ]
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          ],
-          "typedPerFilterConfig": {
-            "envoy.filters.http.ext_authz": {
-              "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
-              "disabled": true
-            }
-          }
-        },
-        {
-          "name": "nonapp_wizard_alice",
-          "domains": [
-            "wizard.alice.olares.local"
-          ],
-          "routes": [
-            {
-              "name": "nonapp_wizard_root_alice",
-              "match": {
-                "prefix": "/"
-              },
-              "route": {
-                "cluster": "nonapp_wizard_alice",
-                "timeout": "300s",
-                "upgradeConfigs": [
-                  {
-                    "upgradeType": "websocket"
-                  },
-                  {
-                    "upgradeType": "tailscale-control-protocol"
-                  }
-                ]
-              },
-              "requestHeadersToAdd": [
-                {
-                  "header": {
-                    "key": "X-BFL-USER",
-                    "value": "alice"
-                  },
-                  "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-                }
-              ]
             }
           ],
           "typedPerFilterConfig": {
@@ -1623,28 +1564,277 @@
       "mostSpecificHeaderMutationsWins": true
     },
     {
-      "name": "https_443_alice_alice_snowinning_com_routes",
+      "name": "https_443_default_routes",
       "virtualHosts": [
         {
-          "name": "profile_alice",
+          "name": "nonapp_auth",
           "domains": [
-            "alice.snowinning.com",
-            "alice.olares.local"
+            "auth.lab.olares.local",
+            "auth.lab.example.com"
           ],
           "routes": [
             {
-              "name": "profile_root_alice",
+              "name": "nonapp_auth_root",
               "match": {
                 "prefix": "/"
               },
               "route": {
-                "cluster": "profile_service_alice",
-                "timeout": "300s"
+                "cluster": "nonapp_auth",
+                "timeout": "300s",
+                "upgradeConfigs": [
+                  {
+                    "upgradeType": "websocket"
+                  },
+                  {
+                    "upgradeType": "tailscale-control-protocol"
+                  }
+                ]
+              },
+              "metadata": {
+                "filterMetadata": {
+                  "envoy.filters.http.lua": {
+                    "language": "en-US"
+                  }
+                }
+              }
+            }
+          ],
+          "typedPerFilterConfig": {
+            "envoy.filters.http.ext_authz": {
+              "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+              "disabled": true
+            }
+          }
+        },
+        {
+          "name": "nonapp_desktop",
+          "domains": [
+            "desktop.lab.olares.local",
+            "desktop.lab.example.com"
+          ],
+          "routes": [
+            {
+              "name": "nonapp_desktop_root",
+              "match": {
+                "prefix": "/"
+              },
+              "route": {
+                "cluster": "nonapp_desktop",
+                "timeout": "300s",
+                "upgradeConfigs": [
+                  {
+                    "upgradeType": "websocket"
+                  },
+                  {
+                    "upgradeType": "tailscale-control-protocol"
+                  }
+                ]
+              },
+              "metadata": {
+                "filterMetadata": {
+                  "envoy.filters.http.lua": {
+                    "language": "en-US"
+                  }
+                }
               },
               "typedPerFilterConfig": {
                 "envoy.filters.http.ext_authz": {
                   "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
-                  "checkSettings": {}
+                  "checkSettings": {
+                    "httpService": {
+                      "serverUri": {
+                        "uri": "http://authelia-backend.os-framework.svc.cluster.local",
+                        "cluster": "authelia_backend",
+                        "timeout": "15s"
+                      },
+                      "pathPrefix": "/api/verify/",
+                      "authorizationRequest": {
+                        "headersToAdd": [
+                          {
+                            "key": "X-Forwarded-Proto",
+                            "value": "%REQ(x-forwarded-proto?:SCHEME)%"
+                          },
+                          {
+                            "key": "X-Original-URL",
+                            "value": "%REQ(x-forwarded-proto?:SCHEME)%://%REQ(:AUTHORITY)%%REQ(:PATH)%"
+                          },
+                          {
+                            "key": "X-Forwarded-Uri",
+                            "value": "%REQ(:PATH)%"
+                          },
+                          {
+                            "key": "X-Forwarded-Host",
+                            "value": "%REQ(:AUTHORITY)%"
+                          },
+                          {
+                            "key": "X-Original-Method",
+                            "value": "%REQ(:METHOD)%"
+                          },
+                          {
+                            "key": "X-Forwarded-Method",
+                            "value": "%REQ(:METHOD)%"
+                          }
+                        ]
+                      },
+                      "authorizationResponse": {
+                        "allowedUpstreamHeaders": {
+                          "patterns": [
+                            {
+                              "exact": "authorization"
+                            },
+                            {
+                              "exact": "proxy-authorization"
+                            },
+                            {
+                              "exact": "x-bfl-user"
+                            },
+                            {
+                              "prefix": "remote-"
+                            },
+                            {
+                              "prefix": "authelia-"
+                            }
+                          ]
+                        },
+                        "allowedClientHeaders": {
+                          "patterns": [
+                            {
+                              "exact": "set-cookie"
+                            },
+                            {
+                              "exact": "location"
+                            },
+                            {
+                              "exact": "www-authenticate"
+                            }
+                          ]
+                        },
+                        "allowedClientHeadersOnSuccess": {
+                          "patterns": [
+                            {
+                              "exact": "set-cookie"
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          ],
+          "typedPerFilterConfig": {
+            "envoy.filters.http.ext_authz": {
+              "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+              "disabled": true
+            }
+          }
+        },
+        {
+          "name": "profile",
+          "domains": [
+            "lab.olares.local",
+            "lab.example.com"
+          ],
+          "routes": [
+            {
+              "name": "profile_root",
+              "match": {
+                "prefix": "/"
+              },
+              "route": {
+                "cluster": "profile_service",
+                "timeout": "300s"
+              },
+              "metadata": {
+                "filterMetadata": {
+                  "envoy.filters.http.lua": {
+                    "language": "en-US"
+                  }
+                }
+              },
+              "typedPerFilterConfig": {
+                "envoy.filters.http.ext_authz": {
+                  "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+                  "checkSettings": {
+                    "httpService": {
+                      "serverUri": {
+                        "uri": "http://authelia-backend.os-framework.svc.cluster.local",
+                        "cluster": "authelia_backend",
+                        "timeout": "15s"
+                      },
+                      "pathPrefix": "/api/verify/",
+                      "authorizationRequest": {
+                        "headersToAdd": [
+                          {
+                            "key": "X-Forwarded-Proto",
+                            "value": "%REQ(x-forwarded-proto?:SCHEME)%"
+                          },
+                          {
+                            "key": "X-Original-URL",
+                            "value": "%REQ(x-forwarded-proto?:SCHEME)%://%REQ(:AUTHORITY)%%REQ(:PATH)%"
+                          },
+                          {
+                            "key": "X-Forwarded-Uri",
+                            "value": "%REQ(:PATH)%"
+                          },
+                          {
+                            "key": "X-Forwarded-Host",
+                            "value": "%REQ(:AUTHORITY)%"
+                          },
+                          {
+                            "key": "X-Original-Method",
+                            "value": "%REQ(:METHOD)%"
+                          },
+                          {
+                            "key": "X-Forwarded-Method",
+                            "value": "%REQ(:METHOD)%"
+                          }
+                        ]
+                      },
+                      "authorizationResponse": {
+                        "allowedUpstreamHeaders": {
+                          "patterns": [
+                            {
+                              "exact": "authorization"
+                            },
+                            {
+                              "exact": "proxy-authorization"
+                            },
+                            {
+                              "exact": "x-bfl-user"
+                            },
+                            {
+                              "prefix": "remote-"
+                            },
+                            {
+                              "prefix": "authelia-"
+                            }
+                          ]
+                        },
+                        "allowedClientHeaders": {
+                          "patterns": [
+                            {
+                              "exact": "set-cookie"
+                            },
+                            {
+                              "exact": "location"
+                            },
+                            {
+                              "exact": "www-authenticate"
+                            }
+                          ]
+                        },
+                        "allowedClientHeadersOnSuccess": {
+                          "patterns": [
+                            {
+                              "exact": "set-cookie"
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  }
                 }
               }
             }
@@ -1659,8 +1849,8 @@
         {
           "name": "app_alice_vault_vault-frontend",
           "domains": [
-            "vault.alice.snowinning.com",
-            "vault.alice.olares.local"
+            "vault.lab.example.com",
+            "vault.lab.olares.local"
           ],
           "routes": [
             {
@@ -1683,7 +1873,89 @@
               "typedPerFilterConfig": {
                 "envoy.filters.http.ext_authz": {
                   "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
-                  "checkSettings": {}
+                  "checkSettings": {
+                    "httpService": {
+                      "serverUri": {
+                        "uri": "http://authelia-backend.os-framework.svc.cluster.local",
+                        "cluster": "authelia_backend_alice",
+                        "timeout": "15s"
+                      },
+                      "pathPrefix": "/api/verify/",
+                      "authorizationRequest": {
+                        "headersToAdd": [
+                          {
+                            "key": "X-Forwarded-Proto",
+                            "value": "%REQ(x-forwarded-proto?:SCHEME)%"
+                          },
+                          {
+                            "key": "X-Original-URL",
+                            "value": "%REQ(x-forwarded-proto?:SCHEME)%://%REQ(:AUTHORITY)%%REQ(:PATH)%"
+                          },
+                          {
+                            "key": "X-Forwarded-Uri",
+                            "value": "%REQ(:PATH)%"
+                          },
+                          {
+                            "key": "X-Forwarded-Host",
+                            "value": "%REQ(:AUTHORITY)%"
+                          },
+                          {
+                            "key": "X-Original-Method",
+                            "value": "%REQ(:METHOD)%"
+                          },
+                          {
+                            "key": "X-Forwarded-Method",
+                            "value": "%REQ(:METHOD)%"
+                          },
+                          {
+                            "key": "X-BFL-USER",
+                            "value": "alice"
+                          }
+                        ]
+                      },
+                      "authorizationResponse": {
+                        "allowedUpstreamHeaders": {
+                          "patterns": [
+                            {
+                              "exact": "authorization"
+                            },
+                            {
+                              "exact": "proxy-authorization"
+                            },
+                            {
+                              "exact": "x-bfl-user"
+                            },
+                            {
+                              "prefix": "remote-"
+                            },
+                            {
+                              "prefix": "authelia-"
+                            }
+                          ]
+                        },
+                        "allowedClientHeaders": {
+                          "patterns": [
+                            {
+                              "exact": "set-cookie"
+                            },
+                            {
+                              "exact": "location"
+                            },
+                            {
+                              "exact": "www-authenticate"
+                            }
+                          ]
+                        },
+                        "allowedClientHeadersOnSuccess": {
+                          "patterns": [
+                            {
+                              "exact": "set-cookie"
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  }
                 }
               }
             }
@@ -1696,130 +1968,7 @@
           }
         },
         {
-          "name": "nonapp_auth_alice",
-          "domains": [
-            "auth.alice.snowinning.com",
-            "auth.alice.olares.local"
-          ],
-          "routes": [
-            {
-              "name": "nonapp_auth_root_alice",
-              "match": {
-                "prefix": "/"
-              },
-              "route": {
-                "cluster": "nonapp_auth_alice",
-                "timeout": "300s",
-                "upgradeConfigs": [
-                  {
-                    "upgradeType": "websocket"
-                  },
-                  {
-                    "upgradeType": "tailscale-control-protocol"
-                  }
-                ]
-              },
-              "requestHeadersToAdd": [
-                {
-                  "header": {
-                    "key": "X-BFL-USER",
-                    "value": "alice"
-                  },
-                  "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-                }
-              ]
-            }
-          ],
-          "typedPerFilterConfig": {
-            "envoy.filters.http.ext_authz": {
-              "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
-              "disabled": true
-            }
-          }
-        },
-        {
-          "name": "nonapp_desktop_alice",
-          "domains": [
-            "desktop.alice.snowinning.com",
-            "desktop.alice.olares.local"
-          ],
-          "routes": [
-            {
-              "name": "nonapp_desktop_root_alice",
-              "match": {
-                "prefix": "/"
-              },
-              "route": {
-                "cluster": "nonapp_desktop_alice",
-                "timeout": "300s",
-                "upgradeConfigs": [
-                  {
-                    "upgradeType": "websocket"
-                  },
-                  {
-                    "upgradeType": "tailscale-control-protocol"
-                  }
-                ]
-              },
-              "typedPerFilterConfig": {
-                "envoy.filters.http.ext_authz": {
-                  "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
-                  "checkSettings": {}
-                }
-              }
-            }
-          ],
-          "typedPerFilterConfig": {
-            "envoy.filters.http.ext_authz": {
-              "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
-              "disabled": true
-            }
-          }
-        },
-        {
-          "name": "nonapp_wizard_alice",
-          "domains": [
-            "wizard.alice.snowinning.com",
-            "wizard.alice.olares.local"
-          ],
-          "routes": [
-            {
-              "name": "nonapp_wizard_root_alice",
-              "match": {
-                "prefix": "/"
-              },
-              "route": {
-                "cluster": "nonapp_wizard_alice",
-                "timeout": "300s",
-                "upgradeConfigs": [
-                  {
-                    "upgradeType": "websocket"
-                  },
-                  {
-                    "upgradeType": "tailscale-control-protocol"
-                  }
-                ]
-              },
-              "requestHeadersToAdd": [
-                {
-                  "header": {
-                    "key": "X-BFL-USER",
-                    "value": "alice"
-                  },
-                  "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-                }
-              ]
-            }
-          ],
-          "typedPerFilterConfig": {
-            "envoy.filters.http.ext_authz": {
-              "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
-              "disabled": true
-            }
-          }
-        },
-        {
-          "name": "default_https_443_alice_alice_snowinning_com",
+          "name": "default_https_443_default",
           "domains": [
             "*"
           ],
@@ -1933,28 +2082,277 @@
       "mostSpecificHeaderMutationsWins": true
     },
     {
-      "name": "https_444_alice_alice_snowinning_com_routes",
+      "name": "https_444_default_routes",
       "virtualHosts": [
         {
-          "name": "profile_alice",
+          "name": "nonapp_auth",
           "domains": [
-            "alice.snowinning.com",
-            "alice.olares.local"
+            "auth.lab.olares.local",
+            "auth.lab.example.com"
           ],
           "routes": [
             {
-              "name": "profile_root_alice",
+              "name": "nonapp_auth_root",
               "match": {
                 "prefix": "/"
               },
               "route": {
-                "cluster": "profile_service_alice",
-                "timeout": "300s"
+                "cluster": "nonapp_auth",
+                "timeout": "300s",
+                "upgradeConfigs": [
+                  {
+                    "upgradeType": "websocket"
+                  },
+                  {
+                    "upgradeType": "tailscale-control-protocol"
+                  }
+                ]
+              },
+              "metadata": {
+                "filterMetadata": {
+                  "envoy.filters.http.lua": {
+                    "language": "en-US"
+                  }
+                }
+              }
+            }
+          ],
+          "typedPerFilterConfig": {
+            "envoy.filters.http.ext_authz": {
+              "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+              "disabled": true
+            }
+          }
+        },
+        {
+          "name": "nonapp_desktop",
+          "domains": [
+            "desktop.lab.olares.local",
+            "desktop.lab.example.com"
+          ],
+          "routes": [
+            {
+              "name": "nonapp_desktop_root",
+              "match": {
+                "prefix": "/"
+              },
+              "route": {
+                "cluster": "nonapp_desktop",
+                "timeout": "300s",
+                "upgradeConfigs": [
+                  {
+                    "upgradeType": "websocket"
+                  },
+                  {
+                    "upgradeType": "tailscale-control-protocol"
+                  }
+                ]
+              },
+              "metadata": {
+                "filterMetadata": {
+                  "envoy.filters.http.lua": {
+                    "language": "en-US"
+                  }
+                }
               },
               "typedPerFilterConfig": {
                 "envoy.filters.http.ext_authz": {
                   "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
-                  "checkSettings": {}
+                  "checkSettings": {
+                    "httpService": {
+                      "serverUri": {
+                        "uri": "http://authelia-backend.os-framework.svc.cluster.local",
+                        "cluster": "authelia_backend",
+                        "timeout": "15s"
+                      },
+                      "pathPrefix": "/api/verify/",
+                      "authorizationRequest": {
+                        "headersToAdd": [
+                          {
+                            "key": "X-Forwarded-Proto",
+                            "value": "%REQ(x-forwarded-proto?:SCHEME)%"
+                          },
+                          {
+                            "key": "X-Original-URL",
+                            "value": "%REQ(x-forwarded-proto?:SCHEME)%://%REQ(:AUTHORITY)%%REQ(:PATH)%"
+                          },
+                          {
+                            "key": "X-Forwarded-Uri",
+                            "value": "%REQ(:PATH)%"
+                          },
+                          {
+                            "key": "X-Forwarded-Host",
+                            "value": "%REQ(:AUTHORITY)%"
+                          },
+                          {
+                            "key": "X-Original-Method",
+                            "value": "%REQ(:METHOD)%"
+                          },
+                          {
+                            "key": "X-Forwarded-Method",
+                            "value": "%REQ(:METHOD)%"
+                          }
+                        ]
+                      },
+                      "authorizationResponse": {
+                        "allowedUpstreamHeaders": {
+                          "patterns": [
+                            {
+                              "exact": "authorization"
+                            },
+                            {
+                              "exact": "proxy-authorization"
+                            },
+                            {
+                              "exact": "x-bfl-user"
+                            },
+                            {
+                              "prefix": "remote-"
+                            },
+                            {
+                              "prefix": "authelia-"
+                            }
+                          ]
+                        },
+                        "allowedClientHeaders": {
+                          "patterns": [
+                            {
+                              "exact": "set-cookie"
+                            },
+                            {
+                              "exact": "location"
+                            },
+                            {
+                              "exact": "www-authenticate"
+                            }
+                          ]
+                        },
+                        "allowedClientHeadersOnSuccess": {
+                          "patterns": [
+                            {
+                              "exact": "set-cookie"
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          ],
+          "typedPerFilterConfig": {
+            "envoy.filters.http.ext_authz": {
+              "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+              "disabled": true
+            }
+          }
+        },
+        {
+          "name": "profile",
+          "domains": [
+            "lab.olares.local",
+            "lab.example.com"
+          ],
+          "routes": [
+            {
+              "name": "profile_root",
+              "match": {
+                "prefix": "/"
+              },
+              "route": {
+                "cluster": "profile_service",
+                "timeout": "300s"
+              },
+              "metadata": {
+                "filterMetadata": {
+                  "envoy.filters.http.lua": {
+                    "language": "en-US"
+                  }
+                }
+              },
+              "typedPerFilterConfig": {
+                "envoy.filters.http.ext_authz": {
+                  "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+                  "checkSettings": {
+                    "httpService": {
+                      "serverUri": {
+                        "uri": "http://authelia-backend.os-framework.svc.cluster.local",
+                        "cluster": "authelia_backend",
+                        "timeout": "15s"
+                      },
+                      "pathPrefix": "/api/verify/",
+                      "authorizationRequest": {
+                        "headersToAdd": [
+                          {
+                            "key": "X-Forwarded-Proto",
+                            "value": "%REQ(x-forwarded-proto?:SCHEME)%"
+                          },
+                          {
+                            "key": "X-Original-URL",
+                            "value": "%REQ(x-forwarded-proto?:SCHEME)%://%REQ(:AUTHORITY)%%REQ(:PATH)%"
+                          },
+                          {
+                            "key": "X-Forwarded-Uri",
+                            "value": "%REQ(:PATH)%"
+                          },
+                          {
+                            "key": "X-Forwarded-Host",
+                            "value": "%REQ(:AUTHORITY)%"
+                          },
+                          {
+                            "key": "X-Original-Method",
+                            "value": "%REQ(:METHOD)%"
+                          },
+                          {
+                            "key": "X-Forwarded-Method",
+                            "value": "%REQ(:METHOD)%"
+                          }
+                        ]
+                      },
+                      "authorizationResponse": {
+                        "allowedUpstreamHeaders": {
+                          "patterns": [
+                            {
+                              "exact": "authorization"
+                            },
+                            {
+                              "exact": "proxy-authorization"
+                            },
+                            {
+                              "exact": "x-bfl-user"
+                            },
+                            {
+                              "prefix": "remote-"
+                            },
+                            {
+                              "prefix": "authelia-"
+                            }
+                          ]
+                        },
+                        "allowedClientHeaders": {
+                          "patterns": [
+                            {
+                              "exact": "set-cookie"
+                            },
+                            {
+                              "exact": "location"
+                            },
+                            {
+                              "exact": "www-authenticate"
+                            }
+                          ]
+                        },
+                        "allowedClientHeadersOnSuccess": {
+                          "patterns": [
+                            {
+                              "exact": "set-cookie"
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  }
                 }
               }
             }
@@ -1969,8 +2367,8 @@
         {
           "name": "app_alice_vault_vault-frontend",
           "domains": [
-            "vault.alice.snowinning.com",
-            "vault.alice.olares.local"
+            "vault.lab.example.com",
+            "vault.lab.olares.local"
           ],
           "routes": [
             {
@@ -1993,7 +2391,89 @@
               "typedPerFilterConfig": {
                 "envoy.filters.http.ext_authz": {
                   "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
-                  "checkSettings": {}
+                  "checkSettings": {
+                    "httpService": {
+                      "serverUri": {
+                        "uri": "http://authelia-backend.os-framework.svc.cluster.local",
+                        "cluster": "authelia_backend_alice",
+                        "timeout": "15s"
+                      },
+                      "pathPrefix": "/api/verify/",
+                      "authorizationRequest": {
+                        "headersToAdd": [
+                          {
+                            "key": "X-Forwarded-Proto",
+                            "value": "%REQ(x-forwarded-proto?:SCHEME)%"
+                          },
+                          {
+                            "key": "X-Original-URL",
+                            "value": "%REQ(x-forwarded-proto?:SCHEME)%://%REQ(:AUTHORITY)%%REQ(:PATH)%"
+                          },
+                          {
+                            "key": "X-Forwarded-Uri",
+                            "value": "%REQ(:PATH)%"
+                          },
+                          {
+                            "key": "X-Forwarded-Host",
+                            "value": "%REQ(:AUTHORITY)%"
+                          },
+                          {
+                            "key": "X-Original-Method",
+                            "value": "%REQ(:METHOD)%"
+                          },
+                          {
+                            "key": "X-Forwarded-Method",
+                            "value": "%REQ(:METHOD)%"
+                          },
+                          {
+                            "key": "X-BFL-USER",
+                            "value": "alice"
+                          }
+                        ]
+                      },
+                      "authorizationResponse": {
+                        "allowedUpstreamHeaders": {
+                          "patterns": [
+                            {
+                              "exact": "authorization"
+                            },
+                            {
+                              "exact": "proxy-authorization"
+                            },
+                            {
+                              "exact": "x-bfl-user"
+                            },
+                            {
+                              "prefix": "remote-"
+                            },
+                            {
+                              "prefix": "authelia-"
+                            }
+                          ]
+                        },
+                        "allowedClientHeaders": {
+                          "patterns": [
+                            {
+                              "exact": "set-cookie"
+                            },
+                            {
+                              "exact": "location"
+                            },
+                            {
+                              "exact": "www-authenticate"
+                            }
+                          ]
+                        },
+                        "allowedClientHeadersOnSuccess": {
+                          "patterns": [
+                            {
+                              "exact": "set-cookie"
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  }
                 }
               }
             }
@@ -2006,130 +2486,7 @@
           }
         },
         {
-          "name": "nonapp_auth_alice",
-          "domains": [
-            "auth.alice.snowinning.com",
-            "auth.alice.olares.local"
-          ],
-          "routes": [
-            {
-              "name": "nonapp_auth_root_alice",
-              "match": {
-                "prefix": "/"
-              },
-              "route": {
-                "cluster": "nonapp_auth_alice",
-                "timeout": "300s",
-                "upgradeConfigs": [
-                  {
-                    "upgradeType": "websocket"
-                  },
-                  {
-                    "upgradeType": "tailscale-control-protocol"
-                  }
-                ]
-              },
-              "requestHeadersToAdd": [
-                {
-                  "header": {
-                    "key": "X-BFL-USER",
-                    "value": "alice"
-                  },
-                  "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-                }
-              ]
-            }
-          ],
-          "typedPerFilterConfig": {
-            "envoy.filters.http.ext_authz": {
-              "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
-              "disabled": true
-            }
-          }
-        },
-        {
-          "name": "nonapp_desktop_alice",
-          "domains": [
-            "desktop.alice.snowinning.com",
-            "desktop.alice.olares.local"
-          ],
-          "routes": [
-            {
-              "name": "nonapp_desktop_root_alice",
-              "match": {
-                "prefix": "/"
-              },
-              "route": {
-                "cluster": "nonapp_desktop_alice",
-                "timeout": "300s",
-                "upgradeConfigs": [
-                  {
-                    "upgradeType": "websocket"
-                  },
-                  {
-                    "upgradeType": "tailscale-control-protocol"
-                  }
-                ]
-              },
-              "typedPerFilterConfig": {
-                "envoy.filters.http.ext_authz": {
-                  "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
-                  "checkSettings": {}
-                }
-              }
-            }
-          ],
-          "typedPerFilterConfig": {
-            "envoy.filters.http.ext_authz": {
-              "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
-              "disabled": true
-            }
-          }
-        },
-        {
-          "name": "nonapp_wizard_alice",
-          "domains": [
-            "wizard.alice.snowinning.com",
-            "wizard.alice.olares.local"
-          ],
-          "routes": [
-            {
-              "name": "nonapp_wizard_root_alice",
-              "match": {
-                "prefix": "/"
-              },
-              "route": {
-                "cluster": "nonapp_wizard_alice",
-                "timeout": "300s",
-                "upgradeConfigs": [
-                  {
-                    "upgradeType": "websocket"
-                  },
-                  {
-                    "upgradeType": "tailscale-control-protocol"
-                  }
-                ]
-              },
-              "requestHeadersToAdd": [
-                {
-                  "header": {
-                    "key": "X-BFL-USER",
-                    "value": "alice"
-                  },
-                  "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
-                }
-              ]
-            }
-          ],
-          "typedPerFilterConfig": {
-            "envoy.filters.http.ext_authz": {
-              "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
-              "disabled": true
-            }
-          }
-        },
-        {
-          "name": "default_https_444_alice_alice_snowinning_com",
+          "name": "default_https_444_default",
           "domains": [
             "*"
           ],

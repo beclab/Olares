@@ -11,503 +11,119 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// ---------------------------------------------------------------------------
-// buildZoneWildcardSNI
-// ---------------------------------------------------------------------------
-
-func TestBuildZoneWildcardSNI(t *testing.T) {
-	got := buildZoneWildcardSNI([]string{"alice.snowinning.com", "alice.olares.local"})
-	assert.Equal(t, []string{
-		"*.alice.olares.local",
-		"*.alice.snowinning.com",
-		"alice.olares.local",
-		"alice.snowinning.com",
-	}, got)
-}
-
-func TestBuildZoneWildcardSNI_Single(t *testing.T) {
-	got := buildZoneWildcardSNI([]string{"alice.example.com"})
-	assert.Equal(t, []string{"*.alice.example.com", "alice.example.com"}, got)
-}
-
-// ---------------------------------------------------------------------------
-// collectAppIDs
-// ---------------------------------------------------------------------------
-
-// ---------------------------------------------------------------------------
-// buildUserHTTPSListeners
-// ---------------------------------------------------------------------------
-
-func TestBuildUserFilterChains_NoDeny_WithCustomDomainCert(t *testing.T) {
-	tr := &Translator{cfg: &Config{SSLServerPort: 443}}
-
-	// "myapp.custom.io" has its own TLS cert entry. It must NOT appear in
-	// the main filter chain's SNI list because it gets its own dedicated
-	// filter chain — if it appeared in both, Envoy would reject the listener
-	// for "multiple filter chains with overlapping matching rules".
-	user := &message.UserInfo{
-		Name:              "alice",
-		Zone:              "example.com",
-		Namespace:         "user-space-alice",
-		IsEphemeral:       false,
-		DenyAll:           false,
-		ServerNameDomains: []string{"alice.example.com"},
-		SSL:               &message.SSLConfig{Zone: "alice.example.com", CertData: "cert", KeyData: "key"},
-		CustomDomainCerts: []*message.CertInfo{
-			{Domain: "myapp.custom.io", CertData: "custom-cert", KeyData: "custom-key"},
-		},
-		Apps: []*message.AppInfo{
-			{
-				Name:      "myapp",
-				Appid:     "myapp",
-				Namespace: "myapp-alice",
-				Owner:     "alice",
-				Entrances: []*message.EntranceInfo{
-					{Name: "web", Host: "myapp-svc", Port: 8080},
-				},
-				Settings: map[string]string{
-					"customDomain": `{"web":{"third_party_domain":"myapp.custom.io"}}`,
-				},
-			},
-		},
+func TestTranslate_DefaultDomainAndCustomCertificate(t *testing.T) {
+	tr := &Translator{cfg: &Config{SSLServerPort: 443, SSLProxyServerPort: 444}}
+	resources := &message.Resources{
+		DefaultDomain: "lab.example.com", LocalZone: "lab.olares.local",
+		SSL:   &message.SSLConfig{CertData: "machine-cert", KeyData: "machine-key"},
+		Users: []*message.UserInfo{{Name: "alice", CustomDomainCerts: []*message.CertInfo{{Domain: "myapp.custom.io", CertData: "custom-cert", KeyData: "custom-key"}}, Apps: []*message.AppInfo{{Name: "myapp", Appid: "myapp", Namespace: "myapp-alice", Owner: "alice", Entrances: []*message.EntranceInfo{{Name: "web", Host: "web", Port: 8080}}, Settings: map[string]string{"customDomain": `{"web":{"third_party_domain":"myapp.custom.io"}}`}}}}},
 	}
-
-	clusterSet := make(map[string]*ir.ClusterIR)
-	vhosts := tr.buildUserVirtualHosts(user, user.SSL.Zone, false, clusterSet)
-	tr.applyDenyAllRestrictions(user, vhosts, nil)
-	listeners := tr.buildUserFilterChains(user, vhosts, 443, false)
-
-	// One per-zone main chain + one custom-cert chain.
-	// ServerNameDomains = ["alice.example.com"], so one zone chain.
-	require.Len(t, listeners, 2)
-
-	main := listeners[0]
-	// Zone-domain-scoped name: https_{port}_{user}_{sanitized-zone}
-	assert.Equal(t, "https_443_alice_alice_example_com", main.Name)
-	// The custom domain must NOT be in the zone chain's SNI list.
-	assert.NotContains(t, main.SNIMatches, "myapp.custom.io")
-
-	custom := listeners[1]
-	assert.Equal(t, []string{"myapp.custom.io"}, custom.SNIMatches)
-}
-
-func TestBuildUserFilterChains_NoDeny(t *testing.T) {
-	tr := &Translator{cfg: &Config{SSLServerPort: 443}}
-
-	user := &message.UserInfo{
-		Name:              "alice",
-		Zone:              "example.com",
-		Namespace:         "user-space-alice",
-		IsEphemeral:       false,
-		DenyAll:           false,
-		ServerNameDomains: []string{"alice.example.com"},
-		SSL:               &message.SSLConfig{Zone: "alice.example.com", CertData: "cert", KeyData: "key"},
-	}
-
-	clusterSet := make(map[string]*ir.ClusterIR)
-	vhosts := tr.buildUserVirtualHosts(user, user.SSL.Zone, false, clusterSet)
-	tr.applyDenyAllRestrictions(user, vhosts, nil)
-	listeners := tr.buildUserFilterChains(user, vhosts, 443, false)
-
-	// One filter chain per zone domain.  ServerNameDomains = ["alice.example.com"],
-	// so exactly one zone chain.
-	require.Len(t, listeners, 1)
-	// Name encodes the zone domain so adding a second zone creates a NEW filter
-	// chain rather than modifying this one.
-	assert.Equal(t, "https_443_alice_alice_example_com", listeners[0].Name)
-	// SNI covers exactly the two patterns for this zone: zone + *.zone
-	assert.Contains(t, listeners[0].SNIMatches, "alice.example.com")
-	assert.Contains(t, listeners[0].SNIMatches, "*.alice.example.com")
-	assert.Len(t, listeners[0].SNIMatches, 2)
-	// Per-app domains are not enumerated (routes live in RDS, not filter chain SNI).
-	assert.NotContains(t, listeners[0].SNIMatches, "auth.alice.example.com")
-	assert.NotContains(t, listeners[0].SNIMatches, "desktop.alice.example.com")
-	assert.Empty(t, listeners[0].SourceCIDRs)
-	assert.Equal(t, "alice", listeners[0].UserName)
-	assert.NotNil(t, listeners[0].TLSCert)
-}
-
-func TestBuildUserFilterChains_NoDeny_MultiZone(t *testing.T) {
-	tr := &Translator{cfg: &Config{SSLServerPort: 443}}
-
-	// User with two zone domains (primary + local).
-	user := &message.UserInfo{
-		Name:              "alice",
-		Zone:              "snowinning.com",
-		Namespace:         "user-space-alice",
-		IsEphemeral:       false,
-		DenyAll:           false,
-		ServerNameDomains: []string{"alice.snowinning.com", "alice.olares.local"},
-		SSL:               &message.SSLConfig{Zone: "alice.snowinning.com", CertData: "cert", KeyData: "key"},
-	}
-
-	clusterSet := make(map[string]*ir.ClusterIR)
-	vhosts := tr.buildUserVirtualHosts(user, user.SSL.Zone, false, clusterSet)
-	tr.applyDenyAllRestrictions(user, vhosts, nil)
-	listeners := tr.buildUserFilterChains(user, vhosts, 443, false)
-
-	// One filter chain per zone → two chains.
-	require.Len(t, listeners, 2)
-
-	// Each chain has exactly 2 SNI entries (zone + *.zone) and a stable name.
-	names := []string{listeners[0].Name, listeners[1].Name}
-	assert.Contains(t, names, "https_443_alice_alice_snowinning_com")
-	assert.Contains(t, names, "https_443_alice_alice_olares_local")
-
-	for _, l := range listeners {
-		assert.Len(t, l.SNIMatches, 2, "each zone chain must have exactly 2 SNI entries")
-		assert.NotNil(t, l.TLSCert)
-		assert.Equal(t, "https_443_alice_routes", l.Name[:len("https_443_alice")]+"_routes",
-			"all zone chains must share the same route-config name prefix")
-	}
-}
-
-// TestBuildUserHTTPSListeners_NoDeny_AddZoneNoExistingDrain verifies the core
-// invariant: adding a third zone domain to a user leaves the first two filter
-// chains byte-for-byte identical (Envoy in-place update, no drain).
-func TestBuildUserFilterChains_NoDeny_AddZoneNoExistingDrain(t *testing.T) {
-	tr := &Translator{cfg: &Config{SSLServerPort: 443}}
-
-	makeUser := func(domains []string) *message.UserInfo {
-		return &message.UserInfo{
-			Name:              "alice",
-			Zone:              "snowinning.com",
-			Namespace:         "user-space-alice",
-			IsEphemeral:       false,
-			DenyAll:           false,
-			ServerNameDomains: domains,
-			SSL:               &message.SSLConfig{Zone: "alice.snowinning.com", CertData: "cert", KeyData: "key"},
+	xds := tr.Translate(resources)
+	require.Len(t, xds.Secrets, 2)
+	require.Len(t, xds.HTTPListeners, 5)
+	for _, listener := range xds.HTTPListeners {
+		switch {
+		case listener.Name == "http_82":
+			assert.False(t, listener.TLS)
+		case strings.HasSuffix(listener.Name, "_default"):
+			assert.ElementsMatch(t, []string{"lab.example.com", "*.lab.example.com"}, listener.SNIMatches)
+			assert.Equal(t, "machine-cert", listener.TLSCert.CertData)
+			assert.NotContains(t, listener.SNIMatches, "myapp.custom.io")
+		default:
+			assert.Equal(t, []string{"myapp.custom.io"}, listener.SNIMatches)
+			assert.Equal(t, "custom-cert", listener.TLSCert.CertData)
 		}
 	}
-
-	buildChains := func(user *message.UserInfo) []*ir.HTTPListenerIR {
-		clusterSet := make(map[string]*ir.ClusterIR)
-		vhosts := tr.buildUserVirtualHosts(user, user.SSL.Zone, false, clusterSet)
-		tr.applyDenyAllRestrictions(user, vhosts, nil)
-		return tr.buildUserFilterChains(user, vhosts, 443, false)
-	}
-
-	before := buildChains(makeUser([]string{"alice.snowinning.com", "alice.olares.local"}))
-	after := buildChains(makeUser([]string{"alice.snowinning.com", "alice.olares.local", "alice.newzone.com"}))
-
-	// After: one extra filter chain added.
-	require.Len(t, before, 2)
-	require.Len(t, after, 3)
-
-	// Find each existing chain by name and compare.
-	findByName := func(ls []*ir.HTTPListenerIR, name string) *ir.HTTPListenerIR {
-		for _, l := range ls {
-			if l.Name == name {
-				return l
-			}
-		}
-		return nil
-	}
-
-	for _, name := range []string{"https_443_alice_alice_snowinning_com", "https_443_alice_alice_olares_local"} {
-		b := findByName(before, name)
-		a := findByName(after, name)
-		require.NotNil(t, b, "filter chain %q must exist before zone addition", name)
-		require.NotNil(t, a, "filter chain %q must exist after zone addition", name)
-		assert.Equal(t, b.SNIMatches, a.SNIMatches, "SNI for %q must not change", name)
-		assert.Equal(t, b.TLSCert, a.TLSCert, "TLS cert ref for %q must not change", name)
-	}
-
-	// The new zone gets its own chain.
-	newChain := findByName(after, "https_443_alice_alice_newzone_com")
-	require.NotNil(t, newChain, "new zone chain must be present after addition")
-	assert.Equal(t, []string{"*.alice.newzone.com", "alice.newzone.com"}, newChain.SNIMatches)
 }
 
-func TestBuildUserFilterChains_DenyAll_WithAllowedDomains(t *testing.T) {
-	tr := &Translator{cfg: &Config{SSLServerPort: 443}}
-
-	// "app.bob.example.com" is in AllowedDomains.  The allowed VH (app)
-	// must NOT have SourceCIDRs; the restricted VHs (profile, auth,
-	// desktop, wizard) must have SourceCIDRs.  The filter chain itself
-	// uses a stable zone wildcard — no per-domain SNI split.
-	user := &message.UserInfo{
-		Name:              "bob",
-		Zone:              "bob.example.com",
-		Namespace:         "user-space-bob",
-		IsEphemeral:       false,
-		DenyAll:           true,
-		AllowedDomains:    []string{"app.bob.example.com"},
-		LocalDomainIP:     "192.168.1.100",
-		ServerNameDomains: []string{"bob.example.com"},
-		SSL:               &message.SSLConfig{Zone: "bob.example.com", CertData: "cert", KeyData: "key"},
-		Apps: []*message.AppInfo{
-			{
-				Name:      "app",
-				Appid:     "app",
-				Namespace: "app-bob",
-				Owner:     "bob",
-				Entrances: []*message.EntranceInfo{
-					{Name: "main", Host: "app-svc", Port: 8080},
-				},
-			},
-		},
-	}
-
-	clusterSet := make(map[string]*ir.ClusterIR)
-	vhosts := tr.buildUserVirtualHosts(user, user.SSL.Zone, false, clusterSet)
-	tr.applyDenyAllRestrictions(user, vhosts, nil)
-	listeners := tr.buildUserFilterChains(user, vhosts, 443, false)
-
-	// One filter chain per zone domain (same as non-deny_all).
-	require.Len(t, listeners, 1)
-	l := listeners[0]
-	assert.Equal(t, "https_443_bob_bob_example_com", l.Name)
-	// Stable zone-wildcard SNI — doesn't change when apps are installed.
-	assert.Contains(t, l.SNIMatches, "bob.example.com")
-	assert.Contains(t, l.SNIMatches, "*.bob.example.com")
-
-	// Access control is on VHs, not on the filter chain.
-	assert.Empty(t, l.SourceCIDRs)
-
-	// The VH for the allowed app must NOT have SourceCIDRs.
-	var appVH *ir.VirtualHostIR
-	var restrictedVHs []*ir.VirtualHostIR
-	for _, vh := range l.VirtualHosts {
-		hasAllowedDomain := false
-		for _, d := range vh.Domains {
-			if d == "app.bob.example.com" {
-				hasAllowedDomain = true
-				break
-			}
+func TestTranslate_DenyAllRestrictsPersonalApps(t *testing.T) {
+	tr := &Translator{cfg: &Config{SSLServerPort: 443, SSLProxyServerPort: 444}}
+	resources := &message.Resources{LocalZone: "lab.olares.local", LocalDomainIP: "192.168.1.100", Users: []*message.UserInfo{{Name: "alice", DenyAll: true, AllowedDomains: []string{"allowed.lab.olares.local"}, Apps: []*message.AppInfo{
+		{Name: "allowed", Appid: "allowed", Namespace: "allowed-alice", Entrances: []*message.EntranceInfo{{Name: "web", Host: "web", Port: 8080}}},
+		{Name: "private", Appid: "private", Namespace: "private-alice", Entrances: []*message.EntranceInfo{{Name: "web", Host: "web", Port: 8080}}},
+	}}}}
+	xds := tr.Translate(resources)
+	require.Len(t, xds.HTTPListeners, 1)
+	found := false
+	for _, vh := range xds.HTTPListeners[0].VirtualHosts {
+		if vh.Name == "app_alice_allowed_web" {
+			assert.Empty(t, vh.SourceCIDRs)
 		}
-		if hasAllowedDomain {
-			appVH = vh
-		} else if len(vh.SourceCIDRs) > 0 {
-			restrictedVHs = append(restrictedVHs, vh)
+		if vh.Name == "app_alice_private_web" {
+			found = true
+			assert.Contains(t, vh.SourceCIDRs, vpnCIDR)
+			assert.Contains(t, vh.SourceCIDRs, "192.168.1.100/32")
 		}
 	}
-
-	require.NotNil(t, appVH, "VH for allowed app must exist")
-	assert.Empty(t, appVH.SourceCIDRs, "allowed VH must not have SourceCIDRs")
-
-	require.NotEmpty(t, restrictedVHs, "there must be restricted VHs")
-	for _, vh := range restrictedVHs {
-		assert.Contains(t, vh.SourceCIDRs, vpnCIDR, "restricted VH %q must include VPN CIDR", vh.Name)
-		assert.Contains(t, vh.SourceCIDRs, "192.168.1.100/32", "restricted VH %q must include LocalDomainIP", vh.Name)
-	}
+	assert.True(t, found)
 }
-
-func TestBuildUserFilterChains_DenyAll_NoAllowedDomains(t *testing.T) {
-	tr := &Translator{cfg: &Config{SSLServerPort: 443}}
-
-	user := &message.UserInfo{
-		Name:              "carol",
-		Zone:              "carol.example.com",
-		Namespace:         "user-space-carol",
-		IsEphemeral:       false,
-		DenyAll:           true,
-		AllowedDomains:    nil,
-		LocalDomainIP:     "",
-		ServerNameDomains: []string{"carol.example.com"},
-		SSL:               &message.SSLConfig{Zone: "carol.example.com", CertData: "cert", KeyData: "key"},
-	}
-
-	clusterSet := make(map[string]*ir.ClusterIR)
-	vhosts := tr.buildUserVirtualHosts(user, user.SSL.Zone, false, clusterSet)
-	tr.applyDenyAllRestrictions(user, vhosts, nil)
-	listeners := tr.buildUserFilterChains(user, vhosts, 443, false)
-
-	// One filter chain per zone domain.
-	require.Len(t, listeners, 1)
-	l := listeners[0]
-	assert.Equal(t, "https_443_carol_carol_example_com", l.Name)
-	// No SourceCIDRs on the filter chain itself.
-	assert.Empty(t, l.SourceCIDRs)
-
-	// All VHs should be restricted (no AllowedDomains).
-	for _, vh := range l.VirtualHosts {
-		assert.Contains(t, vh.SourceCIDRs, vpnCIDR,
-			"VH %q must have VPN CIDR restriction when no AllowedDomains", vh.Name)
-	}
-}
-
-// ---------------------------------------------------------------------------
-// Translate (full integration)
-// ---------------------------------------------------------------------------
 
 func TestTranslate_Full(t *testing.T) {
-	tr := &Translator{cfg: &Config{
-		SSLServerPort:      443,
-		SSLProxyServerPort: 444,
-	}}
-
+	tr := &Translator{cfg: &Config{SSLServerPort: 443, SSLProxyServerPort: 444}}
 	resources := &message.Resources{
-		Users: []*message.UserInfo{
-			{
-				Name:              "alice",
-				Zone:              "example.com",
-				Namespace:         "user-space-alice",
-				IsEphemeral:       false,
-				DenyAll:           false,
-				ServerNameDomains: []string{"alice.example.com"},
-				SSL:               &message.SSLConfig{Zone: "alice.example.com", CertData: "cert", KeyData: "key"},
-				Apps: []*message.AppInfo{
-					{
-						Name:      "vault",
-						Appid:     "vault",
-						Owner:     "alice",
-						Namespace: "vault-alice",
-						Entrances: []*message.EntranceInfo{
-							{Name: "main", Host: "vault-svc", Port: 8080},
-						},
-						Ports: []*message.PortInfo{
-							{Name: "tcp-8080", Host: "vault-svc", Port: 8080, ExposePort: 48126, Protocol: "tcp"},
-						},
-					},
-				},
-			},
-		},
+		DefaultDomain: "lab.example.com", LocalZone: "lab.olares.local",
+		SSL:   &message.SSLConfig{CertData: "machine-cert", KeyData: "machine-key"},
+		Users: []*message.UserInfo{{Name: "alice", Apps: []*message.AppInfo{{Name: "vault", Appid: "vault", Owner: "alice", Namespace: "vault-alice", Entrances: []*message.EntranceInfo{{Name: "main", Host: "vault-svc", Port: 8080}}, Ports: []*message.PortInfo{{Host: "vault-svc", Port: 8080, ExposePort: 48126, Protocol: "tcp"}}}}}},
 	}
-
 	xds := tr.Translate(resources)
-
-	// Expect: HTTP redirect(81) as Listener + HTTPS on 443 and 444 as HTTPListeners + TCP stream as StreamListener
 	require.Len(t, xds.Listeners, 1)
-	httpListener := xds.Listeners[0]
-	assert.Equal(t, "http_redirect_81", httpListener.Name)
-	assert.Equal(t, ir.ProtocolHTTP, httpListener.Protocol)
-
+	assert.Equal(t, "http_redirect_81", xds.Listeners[0].Name)
 	require.Len(t, xds.HTTPListeners, 3)
-	https443 := xds.HTTPListeners[0]
-	// Per-zone naming: https_{port}_{user}_{sanitized-zone-domain}
-	assert.Equal(t, "https_443_alice_alice_example_com", https443.Name)
-	assert.True(t, https443.TLS)
-	assert.False(t, https443.ProxyProtocol)
-
-	https444 := xds.HTTPListeners[1]
-	assert.True(t, https444.ProxyProtocol)
-
-	localHTTP := xds.HTTPListeners[2]
-	assert.Equal(t, "http_82", localHTTP.Name)
-	assert.Empty(t, localHTTP.SNIMatches)
-	assert.True(t, localHTTP.ProxyProtocol)
-	assert.False(t, localHTTP.TLS)
-	assert.False(t, desktopExtAuthOverrides(t, https443), "443 keeps the chain-level Authelia default")
-	assert.True(t, desktopExtAuthOverrides(t, localHTTP), "82 stamps each route with its own Authelia")
-
-	require.Len(t, xds.StreamListeners, 1)
-	stream := xds.StreamListeners[0]
-	assert.Equal(t, "stream_tcp_alice_48126", stream.Name)
-	assert.Equal(t, uint32(48126), stream.Port)
-}
-
-func TestTranslate_NoZone_LocalHTTPUsesUsername(t *testing.T) {
-	tr := &Translator{cfg: &Config{
-		SSLServerPort:      443,
-		SSLProxyServerPort: 444,
-		LocalHTTPProxyPort: 82,
-	}}
-
-	xds := tr.Translate(&message.Resources{
-		Users: []*message.UserInfo{{
-			Name:      "olaresid",
-			Namespace: "user-space-olaresid",
-		}},
-	})
-
-	require.Len(t, xds.HTTPListeners, 1)
-	local := xds.HTTPListeners[0]
-	assert.Equal(t, "http_82", local.Name)
-	assert.Equal(t, uint32(82), local.Port)
-
-	var desktop, profile []string
-	for _, vh := range local.VirtualHosts {
-		switch vh.Name {
-		case "nonapp_desktop_olaresid":
-			desktop = vh.Domains
-		case "profile_olaresid":
-			profile = vh.Domains
+	for _, listener := range xds.HTTPListeners {
+		if listener.Name == "http_82" {
+			assert.False(t, listener.TLS)
+			assert.Nil(t, listener.TLSCert)
+		} else {
+			assert.True(t, listener.TLS)
+			assert.Equal(t, "default-domain-tls", listener.TLSCert.Name)
+			assert.Equal(t, listener.Port == 444, listener.ProxyProtocol)
 		}
 	}
-	assert.Equal(t, []string{"desktop.olaresid.olares.local"}, desktop)
-	assert.Equal(t, []string{"olaresid.olares.local"}, profile)
+	require.Len(t, xds.StreamListeners, 1)
+	assert.Equal(t, "stream_tcp_alice_48126", xds.StreamListeners[0].Name)
+}
+
+func TestTranslate_NoZone_LocalHTTPUsesMachineName(t *testing.T) {
+	tr := &Translator{cfg: &Config{SSLServerPort: 443, SSLProxyServerPort: 444}}
+	for _, localZone := range []string{"", "lab.olares.local"} {
+		t.Run(localZone, func(t *testing.T) {
+			xds := tr.Translate(&message.Resources{LocalZone: localZone, Users: []*message.UserInfo{{Name: "alice"}, {Name: "bob"}}})
+			require.Len(t, xds.HTTPListeners, 1)
+			local := xds.HTTPListeners[0]
+			assert.Equal(t, "http_82", local.Name)
+			zone := localZone
+			if zone == "" {
+				zone = "olares.local"
+			}
+			desktops := 0
+			for _, vh := range local.VirtualHosts {
+				if vh.Name == "nonapp_desktop" {
+					desktops++
+					assert.Equal(t, []string{"desktop." + zone}, vh.Domains)
+					assert.Empty(t, vh.UserName)
+					require.NotNil(t, vh.Routes[0].ExtAuth)
+					assert.Empty(t, vh.Routes[0].ExtAuth.User)
+				}
+			}
+			assert.Equal(t, 1, desktops)
+		})
+	}
 }
 
 func TestTranslate_NoCert_OneSharedLocalHTTPListener(t *testing.T) {
-	tr := &Translator{cfg: &Config{
-		SSLServerPort:      443,
-		SSLProxyServerPort: 444,
-		LocalHTTPProxyPort: 82,
-	}}
-
-	resources := &message.Resources{
-		Users: []*message.UserInfo{
-			{
-				Name:              "alice",
-				Zone:              "alice.snowinning.com",
-				Namespace:         "user-space-alice",
-				ServerNameDomains: []string{"alice.snowinning.com", "alice.olares.local"},
-			},
-			{
-				Name:              "bob",
-				Zone:              "bob.snowinning.com",
-				Namespace:         "user-space-bob",
-				ServerNameDomains: []string{"bob.snowinning.com", "bob.olares.local"},
-			},
-		},
-	}
-
-	xds := tr.Translate(resources)
-
+	tr := &Translator{cfg: &Config{SSLServerPort: 443, SSLProxyServerPort: 444}}
+	xds := tr.Translate(&message.Resources{DefaultDomain: "lab.example.com", LocalZone: "lab.olares.local", Users: []*message.UserInfo{{Name: "alice"}, {Name: "bob"}}})
 	require.Len(t, xds.HTTPListeners, 1)
 	local := xds.HTTPListeners[0]
 	assert.Equal(t, "http_82", local.Name)
-	assert.Empty(t, local.UserName)
 	assert.False(t, local.TLS)
 	assert.Nil(t, local.TLSCert)
-	assert.True(t, local.ProxyProtocol)
-	assert.Empty(t, local.SNIMatches)
-	assert.Equal(t, uint32(82), local.Port)
-
-	desktops := map[string]*ir.HTTPRouteIR{}
 	for _, vh := range local.VirtualHosts {
-		for _, d := range vh.Domains {
-			assert.Truef(t, strings.HasSuffix(d, ".olares.local"), "domain %q", d)
-		}
-		if vh.Name == "nonapp_desktop_alice" || vh.Name == "nonapp_desktop_bob" {
-			require.NotEmpty(t, vh.Routes)
-			desktops[vh.Name] = vh.Routes[0]
+		for _, domain := range vh.Domains {
+			assert.True(t, strings.HasSuffix(domain, ".olares.local"))
 		}
 	}
-	require.Contains(t, desktops, "nonapp_desktop_alice")
-	require.Contains(t, desktops, "nonapp_desktop_bob")
-
-	alice := desktops["nonapp_desktop_alice"]
-	require.NotNil(t, alice.ExtAuth)
-	assert.True(t, alice.ExtAuth.ServiceOverride)
-	assert.Equal(t, "alice", alice.ExtAuth.User)
-	assert.Equal(t, "authelia_backend_alice", alice.ExtAuth.Cluster)
-
-	bob := desktops["nonapp_desktop_bob"]
-	require.NotNil(t, bob.ExtAuth)
-	assert.True(t, bob.ExtAuth.ServiceOverride)
-	assert.Equal(t, "bob", bob.ExtAuth.User)
-	assert.Equal(t, "authelia_backend_bob", bob.ExtAuth.Cluster)
 }
-
-func desktopExtAuthOverrides(t *testing.T, l *ir.HTTPListenerIR) bool {
-	t.Helper()
-	for _, vh := range l.VirtualHosts {
-		if vh.Name != "nonapp_desktop_alice" {
-			continue
-		}
-		require.NotEmpty(t, vh.Routes)
-		require.NotNil(t, vh.Routes[0].ExtAuth)
-		return vh.Routes[0].ExtAuth.ServiceOverride
-	}
-	t.Fatalf("desktop virtual host missing on %s", l.Name)
-	return false
-}
-
-// ---------------------------------------------------------------------------
-// buildHTTPRedirectListener
-// ---------------------------------------------------------------------------
 
 func TestBuildHTTPRedirectListener(t *testing.T) {
 	tr := &Translator{cfg: &Config{}}
@@ -662,11 +278,6 @@ func TestBuildStreamListeners_SkipsInvalidPort(t *testing.T) {
 // helper functions
 // ---------------------------------------------------------------------------
 
-func TestToLocalDomain(t *testing.T) {
-	assert.Equal(t, "vault.alice.olares.local", toLocalDomain("vault.alice.snowinning.com"))
-	assert.Equal(t, "simple", toLocalDomain("simple"))
-}
-
 func TestSanitizeName(t *testing.T) {
 	assert.Equal(t, "api_resources_cache", sanitizeName("/api/resources/cache/"))
 	assert.Equal(t, "example_com", sanitizeName("example.com"))
@@ -710,7 +321,7 @@ func TestBuildAppVirtualHosts_HeadscalePublicRoutes(t *testing.T) {
 		Entrances: []*message.EntranceInfo{{Name: "headscale", Host: "headscale-svc", Port: 80}},
 	}
 
-	vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", false, make(map[string]*ir.ClusterIR))
+	vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", make(map[string]*ir.ClusterIR))
 	require.Len(t, vhosts, 1)
 	require.Len(t, vhosts[0].Routes, 6)
 
@@ -741,7 +352,7 @@ func TestBuildAppVirtualHosts_HeadscalePublicRoutes(t *testing.T) {
 	require.NotNil(t, vhosts[0].Routes[5].ExtAuth)
 
 	user.DenyAll = false
-	vhosts = tr.buildAppVirtualHosts(user, app, "alice.example.com", false, make(map[string]*ir.ClusterIR))
+	vhosts = tr.buildAppVirtualHosts(user, app, "alice.example.com", make(map[string]*ir.ClusterIR))
 	require.Len(t, vhosts, 1)
 	require.Len(t, vhosts[0].Routes, 1)
 	assert.False(t, vhosts[0].Routes[0].BypassSourceCIDR)
@@ -750,7 +361,7 @@ func TestBuildAppVirtualHosts_HeadscalePublicRoutes(t *testing.T) {
 
 func TestBuildAppVirtualHosts_HeadscalePrefixDoesNotGrantPublicRoutes(t *testing.T) {
 	tr := &Translator{cfg: &Config{}}
-	user := &message.UserInfo{Name: "alice", Language: "en", DenyAll: true, LocalDomainIP: "192.168.1.100"}
+	user := &message.UserInfo{Name: "alice", Language: "en", DenyAll: true}
 	app := &message.AppInfo{
 		Name:      "third-party-app",
 		Appid:     "third-party-app",
@@ -761,14 +372,14 @@ func TestBuildAppVirtualHosts_HeadscalePrefixDoesNotGrantPublicRoutes(t *testing
 		},
 	}
 
-	vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", false, make(map[string]*ir.ClusterIR))
+	vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", make(map[string]*ir.ClusterIR))
 	require.Len(t, vhosts, 1)
 	require.Len(t, vhosts[0].Routes, 1)
 	assert.Equal(t, "headscale.alice.example.com", vhosts[0].Domains[0])
 	assert.False(t, vhosts[0].Routes[0].BypassSourceCIDR)
 	require.NotNil(t, vhosts[0].Routes[0].ExtAuth)
 
-	tr.applyDenyAllRestrictions(user, vhosts, nil)
+	tr.applyDenyAllRestrictions(user, vhosts, nil, "192.168.1.100")
 	assert.Contains(t, vhosts[0].SourceCIDRs, vpnCIDR)
 	assert.Contains(t, vhosts[0].SourceCIDRs, "192.168.1.100/32")
 }
@@ -781,7 +392,7 @@ func TestBuildAppVirtualHosts_SharedApp_OpenToAllUsers(t *testing.T) {
 			user := &message.UserInfo{Name: name, Language: "en"}
 			clusterSet := make(map[string]*ir.ClusterIR)
 
-			vhosts := tr.buildAppVirtualHosts(user, makeSharedApp(), name+".example.com", false, clusterSet)
+			vhosts := tr.buildAppVirtualHosts(user, makeSharedApp(), name+".example.com", clusterSet)
 			require.Len(t, vhosts, 1)
 			require.Len(t, vhosts[0].Routes, 1)
 			r := vhosts[0].Routes[0]
@@ -829,7 +440,7 @@ func TestBuildAppVirtualHosts_NonSharedApp(t *testing.T) {
 			{Name: "web", Host: "v1app-svc", Port: 8080},
 		},
 	}
-	vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", false, clusterSet)
+	vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", clusterSet)
 	require.Len(t, vhosts, 1)
 	require.Len(t, vhosts[0].Routes, 1)
 	r := vhosts[0].Routes[0]
@@ -854,7 +465,7 @@ func TestBuildAppVirtualHosts_PublicKeepsExtAuthOmitsOutboundXBFLUser(t *testing
 			{Name: "web", Host: "pub-svc", Port: 8080, AuthLevel: "public"},
 		},
 	}
-	vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", false, clusterSet)
+	vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", clusterSet)
 	require.Len(t, vhosts, 1)
 	require.Len(t, vhosts[0].Routes, 1)
 	r := vhosts[0].Routes[0]
@@ -893,7 +504,7 @@ func TestBuildAppVirtualHosts_ProbeBypassBeforeDefault(t *testing.T) {
 			{Name: "web", Host: "v1app-svc", Port: 8080},
 		},
 	}
-	vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", false, clusterSet)
+	vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", clusterSet)
 	require.Len(t, vhosts, 1)
 	require.GreaterOrEqual(t, len(vhosts[0].Routes), 2)
 	assert.Equal(t, "/healthz", vhosts[0].Routes[0].PathExact)
@@ -921,7 +532,7 @@ func TestBuildAppVirtualHosts_DevEntranceAlias(t *testing.T) {
 			{Name: "web", Host: "10.244.1.23", Port: 9999, Type: "dev"},
 		},
 	}
-	vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", false, clusterSet)
+	vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", clusterSet)
 	require.Len(t, vhosts, 1)
 
 	assert.Contains(t, vhosts[0].Domains, "28f57292.alice.example.com", "primary hostname must remain")
@@ -952,7 +563,7 @@ func TestBuildAppVirtualHosts_NonDevEntranceUsesDNS(t *testing.T) {
 			{Name: "web", Host: "app-svc", Port: 9999},
 		},
 	}
-	vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", false, clusterSet)
+	vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", clusterSet)
 	require.Len(t, vhosts, 1)
 	require.Len(t, vhosts[0].Routes, 1)
 
@@ -977,7 +588,7 @@ func TestBuildAppVirtualHosts_EmptyHostSkipped(t *testing.T) {
 			{Name: "web", Host: "", Port: 8080, Type: "dev"},
 		},
 	}
-	vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", false, clusterSet)
+	vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", clusterSet)
 	assert.Empty(t, vhosts, "entrance with empty host must be skipped")
 	assert.Empty(t, clusterSet)
 }
@@ -997,7 +608,7 @@ func TestBuildAppVirtualHosts_NonDevEntranceNoAlias(t *testing.T) {
 			{Name: "web", Host: "app-svc", Port: 9999},
 		},
 	}
-	vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", false, clusterSet)
+	vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", clusterSet)
 	require.Len(t, vhosts, 1)
 	assert.NotContains(t, vhosts[0].Domains, "28f57292-9999.alice.example.com")
 }
@@ -1097,87 +708,31 @@ func TestBuildFileserverRoutes_NodeScopedBeforeMasterGeneric(t *testing.T) {
 	}
 }
 
-func TestBuildSystemVirtualHost_DesktopWizardVerify_AuthSkipped(t *testing.T) {
+func TestBuildMachineSystemVirtualHosts_SharedLogin(t *testing.T) {
 	tr := &Translator{cfg: &Config{}}
-	user := &message.UserInfo{Name: "alice", Language: "en", Namespace: "user-space-alice"}
-	clusterSet := make(map[string]*ir.ClusterIR)
-
-	desktop := tr.buildSystemVirtualHost(user, systemServiceDef{Name: "desktop", SvcFormat: "edge-desktop.%s.svc.cluster.local"}, "alice.example.com", false, user.Namespace, clusterSet)
-	require.Len(t, desktop.Routes, 1)
-	require.NotNil(t, desktop.Routes[0].ExtAuth)
-	assert.Equal(t, autheliaVerifyPathPrefix, desktop.Routes[0].ExtAuth.PathPrefix)
-	assert.Nil(t, desktop.Routes[0].RequestHeaders, "desktop must not stamp outbound zone-owner X-BFL-USER")
-
-	wizard := tr.buildSystemVirtualHost(user, systemServiceDef{Name: "wizard", SvcFormat: "wizard.%s.svc.cluster.local"}, "alice.example.com", false, user.Namespace, clusterSet)
-	assert.Nil(t, wizard.Routes[0].ExtAuth, "wizard must not attach ExtAuth (pre-auth activation)")
-	require.NotNil(t, wizard.Routes[0].RequestHeaders)
-	assert.Equal(t, "alice", wizard.Routes[0].RequestHeaders["X-BFL-USER"],
-		"wizard must stamp zone-owner X-BFL-USER for Authelia Bridge (no ExtAuth)")
-
-	auth := tr.buildSystemVirtualHost(user, systemServiceDef{Name: "auth", SvcFormat: "authelia-svc.%s.svc.cluster.local"}, "alice.example.com", false, user.Namespace, clusterSet)
-	assert.Nil(t, auth.Routes[0].ExtAuth, "auth IdP must not attach ExtAuth")
-	require.NotNil(t, auth.Routes[0].RequestHeaders)
-	assert.Equal(t, "alice", auth.Routes[0].RequestHeaders["X-BFL-USER"],
-		"auth must stamp zone-owner X-BFL-USER for Authelia Bridge (no ExtAuth)")
-}
-
-func TestBuildUserVirtualHosts_SharedLogin(t *testing.T) {
-	tr := &Translator{cfg: &Config{}}
-	user := &message.UserInfo{Name: "alice", Language: "en", Namespace: "user-space-alice"}
 	clusters := make(map[string]*ir.ClusterIR)
-	vhosts := tr.buildUserVirtualHosts(user, "alice.example.com", false, clusters)
-	var auth *ir.VirtualHostIR
+	vhosts := tr.buildMachineSystemVirtualHosts("lab.example.com", "lab.olares.local", clusters)
+	byName := map[string]*ir.VirtualHostIR{}
 	for _, vh := range vhosts {
-		if vh.Name == "nonapp_auth_alice" {
-			auth = vh
-			break
-		}
+		byName[vh.Name] = vh
 	}
-	require.NotNil(t, auth)
-	assert.Contains(t, auth.Domains, "auth.alice.example.com")
-	assert.Contains(t, auth.Domains, "auth.alice.olares.local")
-	require.Len(t, auth.Routes, 1)
-	route := auth.Routes[0]
-	assert.Nil(t, route.ExtAuth, "the shared login page must remain reachable before authentication")
-	assert.Equal(t, "alice", route.RequestHeaders["X-BFL-USER"], "retain the existing single-user auth backend contract")
-	cluster := clusters[route.Cluster]
-	require.NotNil(t, cluster)
-	assert.Equal(t, "authelia-svc.os-frontend.svc.cluster.local", cluster.Host)
-	assert.Equal(t, uint32(80), cluster.Port)
-	assert.True(t, cluster.UseDNS)
-	// Login and Desktop use shared frontends; Wizard retains its user route.
-	assert.Equal(t, "wizard.user-space-alice.svc.cluster.local", clusters["nonapp_wizard_alice"].Host)
-	assert.Equal(t, "edge-desktop.os-frontend.svc.cluster.local", clusters["nonapp_desktop_alice"].Host)
-}
-
-func TestBuildUserVirtualHosts_ProfileRootVerify(t *testing.T) {
-	tr := &Translator{cfg: &Config{}}
-	user := &message.UserInfo{
-		Name:      "alice",
-		Language:  "en",
-		Namespace: "user-space-alice",
-		SSL:       &message.SSLConfig{Zone: "alice.example.com"},
-	}
-	clusterSet := make(map[string]*ir.ClusterIR)
-	vhosts := tr.buildUserVirtualHosts(user, user.SSL.Zone, false, clusterSet)
-	require.NotEmpty(t, vhosts)
-	var profile *ir.VirtualHostIR
-	for _, vh := range vhosts {
-		if vh.Name == "profile_alice" {
-			profile = vh
-			break
-		}
-	}
-	require.NotNil(t, profile, "profile VH required")
-	require.Len(t, profile.Routes, 1)
-	profileBackend := clusterSet[profile.Routes[0].Cluster]
-	require.NotNil(t, profileBackend)
-	assert.Equal(t, "profile-service.os-frontend.svc.cluster.local", profileBackend.Host)
-	assert.EqualValues(t, 3000, profileBackend.Port)
-	assert.True(t, profileBackend.UseDNS)
-	require.NotNil(t, profile.Routes[0].ExtAuth, "zone root profile must attach ExtAuth")
-	assert.Equal(t, autheliaVerifyPathPrefix, profile.Routes[0].ExtAuth.PathPrefix)
-	assert.Nil(t, profile.Routes[0].RequestHeaders, "profile must not stamp outbound zone-owner X-BFL-USER")
+	require.Contains(t, byName, "nonapp_auth")
+	auth := byName["nonapp_auth"]
+	assert.ElementsMatch(t, []string{"auth.lab.example.com", "auth.lab.olares.local"}, auth.Domains)
+	assert.Nil(t, auth.Routes[0].ExtAuth)
+	assert.Empty(t, auth.Routes[0].RequestHeaders["X-BFL-USER"])
+	assert.Equal(t, "authelia-svc.os-frontend.svc.cluster.local", clusters[auth.Routes[0].Cluster].Host)
+	require.Contains(t, byName, "nonapp_desktop")
+	desktop := byName["nonapp_desktop"]
+	require.NotNil(t, desktop.Routes[0].ExtAuth)
+	assert.Empty(t, desktop.Routes[0].ExtAuth.User)
+	assert.Empty(t, desktop.Routes[0].RequestHeaders["X-BFL-USER"])
+	assert.Equal(t, "edge-desktop.os-frontend.svc.cluster.local", clusters[desktop.Routes[0].Cluster].Host)
+	require.Contains(t, byName, "profile")
+	profile := byName["profile"]
+	require.NotNil(t, profile.Routes[0].ExtAuth)
+	assert.Equal(t, "profile-service.os-frontend.svc.cluster.local", clusters[profile.Routes[0].Cluster].Host)
+	assert.NotContains(t, byName, "nonapp_wizard")
 }
 
 // L4 selects the Files pod itself, without stamping the URL owner over the
@@ -1249,7 +804,7 @@ func TestShareEntranceInstallsFileserverRoutes(t *testing.T) {
 	tr := &Translator{cfg: &Config{}}
 	user := &message.UserInfo{Name: "owner", FileserverNodes: []*message.FileserverNodeInfo{{NodeName: "worker", PodIP: "10.233.1.2"}}}
 	app := &message.AppInfo{Name: "share", Appid: "share", Namespace: "os-frontend", Owner: "owner", Entrances: []*message.EntranceInfo{{Name: "web", Host: "share", Port: 80}}}
-	vhosts := tr.buildAppVirtualHosts(user, app, "owner.example.com", false, make(map[string]*ir.ClusterIR))
+	vhosts := tr.buildAppVirtualHosts(user, app, "owner.example.com", make(map[string]*ir.ClusterIR))
 	require.NotEmpty(t, vhosts)
 	found := false
 	for _, vh := range vhosts {

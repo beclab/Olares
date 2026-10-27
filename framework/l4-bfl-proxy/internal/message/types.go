@@ -17,17 +17,13 @@ type UserInfo struct {
 	Namespace         string
 	Did               string
 	Zone              string
-	IsEphemeral       bool
 	AccessLevel       uint64
 	AllowCIDRs        []string
 	DenyAll           bool
 	AllowedDomains    []string
-	ServerNameDomains []string
-	LocalDomainIP     string
 	CreateTimestamp   int64
 	Language          string
 	CustomDomainCerts []*CertInfo
-	SSL               *SSLConfig
 	Apps              []*AppInfo
 	FileserverNodes   []*FileserverNodeInfo
 	MasterNodeCIDR    string
@@ -83,20 +79,27 @@ type SSLConfig struct {
 }
 
 type Resources struct {
-	Users []*UserInfo
+	DefaultDomain string
+	LocalZone     string
+	SSL           *SSLConfig
+	LocalDomainIP string
+	Users         []*UserInfo
 }
 
 func (r *Resources) DeepCopy() *Resources {
 	if r == nil {
 		return nil
 	}
-	out := &Resources{}
+	out := &Resources{LocalDomainIP: r.LocalDomainIP, DefaultDomain: r.DefaultDomain, LocalZone: r.LocalZone}
+	if r.SSL != nil {
+		ssl := *r.SSL
+		out.SSL = &ssl
+	}
 	if r.Users != nil {
 		for _, u := range r.Users {
 			uc := *u
 			uc.AllowCIDRs = append([]string(nil), u.AllowCIDRs...)
 			uc.AllowedDomains = append([]string(nil), u.AllowedDomains...)
-			uc.ServerNameDomains = append([]string(nil), u.ServerNameDomains...)
 			if u.CustomDomainCerts != nil {
 				uc.CustomDomainCerts = make([]*CertInfo, 0, len(u.CustomDomainCerts))
 				for _, c := range u.CustomDomainCerts {
@@ -110,10 +113,6 @@ func (r *Resources) DeepCopy() *Resources {
 					cp := *fn
 					uc.FileserverNodes = append(uc.FileserverNodes, &cp)
 				}
-			}
-			if u.SSL != nil {
-				cp := *u.SSL
-				uc.SSL = &cp
 			}
 			if u.Apps != nil {
 				uc.Apps = make([]*AppInfo, len(u.Apps))
@@ -135,7 +134,6 @@ func (r *Resources) Sort() {
 	for _, u := range r.Users {
 		sort.Strings(u.AllowCIDRs)
 		sort.Strings(u.AllowedDomains)
-		sort.Strings(u.ServerNameDomains)
 		sort.Slice(u.CustomDomainCerts, func(i, j int) bool {
 			return u.CustomDomainCerts[i].Domain < u.CustomDomainCerts[j].Domain
 		})

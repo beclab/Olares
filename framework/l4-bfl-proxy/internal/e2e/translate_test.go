@@ -26,15 +26,14 @@ var update = flag.Bool("update", false, "update golden files")
 
 func TestE2E_SingleAdminUser(t *testing.T) {
 	resources := &message.Resources{
+		DefaultDomain: "lab.example.com", LocalZone: "lab.olares.local",
+		SSL: &message.SSLConfig{CertData: "machine-cert", KeyData: "machine-key"},
 		Users: []*message.UserInfo{
 			{
-				Name:              "alice",
-				Namespace:         "user-space-alice",
-				Zone:              "snowinning.com",
-				IsEphemeral:       false,
-				DenyAll:           false,
-				ServerNameDomains: []string{"alice.snowinning.com"},
-				SSL:               &message.SSLConfig{Zone: "alice.snowinning.com", CertData: "cert-alice", KeyData: "key-alice"},
+				Name:      "alice",
+				Namespace: "user-space-alice",
+				Zone:      "snowinning.com",
+				DenyAll:   false,
 				Apps: []*message.AppInfo{
 					{
 						Name:      "vault",
@@ -57,18 +56,17 @@ func TestE2E_SingleAdminUser(t *testing.T) {
 
 func TestE2E_DenyAllWithAllowedDomains(t *testing.T) {
 	resources := &message.Resources{
+		DefaultDomain: "lab.example.com", LocalZone: "lab.olares.local",
+		SSL:           &message.SSLConfig{CertData: "machine-cert", KeyData: "machine-key"},
+		LocalDomainIP: "192.168.1.100",
 		Users: []*message.UserInfo{
 			{
-				Name:              "bob",
-				Namespace:         "user-space-bob",
-				Zone:              "snowinning.com",
-				IsEphemeral:       false,
-				DenyAll:           true,
-				AllowedDomains:    []string{"vault-bob.snowinning.com"},
-				LocalDomainIP:     "192.168.1.100",
-				ServerNameDomains: []string{"bob.snowinning.com"},
-				SSL:               &message.SSLConfig{Zone: "bob.snowinning.com", CertData: "cert-bob", KeyData: "key-bob"},
-				Apps:              []*message.AppInfo{},
+				Name:           "bob",
+				Namespace:      "user-space-bob",
+				Zone:           "snowinning.com",
+				DenyAll:        true,
+				AllowedDomains: []string{"vault-bob.snowinning.com"},
+				Apps:           []*message.AppInfo{},
 			},
 		},
 	}
@@ -77,26 +75,22 @@ func TestE2E_DenyAllWithAllowedDomains(t *testing.T) {
 
 func TestE2E_MultipleUsersAndApps(t *testing.T) {
 	resources := &message.Resources{
+		DefaultDomain: "lab.example.com", LocalZone: "lab.olares.local",
+		SSL:           &message.SSLConfig{CertData: "machine-cert", KeyData: "machine-key"},
+		LocalDomainIP: "10.0.0.5",
 		Users: []*message.UserInfo{
 			{
-				Name:              "alice",
-				Namespace:         "user-space-alice",
-				Zone:              "snowinning.com",
-				IsEphemeral:       false,
-				DenyAll:           false,
-				ServerNameDomains: []string{"alice.snowinning.com"},
-				SSL:               &message.SSLConfig{Zone: "alice.snowinning.com", CertData: "cert-alice", KeyData: "key-alice"},
+				Name:      "alice",
+				Namespace: "user-space-alice",
+				Zone:      "snowinning.com",
+				DenyAll:   false,
 			},
 			{
-				Name:              "bob",
-				Namespace:         "user-space-bob",
-				Zone:              "snowinning.com",
-				IsEphemeral:       false,
-				DenyAll:           true,
-				AllowedDomains:    []string{"desktop-bob.snowinning.com"},
-				LocalDomainIP:     "10.0.0.5",
-				ServerNameDomains: []string{"bob.snowinning.com"},
-				SSL:               &message.SSLConfig{Zone: "bob.snowinning.com", CertData: "cert-bob", KeyData: "key-bob"},
+				Name:           "bob",
+				Namespace:      "user-space-bob",
+				Zone:           "snowinning.com",
+				DenyAll:        true,
+				AllowedDomains: []string{"desktop-bob.snowinning.com"},
 				Apps: []*message.AppInfo{
 					{
 						Name:      "vault",
@@ -126,49 +120,16 @@ func TestE2E_MultipleUsersAndApps(t *testing.T) {
 	runE2E(t, "multiple-users-and-apps", resources)
 }
 
-func TestE2E_EphemeralUser(t *testing.T) {
-	// Ephemeral users are now merged into the owner's filter chain instead of
-	// getting a separate filter chain.  The owner's *.zone wildcard covers the
-	// wizard-{guest}.zone domain, so no SNI conflict occurs.  Only the wizard
-	// virtual host for the ephemeral user is merged (not their app VHs).
-	resources := &message.Resources{
-		Users: []*message.UserInfo{
-			{
-				Name:              "alice",
-				Namespace:         "user-space-alice",
-				Zone:              "snowinning.com",
-				IsEphemeral:       false,
-				DenyAll:           false,
-				ServerNameDomains: []string{"alice.snowinning.com"},
-				SSL:               &message.SSLConfig{Zone: "alice.snowinning.com", CertData: "cert-alice", KeyData: "key-alice"},
-			},
-			{
-				// Ephemeral user (wizard setup session for alice's zone).
-				// Their wizard VH (wizard-tempuser.alice.snowinning.com) will
-				// be merged into alice's filter chain.
-				Name:        "tempuser",
-				Namespace:   "user-space-tempuser",
-				Zone:        "alice.snowinning.com",
-				IsEphemeral: true,
-				DenyAll:     false,
-				SSL:         &message.SSLConfig{Zone: "alice.snowinning.com", CertData: "cert-temp", KeyData: "key-temp"},
-			},
-		},
-	}
-	runE2E(t, "ephemeral-user", resources)
-}
-
 func TestE2E_UDPPort(t *testing.T) {
 	resources := &message.Resources{
+		DefaultDomain: "lab.example.com", LocalZone: "lab.olares.local",
+		SSL: &message.SSLConfig{CertData: "machine-cert", KeyData: "machine-key"},
 		Users: []*message.UserInfo{
 			{
-				Name:              "alice",
-				Namespace:         "user-space-alice",
-				Zone:              "snowinning.com",
-				IsEphemeral:       false,
-				DenyAll:           false,
-				ServerNameDomains: []string{"alice.snowinning.com"},
-				SSL:               &message.SSLConfig{Zone: "alice.snowinning.com", CertData: "cert-alice", KeyData: "key-alice"},
+				Name:      "alice",
+				Namespace: "user-space-alice",
+				Zone:      "snowinning.com",
+				DenyAll:   false,
 				Apps: []*message.AppInfo{
 					{
 						Name:      "wireguard",
@@ -206,36 +167,29 @@ func TestE2E_SharedAppOpenToAllUsers(t *testing.T) {
 		}
 	}
 	resources := &message.Resources{
+		DefaultDomain: "lab.example.com", LocalZone: "lab.olares.local",
+		SSL: &message.SSLConfig{CertData: "machine-cert", KeyData: "machine-key"},
 		Users: []*message.UserInfo{
 			{
-				Name:              "admin",
-				Namespace:         "user-space-admin",
-				Zone:              "snowinning.com",
-				IsEphemeral:       false,
-				DenyAll:           false,
-				ServerNameDomains: []string{"admin.snowinning.com"},
-				SSL:               &message.SSLConfig{Zone: "admin.snowinning.com", CertData: "cert-admin", KeyData: "key-admin"},
-				Apps:              []*message.AppInfo{sharedApp("admin")},
+				Name:      "admin",
+				Namespace: "user-space-admin",
+				Zone:      "snowinning.com",
+				DenyAll:   false,
+				Apps:      []*message.AppInfo{sharedApp("admin")},
 			},
 			{
-				Name:              "alice",
-				Namespace:         "user-space-alice",
-				Zone:              "snowinning.com",
-				IsEphemeral:       false,
-				DenyAll:           false,
-				ServerNameDomains: []string{"alice.snowinning.com"},
-				SSL:               &message.SSLConfig{Zone: "alice.snowinning.com", CertData: "cert-alice", KeyData: "key-alice"},
-				Apps:              []*message.AppInfo{sharedApp("admin")},
+				Name:      "alice",
+				Namespace: "user-space-alice",
+				Zone:      "snowinning.com",
+				DenyAll:   false,
+				Apps:      []*message.AppInfo{sharedApp("admin")},
 			},
 			{
-				Name:              "bob",
-				Namespace:         "user-space-bob",
-				Zone:              "snowinning.com",
-				IsEphemeral:       false,
-				DenyAll:           false,
-				ServerNameDomains: []string{"bob.snowinning.com"},
-				SSL:               &message.SSLConfig{Zone: "bob.snowinning.com", CertData: "cert-bob", KeyData: "key-bob"},
-				Apps:              []*message.AppInfo{sharedApp("admin")},
+				Name:      "bob",
+				Namespace: "user-space-bob",
+				Zone:      "snowinning.com",
+				DenyAll:   false,
+				Apps:      []*message.AppInfo{sharedApp("admin")},
 			},
 		},
 	}
@@ -289,155 +243,39 @@ func runE2E(t *testing.T, name string, resources *message.Resources) {
 		"envoy config mismatch for test case %q, run with -update to regenerate golden file", name)
 }
 
-// TestE2E_AddUserNoExistingDrain verifies that adding a new user leaves the
-// existing users' filter chains byte-for-byte identical.
-//
-// Envoy performs an "in-place filter chain update" when:
-//   - the listener's non-filter-chain config is unchanged (address, port,
-//     listener-level filters, per_connection_buffer_limit_bytes)
-//   - filter chains are identified by name
-//
-// For an in-place update with no drain:
-//   - alice's filter chain ("https_443_alice") must be identical byte-for-byte
-//   - bob's filter chain ("https_443_bob") must be a new addition
-//
-// This test proves both conditions, confirming that adding bob does NOT
-// disrupt alice's existing connections.
+// Shared machine filter chains do not change when an additional user is created.
 func TestE2E_AddUserNoExistingDrain(t *testing.T) {
-	makeUser := func(name string) *message.UserInfo {
-		zone := name + ".snowinning.com"
-		return &message.UserInfo{
-			Name:              name,
-			Namespace:         "user-space-" + name,
-			Zone:              "snowinning.com",
-			IsEphemeral:       false,
-			DenyAll:           false,
-			ServerNameDomains: []string{zone, name + ".olares.local"},
-			SSL:               &message.SSLConfig{Zone: zone, CertData: "cert-" + name, KeyData: "key-" + name},
-		}
-	}
-
-	tr := translator.New(nil, nil, &translator.Config{
-		SSLServerPort:      443,
-		SSLProxyServerPort: 444,
-	})
+	tr := translator.New(nil, nil, &translator.Config{SSLServerPort: 443, SSLProxyServerPort: 444})
 	xt := xdstranslator.New(nil, nil)
-
-	// Translate with only alice.
-	snapBefore := xt.Translate(tr.Translate(&message.Resources{
-		Users: []*message.UserInfo{makeUser("alice")},
-	}))
-
-	// Translate with alice + bob (new user).
-	snapAfter := xt.Translate(tr.Translate(&message.Resources{
-		Users: []*message.UserInfo{makeUser("alice"), makeUser("bob")},
-	}))
-
-	// Alice now has one filter chain per zone:
-	//   https_443_alice_alice_snowinning_com
-	//   https_443_alice_alice_olares_local
-	aliceChains := []string{
-		"https_443_alice_alice_snowinning_com",
-		"https_443_alice_alice_olares_local",
-	}
-	for _, chainName := range aliceChains {
-		before := extractFilterChainJSON(snapBefore.Listeners, "https_443", chainName)
-		after := extractFilterChainJSON(snapAfter.Listeners, "https_443", chainName)
-
-		require.NotEmpty(t, before, "alice's filter chain %q not found before bob was added", chainName)
-		require.NotEmpty(t, after, "alice's filter chain %q not found after bob was added", chainName)
-
-		// Alice's per-zone filter chains must be byte-for-byte identical.
-		// Envoy identifies them by name as "unchanged" → no drain.
-		assert.JSONEq(t, before, after,
-			"alice's filter chain %q changed after bob was added → Envoy would drain alice's connections", chainName)
-	}
-
-	// Bob's filter chains must be NEW (absent before, present after).
-	bobChains := []string{
-		"https_443_bob_bob_snowinning_com",
-		"https_443_bob_bob_olares_local",
-	}
-	for _, chainName := range bobChains {
-		assert.Empty(t, extractFilterChainJSON(snapBefore.Listeners, "https_443", chainName),
-			"bob's filter chain %q must not exist before he was added", chainName)
-		assert.NotEmpty(t, extractFilterChainJSON(snapAfter.Listeners, "https_443", chainName),
-			"bob's filter chain %q must exist after he was added", chainName)
+	resources := &message.Resources{DefaultDomain: "lab.example.com", LocalZone: "lab.olares.local", SSL: &message.SSLConfig{CertData: "cert", KeyData: "key"}, Users: []*message.UserInfo{{Name: "alice"}}}
+	before := xt.Translate(tr.Translate(resources))
+	resources.Users = append(resources.Users, &message.UserInfo{Name: "bob"})
+	after := xt.Translate(tr.Translate(resources))
+	for _, chainName := range []string{"https_443_default", "https_444_default"} {
+		port := "https_443"
+		if chainName == "https_444_default" {
+			port = "https_pp_444"
+		}
+		original := extractFilterChainJSON(before.Listeners, port, chainName)
+		require.NotEmpty(t, original)
+		assert.JSONEq(t, original, extractFilterChainJSON(after.Listeners, port, chainName))
 	}
 }
 
-// TestE2E_AddZoneNoExistingDrain verifies that adding a new zone domain to an
-// existing user leaves all other users' filter chains byte-for-byte identical.
-//
-// Before: alice has zones [alice.snowinning.com, alice.olares.local]
-// After:  alice gains alice.newzone.com as a third zone
-//
-// Expected:
-//   - alice's two existing filter chains are unchanged (no drain)
-//   - alice gets a third NEW filter chain for alice.newzone.com
-//   - bob's filter chains are completely unaffected
-func TestE2E_AddZoneNoExistingDrain(t *testing.T) {
-	makeUser := func(name string, extraZones ...string) *message.UserInfo {
-		zone := name + ".snowinning.com"
-		domains := []string{zone, name + ".olares.local"}
-		domains = append(domains, extraZones...)
-		return &message.UserInfo{
-			Name:              name,
-			Namespace:         "user-space-" + name,
-			Zone:              "snowinning.com",
-			IsEphemeral:       false,
-			DenyAll:           false,
-			ServerNameDomains: domains,
-			SSL:               &message.SSLConfig{Zone: zone, CertData: "cert-" + name, KeyData: "key-" + name},
-		}
-	}
-
-	tr := translator.New(nil, nil, &translator.Config{
-		SSLServerPort:      443,
-		SSLProxyServerPort: 444,
-	})
+// Adding an application-specific certificate does not replace the machine chain.
+func TestE2E_AddCustomDomainNoExistingDrain(t *testing.T) {
+	tr := translator.New(nil, nil, &translator.Config{SSLServerPort: 443, SSLProxyServerPort: 444})
 	xt := xdstranslator.New(nil, nil)
-
-	// Before: alice has 2 zones, bob has 2 zones.
-	snapBefore := xt.Translate(tr.Translate(&message.Resources{
-		Users: []*message.UserInfo{makeUser("alice"), makeUser("bob")},
-	}))
-
-	// After: alice gains a third zone; bob is untouched.
-	snapAfter := xt.Translate(tr.Translate(&message.Resources{
-		Users: []*message.UserInfo{makeUser("alice", "alice.newzone.com"), makeUser("bob")},
-	}))
-
-	// Alice's original two chains must be byte-for-byte identical.
-	for _, chainName := range []string{
-		"https_443_alice_alice_snowinning_com",
-		"https_443_alice_alice_olares_local",
-	} {
-		before := extractFilterChainJSON(snapBefore.Listeners, "https_443", chainName)
-		after := extractFilterChainJSON(snapAfter.Listeners, "https_443", chainName)
-		require.NotEmpty(t, before, "filter chain %q not found before zone addition", chainName)
-		require.NotEmpty(t, after, "filter chain %q not found after zone addition", chainName)
-		assert.JSONEq(t, before, after,
-			"filter chain %q changed after zone was added → existing connections would be drained", chainName)
-	}
-
-	// Alice gets a NEW chain for the added zone.
-	newChain := extractFilterChainJSON(snapAfter.Listeners, "https_443", "https_443_alice_alice_newzone_com")
-	assert.NotEmpty(t, newChain, "new zone filter chain must be present after zone addition")
-	assert.Empty(t,
-		extractFilterChainJSON(snapBefore.Listeners, "https_443", "https_443_alice_alice_newzone_com"),
-		"new zone filter chain must not exist before zone addition")
-
-	// Bob's chains are completely untouched.
-	for _, chainName := range []string{
-		"https_443_bob_bob_snowinning_com",
-		"https_443_bob_bob_olares_local",
-	} {
-		before := extractFilterChainJSON(snapBefore.Listeners, "https_443", chainName)
-		after := extractFilterChainJSON(snapAfter.Listeners, "https_443", chainName)
-		require.NotEmpty(t, before, "bob's filter chain %q must exist", chainName)
-		assert.JSONEq(t, before, after, "bob's filter chain %q must be unchanged", chainName)
-	}
+	user := &message.UserInfo{Name: "alice"}
+	resources := &message.Resources{DefaultDomain: "lab.example.com", LocalZone: "lab.olares.local", SSL: &message.SSLConfig{CertData: "cert", KeyData: "key"}, Users: []*message.UserInfo{user}}
+	before := xt.Translate(tr.Translate(resources))
+	user.CustomDomainCerts = []*message.CertInfo{{Domain: "app.custom.io", CertData: "custom-cert", KeyData: "custom-key"}}
+	after := xt.Translate(tr.Translate(resources))
+	original := extractFilterChainJSON(before.Listeners, "https_443", "https_443_default")
+	require.NotEmpty(t, original)
+	assert.JSONEq(t, original, extractFilterChainJSON(after.Listeners, "https_443", "https_443_default"))
+	assert.Empty(t, extractFilterChainJSON(before.Listeners, "https_443", "https_443_alice_custom_app_custom_io"))
+	assert.NotEmpty(t, extractFilterChainJSON(after.Listeners, "https_443", "https_443_alice_custom_app_custom_io"))
 }
 
 // extractFilterChainJSON returns the JSON of the named filter chain inside the
