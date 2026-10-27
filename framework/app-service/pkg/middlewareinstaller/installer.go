@@ -3,15 +3,12 @@ package middlewareinstaller
 import (
 	"context"
 	"errors"
-	"path/filepath"
-
-	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/userstorage"
 	v1 "github.com/beclab/Olares/framework/app-service/pkg/workflowinstaller/v1"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
+	"path/filepath"
 )
 
 // Install a middleware with helm client.
@@ -98,26 +95,9 @@ func getAppData(ctx context.Context, kubeConfig *rest.Config, owner string) (app
 	if err != nil {
 		return "", "", "", err
 	}
-
-	bfl, err := k8s.AppsV1().StatefulSets("user-space-"+owner).Get(ctx, "bfl",
-		metav1.GetOptions{})
+	layout, err := userstorage.Load(ctx, k8s, owner)
 	if err != nil {
-		klog.Errorf("Failed to get bfl err=%v", err)
 		return "", "", "", err
 	}
-
-	appdata = bfl.Annotations[constants.UserAppDataDirKey]
-	if appdata == "" {
-		return "", "", "", errors.New("appdata not found")
-	}
-
-	userspace, ok := bfl.Annotations[constants.UserSpaceDirKey]
-	if !ok {
-		return "", "", "", errors.New("userspace not found")
-	}
-
-	applicationdata = filepath.Join(userspace, "Data")
-	userdata = filepath.Join(userspace, "Home")
-
-	return
+	return filepath.Join(layout.Userspace.Path, "Data"), layout.AppCache.Path, filepath.Join(layout.Userspace.Path, "Home"), nil
 }

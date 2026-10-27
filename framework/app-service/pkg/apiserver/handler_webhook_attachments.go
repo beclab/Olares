@@ -11,15 +11,14 @@ import (
 	"strings"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
-	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	userspacev1 "github.com/beclab/Olares/framework/app-service/pkg/users/userspace/v1"
+	"github.com/beclab/Olares/framework/app-service/pkg/userstorage"
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	admissionv1 "k8s.io/api/admission/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
@@ -363,14 +362,11 @@ func (h *Handler) resolveAttachmentPath(ctx context.Context, cfg *appcfg.Applica
 		root := filepath.Join(rootPath, "rootfs", "Common")
 		return filepath.Join(append([]string{root}, parts[2:]...)...), nil
 	}
-	var bfl appsv1.StatefulSet
-	if err := h.ctrlClient.Get(ctx, types.NamespacedName{Name: "bfl", Namespace: "user-space-" + cfg.OwnerName}, &bfl); err != nil {
+	layout, err := userstorage.Read(ctx, h.ctrlClient, cfg.OwnerName)
+	if err != nil {
 		return "", err
 	}
-	userspaceRoot := bfl.Annotations[constants.UserSpaceDirKey]
-	if userspaceRoot == "" {
-		return "", fmt.Errorf("userspace path is unavailable for %s", cfg.OwnerName)
-	}
+	userspaceRoot := layout.Userspace.Path
 	switch {
 	case parts[1] == "Home":
 		root := filepath.Join(userspaceRoot, "Home")

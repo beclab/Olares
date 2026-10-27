@@ -5,25 +5,29 @@ import (
 	"testing"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
-	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/userstorage"
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 func attachmentWebhookHandler(t *testing.T) *Handler {
 	t.Helper()
 	scheme := runtime.NewScheme()
-	if err := appsv1.AddToScheme(scheme); err != nil {
+	if err := corev1.AddToScheme(scheme); err != nil {
 		t.Fatal(err)
 	}
-	bfl := &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{
-		Name: "bfl", Namespace: "user-space-alice", Annotations: map[string]string{constants.UserSpaceDirKey: "/olares/userspace/alice"},
-	}}
-	return &Handler{ctrlClient: fake.NewClientBuilder().WithScheme(scheme).WithObjects(bfl).Build()}
+	objects := []client.Object{}
+	for _, role := range []string{userstorage.Userspace, userstorage.AppCache, userstorage.DBData} {
+		objects = append(objects, &corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{
+			Name: role, Namespace: "user-space-alice", Labels: map[string]string{userstorage.RoleLabel: role},
+			Annotations: map[string]string{userstorage.HostPathAnnotation: "/olares/userspace/alice", userstorage.NodeAnnotation: "node-a"},
+		}})
+	}
+	return &Handler{ctrlClient: fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()}
 }
 
 func TestInjectAttachmentsTargetsDeclaredContainer(t *testing.T) {

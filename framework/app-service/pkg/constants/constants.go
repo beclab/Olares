@@ -63,9 +63,6 @@ const (
 
 	OwnerNamespacePrefix = "user-space"
 	OwnerNamespaceTempl  = "%s-%s"
-	UserSpaceDirPVC      = "userspace-dir"
-
-	UserAppDataDirPVC = "appcache-dir"
 
 	EnvoyUID int64 = 1555
 	// LinkerdProxyUID is the upstream linkerd-proxy default runAsUser.
@@ -183,9 +180,6 @@ const (
 	DependencyTypeApp    = "application"
 	AppCacheDirURL       = "http://files-service.os-framework/api/resources/cache/%s/"
 	AppDataDirURL        = "http://files-service.os-framework/api/resources/drive/Data/"
-
-	UserSpaceDirKey   = "userspace_hostpath"
-	UserAppDataDirKey = "appcache_hostpath"
 
 	OIDCSecret = "oidc-secret"
 

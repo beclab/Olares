@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"dario.cat/mergo"
+	"github.com/beclab/Olares/framework/app-service/pkg/userstorage"
 	corev1 "k8s.io/api/core/v1"
 
 	sysv1alpha1 "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
@@ -610,7 +611,6 @@ func ACLDestinationPort(dest string) (string, error) {
 }
 
 func TryToGetAppdataDirFromDeployment(ctx context.Context, namespace, name, owner string, appData bool) (appCacheDirs []string, appDataDirs []string, err error) {
-	userspaceNs := utils.UserspaceName(owner)
 	config, err := ctrl.GetConfig()
 	if err != nil {
 		return
@@ -619,24 +619,12 @@ func TryToGetAppdataDirFromDeployment(ctx context.Context, namespace, name, owne
 	if err != nil {
 		return
 	}
-	sts, err := clientset.AppsV1().StatefulSets(userspaceNs).Get(ctx, "bfl", metav1.GetOptions{})
+	layout, err := userstorage.Load(ctx, clientset, owner)
 	if err != nil {
 		return
 	}
-	appCachePath := sts.GetAnnotations()["appcache_hostpath"]
-	if len(appCachePath) == 0 {
-		err = errors.New("empty appcache_hostpath")
-		return
-	}
-	if !strings.HasSuffix(appCachePath, "/") {
-		appCachePath += "/"
-	}
-
-	userspacePath := sts.GetAnnotations()["userspace_hostpath"]
-	if len(userspacePath) == 0 {
-		err = errors.New("empty userspace_hostpath annotation")
-		return
-	}
+	appCachePath := strings.TrimSuffix(layout.AppCache.Path, "/") + "/"
+	userspacePath := layout.Userspace.Path
 	appDataPath := filepath.Join(userspacePath, "Data")
 	if !strings.HasSuffix(appDataPath, "/") {
 		appDataPath += "/"

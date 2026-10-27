@@ -299,9 +299,7 @@ func (h *HelmOps) SetValues(isInstallOp bool) (values map[string]interface{}, er
 		switch perm := p.(type) {
 		case appcfg.AppDataPermission, appcfg.AppCachePermission, appcfg.UserDataPermission, appcfg.AppCommonPermission:
 
-			// app requests app data permission
-			// set .Values.schedule.nodeName and .Values.userspace.appCache to app
-			// since app data on the bfl's local hostpath, app will schedule to the same node of bfl
+			// Use the node and paths recorded on the user's storage PVCs.
 			node, appCachePath, userspacePath, err := h.selectNode()
 			if err != nil {
 				klog.Errorf("Failed select node err=%v", err)

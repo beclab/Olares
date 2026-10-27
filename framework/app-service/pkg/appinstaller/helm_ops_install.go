@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/userstorage"
 	"k8s.io/klog/v2"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
@@ -417,73 +418,13 @@ func (h *HelmOps) userZone() (string, error) {
 func (h *HelmOps) selectNode() (node string, appCache, userspace string, err error) {
 	k8s, err := kubernetes.NewForConfig(h.kubeConfig)
 	if err != nil {
-		klog.Errorf("Failed to create kubernetes client: %v", err)
 		return "", "", "", err
 	}
-
-	bflPods, err := k8s.CoreV1().Pods(h.ownerNamespace()).List(h.ctx,
-		metav1.ListOptions{LabelSelector: "tier=bfl"})
+	layout, err := userstorage.Load(h.ctx, k8s, h.app.OwnerName)
 	if err != nil {
-		klog.Errorf("Failed to list pods in namespace %s: %v", h.ownerNamespace(), err)
 		return "", "", "", err
 	}
-
-	if len(bflPods.Items) > 0 {
-		bfl := bflPods.Items[0]
-
-		vols := bfl.Spec.Volumes
-		if len(vols) < 1 {
-			klog.Error("No volumes found in bfl pod")
-			return "", "", "", errors.New("user space not found")
-		}
-
-		// find user space pvc
-		for _, vol := range vols {
-			if vol.Name == constants.UserAppDataDirPVC || vol.Name == constants.UserSpaceDirPVC {
-				if vol.PersistentVolumeClaim != nil {
-					// find user space path
-					pvc, err := k8s.CoreV1().PersistentVolumeClaims(h.ownerNamespace()).Get(h.ctx,
-						vol.PersistentVolumeClaim.ClaimName,
-						metav1.GetOptions{})
-					if err != nil {
-						klog.Errorf("Failed to get PVC %s in namespace %s: %v", vol.PersistentVolumeClaim.ClaimName, h.ownerNamespace(), err)
-						return "", "", "", err
-					}
-
-					pv, err := k8s.CoreV1().PersistentVolumes().Get(h.ctx, pvc.Spec.VolumeName, metav1.GetOptions{})
-					if err != nil {
-						klog.Errorf("Failed to get PV %s: %v", pvc.Spec.VolumeName, err)
-						return "", "", "", err
-					}
-
-					var path string
-					if pv.Spec.Local != nil {
-						path = pv.Spec.Local.Path
-					}
-					if path == "" {
-						path = pv.Spec.HostPath.Path
-					}
-
-					switch vol.Name {
-					case constants.UserAppDataDirPVC:
-						appCache = path
-					case constants.UserSpaceDirPVC:
-						userspace = path
-					}
-				}
-			}
-		}
-
-		if appCache == "" || userspace == "" {
-			klog.Error("No user space or app cache found in bfl pod")
-			return "", "", "", errors.New("user space not found")
-		}
-
-		return bfl.Spec.NodeName, appCache, userspace, nil
-	}
-
-	klog.Error("No bfl pod found in namespace", h.ownerNamespace())
-	return "", "", "", errors.New("node not found")
+	return layout.NodeName, layout.AppCache.Path, layout.Userspace.Path, nil
 }
 
 func (h *HelmOps) ownerNamespace() string {
