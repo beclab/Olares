@@ -5,7 +5,6 @@ import (
 	"errors"
 	"time"
 
-	"bytetrade.io/web3os/tapr/cmd/sys-event/watchers"
 	aprv1 "bytetrade.io/web3os/tapr/pkg/apis/apr/v1alpha1"
 	aprclientset "bytetrade.io/web3os/tapr/pkg/generated/clientset/versioned"
 	"bytetrade.io/web3os/tapr/pkg/kubesphere"
@@ -19,7 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/retry"
 	"k8s.io/klog/v2"
@@ -30,8 +28,6 @@ type watcher struct {
 	ctx           context.Context
 	aprClient     *aprclientset.Clientset
 	cacheEvent    map[string]map[string]runtime.Object
-	eventWatchers *watchers.Watchers
-	subscriber    *Subscriber
 	activingUsers map[string]string
 }
 
@@ -47,17 +43,13 @@ const (
 
 var schemeGroupVersionResource = schema.GroupVersionResource{Group: "iam.kubesphere.io", Version: "v1alpha2", Resource: "users"}
 
-func NewWatcher(ctx context.Context, kubeconfig *rest.Config,
-	w *watchers.Watchers, n *watchers.Notification) *watcher {
-	kubeClient := kubernetes.NewForConfigOrDie(kubeconfig)
+func NewWatcher(ctx context.Context, kubeconfig *rest.Config) *watcher {
 	dynamicClient := dynamic.NewForConfigOrDie(kubeconfig)
 	return &watcher{
 		ctx:           ctx,
 		dynamicClient: dynamicClient,
 		aprClient:     aprclientset.NewForConfigOrDie(kubeconfig),
 		cacheEvent:    make(map[string]map[string]runtime.Object),
-		eventWatchers: w,
-		subscriber:    &Subscriber{tasks: []task{&Notify{notification: n}, &UserDomain{kubeClient: kubeClient, dynamicClient: dynamicClient}}},
 		activingUsers: make(map[string]string),
 	}
 }
@@ -131,14 +123,6 @@ func (w *watcher) Start() {
 
 					switch event.Type {
 					case watch.Added:
-						if watchers.ValidWatchDuration(&user.ObjectMeta) {
-							w.eventWatchers.Enqueue(watchers.EnqueueObj{
-								Obj:       &user,
-								Action:    watchers.ADD,
-								Subscribe: w.subscriber,
-							})
-						}
-
 						if err := w.invokeUserCreatedCB(nil, &user); err != nil {
 							klog.Error("invoke user create callback error, ", err, user.Name)
 							continue
@@ -147,12 +131,6 @@ func (w *watcher) Start() {
 						klog.Info("invoke user create callback succeed, ", user.Name)
 
 					case watch.Deleted:
-						w.eventWatchers.Enqueue(watchers.EnqueueObj{
-							Obj:       &user,
-							Action:    watchers.DELETE,
-							Subscribe: w.subscriber,
-						})
-
 						if err := w.invokeUserDeletedCB(nil, &user); err != nil {
 							klog.Error("invoke user delete callback error, ", err, user.Name)
 							continue
@@ -161,12 +139,6 @@ func (w *watcher) Start() {
 						klog.Info("invoke user delete callback succeed, ", user.Name)
 
 					case watch.Modified:
-						w.eventWatchers.Enqueue(watchers.EnqueueObj{
-							Obj:       &user,
-							Action:    watchers.UPDATE,
-							Subscribe: w.subscriber,
-						})
-
 						if status, ok := user.Annotations[UserTerminusWizardStatus]; ok {
 							switch status {
 							case string(Completed):

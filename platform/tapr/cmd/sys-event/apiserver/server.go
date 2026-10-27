@@ -14,9 +14,9 @@ type Server struct {
 	subscriber    *custom.Subscriber
 }
 
-func NewServer(w *watchers.Watchers, n *watchers.Notification) *Server {
+func NewServer(w *watchers.Watchers) *Server {
 
-	s := &Server{eventWatchers: w, subscriber: (&custom.Subscriber{}).WithNotification(n)}
+	s := &Server{eventWatchers: w, subscriber: &custom.Subscriber{}}
 	// create new fiber instance  and use across whole app
 	app := fiber.New()
 

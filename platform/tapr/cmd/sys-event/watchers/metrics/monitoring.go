@@ -9,7 +9,9 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
 )
@@ -21,15 +23,17 @@ type Watcher struct {
 	subscriber    *Subscriber
 	eventWatchers *watchers.Watchers
 	monitoring    Monitoring
+	dynamicClient dynamic.Interface
 }
 
 func NewMetricsWatcherOrDie(ctx context.Context,
-	w *watchers.Watchers, n *watchers.Notification, kubeconfig *rest.Config) *Watcher {
+	w *watchers.Watchers, kubeconfig *rest.Config) *Watcher {
 	return &Watcher{
 		ctx:           ctx,
-		subscriber:    (&Subscriber{notification: n}).WithKubeConfig(kubeconfig),
+		subscriber:    (&Subscriber{}).WithKubeConfig(kubeconfig),
 		eventWatchers: w,
 		monitoring:    utils.ValueMust[Monitoring](NewPrometheus(PrometheusEndpoint)),
+		dynamicClient: dynamic.NewForConfigOrDie(kubeconfig),
 	}
 }
 
@@ -66,7 +70,7 @@ func (w *Watcher) Run() {
 				}
 			}
 		}
-		users, err := w.subscriber.notification.DynamicClient.Resource(watchers.UserSchemeGroupVersionResource).List(ctx, metav1.ListOptions{})
+		users, err := w.dynamicClient.Resource(schema.GroupVersionResource{Group: "iam.kubesphere.io", Version: "v1alpha2", Resource: "users"}).List(ctx, metav1.ListOptions{})
 		if err != nil {
 			klog.Error("get user list error, ", err)
 			return false, err

@@ -2,27 +2,18 @@ package metrics
 
 import (
 	"context"
-	"fmt"
-	"time"
 
 	"bytetrade.io/web3os/tapr/cmd/sys-event/watchers"
 	aprv1 "bytetrade.io/web3os/tapr/pkg/apis/apr/v1alpha1"
 	aprclientset "bytetrade.io/web3os/tapr/pkg/generated/clientset/versioned"
-	"bytetrade.io/web3os/tapr/pkg/utils"
 
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
 )
 
-var latestSend = map[string]time.Time{
-	"user_cpu_usage":    time.Now().Add(-2 * time.Hour),
-	"user_memory_usage": time.Now().Add(-2 * time.Hour),
-}
-
 type Subscriber struct {
-	notification *watchers.Notification
-	aprClient    *aprclientset.Clientset
-	invoker      *watchers.CallbackInvoker
+	aprClient *aprclientset.Clientset
+	invoker   *watchers.CallbackInvoker
 }
 
 func (s *Subscriber) WithKubeConfig(config *rest.Config) *Subscriber {
@@ -35,11 +26,6 @@ func (s *Subscriber) WithKubeConfig(config *rest.Config) *Subscriber {
 }
 
 func (s *Subscriber) Do(ctx context.Context, obj interface{}, action watchers.Action) error {
-	admin, err := s.notification.AdminUser(ctx)
-	if err != nil {
-		return err
-	}
-
 	metric := obj.(*Metric)
 
 	switch metric.MetricName {
@@ -52,7 +38,7 @@ func (s *Subscriber) Do(ctx context.Context, obj interface{}, action watchers.Ac
 			CPU:    GetValue(metric),
 			Memory: 0,
 		}
-		err = s.invoker.Invoke(ctx,
+		err := s.invoker.Invoke(ctx,
 			func(cb *aprv1.SysEventRegistry) bool {
 				return cb.Spec.Type == aprv1.Subscriber && cb.Spec.Event == aprv1.CPUHigh
 			},
@@ -61,12 +47,6 @@ func (s *Subscriber) Do(ctx context.Context, obj interface{}, action watchers.Ac
 
 		if err != nil {
 			klog.Warning(err)
-		}
-
-		if s.notification != nil {
-			return s.notification.Send(ctx, admin, "High CPU load alert", &watchers.EventPayload{
-				Type: string(aprv1.CPUHigh),
-			})
 		}
 
 	case "cluster_memory_utilisation":
@@ -78,7 +58,7 @@ func (s *Subscriber) Do(ctx context.Context, obj interface{}, action watchers.Ac
 			CPU:    0,
 			Memory: GetValue(metric),
 		}
-		err = s.invoker.Invoke(ctx,
+		err := s.invoker.Invoke(ctx,
 			func(cb *aprv1.SysEventRegistry) bool {
 				return cb.Spec.Type == aprv1.Subscriber && cb.Spec.Event == aprv1.MemoryHigh
 			},
@@ -89,11 +69,6 @@ func (s *Subscriber) Do(ctx context.Context, obj interface{}, action watchers.Ac
 			klog.Warning(err)
 		}
 
-		if s.notification != nil {
-			return s.notification.Send(ctx, admin, "High memory usage alert", &watchers.EventPayload{
-				Type: string(aprv1.MemoryHigh),
-			})
-		}
 	case "user_cpu_usage":
 		user := metric.MetricValues[0].Metadata["user"]
 		klog.InfoS("User's cpu usage is HIGH", "user", user)
@@ -106,7 +81,7 @@ func (s *Subscriber) Do(ctx context.Context, obj interface{}, action watchers.Ac
 			Memory: 0,
 			User:   user,
 		}
-		err = s.invoker.Invoke(ctx,
+		err := s.invoker.Invoke(ctx,
 			func(cb *aprv1.SysEventRegistry) bool {
 				return cb.Spec.Type == aprv1.Subscriber && cb.Spec.Event == aprv1.UserCPUHigh
 			},
@@ -117,26 +92,6 @@ func (s *Subscriber) Do(ctx context.Context, obj interface{}, action watchers.Ac
 			klog.Warning(err)
 		}
 
-		if s.notification != nil {
-			var errs = make([]error, 0)
-			now := time.Now()
-			if now.Sub(latestSend[metric.MetricName]) > 1*time.Hour {
-				err = s.notification.Send(ctx, admin, fmt.Sprintf("user: %s High cpu usage alert", user), &watchers.EventPayload{
-					Type: string(aprv1.UserCPUHigh),
-				})
-				if err != nil {
-					errs = append(errs, err)
-				}
-				err = s.notification.Send(ctx, user, "High cpu usage alert", &watchers.EventPayload{
-					Type: string(aprv1.UserCPUHigh),
-				})
-				if err != nil {
-					errs = append(errs, err)
-				}
-				latestSend[metric.MetricName] = now
-				return utils.AggregateErrs(errs)
-			}
-		}
 	case "user_memory_usage":
 		user := metric.MetricValues[0].Metadata["user"]
 		klog.InfoS("User's memory usage is HIGH", "user", user)
@@ -149,7 +104,7 @@ func (s *Subscriber) Do(ctx context.Context, obj interface{}, action watchers.Ac
 			Memory: GetValue(metric),
 			User:   user,
 		}
-		err = s.invoker.Invoke(ctx,
+		err := s.invoker.Invoke(ctx,
 			func(cb *aprv1.SysEventRegistry) bool {
 				return cb.Spec.Type == aprv1.Subscriber && cb.Spec.Event == aprv1.UserMemoryHigh
 			},
@@ -160,27 +115,6 @@ func (s *Subscriber) Do(ctx context.Context, obj interface{}, action watchers.Ac
 			klog.Warning(err)
 		}
 
-		if s.notification != nil {
-			var errs = make([]error, 0)
-			now := time.Now()
-			if now.Sub(latestSend[metric.MetricName]) > 1*time.Hour {
-				err = s.notification.Send(ctx, admin, fmt.Sprintf("user: %s High memory usage alert", user), &watchers.EventPayload{
-					Type: string(aprv1.UserMemoryHigh),
-				})
-				if err != nil {
-					errs = append(errs, err)
-				}
-				err = s.notification.Send(ctx, user, "High memory usage alert", &watchers.EventPayload{
-					Type: string(aprv1.UserMemoryHigh),
-				})
-				if err != nil {
-					errs = append(errs, err)
-				}
-				latestSend[metric.MetricName] = now
-				return utils.AggregateErrs(errs)
-			}
-
-		}
 	}
 
 	return nil

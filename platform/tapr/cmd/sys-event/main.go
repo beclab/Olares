@@ -26,9 +26,6 @@ func main() {
 
 	config := ctrl.GetConfigOrDie()
 
-	notification := watchers.Notification{
-		DynamicClient: dynamic.NewForConfigOrDie(config),
-	}
 	w := watchers.NewWatchers(ctx, config, 0)
 	kubeClient := kubernetes.NewForConfigOrDie(config)
 	dynamicClient := dynamic.NewForConfigOrDie(config)
@@ -45,24 +42,24 @@ func main() {
 
 	// add event subscriber to watchers
 	watchers.AddToWatchers[application.Application](w, application.GVR,
-		(&apps.Subscriber{Subscriber: watchers.NewSubscriber(w).WithNotification(&notification)}).HandleEvent())
+		(&apps.Subscriber{Subscriber: watchers.NewSubscriber(w)}).HandleEvent())
 	watchers.AddToWatchers[corev1.Namespace](w, corev1.SchemeGroupVersion.WithResource("namespaces"),
-		(&workflows.Subscriber{Subscriber: watchers.NewSubscriber(w).WithNotification(&notification)}).WithKubeConfig(config).HandleEvent())
+		(&workflows.Subscriber{Subscriber: watchers.NewSubscriber(w)}).WithKubeConfig(config).HandleEvent())
 	watchers.AddToWatchers[corev1.Pod](w, corev1.SchemeGroupVersion.WithResource("pods"),
-		(&dnspod.PodSubscriber{Subscriber: watchers.NewSubscriber(w).WithNotification(&notification)}).WithKubeConfig(config).HandleEvent())
+		(&dnspod.PodSubscriber{Subscriber: watchers.NewSubscriber(w)}).WithKubeConfig(config).HandleEvent())
 	watchers.AddToWatchers[corev1.Node](w, corev1.SchemeGroupVersion.WithResource("nodes"),
-		(&dnspod.NodeSubscriber{Subscriber: watchers.NewSubscriber(w).WithNotification(&notification)}).WithKubeConfig(config).HandleEvent())
+		(&dnspod.NodeSubscriber{Subscriber: watchers.NewSubscriber(w)}).WithKubeConfig(config).HandleEvent())
 
 	go w.Run(1)
 
 	// metrics monitoring
-	go metrics.NewMetricsWatcherOrDie(ctx, w, &notification, config).Run()
+	go metrics.NewMetricsWatcherOrDie(ctx, w, config).Run()
 
 	// api server
-	api := apiserver.NewServer(w, &notification)
+	api := apiserver.NewServer(w)
 	go api.Run()
 
-	userWatcher := users.NewWatcher(ctx, config, w, &notification)
+	userWatcher := users.NewWatcher(ctx, config)
 	userWatcher.Start()
 
 	<-ctx.Done()

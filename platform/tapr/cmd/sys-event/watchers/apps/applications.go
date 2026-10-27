@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"bytetrade.io/web3os/tapr/cmd/sys-event/watchers"
-	aprv1 "bytetrade.io/web3os/tapr/pkg/apis/apr/v1alpha1"
 	"bytetrade.io/web3os/tapr/pkg/app/application"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
@@ -76,46 +75,10 @@ func (s *Subscriber) Do(ctx context.Context, obj interface{}, action watchers.Ac
 	switch action {
 	case watchers.ADD:
 		klog.Info("app ", app.Spec.Namespace, "/", app.Spec.Name, " is installed")
-		if s.Notification != nil {
-			return s.Notification.Send(ctx, app.Spec.Owner, "app "+app.Spec.Namespace+"/"+app.Spec.Name+" is installed",
-				&watchers.EventPayload{
-					Type: string(aprv1.AppInstall),
-					Data: map[string]interface{}{
-						"name": app.Spec.Name,
-					},
-				},
-			)
-		}
 	case watchers.DELETE:
 		klog.Info("app ", app.Spec.Namespace, "/", app.Spec.Name, " is uninstalled")
-		if s.Notification != nil {
-			return s.Notification.Send(ctx, app.Spec.Owner, "app "+app.Spec.Namespace+"/"+app.Spec.Name+" is uninstalled",
-				&watchers.EventPayload{
-					Type: string(aprv1.AppUninstall),
-					Data: map[string]interface{}{
-						"name": app.Spec.Name,
-					},
-				},
-			)
-		}
 	case watchers.SUSPEND:
 		klog.Info("app ", app.Spec.Namespace, "/", app.Spec.Name, " is suspended")
-		if s.Notification != nil {
-			admin, err := s.Notification.AdminUser(ctx)
-			if err != nil {
-				return err
-			}
-
-			return s.Notification.Send(ctx, admin,
-				app.Spec.Owner+"'s app "+app.Spec.Namespace+"/"+app.Spec.Name+" was suspended, cause: "+app.Annotations[suspendCauseAnnotation],
-				&watchers.EventPayload{
-					Type: string(aprv1.AppSuspend),
-					Data: map[string]interface{}{
-						"name": app.Spec.Name,
-					},
-				},
-			)
-		}
 	}
 	return nil
 }
