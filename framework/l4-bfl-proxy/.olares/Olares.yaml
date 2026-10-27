@@ -3,5 +3,5 @@ target: prebuilt
 output:
   containers:
     - 
-      name: beclab/l4-bfl-proxy:v0.3.49
+      name: beclab/l4-bfl-proxy:v0.3.49-user-domain-07c7b45-alpha-1
 # must have blank new line            
