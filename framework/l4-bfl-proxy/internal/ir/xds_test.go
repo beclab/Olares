@@ -23,7 +23,7 @@ func TestXdsDeepCopy(t *testing.T) {
 						SNIMatches: []string{"alice.example.com", "*.alice.example.com"},
 						Destination: &DestinationIR{
 							Name: "user_alice",
-							Host: "bfl.user-space-alice",
+							Host: "bfl.os-frontend",
 							Port: 444,
 						},
 						ProxyProtocolUpstream: true,
@@ -58,7 +58,7 @@ func TestXdsDeepCopy(t *testing.T) {
 
 	assert.Equal(t, "tls_443", original.Listeners[0].Name)
 	assert.Equal(t, "alice.example.com", original.Listeners[0].Routes[0].SNIMatches[0])
-	assert.Equal(t, "bfl.user-space-alice", original.Listeners[0].Routes[0].Destination.Host)
+	assert.Equal(t, "bfl.os-frontend", original.Listeners[0].Routes[0].Destination.Host)
 	assert.Equal(t, "https", original.Listeners[1].HTTPRedirect.Scheme)
 }
 

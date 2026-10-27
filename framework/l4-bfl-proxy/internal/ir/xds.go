@@ -15,6 +15,7 @@ const (
 )
 
 type HTTPListenerIR struct {
+	ExtAuthCluster  string // Explicit shared authorization service; no implicit user identity.
 	Name            string
 	Address         string
 	Port            uint32

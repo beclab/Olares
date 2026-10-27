@@ -671,7 +671,9 @@ func buildMultiUserHTTPSListener(port uint32, proxyProtocol bool, httpListeners 
 		// does not override is denied instead of being checked as someone else.
 		autheliaClusterName := ""
 		filterUser := ""
-		if plainHTTP {
+		if httpIR.ExtAuthCluster != "" {
+			autheliaClusterName = httpIR.ExtAuthCluster
+		} else if plainHTTP {
 			autheliaClusterName = localExtAuthzDenyCluster
 			if _, ok := clusterMap[autheliaClusterName]; !ok {
 				clusterMap[autheliaClusterName] = &ir.ClusterIR{Name: autheliaClusterName}

@@ -150,7 +150,7 @@ func TestBuildTLSListener_Basic(t *testing.T) {
 				SNIMatches: []string{"alice.example.com", "*.alice.example.com"},
 				Destination: &ir.DestinationIR{
 					Name: "user_alice",
-					Host: "bfl.user-space-alice",
+					Host: "bfl.os-frontend",
 					Port: 444,
 				},
 				ProxyProtocolUpstream: true,
@@ -193,7 +193,7 @@ func TestBuildTLSListener_ProxyProtocol(t *testing.T) {
 				SNIMatches: []string{"alice.example.com"},
 				Destination: &ir.DestinationIR{
 					Name: "user_alice",
-					Host: "bfl.user-space-alice",
+					Host: "bfl.os-frontend",
 					Port: 444,
 				},
 			},
@@ -221,7 +221,7 @@ func TestBuildTLSListener_DenyAll_SourceCIDR(t *testing.T) {
 				SNIMatches: []string{"app.bob.example.com"},
 				Destination: &ir.DestinationIR{
 					Name: "user_bob",
-					Host: "bfl.user-space-bob",
+					Host: "bfl.os-frontend",
 					Port: 444,
 				},
 			},
@@ -231,7 +231,7 @@ func TestBuildTLSListener_DenyAll_SourceCIDR(t *testing.T) {
 				SourcePrefixRanges: []string{"100.64.0.0/24", "192.168.1.100/32"},
 				Destination: &ir.DestinationIR{
 					Name: "user_bob",
-					Host: "bfl.user-space-bob",
+					Host: "bfl.os-frontend",
 					Port: 444,
 				},
 			},
@@ -306,7 +306,7 @@ func TestBuildL4TCPListener(t *testing.T) {
 				Name: "direct_48126",
 				Destination: &ir.DestinationIR{
 					Name: "direct_alice_48126",
-					Host: "bfl.user-space-alice",
+					Host: "bfl.os-frontend",
 					Port: 48126,
 				},
 			},
@@ -340,7 +340,7 @@ func TestBuildL4UDPListener(t *testing.T) {
 				Name: "direct_51820",
 				Destination: &ir.DestinationIR{
 					Name: "direct_alice_51820",
-					Host: "bfl.user-space-alice",
+					Host: "bfl.os-frontend",
 					Port: 51820,
 				},
 			},
@@ -380,7 +380,7 @@ func TestBuildL4UDPListener_NoRoutes(t *testing.T) {
 func TestBuildL4Cluster_Basic(t *testing.T) {
 	dest := &ir.DestinationIR{
 		Name: "user_alice",
-		Host: "bfl.user-space-alice",
+		Host: "bfl.os-frontend",
 		Port: 444,
 	}
 
@@ -394,14 +394,14 @@ func TestBuildL4Cluster_Basic(t *testing.T) {
 	require.Len(t, endpoints, 1)
 	require.Len(t, endpoints[0].LbEndpoints, 1)
 	ep := endpoints[0].LbEndpoints[0].GetEndpoint()
-	assert.Equal(t, "bfl.user-space-alice", ep.Address.GetSocketAddress().Address)
+	assert.Equal(t, "bfl.os-frontend", ep.Address.GetSocketAddress().Address)
 	assert.Equal(t, uint32(444), ep.Address.GetSocketAddress().GetPortValue())
 }
 
 func TestBuildL4Cluster_ProxyProtocolUpstream(t *testing.T) {
 	dest := &ir.DestinationIR{
 		Name: "user_alice",
-		Host: "bfl.user-space-alice",
+		Host: "bfl.os-frontend",
 		Port: 444,
 	}
 
@@ -915,7 +915,7 @@ func TestTranslate_AllProtocols(t *testing.T) {
 						SNIMatches: []string{"alice.example.com"},
 						Destination: &ir.DestinationIR{
 							Name: "user_alice",
-							Host: "bfl.user-space-alice",
+							Host: "bfl.os-frontend",
 							Port: 444,
 						},
 						ProxyProtocolUpstream: true,
@@ -932,7 +932,7 @@ func TestTranslate_AllProtocols(t *testing.T) {
 						Name: "direct_30000",
 						Destination: &ir.DestinationIR{
 							Name: "direct_alice_30000",
-							Host: "bfl.user-space-alice",
+							Host: "bfl.os-frontend",
 							Port: 30000,
 						},
 					},
@@ -948,7 +948,7 @@ func TestTranslate_AllProtocols(t *testing.T) {
 						Name: "direct_51820",
 						Destination: &ir.DestinationIR{
 							Name: "direct_alice_51820",
-							Host: "bfl.user-space-alice",
+							Host: "bfl.os-frontend",
 							Port: 51820,
 						},
 					},
