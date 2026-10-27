@@ -683,7 +683,7 @@ func buildMultiUserHTTPSListener(port uint32, proxyProtocol bool, httpListeners 
 				clusters = append(clusters, buildL7Cluster(clusterMap[autheliaClusterName]))
 			}
 		} else {
-			autheliaClusterName = fmt.Sprintf("authelia_backend_%s", httpIR.UserName)
+			autheliaClusterName = "authelia_backend"
 			if _, ok := clusterMap[autheliaClusterName]; !ok {
 				autheliaClusterName = ""
 			}
