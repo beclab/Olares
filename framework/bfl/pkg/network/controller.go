@@ -133,11 +133,11 @@ func (c *Controller) configure(ctx context.Context, binding DomainBinding, spec 
 		status.Domain = DomainStatus{Phase: "unbound"}
 		return nil
 	}
-	_, cloudName, err := NormalizeDomain(binding.Domain)
+	jws, err := c.bindingJWS(ctx, binding)
 	if err != nil {
 		return err
 	}
-	jws, err := c.bindingJWS(ctx, binding)
+	cloudName, err := certmanager.CloudNameFromJWS(jws)
 	if err != nil {
 		return err
 	}

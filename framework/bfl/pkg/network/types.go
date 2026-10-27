@@ -5,8 +5,8 @@ import (
 	"net"
 	"strings"
 
-	"bytetrade.io/web3os/bfl/pkg/constants"
 	"k8s.io/apimachinery/pkg/util/validation"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
 const (
@@ -106,15 +106,16 @@ type DomainView struct {
 	Status DomainStatus `json:"status"`
 }
 
-func NormalizeDomain(value string) (string, constants.TerminusName, error) {
-	domain := strings.TrimSuffix(strings.ToLower(strings.TrimSpace(value)), ".")
-	for _, root := range []string{"olares.com", "olares.cn"} {
-		prefix := strings.TrimSuffix(domain, "."+root)
-		if prefix != domain && len(validation.IsDNS1123Label(prefix)) == 0 {
-			return domain, constants.NewTerminusName(prefix, root), nil
-		}
+func NormalizeDomain(value string) (string, error) {
+	value = strings.ToLower(strings.TrimSpace(value))
+	domain := strings.TrimSuffix(value, ".")
+	if domain == "local" || strings.HasSuffix(domain, ".local") {
+		return "", fmt.Errorf(".local domains are reserved for local access")
 	}
-	return "", "", fmt.Errorf("domain must be an Olares-managed domain such as name.olares.com or name.olares.cn")
+	if net.ParseIP(domain) != nil || len(validation.IsFullyQualifiedDomainName(field.NewPath("domain"), value)) != 0 {
+		return "", fmt.Errorf("domain must be a fully qualified domain name")
+	}
+	return domain, nil
 }
 
 func (c *ProxyConfig) Normalize() error {

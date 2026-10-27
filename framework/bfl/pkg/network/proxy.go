@@ -13,6 +13,7 @@ import (
 
 	"bytetrade.io/web3os/bfl/pkg/constants"
 	"bytetrade.io/web3os/bfl/pkg/utils"
+	"bytetrade.io/web3os/bfl/pkg/utils/certmanager"
 	appv1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -245,7 +246,7 @@ func (c *Controller) applyAgent(ctx context.Context, config []byte) (*appsv1.Dep
 
 const frpcTemplate = `serverAddr = {{quote .Config.FRPServer}}
 serverPort = {{.Config.FRPPort}}
-user = {{quote .CloudName}}
+user = {{quote .User}}
 loginFailExit = false
 webServer.addr = "127.0.0.1"
 webServer.port = 7400
@@ -267,9 +268,18 @@ customDomains = [{{quote .Domain}}]
 type frpcProxy struct{ Name, Type, Domain, Port string }
 
 func RenderFRPC(domain string, conf ProxyConfig, jws, ip, sslPort string, customDomains []string) ([]byte, error) {
-	_, name, err := NormalizeDomain(domain)
+	domain, err := NormalizeDomain(domain)
 	if err != nil {
 		return nil, err
+	}
+	// Token-based proxies only need a stable namespace for proxy names.
+	user := domain
+	if conf.FRPAuthMethod == "jws" {
+		name, err := certmanager.CloudNameFromJWS(jws)
+		if err != nil {
+			return nil, err
+		}
+		user = string(name)
 	}
 	proxies := []frpcProxy{{"web", "http", domain, "80"}, {"web_wildcard", "http", "*." + domain, "80"}, {"web_ssl", "https", domain, sslPort}, {"web_ssl_wildcard", "https", "*." + domain, sslPort}}
 	for i, custom := range customDomains {
@@ -282,9 +292,9 @@ func RenderFRPC(domain string, conf ProxyConfig, jws, ip, sslPort string, custom
 	}
 	var out bytes.Buffer
 	err = t.Execute(&out, struct {
-		Config             ProxyConfig
-		CloudName, JWS, IP string
-		Proxies            []frpcProxy
-	}{conf, string(name), jws, ip, proxies})
+		Config        ProxyConfig
+		User, JWS, IP string
+		Proxies       []frpcProxy
+	}{conf, user, jws, ip, proxies})
 	return out.Bytes(), err
 }

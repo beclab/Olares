@@ -35,16 +35,16 @@ func newCertManagerForUser(ctx context.Context, user *iamv1.User) (Interface, er
 	if jws == "" {
 		return nil, fmt.Errorf("user has no cloud JWS credentials")
 	}
-	name, err := cloudNameFromJWS(jws)
+	name, err := CloudNameFromJWS(jws)
 	if err != nil {
 		return nil, err
 	}
 	return NewCertManagerWithCredentials(ctx, name, jws), nil
 }
 
-// cloudNameFromJWS reads the asserted cloud identity for API routing only.
+// CloudNameFromJWS reads the asserted cloud identity for API routing only.
 // The cloud service still verifies the signature and account authorization.
-func cloudNameFromJWS(jws string) (constants.TerminusName, error) {
+func CloudNameFromJWS(jws string) (constants.TerminusName, error) {
 	parts := strings.Split(jws, ".")
 	if len(parts) != 3 {
 		return "", fmt.Errorf("invalid cloud JWS envelope")

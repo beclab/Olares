@@ -55,7 +55,7 @@ func (s *Store) Bind(ctx context.Context, username, domain, jwsSignature string)
 	if err := s.RequireAdmin(ctx, username); err != nil {
 		return err
 	}
-	normalized, _, err := NormalizeDomain(domain)
+	normalized, err := NormalizeDomain(domain)
 	if err != nil {
 		return err
 	}
