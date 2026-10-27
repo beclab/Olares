@@ -8,6 +8,7 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 	"gopkg.in/yaml.v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
@@ -18,7 +19,6 @@ import (
 
 var (
 	AnnotationGroup         = "bytetrade.io"
-	UserAnnotationZoneKey   = fmt.Sprintf("%s/zone", AnnotationGroup)
 	UserAnnotationOwnerRole = fmt.Sprintf("%s/owner-role", AnnotationGroup)
 )
 
@@ -129,8 +129,32 @@ func getLLdapJwtKey(ctx context.Context, kubeConfig *rest.Config) ([]byte, error
 	return jwtSecretKey, nil
 }
 
-func GetUserZone(ctx context.Context, kubeconfig *rest.Config, username string) (string, error) {
-	return GetUserAnnotation(ctx, kubeconfig, username, UserAnnotationZoneKey)
+// GetClusterZone returns the shared public domain, or the machine's local domain.
+func GetClusterZone(ctx context.Context, kubeconfig *rest.Config) (string, error) {
+	client, err := dynamic.NewForConfig(kubeconfig)
+	if err != nil {
+		return "", err
+	}
+	gvr := schema.GroupVersionResource{Group: "sys.bytetrade.io", Version: "v1alpha1", Resource: "terminus"}
+	data, err := client.Resource(gvr).Get(ctx, "terminus", metav1.GetOptions{})
+	if err != nil {
+		return "", err
+	}
+	domain, _, err := unstructured.NestedString(data.Object, "spec", "settings", "domainName")
+	if err != nil {
+		return "", err
+	}
+	if domain != "" {
+		return domain, nil
+	}
+	localName, _, err := unstructured.NestedString(data.Object, "spec", "localName")
+	if err != nil {
+		return "", err
+	}
+	if localName == "" {
+		return "olares.local", nil
+	}
+	return localName + ".olares.local", nil
 }
 
 func GetUserRole(ctx context.Context, kubeconfig *rest.Config, username string) (string, error) {

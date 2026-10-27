@@ -5,12 +5,10 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
-	"math"
 	"net"
 	"os"
 	"os/exec"
 	"sort"
-	"strconv"
 	"strings"
 
 	"bytetrade.io/web3os/tapr/pkg/app/application"
@@ -62,7 +60,7 @@ var sharedRouteRegistryGVR = schema.GroupVersionResource{
 // behavior: every invocation re-reads ClusterConfig.spec.inClusterGatewayEnabled
 // and applies or removes Shared in-cluster templates accordingly.
 //
-// requirement: this function is intentionally event-driven by existing SRR/User/DNS
+// requirement: this function is intentionally event-driven by existing SRR/Application/network
 // watcher paths. ClusterConfig changes take effect on the next regeneration event
 // (delayed linkage), because sys-event does not register a dedicated ClusterConfig watcher.
 func RegenerateCorefile(ctx context.Context, kubeClient kubernetes.Interface, dynamicClient dynamic.Interface) error {
@@ -110,13 +108,8 @@ func RegenerateCorefile(ctx context.Context, kubeClient kubernetes.Interface, dy
 	}
 	defaultPlugins = normalizeReloadInDefaultPlugins(defaultPlugins)
 
-	userList, err := dynamicClient.Resource(schema.GroupVersionResource{
-		Group:    "iam.kubesphere.io",
-		Version:  "v1alpha2",
-		Resource: "users",
-	}).List(ctx, metav1.ListOptions{})
+	machine, err := readMachineDNS(ctx, kubeClient, dynamicClient)
 	if err != nil {
-		klog.Error("get userlist error, ", err)
 		return err
 	}
 
@@ -141,86 +134,16 @@ func RegenerateCorefile(ctx context.Context, kubeClient kubernetes.Interface, dy
 	var templatesPlugins []*corefile.Plugin
 	var inclusterTemplatesPlugins []*corefile.Plugin
 	var localTemplatesPlugins []*corefile.Plugin
-	var localDomainTemplatesPlugins []*corefile.Plugin
 
-	addUserTemplates := func(zone, ip string, plugins []*corefile.Plugin) []*corefile.Plugin {
-		newOptions := []*corefile.Option{
-			{
-				Name: "match",
-				Args: []string{fmt.Sprintf("\"\\w*\\.?(%s\\.)$\"", zone)},
-			},
-			{
-				Name: "answer",
-				Args: []string{fmt.Sprintf("\"{{ .Name }} 60 IN A %s\"", ip)},
-			},
-			{
-				Name: "fallthrough",
-				Args: []string{},
-			},
-		}
-		anyOptions := []*corefile.Option{
-			{
-				Name: "rcode",
-				Args: []string{"NOERROR"},
-			},
-		}
-		userTemplateArgs := []string{"IN", "A", zone}
-		userTemplateAnyArgs := []string{"IN", "ANY", zone}
-
-		plugins = append(plugins, &corefile.Plugin{
-			Name:    "template",
-			Args:    userTemplateArgs,
-			Options: newOptions,
-		})
-
-		plugins = append(plugins, &corefile.Plugin{
-			Name:    "template",
-			Args:    userTemplateAnyArgs,
-			Options: anyOptions,
-		})
-
-		return plugins
-	} // func addUserTemplates
-
-	ingressIp, err := getUserIngressIP(ctx, kubeClient)
+	ingressIP, err := getL4IngressIP(ctx, kubeClient)
 	if err != nil {
-		klog.Error("get user ingress ip error, ", err)
 		return err
 	}
-
-	if ingressIp != "" {
-		for _, u := range userList.Items {
-
-			userzone := u.GetAnnotations()[UserAnnotationZoneKey]
-			if userzone == "" {
-				klog.Info("user ", u.GetName(), " has no zone annotation, skip corefile update")
-				continue
-			}
-
-			ip, err := getUserLocalIp(&u)
-			if err != nil {
-				klog.Error("get user local ip error, ", err)
-				return err
-			}
-			if ip == nil || ip.String() == "" {
-				klog.Info("user ", u.GetName(), " has no valid local ip, skip corefile update")
-				continue
-			}
-
-			templatesPlugins = addUserTemplates(userzone, ip.String(), templatesPlugins)
-			inclusterTemplatesPlugins = addUserTemplates(userzone, ingressIp, inclusterTemplatesPlugins)
-
-			if masterNodeIp == "" {
-				klog.Info("no master node ip found, skip adding local domain dns record")
-				continue
-			}
-
-			username := u.GetName()
-			userLocalZone := fmt.Sprintf("%s.olares.local", username)
-			localTemplatesPlugins = addUserTemplates(userzone, masterNodeIp, localTemplatesPlugins)
-			localDomainTemplatesPlugins = addUserTemplates(userLocalZone, masterNodeIp, localDomainTemplatesPlugins)
-		} // end of for loop
-	} // end of if ingressIp != ""
+	for _, zone := range []string{machine.domain, machine.localZone} {
+		templatesPlugins = append(templatesPlugins, machineDNSTemplates(zone, machine.localIP)...)
+		inclusterTemplatesPlugins = append(inclusterTemplatesPlugins, machineDNSTemplates(zone, ingressIP)...)
+		localTemplatesPlugins = append(localTemplatesPlugins, machineDNSTemplates(zone, machine.localIP)...)
+	}
 
 	// Degrade on failure: without the app-gateway-data ClusterIP the shared
 	// in-cluster templates are skipped, while the rest of the Corefile still
@@ -239,17 +162,17 @@ func RegenerateCorefile(ctx context.Context, kubeClient kubernetes.Interface, dy
 			// degrade: skip shared templates, keep regenerating the rest.
 			// A transient SRR list failure (e.g. RBAC lag, informer thrash)
 			// must not freeze the whole Corefile. Leave the shared template
-			// plugins nil so user wildcard and other zones still update this
+			// plugins nil so machine wildcard and other zones still update this
 			// round; the shared enhancement converges on the next reconcile.
 			klog.Errorf("degrade: skip shared incluster templates, list SRR error: %v", err)
 		} else if gatewayDataIP != "" {
-			sharedInclusterTemplatePlugins = buildSharedInclusterTemplates(srrEntrances, gatewayDataIP, userList.Items)
+			sharedInclusterTemplatePlugins = buildSharedInclusterTemplates(srrEntrances, gatewayDataIP)
 		}
 	} else {
 		klog.V(2).Info("skip shared incluster CoreDNS templates: inClusterGatewayEnabled=false")
 	}
 
-	v2DirectSharedTemplatePlugins, v2Err := v2DirectSharedTemplatesFromCluster(ctx, kubeClient, dynamicClient, userList.Items)
+	v2DirectSharedTemplatePlugins, v2Err := v2DirectSharedTemplatesFromCluster(ctx, kubeClient, dynamicClient)
 	if v2Err != nil {
 		klog.Errorf("degrade: skip v2 direct shared templates, scan applications error: %v", v2Err)
 	}
@@ -291,16 +214,14 @@ func RegenerateCorefile(ctx context.Context, kubeClient kubernetes.Interface, dy
 		},
 	}
 
-	// Incluster template order (dual-track):
-	//   v3 SRR exact templates → user-zone wildcards → v2 legacy shared templates.
-	// v3 must stay before wildcards so options.shared apps keep gateway FQDN precedence.
-	// v2 follows release-1.12.5 placement after wildcards.
+	// Shared mesh names retain their service/gateway targets even when the
+	// machine's default domain overlaps the fixed shared.olares.com suffix.
 	inclusterPluginsWithSharedTemplates := inclusterTemplatesPlugins
 	if len(sharedInclusterTemplatePlugins) > 0 || len(v2DirectSharedTemplatePlugins) > 0 {
 		var inclusterPluginChain []*corefile.Plugin
 		inclusterPluginChain = append(inclusterPluginChain, sharedInclusterTemplatePlugins...)
-		inclusterPluginChain = append(inclusterPluginChain, inclusterTemplatesPlugins...)
 		inclusterPluginChain = append(inclusterPluginChain, v2DirectSharedTemplatePlugins...)
+		inclusterPluginChain = append(inclusterPluginChain, inclusterTemplatesPlugins...)
 		inclusterPluginsWithSharedTemplates = inclusterPluginChain
 	}
 	inclusterPlugins := append(append([]*corefile.Plugin{}, defaultPlugins...), inclusterPluginsWithSharedTemplates...)
@@ -317,8 +238,7 @@ func RegenerateCorefile(ctx context.Context, kubeClient kubernetes.Interface, dy
 
 	otherServer := &corefile.Server{
 		DomPorts: defaultsServer.DomPorts,
-		Plugins: append(defaultPlugins,
-			append(localTemplatesPlugins, localDomainTemplatesPlugins...)...),
+		Plugins:  append(defaultPlugins, localTemplatesPlugins...),
 	}
 
 	servers := []*corefile.Server{inclusterServer, vpnServer, otherServer}
@@ -496,61 +416,7 @@ func RemoveTemplateFromCorefile(data, userzone string) (string, error) {
 	return file.ToString(), nil
 }
 
-func subDNSSplit(n int64) map[string]net.IP {
-	subDNSMap := make(map[string]net.IP)
-	log2n := int(math.Ceil(math.Log2(float64(n))))
-	alignedN := 1 << log2n
-	_, ipNet, _ := net.ParseCIDR("100.64.0.0/10")
-
-	baseIP := ipNet.IP.To4()
-	originalMaskLen, _ := ipNet.Mask.Size()
-
-	newMaskLen := originalMaskLen + log2n
-	ipsPerSubnet := 1 << (32 - newMaskLen)
-
-	for i := 0; i < alignedN; i++ {
-		offset := uint32(i * ipsPerSubnet)
-		subnetIP := make(net.IP, 4)
-		copy(subnetIP, baseIP)
-		for j := 3; j >= 0 && offset > 0; j-- {
-			subnetIP[j] += byte(offset & 0xFF)
-			offset >>= 8
-		}
-		firstUsableIP := make(net.IP, 4)
-		copy(firstUsableIP, subnetIP)
-		firstUsableIP[3]++
-		index := strconv.FormatInt(int64(i), 10)
-		subDNSMap[index] = firstUsableIP
-	}
-	return subDNSMap
-}
-
-func getUserLocalIp(user *unstructured.Unstructured) (net.IP, error) {
-	userIndex, ok := user.GetAnnotations()[UserIndexAna]
-	if !ok || userIndex == "" {
-		klog.Infof("can not find user index from annotations")
-		return nil, nil
-	}
-
-	userMaxStr := os.Getenv("OLARES_MAX_USERS")
-	if userMaxStr == "" {
-		userMaxStr = "1024"
-	}
-	userMax, err := strconv.ParseInt(userMaxStr, 10, 64)
-	if err != nil {
-		klog.Infof("parse user index failed %v", err)
-		return nil, err
-	}
-	localIp := subDNSSplit(userMax)[userIndex]
-	if localIp == nil || localIp.String() == "" {
-		return nil, fmt.Errorf("invalid ip address %v", localIp)
-	}
-	klog.Infof("localIp: %v", localIp)
-
-	return localIp, nil
-}
-
-func getUserIngressIP(ctx context.Context, kubeClient kubernetes.Interface) (string, error) {
+func getL4IngressIP(ctx context.Context, kubeClient kubernetes.Interface) (string, error) {
 	pods, err := kubeClient.CoreV1().Pods("os-network").List(ctx, metav1.ListOptions{
 		LabelSelector: "app=l4-bfl-proxy",
 	})
@@ -559,7 +425,7 @@ func getUserIngressIP(ctx context.Context, kubeClient kubernetes.Interface) (str
 		return "", err
 	}
 	if len(pods.Items) == 0 {
-		klog.Info("no l4 proxy pod found, users are not initialized yet")
+		klog.Info("L4 proxy pod is not available yet")
 		return "", nil
 	}
 	pod := pods.Items[0]
@@ -620,10 +486,6 @@ func buildBlockLocalSearchServer() (*corefile.Server, error) {
 	}, nil
 }
 
-const UserAnnotationZoneKey = "bytetrade.io/zone"
-const UserAnnotationLocalDomainDNSRecord = "bytetrade.io/local-domain-dns-record"
-const UserIndexAna = "bytetrade.io/user-index"
-
 // SharedInclusterEntrance identifies one gateway-mode SRR host pattern that
 // may be rewritten inside the cluster.
 type SharedInclusterEntrance struct {
@@ -635,26 +497,16 @@ type SharedInclusterEntrance struct {
 }
 
 const (
-	hostPatternSharedExact    = "shared-exact"
-	hostPatternViewerWildcard = "viewer-wildcard"
+	hostPatternSharedExact      = "shared-exact"
+	hostPatternApplicationExact = "application-exact"
 )
 
 // matchRegex returns an anchored host regex for one SRR host pattern:
 // - shared exact host:  ^<id>\.shared\.<base>\.$
-// - application logical: ^<id>\.(<v1>|<v2>|...)\.<base>\.$
-//
-// The viewer label of an application logical host is limited to the local
-// viewers returned by viewersFor. A viewer label that belongs to another
-// Olares must not resolve to this cluster's gateway; it falls through to the
-// upstream resolver instead. No local viewer means no template.
-func (e SharedInclusterEntrance) matchRegex(viewersFor func(platformDomain string) []string) string {
+// - application exact: ^<id>\.<machine-domain>\.$
+func (e SharedInclusterEntrance) matchRegex() string {
 	entranceID, platformDomain, hostPatternType, ok := parseLogicalHostPattern(e.HostPattern)
 	if !ok {
-		platformDomain = strings.ToLower(strings.TrimSpace(strings.TrimSuffix(e.PlatformDomain, ".")))
-		entranceID = strings.ToLower(strings.TrimSpace(e.EntranceID))
-		hostPatternType = hostPatternSharedExact
-	}
-	if platformDomain == "" || entranceID == "" || hostPatternType == "" {
 		return ""
 	}
 	escapedEntranceID := strings.ReplaceAll(entranceID, ".", `\.`)
@@ -662,48 +514,11 @@ func (e SharedInclusterEntrance) matchRegex(viewersFor func(platformDomain strin
 	switch hostPatternType {
 	case hostPatternSharedExact:
 		return `"^` + escapedEntranceID + `\.shared\.` + escapedPlatformDomain + `\.$"`
-	case hostPatternViewerWildcard:
-		var viewers []string
-		if viewersFor != nil {
-			viewers = viewersFor(platformDomain)
-		}
-		if len(viewers) == 0 {
-			return ""
-		}
-		return `"^` + escapedEntranceID + `\.(` + strings.Join(viewers, "|") + `)\.` + escapedPlatformDomain + `\.$"`
+	case hostPatternApplicationExact:
+		return `"^` + escapedEntranceID + `\.` + escapedPlatformDomain + `\.$"`
 	default:
 		return ""
 	}
-}
-
-// localSharedViewers returns the sorted, deduplicated viewer labels of the
-// users on this cluster for platformDomain: every user name, plus the first
-// label of a zone "<label>.<platformDomain>". Labels that are not valid DNS
-// labels are dropped, so every returned value is safe inside a regex.
-func localSharedViewers(users []unstructured.Unstructured, platformDomain string) []string {
-	platformDomain = strings.ToLower(strings.TrimSpace(strings.TrimSuffix(platformDomain, ".")))
-	seen := make(map[string]struct{})
-	add := func(label string) {
-		label = strings.ToLower(strings.TrimSpace(label))
-		if label == "" || len(validation.IsDNS1123Label(label)) > 0 {
-			return
-		}
-		seen[label] = struct{}{}
-	}
-	for i := range users {
-		add(users[i].GetName())
-		zone := strings.ToLower(strings.TrimSpace(strings.TrimSuffix(users[i].GetAnnotations()[UserAnnotationZoneKey], ".")))
-		if platformDomain == "" || !strings.HasSuffix(zone, "."+platformDomain) {
-			continue
-		}
-		add(strings.TrimSuffix(zone, "."+platformDomain))
-	}
-	out := make([]string, 0, len(seen))
-	for label := range seen {
-		out = append(out, label)
-	}
-	sort.Strings(out)
-	return out
 }
 
 // buildSharedInclusterTemplates builds CoreDNS `template` plugin instances
@@ -711,41 +526,27 @@ func localSharedViewers(users []unstructured.Unstructured, platformDomain string
 // data plane ClusterIP.
 //
 // rationale: CoreDNS's plugin.cfg orders `template` before `hosts`, so the
-// per-user wildcard `template IN A <userzone> { match "\w*\.?(<userzone>\.)$" }`
-// would shadow any matching `hosts` entry for `<hash>.shared.<platformDomain>`.
+// machine wildcard templates would shadow matching `hosts` entries for
+// registered application and shared mesh entrances.
 // We therefore emit exact-FQDN `template` instances anchored at the root zone
 // (`IN A .`) that match the literal FQDN with a `^…\.$` anchored regex and
 // answer with the gateway ClusterIP. `fallthrough` is set so unrelated names
 // continue down the chain to the wildcard templates / forward.
 //
-// requirement: only FQDNs derived from SRR hostPatterns may be rewritten, and
-// application logical hosts only for viewers that are users of this cluster.
+// requirement: only FQDNs derived from SRR hostPatterns may be rewritten.
 // behavior: deterministic sorted ordering by match regex; empty input returns nil.
 // test: table-driven unit tests in corefile_incluster_test.go.
-func buildSharedInclusterTemplates(entrances []SharedInclusterEntrance, gatewayDataIP string, users []unstructured.Unstructured) []*corefile.Plugin {
+func buildSharedInclusterTemplates(entrances []SharedInclusterEntrance, gatewayDataIP string) []*corefile.Plugin {
 	ip := net.ParseIP(strings.TrimSpace(gatewayDataIP))
 	if ip == nil || ip.To4() == nil {
 		return nil
 	}
 	gatewayDataIP = ip.String()
 
-	viewersByDomain := make(map[string][]string)
-	viewersFor := func(platformDomain string) []string {
-		if v, ok := viewersByDomain[platformDomain]; ok {
-			return v
-		}
-		v := localSharedViewers(users, platformDomain)
-		if len(v) == 0 {
-			klog.Warningf("skip shared incluster viewer templates for platform domain %s: no local viewer", platformDomain)
-		}
-		viewersByDomain[platformDomain] = v
-		return v
-	}
-
 	seen := make(map[string]struct{})
 	var matches []string
 	for _, ent := range entrances {
-		match := ent.matchRegex(viewersFor)
+		match := ent.matchRegex()
 		if match == "" {
 			continue
 		}
@@ -802,11 +603,10 @@ func namespacesWithDNSPassthrough(ctx context.Context, kubeClient kubernetes.Int
 }
 
 func parseLogicalHostPattern(pattern string) (entranceID, platformDomain, hostPatternType string, ok bool) {
-	pattern = strings.ToLower(strings.TrimSpace(pattern))
-	if pattern == "" {
+	pattern = strings.TrimSuffix(strings.ToLower(strings.TrimSpace(pattern)), ".")
+	if len(validation.IsDNS1123Subdomain(pattern)) > 0 {
 		return "", "", "", false
 	}
-	pattern = strings.TrimSuffix(pattern, ".")
 
 	const sharedMarker = ".shared."
 	if idx := strings.Index(pattern, sharedMarker); idx > 0 && len(pattern) > idx+len(sharedMarker) {
@@ -821,17 +621,11 @@ func parseLogicalHostPattern(pattern string) (entranceID, platformDomain, hostPa
 		return entranceID, platformDomain, hostPatternSharedExact, true
 	}
 
-	const viewerWildcardMarker = ".*."
-	if idx := strings.Index(pattern, viewerWildcardMarker); idx > 0 && len(pattern) > idx+len(viewerWildcardMarker) {
-		entranceID = strings.TrimSpace(pattern[:idx])
-		if strings.Contains(entranceID, ".") || entranceID == "" || strings.Contains(entranceID, "*") {
-			return "", "", "", false
-		}
-		platformDomain = strings.TrimSpace(strings.TrimSuffix(pattern[idx+len(viewerWildcardMarker):], "."))
-		if platformDomain == "" || strings.Contains(platformDomain, "*") {
-			return "", "", "", false
-		}
-		return entranceID, platformDomain, hostPatternViewerWildcard, true
+	// Application entrances use an exact prefix under the machine domain.
+	// Only names explicitly registered by an SRR get a gateway DNS override.
+	parts := strings.SplitN(pattern, ".", 2)
+	if len(parts) == 2 {
+		return parts[0], parts[1], hostPatternApplicationExact, true
 	}
 	return "", "", "", false
 }
@@ -944,14 +738,6 @@ func isV3SharedApp(app *application.Application) bool {
 	return app.GetLabels()[labelAppShared] == labelAppSharedTrue
 }
 
-func platformDomainFromUserZone(userZone string) (string, bool) {
-	tokens := strings.Split(userZone, ".")
-	if len(tokens) < 2 {
-		return "", false
-	}
-	return strings.Join(tokens[1:], "."), true
-}
-
 func escapeRegexLabel(s string) string {
 	return strings.ReplaceAll(s, ".", `\.`)
 }
@@ -989,25 +775,10 @@ func v2DirectSharedTemplatesFromCluster(
 	ctx context.Context,
 	kubeClient kubernetes.Interface,
 	dynamicClient dynamic.Interface,
-	users []unstructured.Unstructured,
 ) ([]*corefile.Plugin, error) {
-	if len(users) == 0 {
-		klog.Info("no users found, skip adding shared entrance dns records")
-		return nil, nil
-	}
-
-	zone := users[0].GetAnnotations()[UserAnnotationZoneKey]
-	if len(zone) == 0 {
-		klog.Info("no zone annotation found in user, skip adding shared entrance dns records")
-		return nil, nil
-	}
-	tokens := strings.Split(zone, ".")
-	if len(tokens) < 2 {
-		klog.Info("invalid zone annotation found in user, skip adding shared entrance dns records")
-		return nil, nil
-	}
-	tokens[0] = "shared"
-	sharedZone := strings.Join(tokens, ".")
+	// Shared entrance addresses are internal mesh names, independent of the
+	// machine default domain and of any user's identity or public domain.
+	sharedZone := sharedMeshZone
 
 	appList, err := dynamicClient.Resource(application.GVR).List(ctx, metav1.ListOptions{})
 	if err != nil {

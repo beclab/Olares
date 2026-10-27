@@ -39,6 +39,10 @@ func main() {
 		klog.Fatalf("register Application corefile watcher: %v", err)
 	}
 
+	if err := watchers.RegisterCorefileNetworkWatcher(w, kubeClient, dynamicClient); err != nil {
+		klog.Fatalf("register machine network corefile watcher: %v", err)
+	}
+
 	// add event subscriber to watchers
 	watchers.AddToWatchers[application.Application](w, application.GVR,
 		(&apps.Subscriber{Subscriber: watchers.NewSubscriber(w).WithNotification(&notification)}).HandleEvent())

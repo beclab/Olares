@@ -21,16 +21,23 @@ import (
 )
 
 func TestBuildSharedInclusterTemplates_empty(t *testing.T) {
-	if got := buildSharedInclusterTemplates(nil, "10.0.0.5", nil); got != nil {
+	if got := buildSharedInclusterTemplates(nil, "10.0.0.5"); got != nil {
 		t.Fatalf("expected nil, got %#v", got)
 	}
-	if got := buildSharedInclusterTemplates([]SharedInclusterEntrance{}, "10.0.0.5", nil); got != nil {
+	if got := buildSharedInclusterTemplates([]SharedInclusterEntrance{}, "10.0.0.5"); got != nil {
 		t.Fatalf("expected nil, got %#v", got)
 	}
 	if got := buildSharedInclusterTemplates([]SharedInclusterEntrance{
 		{AppID: "a5be2268", EntranceName: "ollama", EntranceID: "a5be2268", PlatformDomain: "olares.com", HostPattern: "a5be2268.shared.olares.com"},
-	}, "not-an-ip", nil); got != nil {
+	}, "not-an-ip"); got != nil {
 		t.Fatalf("expected nil for invalid gateway IP, got %#v", got)
+	}
+	for _, pattern := range []string{"", "a5be2268.*.olares.com", "a5be2268.shared.*.olares.com", "a5be2268..olares.com"} {
+		if got := buildSharedInclusterTemplates([]SharedInclusterEntrance{
+			{AppID: "a5be2268", EntranceName: "ollama", EntranceID: "a5be2268", PlatformDomain: "olares.com", HostPattern: pattern},
+		}, "10.0.0.5"); got != nil {
+			t.Fatalf("invalid hostPattern %q must not produce a fallback DNS entry: %#v", pattern, got)
+		}
 	}
 }
 
@@ -39,7 +46,7 @@ func TestBuildSharedInclusterTemplates_orderingAndDedup(t *testing.T) {
 		{AppID: "a5be2268", EntranceName: "shared", EntranceID: "a5be2268", PlatformDomain: "olares.com", HostPattern: "a5be2268.shared.olares.com"},
 		{AppID: "a5be2268", EntranceName: "shared", EntranceID: "a5be2268", PlatformDomain: "olares.com", HostPattern: "a5be2268.shared.olares.com"},
 	}
-	plugins := buildSharedInclusterTemplates(entrances, "10.0.0.8", nil)
+	plugins := buildSharedInclusterTemplates(entrances, "10.0.0.8")
 	if len(plugins) != 1 {
 		t.Fatalf("expected 1 template plugin, got %d", len(plugins))
 	}
@@ -49,25 +56,24 @@ func TestBuildSharedInclusterTemplates_orderingAndDedup(t *testing.T) {
 	}
 }
 
-func TestBuildSharedInclusterTemplates_applicationLogicalPattern(t *testing.T) {
-	// TC-M4-09: application logical host <id>.*.<base> maps to
-	// ^<id>\.(<local viewers>)\.<base>\.$ with gatewayDataIP and TTL=15.
+func TestBuildSharedInclusterTemplates_applicationExactPattern(t *testing.T) {
+	// Application hosts use an exact entrance under the machine domain.
 	plugins := buildSharedInclusterTemplates([]SharedInclusterEntrance{
 		{
 			AppID:          "a5be2268",
 			EntranceName:   "api",
 			EntranceID:     "a5be2268",
-			PlatformDomain: "olares.com",
-			HostPattern:    "a5be2268.*.olares.com",
+			PlatformDomain: "machine.olares.com",
+			HostPattern:    "a5be2268.machine.olares.com",
 		},
-	}, "10.0.0.8", testUsers("bob"))
+	}, "10.0.0.8")
 	if len(plugins) != 1 {
 		t.Fatalf("expected 1 template plugin, got %d", len(plugins))
 	}
-	wantMatch := `"^a5be2268\.(bob)\.olares\.com\.$"`
+	wantMatch := `"^a5be2268\.machine\.olares\.com\.$"`
 	body := plugins[0].ToString()
 	if !strings.Contains(body, wantMatch) {
-		t.Fatalf("expected application wildcard match %q in %q", wantMatch, body)
+		t.Fatalf("expected exact application match %q in %q", wantMatch, body)
 	}
 	if !strings.Contains(body, `"{{ .Name }} 15 IN A 10.0.0.8"`) {
 		t.Fatalf("expected TTL 15 gateway answer, got %q", body)
@@ -76,16 +82,16 @@ func TestBuildSharedInclusterTemplates_applicationLogicalPattern(t *testing.T) {
 
 func TestBuildSharedInclusterTemplates_nonSRRFQDNFallsThrough(t *testing.T) {
 	// TC-M4-11: non-SRR names must not match the gateway template and
-	// fallthrough must remain to allow user wildcard/l4-bfl-proxy chain.
+	// fallthrough must remain to allow machine wildcard/l4-bfl-proxy chain.
 	plugins := buildSharedInclusterTemplates([]SharedInclusterEntrance{
 		{
 			AppID:          "a5be2268",
 			EntranceName:   "api",
 			EntranceID:     "a5be2268",
-			PlatformDomain: "olares.com",
-			HostPattern:    "a5be2268.*.olares.com",
+			PlatformDomain: "machine.olares.com",
+			HostPattern:    "a5be2268.machine.olares.com",
 		},
-	}, "10.0.0.8", testUsers("bob"))
+	}, "10.0.0.8")
 	if len(plugins) != 1 {
 		t.Fatalf("expected 1 template plugin, got %d", len(plugins))
 	}
@@ -106,6 +112,8 @@ func TestBuildSharedInclusterTemplates_nonSRRFQDNFallsThrough(t *testing.T) {
 		t.Fatalf("compile match regex %q: %v", matchExpr, err)
 	}
 	for _, host := range []string{
+		"a5be2268.bob.olares.com.",
+		"a5be2268.other.olares.com.",
 		"auth.bob.olares.com.",
 		"x.bob.olares.com.",
 		"foo.shared.olares.com.",
@@ -119,127 +127,6 @@ func TestBuildSharedInclusterTemplates_nonSRRFQDNFallsThrough(t *testing.T) {
 	}
 }
 
-func TestBuildSharedInclusterTemplates_remoteViewerFallsThrough(t *testing.T) {
-	entrances := []SharedInclusterEntrance{
-		{AppID: "366ada1d", EntranceName: "api", EntranceID: "366ada1d", PlatformDomain: "olares.com", HostPattern: "366ada1d.*.olares.com"},
-		{AppID: "366ada1d", EntranceName: "api", EntranceID: "router", PlatformDomain: "olares.com", HostPattern: "router.*.olares.com"},
-	}
-	plugins := buildSharedInclusterTemplates(entrances, "10.233.42.232", testUsers("olarestest001"))
-	if len(plugins) != 2 {
-		t.Fatalf("expected 2 template plugins, got %d", len(plugins))
-	}
-	res := make([]*regexp.Regexp, 0, len(plugins))
-	for _, p := range plugins {
-		res = append(res, compileTemplateMatch(t, p))
-	}
-	matchesAny := func(host string) bool {
-		for _, re := range res {
-			if re.MatchString(host) {
-				return true
-			}
-		}
-		return false
-	}
-	for _, host := range []string{
-		"366ada1d.olarestest001.olares.com.",
-		"router.olarestest001.olares.com.",
-	} {
-		if !matchesAny(host) {
-			t.Fatalf("local viewer host %q must resolve to the gateway", host)
-		}
-	}
-	for _, host := range []string{
-		"366ada1d.sparktest02.olares.com.",
-		"router.sparktest02.olares.com.",
-		"366ada1d.olarestest001x.olares.com.",
-		"366ada1d.olarestest001.olares.com.evil.",
-	} {
-		if matchesAny(host) {
-			t.Fatalf("remote viewer host %q must fall through to upstream DNS", host)
-		}
-	}
-}
-
-func TestBuildSharedInclusterTemplates_multipleLocalViewers(t *testing.T) {
-	plugins := buildSharedInclusterTemplates([]SharedInclusterEntrance{
-		{AppID: "a5be2268", EntranceName: "api", EntranceID: "a5be2268", PlatformDomain: "olares.com", HostPattern: "a5be2268.*.olares.com"},
-	}, "10.0.0.8", testUsers("carol", "alice", "bob", "alice"))
-	if len(plugins) != 1 {
-		t.Fatalf("expected 1 template plugin, got %d", len(plugins))
-	}
-	wantMatch := `"^a5be2268\.(alice|bob|carol)\.olares\.com\.$"`
-	if body := plugins[0].ToString(); !strings.Contains(body, wantMatch) {
-		t.Fatalf("expected sorted viewer alternation %q in %q", wantMatch, body)
-	}
-}
-
-func TestBuildSharedInclusterTemplates_noLocalViewerSkipsLogicalPattern(t *testing.T) {
-	plugins := buildSharedInclusterTemplates([]SharedInclusterEntrance{
-		{AppID: "a5be2268", EntranceName: "api", EntranceID: "a5be2268", PlatformDomain: "olares.com", HostPattern: "a5be2268.*.olares.com"},
-		{AppID: "a5be2268", EntranceName: "shared", EntranceID: "a5be2268", PlatformDomain: "olares.com", HostPattern: "a5be2268.shared.olares.com"},
-	}, "10.0.0.8", nil)
-	if len(plugins) != 1 {
-		t.Fatalf("expected only the shared exact template, got %d", len(plugins))
-	}
-	if body := plugins[0].ToString(); !strings.Contains(body, `"^a5be2268\.shared\.olares\.com\.$"`) {
-		t.Fatalf("shared exact template must stay without local viewers: %q", body)
-	}
-}
-
-func TestLocalSharedViewers(t *testing.T) {
-	users := []unstructured.Unstructured{
-		testUser("Alice", "alice.olares.com"),
-		testUser("bob", "robert.olares.com"),
-		testUser("carol", "carol.example.com"),
-		testUser("dave", "x.y.olares.com"),
-		testUser("bad_name", ""),
-		testUser("erin", "erin.olares.com."),
-	}
-	got := localSharedViewers(users, "olares.com")
-	want := []string{"alice", "bob", "carol", "dave", "erin", "robert"}
-	if strings.Join(got, ",") != strings.Join(want, ",") {
-		t.Fatalf("localSharedViewers = %v, want %v", got, want)
-	}
-	if got := localSharedViewers(nil, "olares.com"); len(got) != 0 {
-		t.Fatalf("expected no viewers, got %v", got)
-	}
-}
-
-func compileTemplateMatch(t *testing.T, plugin *corefile.Plugin) *regexp.Regexp {
-	t.Helper()
-	for _, opt := range plugin.Options {
-		if opt != nil && opt.Name == "match" && len(opt.Args) > 0 {
-			re, err := regexp.Compile(strings.Trim(opt.Args[0], `"`))
-			if err != nil {
-				t.Fatalf("compile match regex %q: %v", opt.Args[0], err)
-			}
-			return re
-		}
-	}
-	t.Fatalf("missing match expression: %s", plugin.ToString())
-	return nil
-}
-
-func testUser(name, zone string) unstructured.Unstructured {
-	meta := map[string]interface{}{"name": name}
-	if zone != "" {
-		meta["annotations"] = map[string]interface{}{UserAnnotationZoneKey: zone}
-	}
-	return unstructured.Unstructured{Object: map[string]interface{}{
-		"apiVersion": "iam.kubesphere.io/v1alpha2",
-		"kind":       "User",
-		"metadata":   meta,
-	}}
-}
-
-func testUsers(names ...string) []unstructured.Unstructured {
-	out := make([]unstructured.Unstructured, 0, len(names))
-	for _, n := range names {
-		out = append(out, testUser(n, n+".olares.com"))
-	}
-	return out
-}
-
 func TestBuildSharedInclusterTemplates_perUserEntranceExcluded(t *testing.T) {
 	// Per-user single-entrance host uses appid.owner.zone — must never be
 	// matched by the shared-template regex (which is anchored on the exact
@@ -249,7 +136,7 @@ func TestBuildSharedInclusterTemplates_perUserEntranceExcluded(t *testing.T) {
 	entrances := []SharedInclusterEntrance{
 		{AppID: "a5be2268", EntranceName: "ollama", EntranceID: "a5be2268", PlatformDomain: "olares.com", HostPattern: "a5be2268.shared.olares.com"},
 	}
-	plugins := buildSharedInclusterTemplates(entrances, "172.16.0.4", nil)
+	plugins := buildSharedInclusterTemplates(entrances, "172.16.0.4")
 	if len(plugins) != 1 {
 		t.Fatalf("expected 1 plugin, got %d", len(plugins))
 	}
@@ -271,10 +158,10 @@ func TestInClusterGatewayEnabled_defaultsTrue(t *testing.T) {
 
 func TestBuildSharedInclusterTemplates_clusterIPRotation(t *testing.T) {
 	ent := SharedInclusterEntrance{
-		AppID: "a5be2268", EntranceName: "api", EntranceID: "a5be2268", PlatformDomain: "olares.com", HostPattern: "a5be2268.*.olares.com",
+		AppID: "a5be2268", EntranceName: "api", EntranceID: "a5be2268", PlatformDomain: "machine.olares.com", HostPattern: "a5be2268.machine.olares.com",
 	}
-	p1 := buildSharedInclusterTemplates([]SharedInclusterEntrance{ent}, "10.0.0.1", testUsers("bob"))
-	p2 := buildSharedInclusterTemplates([]SharedInclusterEntrance{ent}, "10.0.0.2", testUsers("bob"))
+	p1 := buildSharedInclusterTemplates([]SharedInclusterEntrance{ent}, "10.0.0.1")
+	p2 := buildSharedInclusterTemplates([]SharedInclusterEntrance{ent}, "10.0.0.2")
 	if len(p1) != 1 || len(p2) != 1 {
 		t.Fatalf("expected single plugin per call, got %d / %d", len(p1), len(p2))
 	}
@@ -289,7 +176,7 @@ func TestBuildSharedInclusterTemplates_clusterIPRotation(t *testing.T) {
 func TestBuildSharedInclusterTemplates_roundTripCorefile(t *testing.T) {
 	plugins := buildSharedInclusterTemplates([]SharedInclusterEntrance{
 		{AppID: "bc2bd381", EntranceName: "litellm", EntranceID: "bc2bd381", PlatformDomain: "olares.com", HostPattern: "bc2bd381.shared.olares.com"},
-	}, "192.168.1.10", nil)
+	}, "192.168.1.10")
 	if len(plugins) != 1 {
 		t.Fatalf("expected 1 plugin, got %d", len(plugins))
 	}
@@ -352,16 +239,15 @@ func TestParseLogicalHostPattern(t *testing.T) {
 		t.Fatalf("parsed result id=%q domain=%q hostType=%q", id, domain, hostType)
 	}
 
-	id, domain, hostType, ok = parseLogicalHostPattern("bc2bd381.*.olares.com")
-	if !ok {
-		t.Fatal("expected application logical host pattern to be parsed")
-	}
-	if id != "bc2bd381" || domain != "olares.com" || hostType != hostPatternViewerWildcard {
-		t.Fatalf("parsed logical result id=%q domain=%q hostType=%q", id, domain, hostType)
+	id, domain, hostType, ok = parseLogicalHostPattern("bc2bd381.machine.olares.com")
+	if !ok || id != "bc2bd381" || domain != "machine.olares.com" || hostType != hostPatternApplicationExact {
+		t.Fatalf("parsed machine host id=%q domain=%q hostType=%q ok=%v", id, domain, hostType, ok)
 	}
 
 	for _, pattern := range []string{
-		"bc2bd381.bob.olares.com",
+		"bc2bd381.*.olares.com",
+		"bc2bd381.shared.*.olares.com",
+		"bc2bd381..olares.com",
 		".shared.olares.com",
 		"*.shared.olares.com",
 		"bc2bd381.*.",
@@ -417,7 +303,7 @@ func TestSharedInclusterEntrancesFromSRRItems(t *testing.T) {
 	}
 
 	perUser := "a5be2268.bob.olares.com"
-	plugins := buildSharedInclusterTemplates(got, "10.0.0.5", nil)
+	plugins := buildSharedInclusterTemplates(got, "10.0.0.5")
 	for _, p := range plugins {
 		if strings.Contains(p.ToString(), perUser) {
 			t.Fatalf("per-user host must not appear: %s", p.ToString())
@@ -446,12 +332,13 @@ func TestSharedInclusterEntrancesFromSRRItems_passthroughAndDirect(t *testing.T)
 	}
 }
 
-func TestSharedInclusterEntrancesFromSRRItems_logicalPatternNotFirst(t *testing.T) {
+func TestSharedInclusterEntrancesFromSRRItems_exactPatternsAndInvalidWildcard(t *testing.T) {
 	prefix := "a5be2268"
 	srr := unstructuredSRR("ollama-shared", "shared-a5be2268-api", map[string]string{
 		labelSRRAppID: "a5be2268", labelSRREntrance: "api",
 	}, "gateway", []string{
 		"api.*.olares.com",
+		"api.machine.olares.com",
 		prefix + ".shared.olares.com",
 	})
 	got := sharedInclusterEntrancesFromSRRItems(
@@ -459,10 +346,10 @@ func TestSharedInclusterEntrancesFromSRRItems_logicalPatternNotFirst(t *testing.
 		nil,
 	)
 	if len(got) != 2 {
-		t.Fatalf("expected 2 entrances (one per hostPattern), got %d (%+v)", len(got), got)
+		t.Fatalf("expected 2 exact entrances, skipping old wildcard, got %d (%+v)", len(got), got)
 	}
-	if got[0].EntranceID != "api" || got[0].HostPattern != "api.*.olares.com" {
-		t.Fatalf("first = %+v, want api / api.*.olares.com", got[0])
+	if got[0].EntranceID != "api" || got[0].HostPattern != "api.machine.olares.com" {
+		t.Fatalf("first = %+v, want api / api.machine.olares.com", got[0])
 	}
 	if got[1].EntranceID != prefix || got[1].HostPattern != prefix+".shared.olares.com" {
 		t.Fatalf("second = %+v, want %s / %s.shared.olares.com", got[1], prefix, prefix)
@@ -473,8 +360,8 @@ func TestSharedInclusterEntrancesFromSRRItems_friendlyAndHash(t *testing.T) {
 	srr := unstructuredSRR("router-shared", "app-f3395cd5-web", map[string]string{
 		labelSRRAppID: "f3395cd5", labelSRREntrance: "web",
 	}, "gateway", []string{
-		"router.*.olares.com",
-		"f3395cd5.*.olares.com",
+		"router.machine.olares.com",
+		"f3395cd5.machine.olares.com",
 	})
 	got := sharedInclusterEntrancesFromSRRItems(
 		[]unstructured.Unstructured{*srr},
@@ -483,7 +370,7 @@ func TestSharedInclusterEntrancesFromSRRItems_friendlyAndHash(t *testing.T) {
 	if len(got) != 2 {
 		t.Fatalf("expected 2, got %d (%+v)", len(got), got)
 	}
-	if got[0].HostPattern != "router.*.olares.com" || got[1].HostPattern != "f3395cd5.*.olares.com" {
+	if got[0].HostPattern != "router.machine.olares.com" || got[1].HostPattern != "f3395cd5.machine.olares.com" {
 		t.Fatalf("patterns = %q, %q", got[0].HostPattern, got[1].HostPattern)
 	}
 }
@@ -502,7 +389,7 @@ func TestBuildSharedInclusterTemplates_overridesUserWildcard(t *testing.T) {
 	// handle other names in the zone via fallthrough on the shared template.
 	shared := buildSharedInclusterTemplates([]SharedInclusterEntrance{
 		{AppID: "bc2bd381", EntranceName: "litellm", EntranceID: "bc2bd381", PlatformDomain: "olares.com", HostPattern: "bc2bd381.shared.olares.com"},
-	}, "10.233.38.210", nil)
+	}, "10.233.38.210")
 	if len(shared) != 1 {
 		t.Fatalf("expected 1 shared template, got %d", len(shared))
 	}
@@ -556,14 +443,14 @@ func TestRegenerateCorefileInclusterGatewayToggle(t *testing.T) {
 		assertContainsSharedExactTemplate(t, corefileBody)
 	})
 
-	t.Run("TC-062 OFF state removes shared templates but keeps user wildcard", func(t *testing.T) {
+	t.Run("TC-062 OFF state removes shared templates but keeps machine wildcard", func(t *testing.T) {
 		kubeClient, dynamicClient := buildCorefileRegenerateHarness(t, false)
 		if err := RegenerateCorefile(ctx, kubeClient, dynamicClient); err != nil {
 			t.Fatalf("RegenerateCorefile failed: %v", err)
 		}
 		corefileBody := mustReadCorefileConfigMap(t, ctx, kubeClient)
 		assertNotContainsSharedExactTemplate(t, corefileBody)
-		assertContainsUserWildcard(t, corefileBody)
+		assertContainsMachineWildcard(t, corefileBody)
 	})
 
 	t.Run("TC-063 OFF->ON switch restores exact shared template", func(t *testing.T) {
@@ -594,32 +481,8 @@ func TestRegenerateCorefileInclusterGatewayToggle(t *testing.T) {
 		}
 		corefileBody := mustReadCorefileConfigMap(t, ctx, kubeClient)
 		assertNotContainsSharedExactTemplate(t, corefileBody)
-		assertContainsUserWildcard(t, corefileBody)
+		assertContainsMachineWildcard(t, corefileBody)
 	})
-}
-
-func TestRegenerateCorefileLogicalPatternLocalViewersOnly(t *testing.T) {
-	ctx := context.Background()
-	kubeClient, dynamicClient := buildCorefileRegenerateHarness(t, true)
-	srr := unstructuredSRR("litellm-ns", "app-366ada1d-api", map[string]string{
-		labelSRRAppID: "366ada1d", labelSRREntrance: "api",
-	}, "gateway", []string{"366ada1d.*.olares.com"})
-	if _, err := dynamicClient.Resource(sharedRouteRegistryGVR).Namespace("litellm-ns").Create(ctx, srr, metav1.CreateOptions{}); err != nil {
-		t.Fatalf("create SRR: %v", err)
-	}
-	if err := RegenerateCorefile(ctx, kubeClient, dynamicClient); err != nil {
-		t.Fatalf("RegenerateCorefile failed: %v", err)
-	}
-	body := mustReadCorefileConfigMap(t, ctx, kubeClient)
-	if _, err := corefile.New(body); err != nil {
-		t.Fatalf("CoreDNS rejected generated Corefile: %v\n%s", err, body)
-	}
-	if !strings.Contains(body, `366ada1d\.(brucedai)\.olares\.com`) {
-		t.Fatalf("expected logical template limited to local viewer, got:\n%s", body)
-	}
-	if strings.Contains(body, `366ada1d\.[^.]+\.olares\.com`) {
-		t.Fatalf("logical template must not match any viewer, got:\n%s", body)
-	}
 }
 
 func TestRegenerateCorefileSRRListDegrade(t *testing.T) {
@@ -637,7 +500,7 @@ func TestRegenerateCorefileSRRListDegrade(t *testing.T) {
 		}
 
 		corefileBody := mustReadCorefileConfigMap(t, ctx, kubeClient)
-		assertContainsUserWildcard(t, corefileBody)
+		assertContainsMachineWildcard(t, corefileBody)
 		assertNotContainsSharedExactTemplate(t, corefileBody)
 	})
 
@@ -650,15 +513,15 @@ func TestRegenerateCorefileSRRListDegrade(t *testing.T) {
 		assertContainsSharedExactTemplate(t, corefileBody)
 	})
 
-	t.Run("TC-A5-3 core input list error still fails closed", func(t *testing.T) {
+	t.Run("TC-A5-3 machine configuration read error still fails closed", func(t *testing.T) {
 		kubeClient, dynamicClient := buildCorefileRegenerateHarness(t, true)
-		dynamicClient.PrependReactor("list", "users",
+		dynamicClient.PrependReactor("get", "terminus",
 			func(clienttesting.Action) (bool, runtime.Object, error) {
-				return true, nil, errors.New("forbidden: users list denied")
+				return true, nil, errors.New("forbidden: terminus get denied")
 			})
 
 		if err := RegenerateCorefile(ctx, kubeClient, dynamicClient); err == nil {
-			t.Fatal("expected error for core input (users) list failure, got nil")
+			t.Fatal("expected error for machine configuration read failure, got nil")
 		}
 	})
 }
@@ -681,10 +544,10 @@ func TestRegenerateCorefileReloadAndSizeGuard(t *testing.T) {
 		kubeClient, dynamicClient := buildCorefileRegenerateHarness(t, true)
 		originalCorefile := mustReadCorefileConfigMap(t, ctx, kubeClient)
 
-		oversizedUsers := buildManyUsersForCorefile(12000)
-		dynamicClient.PrependReactor("list", "users",
+		oversizedRoutes := buildManyRoutesForCorefile(12000)
+		dynamicClient.PrependReactor("list", "sharedrouteregistries",
 			func(clienttesting.Action) (bool, runtime.Object, error) {
-				return true, oversizedUsers, nil
+				return true, oversizedRoutes, nil
 			})
 
 		err := RegenerateCorefile(ctx, kubeClient, dynamicClient)
@@ -793,19 +656,7 @@ func buildCorefileRegenerateHarness(t *testing.T, inClusterEnabled bool) (*kubef
 			},
 		},
 	}
-	user := &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"apiVersion": "iam.kubesphere.io/v1alpha2",
-			"kind":       "User",
-			"metadata": map[string]interface{}{
-				"name": sharedViewer,
-				"annotations": map[string]interface{}{
-					UserAnnotationZoneKey: sharedZone,
-					UserIndexAna:          "0",
-				},
-			},
-		},
-	}
+
 	srr := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "gateway.olares.io/v1alpha1",
@@ -833,10 +684,24 @@ func buildCorefileRegenerateHarness(t *testing.T, inClusterEnabled bool) (*kubef
 			sharedRouteRegistryGVR: "SharedRouteRegistryList",
 			application.GVR:        "ApplicationList",
 			calicoIPPoolGVR:        "IPPoolList",
-			{Group: "iam.kubesphere.io", Version: "v1alpha2", Resource: "users"}: "UserList",
+			terminusGVR:            "TerminusList",
 		},
-		clusterConfig, user, srr,
+		clusterConfig, srr,
 	)
+	terminus := &unstructured.Unstructured{Object: map[string]interface{}{
+		"apiVersion": "sys.bytetrade.io/v1alpha1", "kind": "Terminus",
+		"metadata": map[string]interface{}{"name": "terminus"},
+		"spec":     map[string]interface{}{"localName": sharedViewer, "settings": map[string]interface{}{"domainName": sharedZone}},
+	}}
+	if _, err := dynamicClient.Resource(terminusGVR).Create(context.Background(), terminus, metav1.CreateOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := kubeClient.CoreV1().ConfigMaps("os-network").Create(context.Background(), &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{Name: "default-network", Namespace: "os-network"},
+		Data:       map[string]string{"local-dns-ip": "192.168.128.10"},
+	}, metav1.CreateOptions{}); err != nil {
+		t.Fatal(err)
+	}
 	return kubeClient, dynamicClient
 }
 
@@ -887,11 +752,11 @@ func assertNotContainsSharedExactTemplate(t *testing.T, corefileBody string) {
 	}
 }
 
-func assertContainsUserWildcard(t *testing.T, corefileBody string) {
+func assertContainsMachineWildcard(t *testing.T, corefileBody string) {
 	t.Helper()
 	const userTemplate = "template IN A brucedai.olares.com"
 	if !strings.Contains(corefileBody, userTemplate) {
-		t.Fatalf("expected user wildcard template to remain, got:\n%s", corefileBody)
+		t.Fatalf("expected machine wildcard template to remain, got:\n%s", corefileBody)
 	}
 }
 
@@ -920,27 +785,16 @@ func unstructuredSRR(ns, name string, labels map[string]string, routeMode string
 	return &unstructured.Unstructured{Object: obj}
 }
 
-func buildManyUsersForCorefile(count int) *unstructured.UnstructuredList {
+func buildManyRoutesForCorefile(count int) *unstructured.UnstructuredList {
 	list := &unstructured.UnstructuredList{}
-	list.SetAPIVersion("iam.kubesphere.io/v1alpha2")
-	list.SetKind("UserList")
-	list.Items = make([]unstructured.Unstructured, 0, count)
+	list.SetAPIVersion("gateway.olares.io/v1alpha1")
+	list.SetKind("SharedRouteRegistryList")
 	for i := 0; i < count; i++ {
-		name := fmt.Sprintf("user-%05d", i)
-		zone := fmt.Sprintf("%s.olares.com", name)
-		list.Items = append(list.Items, unstructured.Unstructured{
-			Object: map[string]interface{}{
-				"apiVersion": "iam.kubesphere.io/v1alpha2",
-				"kind":       "User",
-				"metadata": map[string]interface{}{
-					"name": name,
-					"annotations": map[string]interface{}{
-						UserAnnotationZoneKey: zone,
-						UserIndexAna:          "0",
-					},
-				},
-			},
-		})
+		id := fmt.Sprintf("app%05d", i)
+		route := unstructuredSRR("apps", id,
+			map[string]string{labelSRRAppID: id, labelSRREntrance: "web"}, srrRouteModeGateway,
+			[]string{id + ".shared.olares.com"})
+		list.Items = append(list.Items, *route)
 	}
 	return list
 }

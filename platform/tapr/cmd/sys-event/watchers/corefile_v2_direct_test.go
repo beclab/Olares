@@ -107,9 +107,9 @@ func TestV2DirectSharedTemplatesFromCluster_TC_V2_01_singleEntrance(t *testing.T
 			{
 				ObjectMeta: metav1.ObjectMeta{Name: appName},
 				Spec: application.ApplicationSpec{
-					Name:   appName,
-					Owner:  appOwner,
-					Appid:  entranceID,
+					Name:      appName,
+					Owner:     appOwner,
+					Appid:     entranceID,
 					Namespace: "nginx-ns",
 					SharedEntrances: []application.Entrance{
 						{Name: "web", Host: "nginx-svc"},
@@ -137,8 +137,7 @@ func TestV2DirectSharedTemplatesFromCluster_TC_V2_01_singleEntrance(t *testing.T
 		},
 	})
 
-	users := []*unstructured.Unstructured{userWithZone("brucedai", userZone)}
-	plugins, err := v2DirectSharedTemplatesFromCluster(context.Background(), kubeClient, dynamicClient, toUnstructuredUsers(users))
+	plugins, err := v2DirectSharedTemplatesFromCluster(context.Background(), kubeClient, dynamicClient)
 	if err != nil {
 		t.Fatalf("v2DirectSharedTemplatesFromCluster failed: %v", err)
 	}
@@ -204,8 +203,7 @@ func TestV2DirectSharedTemplatesFromCluster_TC_V2_02_multiEntrance(t *testing.T)
 		},
 	})
 
-	users := []*unstructured.Unstructured{userWithZone("brucedai", userZone)}
-	plugins, err := v2DirectSharedTemplatesFromCluster(context.Background(), kubeClient, dynamicClient, toUnstructuredUsers(users))
+	plugins, err := v2DirectSharedTemplatesFromCluster(context.Background(), kubeClient, dynamicClient)
 	if err != nil {
 		t.Fatalf("v2DirectSharedTemplatesFromCluster failed: %v", err)
 	}
@@ -271,8 +269,7 @@ func TestV2DirectSharedTemplatesFromCluster_TC_V2_03_v3SharedSkipsV2(t *testing.
 		},
 	})
 
-	users := []*unstructured.Unstructured{userWithZone("brucedai", userZone)}
-	plugins, err := v2DirectSharedTemplatesFromCluster(context.Background(), kubeClient, dynamicClient, toUnstructuredUsers(users))
+	plugins, err := v2DirectSharedTemplatesFromCluster(context.Background(), kubeClient, dynamicClient)
 	if err != nil {
 		t.Fatalf("v2DirectSharedTemplatesFromCluster failed: %v", err)
 	}
@@ -329,8 +326,7 @@ func TestV2DirectSharedTemplatesFromCluster_TC_V2_04_bareAppidEntranceIDExcluded
 		},
 	})
 
-	users := []*unstructured.Unstructured{userWithZone("brucedai", userZone)}
-	plugins, err := v2DirectSharedTemplatesFromCluster(context.Background(), kubeClient, dynamicClient, toUnstructuredUsers(users))
+	plugins, err := v2DirectSharedTemplatesFromCluster(context.Background(), kubeClient, dynamicClient)
 	if err != nil {
 		t.Fatalf("v2DirectSharedTemplatesFromCluster failed: %v", err)
 	}
@@ -437,10 +433,10 @@ func buildV2RegenerateHarness(t *testing.T, inClusterEnabled bool) (*kubefake.Cl
 	t.Helper()
 
 	const (
-		appName   = "nginx"
-		appOwner  = "brucedai"
+		appName    = "nginx"
+		appOwner   = "brucedai"
 		sharedZone = "brucedai.olares.com"
-		serviceIP = "10.233.32.202"
+		serviceIP  = "10.233.32.202"
 	)
 
 	kubeClient, dynamicClient := buildCorefileRegenerateHarness(t, inClusterEnabled)
@@ -478,30 +474,6 @@ func buildV2RegenerateHarness(t *testing.T, inClusterEnabled bool) (*kubefake.Cl
 		t.Fatalf("create application: %v", err)
 	}
 	return kubeClient, dynamicClient
-}
-
-func userWithZone(name, zone string) *unstructured.Unstructured {
-	return &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"apiVersion": "iam.kubesphere.io/v1alpha2",
-			"kind":       "User",
-			"metadata": map[string]interface{}{
-				"name": name,
-				"annotations": map[string]interface{}{
-					UserAnnotationZoneKey: zone,
-					UserIndexAna:          "0",
-				},
-			},
-		},
-	}
-}
-
-func toUnstructuredUsers(users []*unstructured.Unstructured) []unstructured.Unstructured {
-	out := make([]unstructured.Unstructured, len(users))
-	for i, u := range users {
-		out[i] = *u
-	}
-	return out
 }
 
 func applicationUnstructured(app *application.Application) *unstructured.Unstructured {
