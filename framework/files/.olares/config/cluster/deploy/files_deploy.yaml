@@ -49,6 +49,9 @@ spec:
     metadata:
       labels:
         app: files
+        # This secondary role label lets search3-server find the monitor sidecar while the
+        # DaemonSet keeps its immutable app=files selector for safe in-place upgrades.
+        search3.olares.io/monitor: "true"
       annotations:
 {{ if .Values.telemetry }}
         instrumentation.opentelemetry.io/inject-nginx: "olares-instrumentation"
@@ -398,6 +401,102 @@ spec:
           terminationMessagePath: /dev/termination-log
           terminationMessagePolicy: File
           imagePullPolicy: IfNotPresent
+
+        - name: search3monitor
+          image: beclab/search3monitor:v0.4.6
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8081
+          # Monitor initialization waits for the Search3 schema, node metadata, users, and NATS
+          # before binding port 8081. A long startup budget avoids restart loops during rebuilds,
+          # while readiness keeps search3-server from routing to an uninitialized sidecar.
+          startupProbe:
+            tcpSocket:
+              port: 8081
+            periodSeconds: 5
+            failureThreshold: 360
+          readinessProbe:
+            tcpSocket:
+              port: 8081
+            periodSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            tcpSocket:
+              port: 8081
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          env:
+            - name: NODE_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: TERMINUSD_HOST
+              value: master-node:18088
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  key: database_url
+                  name: search3-secrets
+            - name: SEARCH3_SERVER_ADDRESS
+              value: search3.os-framework:80
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.namespace
+            # The watcher uses this explicit name when it registers with fsnotify. Keeping it
+            # stable avoids making registration depend on the parent DaemonSet or Pod name.
+            - name: CONTAINER_NAME
+              value: search3monitor
+            - name: LOG_FILE
+              value: "true"
+            - name: NATS_HOST
+              value: nats.os-platform
+            - name: NATS_PORT
+              value: "4222"
+            - name: NATS_USERNAME
+              value: os-search-server
+            - name: NATS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: nats_password
+                  name: search-server-nats-secret
+            - name: NATS_SUBJECT_SYSTEM_SEARCH
+              value: os.search
+            - name: NATS_SUBJECT_SYSTEM_USERS
+              value: os.users
+            - name: NATS_SUBJECT_SYSTEM_GROUPS
+              value: os.groups
+            - name: LOG_MAX_FILE_BYTES
+              value: "16777216"
+            - name: LOG_DIR_MAX_BYTES
+              value: "1073741824"
+            - name: JINA_CLIP_V2_URL
+              value: http://sharedentrances-api.jinaclipv2embed-shared
+          volumeMounts:
+            - name: fb-data
+              mountPath: /appdata
+            - name: userspace-dir
+              mountPath: /data
+            - name: upload-appdata
+              mountPath: /appcache/
+{{ if .Values.sharedlib }}
+            - name: shared-lib
+              mountPath: /data/External
+              mountPropagation: Bidirectional
+{{ end }}
+            - name: common-data
+              mountPath: /appcommon/
+          securityContext:
+            privileged: true
+            runAsUser: 0
+            allowPrivilegeEscalation: true
 
       volumes:
         - name: userspace-dir
