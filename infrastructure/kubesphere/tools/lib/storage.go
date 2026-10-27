@@ -113,6 +113,8 @@ func (r *StandardStorage) NamespaceScoped() bool {
 	return false
 }
 
+func (r *StandardStorage) Destroy() {}
+
 func (r *StatusStandardStorage) GroupVersionKind(containingGV schema.GroupVersion) schema.GroupVersionKind {
 	return r.cfg.gvk
 }

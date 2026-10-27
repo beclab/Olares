@@ -47,7 +47,7 @@ func TestGetListDashboards(t *testing.T) {
 		t.Fatalf("unable add APIs to scheme: %v", err)
 	}
 
-	c = fake.NewFakeClientWithScheme(sch)
+	c = fake.NewClientBuilder().WithScheme(sch).Build()
 
 	var labelSet1 = map[string]string{"foo-1": "bar-1"}
 	var labelSet2 = map[string]string{"foo-2": "bar-2"}

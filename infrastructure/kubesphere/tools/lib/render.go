@@ -22,10 +22,10 @@ import (
 	"log"
 	"net"
 
+	"github.com/go-openapi/spec"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apiserver/pkg/registry/rest"
 
-	"github.com/go-openapi/spec"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -47,6 +47,12 @@ type Config struct {
 	Resources          []schema.GroupVersionResource
 	Mapper             *meta.DefaultRESTMapper
 }
+
+type statusRESTStorage struct {
+	*StatusStandardStorage
+}
+
+func (statusRESTStorage) Destroy() {}
 
 func (c *Config) GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition {
 	out := map[string]common.OpenAPIDefinition{}
@@ -93,7 +99,13 @@ func RenderOpenAPISpec(cfg Config) (string, error) {
 		return "", err
 	}
 	serverConfig.OpenAPIConfig = genericapiserver.DefaultOpenAPIConfig(cfg.GetOpenAPIDefinitions, apiopenapi.NewDefinitionNamer(cfg.Scheme))
-	serverConfig.OpenAPIConfig.Info.InfoProps = cfg.Info
+	info, err := json.Marshal(cfg.Info)
+	if err != nil {
+		return "", err
+	}
+	if err := json.Unmarshal(info, &serverConfig.OpenAPIConfig.Info.InfoProps); err != nil {
+		return "", err
+	}
 
 	genericServer, err := serverConfig.Complete().New("stash-server", genericapiserver.NewEmptyDelegate()) // completion is done in Complete, no need for a second time
 	if err != nil {
@@ -144,7 +156,7 @@ func RenderOpenAPISpec(cfg Config) (string, error) {
 					storage[stuff.gvk.Version] = map[string]rest.Storage{}
 				}
 				storage[stuff.gvk.Version][r] = NewREST(stuff)
-				storage[stuff.gvk.Version][r+"/status"] = NewStatusREST(
+				storage[stuff.gvk.Version][r+"/status"] = statusRESTStorage{NewStatusREST(
 					StatusResourceInfo{
 						gvk: struct {
 							Group   string
@@ -152,7 +164,7 @@ func RenderOpenAPISpec(cfg Config) (string, error) {
 							Kind    string
 						}{Group: stuff.gvk.Group, Version: stuff.gvk.Version, Kind: stuff.gvk.Kind},
 						obj: stuff.obj,
-					})
+					})}
 			}
 			for version, s := range storage {
 				apiGroupInfo.VersionedResourcesStorageMap[version] = s
