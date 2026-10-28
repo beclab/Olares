@@ -84,7 +84,7 @@ export const useCases: UseCase[] = [
   { title: "QEMU Server", link: "/use-cases/qemu", category: "Virtual machine", description: "Run independent Linux servers with SSH and VPN access", descriptionZh: "运行独立 Linux 服务器，通过 SSH 与 VPN 连接" },
   { title: "Windows", link: "/use-cases/windows", category: "Virtual machine", description: "Run a Windows VM with VNC or Remote Desktop", descriptionZh: "通过 VNC 或远程桌面运行 Windows 虚拟机" },
   { title: "Immich", link: "/use-cases/immich", category: "Entertainment", description: "Back up and organize photos with AI search", descriptionZh: "备份整理照片，支持 AI 搜索" },
-  { title: "Immich NAS uploads", link: "/use-cases/immich-store-uploads-on-nas", category: "Entertainment", description: "Store Immich uploads directly on your NAS", descriptionZh: "将 Immich 上传的媒体直接存储到 NAS" },
+  { title: "Immich NAS storage", titleZh: "Immich NAS 存储", link: "/use-cases/immich-store-uploads-on-nas", category: "Entertainment", description: "Store Immich uploads directly on your NAS", descriptionZh: "将通过 Immich 上传的照片和视频直接存储到 NAS" },
   { title: "Jellyfin", link: "/use-cases/jellyfin", category: "Entertainment", description: "Private media streaming server", descriptionZh: "私人流媒体服务器" },
   { title: "Steam", link: "/use-cases/steam-direct-play", category: "Games", description: "Play Steam games locally or stream them", descriptionZh: "本地游玩 Steam 游戏或串流到其他设备" },
   { title: "Komga", link: "/use-cases/komga", category: "Entertainment", description: "Self-hosted comic and manga library", descriptionZh: "自托管的漫画书库" },
