@@ -24,7 +24,7 @@ Duix.Avatar（前身为 HeyGem）是一个开源 AI 工具包，用于生成数�
 - 为数字人克隆准备和处理视频及音频素材。
 - 使用 Olares 上的 Hoppscotch 调用 Duix.Avatar API 集合来训练模型、合成音频和创建视频。
 
-## Prerequisites
+## 准备工作 {#prerequisites}
 
 在开始之前，请确保：
 - Olares 1.11 或更高版本。
@@ -168,7 +168,7 @@ Duix.Avatar API 地址与你的 Olares ID 绑定。在以下所有 API 请求中
     ```
    ![在 Files 中检查视频](/images/manual/use-cases/duix-avatar-check-video-in-files.png#bordered)
 
-## FAQ
+## 常见问题 {#faq}
 
 ### 进度卡住或合成失败
 

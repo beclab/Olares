@@ -125,7 +125,7 @@ DeerFlow 2.0 使用 `config.yaml` 文件作为核心配置。要将其连接到�
    你也可以上传附件，让 DeerFlow 将其作为输入：
    ![上传附件](/images/manual/use-cases/deerflow2-write.png#bordered)
 
-## FAQs
+## 常见问题 {#faqs}
 
 ### DeerFlow 2.0 无法生成响应
 

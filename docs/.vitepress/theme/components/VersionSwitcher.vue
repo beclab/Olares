@@ -9,7 +9,8 @@ const props = defineProps<{
   latestVersion: string
 }>();
 
-const { site, page } = useData();
+const { site, page, lang } = useData();
+const switchLabel = computed(() => lang.value.startsWith("zh") ? "切换版本" : "Switch version");
 
 declare const __SITE_PATH_PREFIX__: string;
 declare const __CURRENT_DOC_VERSION__: string;
@@ -109,7 +110,7 @@ const toggle = () => {
 
 <template>
   <VPFlyout  class="VPVersionSwitcher" icon="vpi-versioning" :button="currentVersion"
-    :label="'Switch Version'">
+    :label="switchLabel">
     <div class="items">
       <!-- <VPMenuLink v-if="currentVersion != latestVersion" :item="{
         text: latestVersion,

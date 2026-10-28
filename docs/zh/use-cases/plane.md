@@ -163,7 +163,7 @@ Plane 依赖多个中间件组件才能平稳运行。虽然 PostgreSQL 和 Redi
 
 在本场景中，我们将为该项目创建以下任务项。
 
-| Task title | Module | Cycle | Priority |
+| 任务标题 | 模块 | 迭代周期 | 优先级 |
 |:---|:---|:---|:---|
 | Conduct UX audit | Technical SEO | Phase 1: Discovery | High |
 | Draft eye-catching headlines | Copywriting | Phase 1: Discovery | Urgent |
@@ -218,4 +218,4 @@ Plane 依赖多个中间件组件才能平稳运行。虽然 PostgreSQL 和 Redi
 
 ## 了解更多
 
-- [Official Plane documentation](https://docs.plane.so/)
+- [Plane 官方文档](https://docs.plane.so/)
