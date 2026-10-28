@@ -375,7 +375,6 @@ func main() {
 		}
 	}()
 
-	// api server run with request's token
 	// get kubesphere host from env or config file
 	ksHost := os.Getenv(kubeSphereHostAddr)
 	ksPort := os.Getenv(kubeSphereHostPort)

@@ -114,13 +114,6 @@ func (h *Handler) resume(req *restful.Request, resp *restful.Response) {
 		api.HandleBadRequest(resp, req, err)
 		return
 	}
-	token, err := h.GetUserServiceAccountToken(req.Request.Context(), owner)
-	if err != nil {
-		klog.Error("Failed to get user service account token: ", err)
-		api.HandleError(resp, req, err)
-		return
-	}
-
 	name, amPtr, ok := h.loadAuthorizedLifecycleAM(req.Request.Context(), req, resp, app, owner)
 	if !ok {
 		return
@@ -131,7 +124,7 @@ func (h *Handler) resume(req *restful.Request, resp *restful.Response) {
 		return
 	}
 	var appCfg *appcfg.ApplicationConfig
-	err = json.Unmarshal([]byte(am.Spec.Config), &appCfg)
+	err := json.Unmarshal([]byte(am.Spec.Config), &appCfg)
 	if err != nil {
 		klog.Errorf("unmarshal to appConfig failed %v", err)
 		api.HandleError(resp, req, err)
@@ -145,7 +138,7 @@ func (h *Handler) resume(req *restful.Request, resp *restful.Response) {
 		Client:    h.ctrlClient,
 		AppConfig: appCfg,
 		Op:        v1alpha1.ResumeOp,
-		Token:     token,
+		Token:     h.GetServerServiceAccountToken(),
 	}, validation.ResumePressureValidators()...)
 	if err != nil {
 		api.HandleError(resp, req, err)

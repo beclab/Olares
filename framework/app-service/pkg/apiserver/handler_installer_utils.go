@@ -158,7 +158,7 @@ func (h *Handler) UpdateAppState(ctx context.Context, name string, state v1alpha
 }
 
 func (h *Handler) checkDependencies(req *restful.Request, resp *restful.Response) {
-	owner := req.Attribute(constants.UserContextAttribute) // get owner from request token
+	owner := req.Attribute(constants.UserContextAttribute)
 	var err error
 	depReq := depRequest{}
 	err = req.ReadEntity(&depReq)

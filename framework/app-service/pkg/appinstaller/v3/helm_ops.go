@@ -41,8 +41,8 @@ type HelmOpsV3 struct {
 // NewHelmOps constructs a v3 HelmOps. It delegates to v1.NewHelmOps for the
 // heavy lifting and wraps the result so the dispatcher in
 // pkg/appinstaller/versioned can return a typed v3 value.
-func NewHelmOps(ctx context.Context, kubeConfig *rest.Config, app *appcfg.ApplicationConfig, token string, options v1.Opt) (v1.HelmOpsInterface, error) {
-	v1Ops, err := v1.NewHelmOps(ctx, kubeConfig, app, token, options)
+func NewHelmOps(ctx context.Context, kubeConfig *rest.Config, app *appcfg.ApplicationConfig, options v1.Opt) (v1.HelmOpsInterface, error) {
+	v1Ops, err := v1.NewHelmOps(ctx, kubeConfig, app, options)
 	if err != nil {
 		klog.Errorf("Failed to create v3 HelmOps: %v", err)
 		return nil, err

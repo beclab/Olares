@@ -76,7 +76,6 @@ type installHandlerHelper struct {
 	rawAppName string
 	owner      string
 	chartOwner string
-	token      string
 	insReq     *api.InstallRequest
 	appConfig  *appcfg.ApplicationConfig
 	chartPath  string
@@ -107,13 +106,6 @@ func (h *Handler) install(req *restful.Request, resp *restful.Response) {
 	app := req.PathParameter(ParamAppName)
 	owner := req.Attribute(constants.UserContextAttribute).(string)
 	var err error
-	token, err := h.GetUserServiceAccountToken(req.Request.Context(), owner)
-	if err != nil {
-		klog.Error("Failed to get user service account token: ", err)
-		api.HandleError(resp, req, err)
-		return
-	}
-
 	marketSource := req.HeaderParameter(constants.MarketSource)
 	klog.Infof("install: user: %v, source: %v", owner, marketSource)
 
@@ -200,7 +192,6 @@ func (h *Handler) install(req *restful.Request, resp *restful.Response) {
 			rawAppName: rawAppName,
 			owner:      owner,
 			chartOwner: chartOwner,
-			token:      token,
 			insReq:     insReq,
 			client:     client,
 		}
@@ -219,7 +210,6 @@ func (h *Handler) install(req *restful.Request, resp *restful.Response) {
 				rawAppName: rawAppName,
 				owner:      owner,
 				chartOwner: chartOwner,
-				token:      token,
 				insReq:     insReq,
 				client:     client,
 			},
@@ -237,7 +227,6 @@ func (h *Handler) install(req *restful.Request, resp *restful.Response) {
 				rawAppName: rawAppName,
 				owner:      owner,
 				chartOwner: chartOwner,
-				token:      token,
 				insReq:     insReq,
 				client:     client,
 			}}
@@ -352,7 +341,7 @@ func (h *Handler) install(req *restful.Request, resp *restful.Response) {
 		Client:    h.ctrlClient,
 		AppConfig: appCfg,
 		Op:        v1alpha1.InstallOp,
-		Token:     token,
+		Token:     h.GetServerServiceAccountToken(),
 	}, validation.InstallabilityValidators()...)
 	if err != nil {
 		api.HandleError(resp, req, err)
@@ -820,7 +809,6 @@ func (h *installHandlerHelper) applyAppMgr(name string, extraLabels map[string]s
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 			Annotations: map[string]string{
-				api.AppTokenKey:                 h.token,
 				api.AppRepoURLKey:               h.insReq.RepoURL,
 				api.AppVersionKey:               h.appConfig.Version,
 				api.AppMarketSourceKey:          marketSource,
@@ -861,7 +849,6 @@ func (h *installHandlerHelper) applyAppMgr(name string, extraLabels map[string]s
 		}
 		metadataPatch := map[string]interface{}{
 			"annotations": map[string]interface{}{
-				api.AppTokenKey:                 h.token,
 				api.AppRepoURLKey:               h.insReq.RepoURL,
 				api.AppVersionKey:               h.appConfig.Version,
 				api.AppMarketSourceKey:          marketSource,
@@ -1094,7 +1081,6 @@ func (h *installHandlerHelperV2) getAppConfig(adminUsers []string, marketSource 
 		Owner:        h.owner,
 		RepoURL:      h.insReq.RepoURL,
 		Version:      chartVersion,
-		Token:        h.token,
 		Admin:        admin,
 		MarketSource: marketSource,
 		IsAdmin:      isAdmin,

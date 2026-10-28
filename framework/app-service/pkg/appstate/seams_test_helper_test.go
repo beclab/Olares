@@ -24,7 +24,7 @@ import (
 // of failing fast and letting cleanup move on. Tests that need real
 // fakes call injectHelmOps to override these on top.
 func TestMain(m *testing.M) {
-	newHelmOps = func(ctx context.Context, kubeConfig *rest.Config, app *appcfg.ApplicationConfig, token string, options appinstaller.Opt) (appinstaller.HelmOpsInterface, error) {
+	newHelmOps = func(ctx context.Context, kubeConfig *rest.Config, app *appcfg.ApplicationConfig, options appinstaller.Opt) (appinstaller.HelmOpsInterface, error) {
 		return nil, errors.New("appstate test: newHelmOps not injected")
 	}
 	getKubeConfig = func() (*rest.Config, error) {
@@ -40,7 +40,7 @@ func injectHelmOps(t *testing.T, f *testutil.FakeHelmOps) {
 	t.Helper()
 	origNew := newHelmOps
 	origCfg := getKubeConfig
-	newHelmOps = func(ctx context.Context, kubeConfig *rest.Config, app *appcfg.ApplicationConfig, token string, options appinstaller.Opt) (appinstaller.HelmOpsInterface, error) {
+	newHelmOps = func(ctx context.Context, kubeConfig *rest.Config, app *appcfg.ApplicationConfig, options appinstaller.Opt) (appinstaller.HelmOpsInterface, error) {
 		return f, nil
 	}
 	getKubeConfig = func() (*rest.Config, error) { return &rest.Config{}, nil }
@@ -55,7 +55,7 @@ func injectHelmOpsError(t *testing.T, err error) {
 	t.Helper()
 	origNew := newHelmOps
 	origCfg := getKubeConfig
-	newHelmOps = func(ctx context.Context, kubeConfig *rest.Config, app *appcfg.ApplicationConfig, token string, options appinstaller.Opt) (appinstaller.HelmOpsInterface, error) {
+	newHelmOps = func(ctx context.Context, kubeConfig *rest.Config, app *appcfg.ApplicationConfig, options appinstaller.Opt) (appinstaller.HelmOpsInterface, error) {
 		return nil, err
 	}
 	getKubeConfig = func() (*rest.Config, error) { return &rest.Config{}, nil }
@@ -74,7 +74,7 @@ func injectHelmOpsError(t *testing.T, err error) {
 func fakeDeps(f *testutil.FakeHelmOps) Deps {
 	return Deps{
 		KubeConfig: func() (*rest.Config, error) { return &rest.Config{}, nil },
-		NewHelmOps: func(ctx context.Context, kubeConfig *rest.Config, app *appcfg.ApplicationConfig, token string, options appinstaller.Opt) (appinstaller.HelmOpsInterface, error) {
+		NewHelmOps: func(ctx context.Context, kubeConfig *rest.Config, app *appcfg.ApplicationConfig, options appinstaller.Opt) (appinstaller.HelmOpsInterface, error) {
 			return f, nil
 		},
 	}

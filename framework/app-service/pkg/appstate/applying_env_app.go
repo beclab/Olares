@@ -130,8 +130,6 @@ func (a *ApplyingEnvApp) exec(ctx context.Context) error {
 		return err
 	}
 
-	token := a.manager.Annotations[api.AppTokenKey]
-
 	var appCfg *appcfg.ApplicationConfig
 	if err := json.Unmarshal([]byte(a.manager.Spec.Config), &appCfg); err != nil {
 		klog.Errorf("Failed to unmarshal app config: %v", err)
@@ -146,7 +144,7 @@ func (a *ApplyingEnvApp) exec(ctx context.Context) error {
 	preState := a.manager.Annotations[api.AppPreUpgradeStateKey]
 	skipWaitForStartUp := preState == appsv1.Stopped.String()
 
-	helmOps, err := a.deps.NewHelmOps(ctx, kubeConfig, appCfg, token, appinstaller.Opt{
+	helmOps, err := a.deps.NewHelmOps(ctx, kubeConfig, appCfg, appinstaller.Opt{
 		Source:             a.manager.Spec.Source,
 		MarketSource:       appcfg.GetMarketSource(a.manager),
 		SkipWaitForStartUp: skipWaitForStartUp,

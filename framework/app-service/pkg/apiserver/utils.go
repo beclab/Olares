@@ -51,7 +51,7 @@ import (
 // authorisation; it just returns the underlying Application.
 func getAppByName(req *restful.Request, resp *restful.Response) (*v1alpha1.Application, error) {
 	appName := req.PathParameter(ParamAppName)
-	owner := req.Attribute(constants.UserContextAttribute) // get owner from request token
+	owner := req.Attribute(constants.UserContextAttribute)
 
 	client := req.Attribute(constants.KubeSphereClientAttribute).(*clientset.ClientSet)
 

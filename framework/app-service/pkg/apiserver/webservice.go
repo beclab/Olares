@@ -145,7 +145,6 @@ func addServiceToContainer(c *restful.Container, handler *Handler) error {
 	//	Doc("get a user's resource and resource usage").
 	//	Param(ws.PathParameter(ParamAppName, "the name of the user")).
 	//	Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
-	//	Param(ws.HeaderParameter("X-Authorization", "Auth token")).
 	//	Returns(http.StatusOK, "Success to get", nil))
 
 	ws.Route(ws.GET("/user/resource").
@@ -514,7 +513,6 @@ func addServiceToContainer(c *restful.Container, handler *Handler) error {
 		Doc("get application environment variables").
 		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
 		Param(ws.PathParameter(ParamAppName, "the name of application")).
-		Param(ws.HeaderParameter("X-Authorization", "Auth token")).
 		Returns(http.StatusOK, "success to get application environment variables", nil))
 
 	ws.Route(ws.PUT("/apps/{"+ParamAppName+"}/env").
@@ -522,7 +520,6 @@ func addServiceToContainer(c *restful.Container, handler *Handler) error {
 		Doc("update application environment variables").
 		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
 		Param(ws.PathParameter(ParamAppName, "the name of application")).
-		Param(ws.HeaderParameter("X-Authorization", "Auth token")).
 		Consumes(restful.MIME_JSON).
 		Returns(http.StatusOK, "success to update application environment variables", nil))
 
@@ -676,7 +673,6 @@ func addServiceToContainer(c *restful.Container, handler *Handler) error {
 		To(handler.createSystemEnv).
 		Doc("create a system environment variable (admin only)").
 		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
-		Param(ws.HeaderParameter("X-Authorization", "Auth token")).
 		Consumes(restful.MIME_JSON).
 		Returns(http.StatusOK, "Success to create system env", nil))
 
@@ -684,7 +680,6 @@ func addServiceToContainer(c *restful.Container, handler *Handler) error {
 		To(handler.listSystemEnvs).
 		Doc("list system environment variables").
 		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
-		Param(ws.HeaderParameter("X-Authorization", "Auth token")).
 		Returns(http.StatusOK, "Success to list system envs", nil))
 
 	ws.Route(ws.PUT("/systemenvs").
@@ -692,7 +687,6 @@ func addServiceToContainer(c *restful.Container, handler *Handler) error {
 		Doc("batch update system environment variable values (admin only)").
 		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
 		Reads([]sysv1alpha1.EnvVarSpec{}).
-		Param(ws.HeaderParameter("X-Authorization", "Auth token")).
 		Consumes(restful.MIME_JSON).
 		Returns(http.StatusOK, "Success to batch update system envs", nil))
 
@@ -701,7 +695,6 @@ func addServiceToContainer(c *restful.Container, handler *Handler) error {
 		Doc("update a system environment variable value (admin only)").
 		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
 		Param(ws.PathParameter(ParamAppName, "the name of system env")).
-		Param(ws.HeaderParameter("X-Authorization", "Auth token")).
 		Consumes(restful.MIME_JSON).
 		Returns(http.StatusOK, "Success to update system env", nil))
 
@@ -710,7 +703,6 @@ func addServiceToContainer(c *restful.Container, handler *Handler) error {
 		Doc("delete a system environment variable (admin only)").
 		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
 		Param(ws.PathParameter(ParamAppName, "the name of system env")).
-		Param(ws.HeaderParameter("X-Authorization", "Auth token")).
 		Returns(http.StatusOK, "Success to delete system env", nil))
 
 	ws.Route(ws.GET("/systemenvs/{"+ParamAppName+"}").
@@ -718,7 +710,6 @@ func addServiceToContainer(c *restful.Container, handler *Handler) error {
 		Doc("get a system environment variable details including referrers").
 		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
 		Param(ws.PathParameter(ParamAppName, "the name of system env")).
-		Param(ws.HeaderParameter("X-Authorization", "Auth token")).
 		Returns(http.StatusOK, "Success to get system env detail", nil))
 
 	// UserEnv API routes
@@ -726,7 +717,6 @@ func addServiceToContainer(c *restful.Container, handler *Handler) error {
 		To(handler.createUserEnv).
 		Doc("create a user environment variable").
 		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
-		Param(ws.HeaderParameter("X-Authorization", "Auth token")).
 		Consumes(restful.MIME_JSON).
 		Returns(http.StatusOK, "Success to create user env", nil))
 
@@ -742,7 +732,6 @@ func addServiceToContainer(c *restful.Container, handler *Handler) error {
 		To(handler.listUserEnvs).
 		Doc("list user environment variables").
 		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
-		Param(ws.HeaderParameter("X-Authorization", "Auth token")).
 		Returns(http.StatusOK, "Success to list user envs", nil))
 
 	ws.Route(ws.PUT("/userenvs").
@@ -750,7 +739,6 @@ func addServiceToContainer(c *restful.Container, handler *Handler) error {
 		Doc("batch update user environment variable values").
 		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
 		Reads([]sysv1alpha1.EnvVarSpec{}).
-		Param(ws.HeaderParameter("X-Authorization", "Auth token")).
 		Consumes(restful.MIME_JSON).
 		Returns(http.StatusOK, "Success to batch update user envs", nil))
 
@@ -759,7 +747,6 @@ func addServiceToContainer(c *restful.Container, handler *Handler) error {
 		Doc("update a user environment variable value").
 		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
 		Param(ws.PathParameter(ParamAppName, "the name of user env")).
-		Param(ws.HeaderParameter("X-Authorization", "Auth token")).
 		Consumes(restful.MIME_JSON).
 		Returns(http.StatusOK, "Success to update user env", nil))
 
@@ -768,7 +755,6 @@ func addServiceToContainer(c *restful.Container, handler *Handler) error {
 		Doc("delete a user environment variable").
 		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
 		Param(ws.PathParameter(ParamAppName, "the name of user env")).
-		Param(ws.HeaderParameter("X-Authorization", "Auth token")).
 		Returns(http.StatusOK, "Success to delete user env", nil))
 
 	ws.Route(ws.GET("/userenvs/{"+ParamAppName+"}").
@@ -776,7 +762,6 @@ func addServiceToContainer(c *restful.Container, handler *Handler) error {
 		Doc("get a user environment variable details including referrers").
 		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
 		Param(ws.PathParameter(ParamAppName, "the name of user env")).
-		Param(ws.HeaderParameter("X-Authorization", "Auth token")).
 		Returns(http.StatusOK, "Success to get user env detail", nil))
 
 	ws.Route(ws.GET("/users/admin/username").

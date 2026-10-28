@@ -97,7 +97,7 @@ type Resp struct {
 
 // Apply middlewarerequest, get response and set values.
 func Apply(middleware *Middleware, kubeConfig *rest.Config, appName, appNamespace,
-	namespace, token, ownerName string, vals map[string]interface{}) error {
+	namespace, ownerName string, vals map[string]interface{}) error {
 	if middleware == nil {
 		return nil
 	}
@@ -118,7 +118,6 @@ func Apply(middleware *Middleware, kubeConfig *rest.Config, appName, appNamespac
 		}
 		resp, err := client.SetTimeout(1*time.Second).R().
 			SetHeader(restful.HEADER_ContentType, restful.MIME_JSON).
-			SetAuthToken(token).
 			SetHeader(constants.BflUserKey, ownerName).
 			SetBody(request).Post(url)
 		if err != nil {

@@ -162,7 +162,6 @@ func (p *UninstallingApp) waitForDeleteSharedNamespaces(ctx context.Context, app
 
 func (p *UninstallingApp) exec(ctx context.Context) error {
 	var err error
-	token := p.manager.Annotations[api.AppTokenKey]
 
 	uninstallAll := p.manager.Annotations[api.AppUninstallAllKey]
 	var appCfg *appcfg.ApplicationConfig
@@ -180,7 +179,7 @@ func (p *UninstallingApp) exec(ctx context.Context) error {
 		klog.Infof("delete old mongodb ..........")
 		return p.oldMongodbUninstall(ctx, kubeConfig)
 	}
-	ops, err := p.deps.NewHelmOps(ctx, kubeConfig, appCfg, token, appinstaller.Opt{MarketSource: appcfg.GetMarketSource(p.manager)})
+	ops, err := p.deps.NewHelmOps(ctx, kubeConfig, appCfg, appinstaller.Opt{MarketSource: appcfg.GetMarketSource(p.manager)})
 	if err != nil {
 		klog.Errorf("make helm ops failed %v", err)
 		return err

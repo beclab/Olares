@@ -48,7 +48,6 @@ func NewInstallingApp(deps Deps,
 
 func (p *InstallingApp) Exec(ctx context.Context) (StatefulInProgressApp, error) {
 	var err error
-	token := p.manager.Annotations[api.AppTokenKey]
 	var appCfg *appcfg.ApplicationConfig
 	err = json.Unmarshal([]byte(p.manager.Spec.Config), &appCfg)
 	if err != nil {
@@ -101,7 +100,7 @@ func (p *InstallingApp) Exec(ctx context.Context) (StatefulInProgressApp, error)
 					Client:    p.client,
 					AppConfig: appCfg,
 					Op:        p.manager.Spec.OpType,
-					Token:     token,
+					Token:     kubeConfig.BearerToken,
 				}
 
 				// toInstallFailed is the single entry point for every "this install
@@ -186,7 +185,7 @@ func (p *InstallingApp) Exec(ctx context.Context) (StatefulInProgressApp, error)
 				}
 
 				var ops appinstaller.HelmOpsInterface
-				ops, err = p.deps.NewHelmOps(c, kubeConfig, appCfg, token,
+				ops, err = p.deps.NewHelmOps(c, kubeConfig, appCfg,
 					appinstaller.Opt{
 						Source:       p.manager.Spec.Source,
 						MarketSource: appcfg.GetMarketSource(p.manager),

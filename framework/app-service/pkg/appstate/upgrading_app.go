@@ -200,7 +200,6 @@ func (p *UpgradingApp) exec(ctx context.Context) error {
 	annotations := p.manager.Annotations
 	version := annotations[api.AppVersionKey]
 	repoURL := annotations[api.AppRepoURLKey]
-	token := annotations[api.AppTokenKey]
 	marketSource := annotations[api.AppMarketSourceKey]
 	//var chartPath string
 	admin, err := kubesphere.GetAdminUsername(ctx, kubeConfig)
@@ -237,7 +236,6 @@ func (p *UpgradingApp) exec(ctx context.Context) error {
 			RawAppName:   getRawAppName(p.manager.Spec.RawAppName),
 			RepoURL:      repoURL,
 			Version:      version,
-			Token:        token,
 			Admin:        admin,
 			MarketSource: marketSource,
 			IsAdmin:      isAdmin,
@@ -258,7 +256,6 @@ func (p *UpgradingApp) exec(ctx context.Context) error {
 			RawAppName:   getRawAppName(p.manager.Spec.RawAppName),
 			RepoURL:      repoURL,
 			Version:      version,
-			Token:        token,
 			Owner:        p.manager.Spec.AppOwner,
 			MarketSource: marketSource,
 		})
@@ -300,7 +297,7 @@ func (p *UpgradingApp) exec(ctx context.Context) error {
 	preState := p.manager.Annotations[api.AppPreUpgradeStateKey]
 
 	skipWaitForStartUp := preState == appsv1.Stopped.String()
-	ops, err := p.deps.NewHelmOps(ctx, kubeConfig, appConfig, token,
+	ops, err := p.deps.NewHelmOps(ctx, kubeConfig, appConfig,
 		appinstaller.Opt{
 			Source:             p.manager.Spec.Source,
 			MarketSource:       appcfg.GetMarketSource(p.manager),

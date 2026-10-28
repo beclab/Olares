@@ -23,13 +23,6 @@ func (h *Handler) uninstall(req *restful.Request, resp *restful.Response) {
 	app := req.PathParameter(ParamAppName)
 	owner := req.Attribute(constants.UserContextAttribute).(string)
 	var err error
-	token, err := h.GetUserServiceAccountToken(req.Request.Context(), owner)
-	if err != nil {
-		klog.Error("Failed to get user service account token: ", err)
-		api.HandleError(resp, req, err)
-		return
-	}
-
 	request := &api.UninstallRequest{}
 	if req.Request.ContentLength > 0 {
 		err := req.ReadEntity(request)
@@ -70,7 +63,6 @@ func (h *Handler) uninstall(req *restful.Request, resp *restful.Response) {
 	if am.Annotations == nil {
 		am.Annotations = make(map[string]string)
 	}
-	am.Annotations[api.AppTokenKey] = token
 	am.Annotations[api.AppUninstallAllKey] = fmt.Sprintf("%t", uninstallAll)
 	am.Annotations[api.AppDeleteDataKey] = fmt.Sprintf("%t", request.DeleteData)
 	err = h.ctrlClient.Update(req.Request.Context(), &am)

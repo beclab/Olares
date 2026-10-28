@@ -32,9 +32,9 @@ import (
 // the api module just to express which validators apply.
 type Op = v1alpha1.OpType
 
-// Input bundles everything a Validator might need. Token is optional and
-// only the cluster-pressure / cluster-capacity validators currently use
-// it; the others ignore unset fields.
+// Input bundles everything a Validator might need. Token is app-service's
+// ServiceAccount token for cluster-pressure / cluster-capacity monitoring
+// queries; it is not a user credential. Other validators ignore it.
 //
 // PrevAppConfig, PrevState and PreUpgradeSteadyState are used for
 // UpgradeOp when running cluster-pressure / k8s-request (and to decide

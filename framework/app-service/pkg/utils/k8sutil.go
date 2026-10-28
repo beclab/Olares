@@ -213,10 +213,6 @@ func GetServerServiceAccountToken() (string, error) {
 	return serviceAccountToken, nil
 }
 
-func GetUserServiceAccountToken(ctx context.Context, client kubernetes.Interface, user string) (string, error) {
-	return "", errors.New("GetUserServiceAccountToken is not implemented yet")
-}
-
 func GetTerminusVersion(ctx context.Context, config *rest.Config) (*sysv1alpha1.Terminus, error) {
 	dynamicClient, err := dynamic.NewForConfig(config)
 	if err != nil {

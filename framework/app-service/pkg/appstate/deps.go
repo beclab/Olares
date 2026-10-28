@@ -25,7 +25,7 @@ import (
 // versioned.NewHelmOps so the production wiring is a direct assignment
 // while tests can supply a fake.
 type HelmOpsFactory func(ctx context.Context, kubeConfig *rest.Config,
-	app *appcfg.ApplicationConfig, token string, options appinstaller.Opt) (appinstaller.HelmOpsInterface, error)
+	app *appcfg.ApplicationConfig, options appinstaller.Opt) (appinstaller.HelmOpsInterface, error)
 
 // MiddlewareOperator is the subset of kubeblocks.OperationOptions used by
 // the state machine (start/stop of KubeBlocks-backed middleware).

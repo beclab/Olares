@@ -33,7 +33,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/util/retry"
 	"k8s.io/klog/v2"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // appLevelSettingKeys lists Spec.Settings keys whose values are scoped
@@ -367,13 +366,6 @@ func (h *Handler) setupAppEntranceDomain(req *restful.Request, resp *restful.Res
 			return
 		}
 
-		token, err := h.GetUserServiceAccountToken(req.Request.Context(), owner)
-		if err != nil {
-			klog.Error("Failed to get user service account token: ", err)
-			api.HandleError(resp, req, err)
-			return
-		}
-
 		vals := make(map[string]interface{})
 		entries := make(map[string]interface{})
 		for i, entrance := range app.Spec.Entrances {
@@ -418,15 +410,6 @@ func (h *Handler) setupAppEntranceDomain(req *restful.Request, resp *restful.Res
 			return
 		}
 
-		appMgrCopy := appMgr.DeepCopy()
-		appMgrCopy.Annotations[api.AppTokenKey] = token
-
-		err = h.ctrlClient.Patch(req.Request.Context(), appMgrCopy, client.MergeFrom(appMgr))
-		if err != nil {
-			api.HandleError(resp, req, err)
-			return
-		}
-
 		now := metav1.Now()
 		opID := strconv.FormatInt(time.Now().Unix(), 10)
 
@@ -434,7 +417,7 @@ func (h *Handler) setupAppEntranceDomain(req *restful.Request, resp *restful.Res
 			OpType:     v1alpha1.UpgradeOp,
 			OpID:       opID,
 			State:      v1alpha1.Upgrading,
-			Message:    fmt.Sprintf("app %s was upgrade via setup domain by user %s", appMgrCopy.Spec.AppName, appMgrCopy.Spec.AppOwner),
+			Message:    fmt.Sprintf("app %s was upgrade via setup domain by user %s", appMgr.Spec.AppName, appMgr.Spec.AppOwner),
 			StatusTime: &now,
 			UpdateTime: &now,
 		}

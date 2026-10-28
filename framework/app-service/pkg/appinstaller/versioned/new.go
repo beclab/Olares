@@ -10,14 +10,14 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-func NewHelmOps(ctx context.Context, kubeConfig *rest.Config, app *appcfg.ApplicationConfig, token string, options appinstaller.Opt) (ops appinstaller.HelmOpsInterface, err error) {
+func NewHelmOps(ctx context.Context, kubeConfig *rest.Config, app *appcfg.ApplicationConfig, options appinstaller.Opt) (ops appinstaller.HelmOpsInterface, err error) {
 	switch app.APIVersion {
 	case appcfg.V3:
-		ops, err = v3.NewHelmOps(ctx, kubeConfig, app, token, options)
+		ops, err = v3.NewHelmOps(ctx, kubeConfig, app, options)
 	case appcfg.V2:
-		ops, err = v2.NewHelmOps(ctx, kubeConfig, app, token, options)
+		ops, err = v2.NewHelmOps(ctx, kubeConfig, app, options)
 	default:
-		ops, err = appinstaller.NewHelmOps(ctx, kubeConfig, app, token, options)
+		ops, err = appinstaller.NewHelmOps(ctx, kubeConfig, app, options)
 	}
 
 	return ops, err

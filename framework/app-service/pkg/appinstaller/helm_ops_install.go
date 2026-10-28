@@ -114,7 +114,6 @@ type HelmOps struct {
 	actionConfig *action.Configuration
 	app          *appcfg.ApplicationConfig
 	settings     *cli.EnvSettings
-	token        string
 	//client       *kubernetes.Clientset
 	//dyClient dynamic.Interface
 	client  *clientset.ClientSet
@@ -140,7 +139,7 @@ func (h *HelmOps) InstallChart(values map[string]interface{}) error {
 }
 
 // NewHelmOps constructs a new helmOps.
-func NewHelmOps(ctx context.Context, kubeConfig *rest.Config, app *appcfg.ApplicationConfig, token string, options Opt) (HelmOpsInterface, error) {
+func NewHelmOps(ctx context.Context, kubeConfig *rest.Config, app *appcfg.ApplicationConfig, options Opt) (HelmOpsInterface, error) {
 	actionConfig, settings, err := helm.InitConfig(kubeConfig, app.Namespace)
 	if err != nil {
 		return nil, err
@@ -156,7 +155,6 @@ func NewHelmOps(ctx context.Context, kubeConfig *rest.Config, app *appcfg.Applic
 		app:          app,
 		actionConfig: actionConfig,
 		settings:     settings,
-		token:        token,
 		client:       client,
 		options:      options,
 	}
@@ -958,10 +956,6 @@ func (h *HelmOps) Settings() *cli.EnvSettings {
 
 func (h *HelmOps) Context() context.Context {
 	return h.ctx
-}
-
-func (h *HelmOps) Token() string {
-	return h.token
 }
 
 func (h *HelmOps) Client() *clientset.ClientSet {

@@ -8,7 +8,6 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/appinstaller"
 	"github.com/beclab/Olares/framework/app-service/pkg/compute"
@@ -113,8 +112,7 @@ func runHelmUninstallForFailure(ctx context.Context, manager *appsv1.Application
 	if err != nil {
 		return fmt.Errorf("get kube config: %w", err)
 	}
-	token := manager.Annotations[api.AppTokenKey]
-	ops, err := newHelmOps(ctx, kubeConfig, appCfg, token, appinstaller.Opt{
+	ops, err := newHelmOps(ctx, kubeConfig, appCfg, appinstaller.Opt{
 		Source:       manager.Spec.Source,
 		MarketSource: appcfg.GetMarketSource(manager),
 	})

@@ -180,7 +180,7 @@ func newTestDeps(c client.Client) (Deps, *testFakes) {
 			return &rest.Config{}, nil
 		},
 		NewHelmOps: func(ctx context.Context, kubeConfig *rest.Config, app *appcfg.ApplicationConfig,
-			token string, options appinstaller.Opt) (appinstaller.HelmOpsInterface, error) {
+			options appinstaller.Opt) (appinstaller.HelmOpsInterface, error) {
 			if tf.newHelmOpsErr != nil {
 				return nil, tf.newHelmOpsErr
 			}

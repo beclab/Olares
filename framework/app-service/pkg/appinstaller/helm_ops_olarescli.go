@@ -81,9 +81,8 @@ func (h *HelmOps) olaresCLIStore() (*olarescli.Store, error) {
 	if err != nil {
 		return nil, err
 	}
-	// app-service's own ServiceAccount token, not h.token: lldap authorizes
-	// the derive endpoints by TokenReview against a list of platform service
-	// accounts, and h.token belongs to the user's namespace.
+	// LLDAP authorizes the derive endpoints by TokenReview against a list
+	// of platform service accounts, so use app-service's own token.
 	saToken, err := utils.GetServerServiceAccountToken()
 	if err != nil {
 		return nil, err

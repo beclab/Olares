@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
@@ -78,10 +77,6 @@ func WithConfig(t *testing.T, cfg *appcfg.ApplicationConfig) AMOption {
 		t.Fatalf("marshal app config: %v", err)
 	}
 	return WithConfigJSON(string(b))
-}
-
-func WithToken(token string) AMOption {
-	return func(am *appv1alpha1.ApplicationManager) { am.Annotations[api.AppTokenKey] = token }
 }
 
 func WithAnnotation(k, v string) AMOption {

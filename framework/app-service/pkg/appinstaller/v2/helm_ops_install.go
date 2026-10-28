@@ -28,8 +28,8 @@ type HelmOpsV2 struct {
 	*v1.HelmOps
 }
 
-func NewHelmOps(ctx context.Context, kubeConfig *rest.Config, app *appcfg.ApplicationConfig, token string, options v1.Opt) (v1.HelmOpsInterface, error) {
-	v1Ops, err := v1.NewHelmOps(ctx, kubeConfig, app, token, options)
+func NewHelmOps(ctx context.Context, kubeConfig *rest.Config, app *appcfg.ApplicationConfig, options v1.Opt) (v1.HelmOpsInterface, error) {
+	v1Ops, err := v1.NewHelmOps(ctx, kubeConfig, app, options)
 	if err != nil {
 		klog.Errorf("Failed to create HelmOps: %v", err)
 		return nil, err

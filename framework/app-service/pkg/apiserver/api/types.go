@@ -7,7 +7,6 @@ import (
 )
 
 const (
-	AppTokenKey                      = "bytetrade.io/token"
 	AppRepoURLKey                    = "bytetrade.io/repo-url"
 	AppVersionKey                    = "bytetrade.io/chart-version"
 	AppMarketSourceKey               = constants.AppMarketSourceKey

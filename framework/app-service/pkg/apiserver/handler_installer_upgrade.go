@@ -49,7 +49,6 @@ type upgradeHandlerHelper struct {
 	app        string
 	rawAppName string
 	request    *api.UpgradeRequest
-	token      string
 	appConfig  *appcfg.ApplicationConfig
 	chartPath  string
 }
@@ -109,7 +108,6 @@ func (h *upgradeHandlerHelper) getAppConfig(prevCfg *appcfg.ApplicationConfig, a
 		Owner:        h.owner,
 		RepoURL:      h.request.RepoURL,
 		Version:      h.request.Version,
-		Token:        h.token,
 		Admin:        admin,
 		MarketSource: marketSource,
 		IsAdmin:      prevCfg.AppScope.ClusterScoped,
@@ -222,7 +220,6 @@ func (h *upgradeHandlerHelperV3) getAppConfig(prevCfg *appcfg.ApplicationConfig,
 		Owner:        prevCfg.OwnerName,
 		RepoURL:      h.request.RepoURL,
 		Version:      h.request.Version,
-		Token:        h.token,
 		Admin:        h.owner,
 		MarketSource: marketSource,
 		IsAdmin:      true,
@@ -260,7 +257,6 @@ func (h *upgradeHandlerHelperV2) getAppConfig(prevCfg *appcfg.ApplicationConfig,
 		Owner:        h.owner,
 		RepoURL:      h.request.RepoURL,
 		Version:      h.request.Version,
-		Token:        h.token,
 		Admin:        admin,
 		MarketSource: marketSource,
 		IsAdmin:      isAdmin,
@@ -372,12 +368,6 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 		}
 	}
 
-	token, err := h.GetUserServiceAccountToken(req.Request.Context(), owner)
-	if err != nil {
-		klog.Error("Failed to get user service account token: ", err)
-		api.HandleError(resp, req, err)
-		return
-	}
 	rawAppName := appMgr.Spec.AppName
 	if appMgr.Spec.RawAppName != "" {
 		rawAppName = appMgr.Spec.RawAppName
@@ -414,7 +404,6 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 			app:        app,
 			rawAppName: rawAppName,
 			owner:      prevCfg.OwnerName,
-			token:      token,
 		}
 
 		helper = h
@@ -429,7 +418,6 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 				app:        app,
 				rawAppName: rawAppName,
 				owner:      prevCfg.OwnerName,
-				token:      token,
 			},
 		}
 
@@ -445,7 +433,6 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 				app:        app,
 				rawAppName: rawAppName,
 				owner:      prevCfg.OwnerName,
-				token:      token,
 			},
 		}
 
@@ -496,7 +483,7 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 		PrevState:             appMgr.Status.State,
 		PreUpgradeSteadyState: appMgr.Annotations[api.AppPreUpgradeStateKey],
 		Op:                    appv1alpha1.UpgradeOp,
-		Token:                 token,
+		Token:                 h.GetServerServiceAccountToken(),
 	}, validation.UpgradabilityValidators()...)
 	if err != nil {
 		api.HandleError(resp, req, err)
@@ -547,7 +534,6 @@ func (h *Handler) appUpgrade(req *restful.Request, resp *restful.Response) {
 	}
 	appCopy.Annotations[api.AppRepoURLKey] = request.RepoURL
 	appCopy.Annotations[api.AppVersionKey] = request.Version
-	appCopy.Annotations[api.AppTokenKey] = token
 	appCopy.Annotations[api.AppMarketSourceKey] = marketSource
 	// Snapshot the pre-upgrade state so upgrading_app can decide whether
 	// to scale workloads back up after the helm upgrade. When the app was

@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/appinstaller"
 	"github.com/beclab/Olares/framework/app-service/pkg/compute"
@@ -82,7 +81,6 @@ func (p *InstallingCancelingApp) handleInstallCancel(ctx context.Context) error 
 		klog.Errorf("app %s operation is not running", p.manager.Name)
 	}
 
-	token := p.manager.Annotations[api.AppTokenKey]
 	kubeConfig, err := p.deps.KubeConfig()
 	if err != nil {
 		klog.Errorf("get kube config failed %v", err)
@@ -97,7 +95,7 @@ func (p *InstallingCancelingApp) handleInstallCancel(ctx context.Context) error 
 		return err
 	}
 
-	ops, err := p.deps.NewHelmOps(ctx, kubeConfig, appCfg, token, appinstaller.Opt{})
+	ops, err := p.deps.NewHelmOps(ctx, kubeConfig, appCfg, appinstaller.Opt{})
 	if err != nil {
 		klog.Errorf("make helm ops failed %v", err)
 		return err

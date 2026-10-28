@@ -745,7 +745,6 @@ type ConfigOptions struct {
 	RepoURL      string
 	Owner        string
 	Version      string
-	Token        string
 	Admin        string
 	MarketSource string
 	IsAdmin      bool
@@ -1137,7 +1136,6 @@ func checkVersionFormat(constraint string) error {
 // GetIndexAndDownloadChart download a chart and returns download chart path.
 func GetIndexAndDownloadChart(ctx context.Context, options *ConfigOptions) (string, error) {
 	client := resty.New().SetTimeout(10*time.Second).
-		SetAuthToken(options.Token).
 		SetHeader(constants.MarketUser, options.Owner).
 		SetHeader(constants.MarketSource, options.MarketSource)
 	if options.ChartOwner != "" {
@@ -1195,18 +1193,17 @@ func GetIndexAndDownloadChart(ctx context.Context, options *ConfigOptions) (stri
 			return "", err
 		}
 	}
-	_, err = downloadAndUnpack(ctx, url, options.Token, options.Owner, options.MarketSource, options.ChartOwner)
+	_, err = downloadAndUnpack(ctx, url, options.Owner, options.MarketSource, options.ChartOwner)
 	if err != nil {
 		return "", err
 	}
 	return chartPath, nil
 }
 
-func downloadAndUnpack(ctx context.Context, tgz *url.URL, token, owner, marketSource, originOwner string) (string, error) {
+func downloadAndUnpack(ctx context.Context, tgz *url.URL, owner, marketSource, originOwner string) (string, error) {
 	dst := appcfg.ChartsPath
 	g := new(getter.HttpGetter)
 	g.Header = make(http.Header)
-	g.Header.Set("Authorization", "Bearer "+token)
 	g.Header.Set(constants.MarketUser, owner)
 	g.Header.Set(constants.MarketSource, marketSource)
 	if originOwner != "" {

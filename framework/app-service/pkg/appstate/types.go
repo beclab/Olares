@@ -189,7 +189,6 @@ func (b *baseStatefulApp) finishCancelToCanceled(ctx context.Context, am *appsv1
 }
 
 func (p *baseStatefulApp) forceDeleteApp(ctx context.Context) error {
-	token := p.manager.Annotations[api.AppTokenKey]
 	if p.manager.Spec.Config == "" && p.manager.Spec.Source == "system" {
 		klog.Infof("app %s config is empty, source is system", p.manager.Name)
 		err := p.updateStatus(ctx, p.manager, appsv1.Uninstalled, nil, appsv1.Uninstalled.String(), appsv1.Uninstalled.String())
@@ -217,7 +216,7 @@ func (p *baseStatefulApp) forceDeleteApp(ctx context.Context) error {
 		return p.oldMongodbUninstall(ctx, kubeConfig)
 	}
 
-	ops, err := p.deps.NewHelmOps(ctx, kubeConfig, appCfg, token, appinstaller.Opt{MarketSource: appcfg.GetMarketSource(p.manager)})
+	ops, err := p.deps.NewHelmOps(ctx, kubeConfig, appCfg, appinstaller.Opt{MarketSource: appcfg.GetMarketSource(p.manager)})
 	if err != nil {
 		klog.Errorf("make helm ops failed %v", err)
 		return err

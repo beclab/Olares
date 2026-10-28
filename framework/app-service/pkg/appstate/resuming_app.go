@@ -100,14 +100,12 @@ func (p *ResumingApp) scaleOrPatchResume(ctx context.Context, resumeServer bool)
 		return p.resumeViaPatch(ctx, resumeServer)
 	}
 
-	token := p.manager.Annotations[api.AppTokenKey]
-
 	kubeConfig, err := p.deps.KubeConfig()
 	if err != nil {
 		klog.Errorf("get kube config failed %v", err)
 		return err
 	}
-	ops, err := p.deps.NewHelmOps(ctx, kubeConfig, &appCfg, token,
+	ops, err := p.deps.NewHelmOps(ctx, kubeConfig, &appCfg,
 		appinstaller.Opt{
 			Source:       p.manager.Spec.Source,
 			MarketSource: appcfg.GetMarketSource(p.manager),

@@ -11,13 +11,9 @@ import (
 	"github.com/beclab/api/pkg/generated/informers/externalversions"
 	lister_v1alpha1 "github.com/beclab/api/pkg/generated/listers/app.bytetrade.io/v1alpha1"
 
-	// upgrade removed from direct usage in handlers
-	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	"github.com/beclab/Olares/framework/app-service/pkg/webhook"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -185,13 +181,4 @@ func (h *Handler) Run(stopCh <-chan struct{}) error {
 
 func (h *Handler) GetServerServiceAccountToken() string {
 	return h.kubeConfig.BearerToken
-}
-
-func (h *Handler) GetUserServiceAccountToken(ctx context.Context, user string) (string, error) {
-	kubeClient, err := kubernetes.NewForConfig(h.kubeConfig)
-	if err != nil {
-		klog.Errorf("Failed to create kube client: %v", err)
-		return "", err
-	}
-	return utils.GetUserServiceAccountToken(ctx, kubeClient, user)
 }

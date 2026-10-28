@@ -319,7 +319,7 @@ func newTestController(t *testing.T, objs ...client.Object) (*ApplicationManager
 		c,
 		func() (*rest.Config, error) { return &rest.Config{}, nil },
 		func(ctx context.Context, kubeConfig *rest.Config, app *appcfg.ApplicationConfig,
-			token string, options appinstaller.Opt) (appinstaller.HelmOpsInterface, error) {
+			options appinstaller.Opt) (appinstaller.HelmOpsInterface, error) {
 			ns := ""
 			if app != nil {
 				ns = app.Namespace

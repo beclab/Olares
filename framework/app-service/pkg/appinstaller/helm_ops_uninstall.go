@@ -155,8 +155,7 @@ func (h *HelmOps) ClearCache(client kubernetes.Interface, appCacheDirs []string)
 	if len(appCacheDirs) > 0 {
 		klog.Infof("clear app cache dirs: %v", appCacheDirs)
 
-		c := resty.New().SetTimeout(2 * time.Second).
-			SetAuthToken(h.token)
+		c := resty.New().SetTimeout(2 * time.Second)
 		nodes, e := client.CoreV1().Nodes().List(h.ctx, metav1.ListOptions{})
 
 		if e == nil {
@@ -187,8 +186,7 @@ func (h *HelmOps) ClearData(client kubernetes.Interface, appDataDirs []string) e
 	if len(appDataDirs) > 0 {
 		klog.Infof("clear app data dirs: %v", appDataDirs)
 
-		c := resty.New().SetTimeout(2 * time.Second).
-			SetAuthToken(h.token)
+		c := resty.New().SetTimeout(2 * time.Second)
 
 		formattedAppDataDirs := apputils.FormatCacheDirs(appDataDirs)
 

@@ -257,7 +257,8 @@ func (h *Handler) allAppManagers(req *restful.Request, resp *restful.Response) {
 			continue
 		}
 		am.ManagedFields = make([]metav1.ManagedFieldsEntry, 0)
-		am.Annotations[api.AppTokenKey] = ""
+		// Do not expose credentials left on managers created by older versions.
+		delete(am.Annotations, "bytetrade.io/token")
 		am.Annotations[constants.ApplicationImageLabel] = ""
 		am.Spec.Config = ""
 		am.Status.OpRecords = make([]v1alpha1.OpRecord, 0)

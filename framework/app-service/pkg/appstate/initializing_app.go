@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/appinstaller"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
@@ -42,7 +41,6 @@ func NewInitializingApp(deps Deps,
 
 func (p *InitializingApp) Exec(ctx context.Context) (StatefulInProgressApp, error) {
 	var err error
-	token := p.manager.Annotations[api.AppTokenKey]
 
 	var appCfg *appcfg.ApplicationConfig
 	err = json.Unmarshal([]byte(p.manager.Spec.Config), &appCfg)
@@ -58,7 +56,7 @@ func (p *InitializingApp) Exec(ctx context.Context) (StatefulInProgressApp, erro
 
 	opCtx, cancel := context.WithCancel(context.Background())
 
-	ops, err := p.deps.NewHelmOps(opCtx, kubeConfig, appCfg, token,
+	ops, err := p.deps.NewHelmOps(opCtx, kubeConfig, appCfg,
 		appinstaller.Opt{Source: p.manager.Spec.Source, MarketSource: appcfg.GetMarketSource(p.manager)})
 	if err != nil {
 		klog.Errorf("make helm ops failed %v", err)

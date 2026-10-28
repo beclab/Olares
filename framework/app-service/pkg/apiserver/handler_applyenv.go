@@ -32,13 +32,6 @@ func (h *Handler) appApplyEnv(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	token, err := h.GetUserServiceAccountToken(req.Request.Context(), owner)
-	if err != nil {
-		klog.Error("Failed to get user service account token: ", err)
-		api.HandleError(resp, req, err)
-		return
-	}
-
 	appCopy := appMgr.DeepCopy()
 	appCopy.Spec.OpType = appv1alpha1.ApplyEnvOp
 	if appCopy.Annotations == nil {
@@ -46,13 +39,12 @@ func (h *Handler) appApplyEnv(req *restful.Request, resp *restful.Response) {
 		api.HandleError(resp, req, fmt.Errorf("not support operation %s", appv1alpha1.ApplyEnvOp))
 		return
 	}
-	appCopy.Annotations[api.AppTokenKey] = token
 	// Snapshot the pre-op state so applying_env_app can decide whether to
 	// scale workloads back up or land in Stopped. Only Running/Stopped
 	// overwrite; retries from failed states keep the prior steady intent.
 	api.SnapshotPreUpgradeState(appCopy.Annotations, appMgr.Status.State)
 
-	err = h.ctrlClient.Patch(req.Request.Context(), appCopy, client.MergeFrom(&appMgr))
+	err := h.ctrlClient.Patch(req.Request.Context(), appCopy, client.MergeFrom(&appMgr))
 	if err != nil {
 		api.HandleError(resp, req, err)
 		return

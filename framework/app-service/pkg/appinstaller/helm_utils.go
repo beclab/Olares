@@ -412,7 +412,7 @@ func (h *HelmOps) TaprApply(values map[string]interface{}, namespace string) err
 	}
 
 	if err := tapr.Apply(h.app.Middleware, h.kubeConfig, h.app.AppName, h.app.Namespace,
-		namespace, h.token, h.app.OwnerName, values); err != nil {
+		namespace, h.app.OwnerName, values); err != nil {
 		klog.Errorf("Failed to apply middleware err=%v", err)
 		return err
 	}
