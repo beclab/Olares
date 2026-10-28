@@ -31,14 +31,15 @@ func TestSearchCommandExposesFederatedDriveOnly(t *testing.T) {
 }
 
 // Only the commands that can run the federated job may default to printing
-// everything; `knowledge` never leaves the session API, which pages
-// server-side and has no completed result set to print in full.
+// everything; `knowledge` and `market` never leave the session API, which
+// pages server-side and has no completed result set to print in full.
 func TestSearchDefaultLimitPerCommand(t *testing.T) {
 	cmd := NewSearchCommand(&cmdutil.Factory{})
 	cases := map[string]string{
 		"drive":     "0",
 		"sync":      "0",
 		"knowledge": "20",
+		"market":    "20",
 	}
 	for name, want := range cases {
 		found, _, err := cmd.Find([]string{name})

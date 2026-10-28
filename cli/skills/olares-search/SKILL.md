@@ -1,7 +1,7 @@
 ---
 name: olares-search
 version: 0.0.0-cli.0
-description: "Olares search via olares-cli search — the Desktop global search over Drive files, Sync (Seafile) libraries, Google Drive, Dropbox, Wise/Knowledge, and installed applications, with paging and JSON output. On Olares 1.12.7+ one `search drive` (alias `search files`) covers all four file sources. Use for Olares search, full-text search, find a file by content, Text Search, global search, search apps, search google drive, search dropbox, search sync, search wise."
+description: "Olares search via olares-cli search — the Desktop global search over Drive files, Sync (Seafile) libraries, Google Drive, Dropbox, Wise/Knowledge, installed applications, and the Market app catalog, with paging and JSON output. On Olares 1.12.7+ one `search drive` (alias `search files`) covers all four file sources. Use for Olares search, full-text search, find a file by content, Text Search, global search, search apps, search market, find an app to install, search google drive, search dropbox, search sync, search wise."
 compatibility: Requires olares-cli on PATH and active Olares profile
 metadata:
   openclaw:
@@ -20,8 +20,9 @@ Use `olares-cli search <subcommand> --help` for syntax.
 
 - Find a file or knowledge item by name/content across Drive, Sync, Google Drive, Dropbox, or Wise. One `search drive` covers all four file sources on Olares 1.12.7+.
 - Find an installed application by visible title.
+- Find an app in the Market catalog, installed or not, by name, title, or description.
 
-> **Mental model:** `search drive` / `search sync` / `search knowledge` answer *"which file CONTAINS this text"* by querying the pre-built per-user index. `search app` answers *"which installed app matches this name"*. It is not lifecycle inventory (`market list --mine` / `market status`) or resource ranking (`dashboard applications`). To LIST or READ a known path, use [`olares-files`](../olares-files/SKILL.md) (`files ls` / `files cat` / `files download`).
+> **Mental model:** `search drive` / `search sync` / `search knowledge` answer *"which file CONTAINS this text"* by querying the pre-built per-user index. `search app` answers *"which installed app matches this name"* and returns entrance URLs to open it. `search market` answers *"which app in the store matches this"*: it searches the catalog the signed-in user can see, returns the Market detail route `/app/<source_id>/<app_name>`, and says nothing about whether the app is installed. Neither is lifecycle inventory (`market list --mine` / `market status`) or resource ranking (`dashboard applications`). To LIST or READ a known path, use [`olares-files`](../olares-files/SKILL.md) (`files ls` / `files cat` / `files download`).
 
 ## Fast paths
 
@@ -29,6 +30,7 @@ Use `olares-cli search <subcommand> --help` for syntax.
 |---|---|---|
 | Find a file by name or content | this file | `olares-cli search drive "quarterly report" -o json` |
 | Find an installed app by its title | this file | `olares-cli search app music -o json` |
+| Find an app to install from the Market | this file, then [`olares-market`](../olares-market/SKILL.md) to install it | `olares-cli search market "photo editor" -o json` |
 | Find something in Wise | this file | `olares-cli search knowledge "retrieval" -o json` |
 | Tell "not indexed" from "not there" | this file, then [`olares-files`](../olares-files/SKILL.md) for the known path | `olares-cli settings search status -o json` |
 
@@ -40,6 +42,7 @@ Use `olares-cli search <subcommand> --help` for syntax.
 | `sync` | Sync (Seafile) libraries only | [indexing](#indexing-drive--sync--cloud--knowledge) — a narrowed view of what `drive` already covers |
 | `knowledge` (`wise`) | Wise/Knowledge content search | [indexing](#indexing-drive--sync--cloud--knowledge) — Wise owns this index; needs Olares 1.12.7+ |
 | `app` | Visible installed-app title search | nothing further; it is a title match, not lifecycle inventory |
+| `market` | Market catalog search over app name, title, and description (`--type aggregate\|file_name`) | nothing further; needs Olares 1.12.7+ and a search3 build that serves the `market` source. `meta.installable: false` means this machine's hardware cannot run the app, `null` means Market has no verdict yet |
 
 There is no separate `gdrive` or `dropbox` verb: on Olares 1.12.7+ `drive` searches `files_v2`, `google_drive`, `dropbox`, and `seafile` in one asynchronous federated request, mirroring the Desktop dialog's single "Files" entry. `sync` restricts that same channel to `seafile`. Olares 1.12.6 and older have no federated channel: there `drive` covers local Drive files only and `sync` falls back to `/api/search/sync`, so on those versions both commands are needed to cover what one covers on 1.12.7+.
 

@@ -25,6 +25,7 @@ const (
 	appDropbox     = "dropbox"
 	appSeafile     = "seafile"
 	appKnowledge   = "knowledge"
+	appMarket      = "market"
 
 	// searchSessionAppMinOlaresVersion is the first Olares line on which
 	// search3 serves the knowledge partition and federated cloud sources.
