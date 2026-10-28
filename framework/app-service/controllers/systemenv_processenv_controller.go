@@ -7,6 +7,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/cluster"
+
 	sysv1alpha1 "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
@@ -89,13 +91,12 @@ func InitializeSystemEnvProcessEnv(ctx context.Context, c client.Client) error {
 	var isCNDomain bool
 	var once sync.Once
 	checkDomainRegion := func() {
-		sysCR := &sysv1alpha1.Terminus{}
-		getSysCRerr = c.Get(ctx, client.ObjectKey{Name: "terminus"}, sysCR)
+		var domainName string
+		domainName, getSysCRerr = cluster.GetDomainName(ctx, c)
 		if getSysCRerr != nil {
 			klog.Errorf("get sysinfo failed: %v", getSysCRerr)
 			return
 		}
-		domainName := sysCR.Spec.Settings["domainName"]
 		if strings.HasSuffix(domainName, ".cn") {
 			isCNDomain = true
 		}

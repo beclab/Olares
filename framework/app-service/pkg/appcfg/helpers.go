@@ -176,31 +176,23 @@ func GenEntranceURL(ctx context.Context, app *Application) ([]Entrance, error) {
 
 // GenSharedEntranceURL fills in URLs for the app's shared entrances.
 func GenSharedEntranceURL(ctx context.Context, app *Application) ([]Entrance, error) {
-	zone, err := getUserZone(ctx, app.Spec.Owner)
-	if err != nil {
-		klog.Errorf("failed to get user zone: %v", err)
+	if len(app.Spec.SharedEntrances) == 0 {
+		return app.Spec.SharedEntrances, nil
 	}
+	sharedZone := "shared.olares.com"
 
-	if len(zone) > 0 {
-		tokens := strings.Split(zone, ".")
-		tokens[0] = "shared"
-		sharedZone := strings.Join(tokens, ".")
-
-		appid := strings.ToLower(strings.TrimSpace(app.Spec.Appid))
-		sharedEntrancesForZone := make(appv1alpha1.Entrances, 0)
-		isShared := appv1alpha1.IsShared(app)
-
+	appid := strings.ToLower(strings.TrimSpace(app.Spec.Appid))
+	isShared := appv1alpha1.IsShared(app)
+	// The API SharedForZone helpers use a fixed mesh domain; UI URLs use the platform domain.
+	entranceCount := len(app.Spec.SharedEntrances)
+	for i := range app.Spec.SharedEntrances {
+		id := appv1alpha1.SharedEntranceIDV2(appid, i, entranceCount)
 		if isShared {
-			sharedEntrancesForZone = appv1alpha1.Entrances(app.Spec.SharedEntrances).SharedForZone(appid, sharedZone)
-		} else {
-			sharedEntrancesForZone = appv1alpha1.Entrances(app.Spec.SharedEntrances).SharedForZoneV2(appid, sharedZone)
+			id = appv1alpha1.SharedEntranceID(appid, i, entranceCount)
 		}
-
-		for i := range sharedEntrancesForZone {
-			app.Spec.SharedEntrances[i] = sharedEntrancesForZone[i]
-			if app.Spec.SharedEntrances[i].Port > 0 {
-				app.Spec.SharedEntrances[i].URL = fmt.Sprintf("%s:%d", app.Spec.SharedEntrances[i].URL, app.Spec.SharedEntrances[i].Port)
-			}
+		app.Spec.SharedEntrances[i].URL = fmt.Sprintf("%s.%s", id, sharedZone)
+		if app.Spec.SharedEntrances[i].Port > 0 {
+			app.Spec.SharedEntrances[i].URL = fmt.Sprintf("%s:%d", app.Spec.SharedEntrances[i].URL, app.Spec.SharedEntrances[i].Port)
 		}
 	}
 

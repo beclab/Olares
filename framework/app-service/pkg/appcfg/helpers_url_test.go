@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/cluster"
+
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 )
 
@@ -19,6 +21,8 @@ func withMockZone(zone string) func() {
 }
 
 func TestGenSharedEntranceURLSingleEntranceUsesApiSharedID(t *testing.T) {
+	cluster.PrimePlatformDomainForTest("olares.com")
+	t.Cleanup(cluster.ResetPlatformDomainForTest)
 	restore := withMockZone("alice.olares.com")
 	defer restore()
 
@@ -85,6 +89,8 @@ func TestGenEntranceURLPreservesCustomThirdLevelDomain(t *testing.T) {
 }
 
 func TestApplicationConfigGenURLPassesAppID(t *testing.T) {
+	cluster.PrimePlatformDomainForTest("olares.com")
+	t.Cleanup(cluster.ResetPlatformDomainForTest)
 	restore := withMockZone("alice.olares.com")
 	defer restore()
 
@@ -119,5 +125,53 @@ func TestApplicationConfigGenURLPassesAppID(t *testing.T) {
 	wantSharedURL := sharedID + ".shared.olares.com"
 	if sharedEntrances[0].URL != wantSharedURL {
 		t.Fatalf("shared URL = %q, want %q", sharedEntrances[0].URL, wantSharedURL)
+	}
+}
+
+func TestGenSharedEntranceURLUsesPlatformDomain(t *testing.T) {
+	restore := withMockZone("alice.unrelated.example")
+	defer restore()
+	cluster.PrimePlatformDomainForTest("owner.org.example.cn")
+	t.Cleanup(cluster.ResetPlatformDomainForTest)
+	app := &Application{Spec: ApplicationSpec{Appid: "demo", Owner: "alice", SharedEntrances: []Entrance{{Name: "web", Port: 8080}}}}
+	got, err := GenSharedEntranceURL(context.Background(), app)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := appv1alpha1.SharedEntranceIDV2("demo", 0, 1) + ".shared.owner.org.example.cn:8080"
+	if got[0].URL != want {
+		t.Fatalf("got %q, want %q", got[0].URL, want)
+	}
+}
+
+func TestGenSharedEntranceURLMissingPlatformDomain(t *testing.T) {
+	cluster.PrimePlatformDomainForTest("")
+	t.Cleanup(cluster.ResetPlatformDomainForTest)
+	app := &Application{Spec: ApplicationSpec{SharedEntrances: []Entrance{{Name: "web"}}}}
+	if _, err := GenSharedEntranceURL(context.Background(), app); err == nil {
+		t.Fatal("expected platform domain error")
+	}
+	if _, err := GenSharedEntranceURL(context.Background(), &Application{}); err != nil {
+		t.Fatalf("empty shared entrances: %v", err)
+	}
+}
+
+func TestGenSharedEntranceURLSharedAppMultipleEntrances(t *testing.T) {
+	cluster.PrimePlatformDomainForTest("org.example.com")
+	t.Cleanup(cluster.ResetPlatformDomainForTest)
+	app := &Application{Spec: ApplicationSpec{Appid: "demo", SharedEntrances: []Entrance{{Name: "web"}, {Name: "api", Port: 9000}}}}
+	app.Labels = map[string]string{appv1alpha1.AppSharedLabel: appv1alpha1.AppSharedTrue}
+	got, err := GenSharedEntranceURL(context.Background(), app)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := range got {
+		want := appv1alpha1.SharedEntranceID("demo", i, len(got)) + ".shared.org.example.com"
+		if i == 1 {
+			want += ":9000"
+		}
+		if got[i].URL != want {
+			t.Fatalf("entrance %d URL=%q, want %q", i, got[i].URL, want)
+		}
 	}
 }

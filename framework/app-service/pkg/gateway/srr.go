@@ -107,7 +107,7 @@ func BuildSpecForEntrance(app *appv1alpha1.Application, entrance appv1alpha1.Ent
 	default:
 		var err error
 		isShared := appv1alpha1.IsShared(app)
-		pattern, err := appcfg.LogicalHostPattern(appid, entranceIndex, entranceCount, platformDomain, isShared)
+		pattern, err := appcfg.LogicalHostPattern(appid, entranceIndex, entranceCount, isShared)
 		if err != nil {
 			return srrv1alpha1.SharedRouteRegistrySpec{}, err
 		}

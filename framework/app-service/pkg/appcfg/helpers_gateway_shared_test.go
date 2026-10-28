@@ -1,8 +1,9 @@
 package appcfg
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"testing"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
@@ -125,7 +126,7 @@ func TestIsSharedServerApp(t *testing.T) {
 
 func TestLogicalHostPattern(t *testing.T) {
 	t.Run("single shared entrance without index suffix", func(t *testing.T) {
-		got, err := LogicalHostPattern("demo1234", 0, 1, "olares.com", true)
+		got, err := LogicalHostPattern("demo1234", 0, 1, true)
 		if err != nil {
 			t.Fatalf("LogicalHostPattern() error = %v", err)
 		}
@@ -136,7 +137,7 @@ func TestLogicalHostPattern(t *testing.T) {
 	})
 
 	t.Run("multiple shared entrances use indexed id", func(t *testing.T) {
-		got, err := LogicalHostPattern("demo1234", 1, 2, "olares.com.", false)
+		got, err := LogicalHostPattern("demo1234", 1, 2, false)
 		if err != nil {
 			t.Fatalf("LogicalHostPattern() error = %v", err)
 		}
@@ -147,7 +148,7 @@ func TestLogicalHostPattern(t *testing.T) {
 	})
 
 	t.Run("non-com platformDomain still uses SharedMeshDomain", func(t *testing.T) {
-		got, err := LogicalHostPattern("demo1234", 0, 1, "bytetrade.io", true)
+		got, err := LogicalHostPattern("demo1234", 0, 1, true)
 		if err != nil {
 			t.Fatalf("LogicalHostPattern() error = %v", err)
 		}
@@ -158,7 +159,7 @@ func TestLogicalHostPattern(t *testing.T) {
 	})
 
 	t.Run("empty platformDomain still succeeds", func(t *testing.T) {
-		got, err := LogicalHostPattern("demo1234", 0, 1, "", true)
+		got, err := LogicalHostPattern("demo1234", 0, 1, true)
 		if err != nil {
 			t.Fatalf("LogicalHostPattern() error = %v", err)
 		}
@@ -190,7 +191,7 @@ func TestLogicalHostPattern(t *testing.T) {
 		}
 		for _, tc := range cases {
 			t.Run(tc.name, func(t *testing.T) {
-				if _, err := LogicalHostPattern(tc.appid, tc.entranceIndex, tc.entranceCount, "olares.com", true); err == nil {
+				if _, err := LogicalHostPattern(tc.appid, tc.entranceIndex, tc.entranceCount, true); err == nil {
 					t.Fatalf("LogicalHostPattern(%q, %d, %d) expected error", tc.appid, tc.entranceIndex, tc.entranceCount)
 				}
 			})

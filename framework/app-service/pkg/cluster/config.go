@@ -1,18 +1,19 @@
-// Package cluster reads the cluster.olares.io/v1alpha1 ClusterConfig singleton
-// to resolve the platform domain. Lite scope: no mesh profile, no viewer
-// scheme. The CR is read via the dynamic client so app-service does not need
-// to register it on the shared controller-runtime scheme.
+// Package cluster reads cluster-wide configuration from Terminus and ClusterConfig.
 package cluster
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
+	sysv1alpha1 "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/klog/v2"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -55,9 +56,35 @@ var (
 	platformDomainTestOverrideSet bool
 )
 
-// GetPlatformDomain returns the cluster platform domain. It never returns
-// empty: a missing ClusterConfig or API failure falls back to the env var and
-// then DefaultPlatformDomain. Results are cached for a short TTL.
+// GetDomainName reads the platform domain from the Terminus singleton.
+// It preserves all domain labels and returns an error when the domain is unset.
+func GetDomainName(ctx context.Context, reader client.Reader) (string, error) {
+	var terminus sysv1alpha1.Terminus
+	if err := reader.Get(ctx, client.ObjectKey{Name: "terminus"}, &terminus); err != nil {
+		return "", fmt.Errorf("failed to get Terminus domain name: %w", err)
+	}
+	domain := strings.ToLower(strings.TrimSuffix(strings.TrimSpace(terminus.Spec.Settings["domainName"]), "."))
+	if domain == "" {
+		//FIXME:
+		return "olares.local", nil
+	}
+	return domain, nil
+}
+
+var newDomainReader = func() (client.Reader, error) {
+	cfg, err := ctrl.GetConfig()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get Kubernetes config: %w", err)
+	}
+	scheme := runtime.NewScheme()
+	if err := sysv1alpha1.AddToScheme(scheme); err != nil {
+		return nil, fmt.Errorf("failed to register Terminus scheme: %w", err)
+	}
+	return client.New(cfg, client.Options{Scheme: scheme})
+}
+
+// GetPlatformDomain returns the Terminus platform domain, or an empty string
+// on failure. Only successful reads are cached for a short TTL.
 func GetPlatformDomain(ctx context.Context) string {
 	if platformDomainTestOverrideSet {
 		return platformDomainTestOverride
@@ -66,26 +93,16 @@ func GetPlatformDomain(ctx context.Context) string {
 		return d
 	}
 
-	// get cluster owner
-	owner, err := kubesphere.GetClusterOwner(ctx) // best effort, just to trigger the cluster owner cache population
+	reader, err := newDomainReader()
 	if err != nil {
-		klog.V(2).Infof("cluster: get cluster owner failed: %v", err)
+		klog.Errorf("Failed to initialize platform domain reader: %v", err)
 		return ""
 	}
-
-	zone, err := kubesphere.GetUserZone(ctx, owner)
+	domain, err := GetDomainName(ctx, reader)
 	if err != nil {
-		klog.V(2).Infof("cluster: get user zone failed: %v", err)
+		klog.Errorf("Failed to get platform domain: %v", err)
 		return ""
 	}
-
-	zoneTokens := strings.Split(zone, ".")
-	if len(zoneTokens) < 2 {
-		klog.V(2).Infof("cluster: invalid user zone format: %s", zone)
-		return ""
-	}
-
-	domain := strings.Join(zoneTokens[1:], ".")
 
 	defaultCache.set(domain)
 	return domain

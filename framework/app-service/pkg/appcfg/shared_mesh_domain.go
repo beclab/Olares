@@ -4,8 +4,7 @@ import "strings"
 
 // SharedMeshDomain is the fixed DNS suffix for gateway sharedEntrances
 // (SRR hostPatterns and in-cluster chart URLs). Application entrances keep
-// using cluster.GetPlatformDomain(). UI GenSharedEntranceURL is owned by a
-// separate change.
+// using cluster.GetPlatformDomain(), as do UI shared entrance URLs.
 const SharedMeshDomain = "olares.com"
 
 // SharedZone returns "shared." + SharedMeshDomain.

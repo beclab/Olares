@@ -94,6 +94,8 @@ func TestComputeRouteModePatch_settingsOverride(t *testing.T) {
 }
 
 func TestComputeRouteModePatch_autoGatewayForSharedApp(t *testing.T) {
+	cluster.PrimePlatformDomainForTest("olares.com")
+	t.Cleanup(cluster.ResetPlatformDomainForTest)
 	resetGatewayReadyCacheForTest()
 	cluster.PrimeInClusterGatewayEnabledForTest(true)
 	defer cluster.ResetInClusterGatewayEnabledForTest()
@@ -108,6 +110,8 @@ func TestComputeRouteModePatch_autoGatewayForSharedApp(t *testing.T) {
 }
 
 func TestComputeRouteModePatch_skipsNonSharedApp(t *testing.T) {
+	cluster.PrimePlatformDomainForTest("olares.com")
+	t.Cleanup(cluster.ResetPlatformDomainForTest)
 	resetGatewayReadyCacheForTest()
 	cluster.PrimeInClusterGatewayEnabledForTest(true)
 	defer cluster.ResetInClusterGatewayEnabledForTest()
@@ -133,6 +137,8 @@ func TestComputeRouteModePatch_skipsNonSharedApp(t *testing.T) {
 }
 
 func TestComputeRouteModePatch_gateDisabled(t *testing.T) {
+	cluster.PrimePlatformDomainForTest("olares.com")
+	t.Cleanup(cluster.ResetPlatformDomainForTest)
 	resetGatewayReadyCacheForTest()
 	cluster.PrimeInClusterGatewayEnabledForTest(false)
 	defer cluster.ResetInClusterGatewayEnabledForTest()
@@ -147,6 +153,8 @@ func TestComputeRouteModePatch_gateDisabled(t *testing.T) {
 }
 
 func TestComputeRouteModePatch_gatewayNotReady(t *testing.T) {
+	cluster.PrimePlatformDomainForTest("olares.com")
+	t.Cleanup(cluster.ResetPlatformDomainForTest)
 	resetGatewayReadyCacheForTest()
 	cluster.PrimeInClusterGatewayEnabledForTest(true)
 	defer cluster.ResetInClusterGatewayEnabledForTest()
@@ -161,6 +169,8 @@ func TestComputeRouteModePatch_gatewayNotReady(t *testing.T) {
 }
 
 func TestApplyRouteModeAnnotation_mutatesApp(t *testing.T) {
+	cluster.PrimePlatformDomainForTest("olares.com")
+	t.Cleanup(cluster.ResetPlatformDomainForTest)
 	resetGatewayReadyCacheForTest()
 	cluster.PrimeInClusterGatewayEnabledForTest(true)
 	defer cluster.ResetInClusterGatewayEnabledForTest()
@@ -174,5 +184,18 @@ func TestApplyRouteModeAnnotation_mutatesApp(t *testing.T) {
 	}
 	if got := app.Annotations[AnnotationRouteMode]; got != AnnotationRouteModeGateway {
 		t.Fatalf("annotation = %q, want gateway", got)
+	}
+}
+
+func TestComputeRouteModePatchMissingPlatformDomain(t *testing.T) {
+	cluster.PrimePlatformDomainForTest("")
+	t.Cleanup(cluster.ResetPlatformDomainForTest)
+	cluster.PrimeInClusterGatewayEnabledForTest(true)
+	t.Cleanup(cluster.ResetInClusterGatewayEnabledForTest)
+	resetGatewayReadyCacheForTest()
+	c := newFakeClient(t, newAcceptedGateway())
+	need, mode, err := ComputeRouteModePatch(context.Background(), c, newSharedApp())
+	if err != nil || need || mode != "" {
+		t.Fatalf("missing domain: need=%v mode=%q err=%v", need, mode, err)
 	}
 }

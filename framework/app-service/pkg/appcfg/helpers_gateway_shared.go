@@ -33,7 +33,7 @@ func IsSharedServerApp(app *appv1alpha1.Application) bool {
 // LogicalHostPattern returns the canonical shared gateway host pattern:
 // <sharedEntranceID>.shared.<SharedMeshDomain>. platformDomain is retained for
 // call-site compatibility but is not used for the host suffix.
-func LogicalHostPattern(appid string, entranceIndex, entranceCount int, platformDomain string, isShared bool) (string, error) {
+func LogicalHostPattern(appid string, entranceIndex, entranceCount int, isShared bool) (string, error) {
 	appid = strings.ToLower(strings.TrimSpace(appid))
 	if appid == "" {
 		return "", fmt.Errorf("appid is empty")
@@ -41,7 +41,6 @@ func LogicalHostPattern(appid string, entranceIndex, entranceCount int, platform
 	if entranceIndex < 0 || entranceIndex >= entranceCount {
 		return "", fmt.Errorf("shared entrance index out of range: index=%d count=%d", entranceIndex, entranceCount)
 	}
-	_ = platformDomain
 	if isShared {
 		return fmt.Sprintf("%s.shared.%s", appv1alpha1.SharedEntranceID(appid, entranceIndex, entranceCount), SharedMeshDomain), nil
 	}
