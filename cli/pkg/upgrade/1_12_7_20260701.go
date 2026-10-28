@@ -17,7 +17,7 @@ func (u upgrader_1_12_7_20260701) Version() *semver.Version {
 	return semver.MustParse("1.12.7-20260701")
 }
 
-func (u upgrader_1_12_7_20260701) UpgradeSystemComponents() []task.Interface {
+func (u upgrader_1_12_7_20260701) PostUpgradeNode() []task.Interface {
 	tasks := append([]task.Interface{
 		&task.LocalTask{
 			Name:   "PatchNfsScript",
@@ -26,7 +26,7 @@ func (u upgrader_1_12_7_20260701) UpgradeSystemComponents() []task.Interface {
 			Delay:  5 * time.Second,
 		},
 	})
-	tasks = append(u.upgraderBase.UpgradeSystemComponents(), tasks...)
+	tasks = append(tasks, u.upgraderBase.PostUpgradeNode()...)
 	return tasks
 }
 

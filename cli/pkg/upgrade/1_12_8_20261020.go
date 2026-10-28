@@ -17,10 +17,14 @@ func (u upgrader_1_12_8_20261020) Version() *semver.Version {
 	return semver.MustParse("1.12.8-20261020")
 }
 
-// Restart K3s after component upgrades finish, then wait for the API server
-// and system components to recover.
+// Kubelet and systemd configuration is local to each node.
+func (u upgrader_1_12_8_20261020) PostUpgradeNode() []task.Interface {
+	return append(regenerateKubeFilesOnNode(), u.upgraderBase.PostUpgradeNode()...)
+}
+
+// Kubeadm control-plane files and cluster health are checked on the admin node.
 func (u upgrader_1_12_8_20261020) PostUpgrade() []task.Interface {
-	return append(regenerateKubeFiles(), u.upgraderBase.PostUpgrade()...)
+	return append(regenerateKubeFilesOnControlNode(), u.upgraderBase.PostUpgrade()...)
 }
 
 func init() {

@@ -18,10 +18,12 @@ func (u upgrader_1_12_7_20260723) Version() *semver.Version {
 	return semver.MustParse("1.12.7-20260723")
 }
 
-func (u upgrader_1_12_7_20260723) PrepareForUpgrade() []task.Interface {
-	var tasks []task.Interface
-	tasks = append(tasks, migrateContainerdConfigV3()...)
-	return append(tasks, u.upgraderBase.PrepareForUpgrade()...)
+// PreUpgradeNode rewrites the container runtime's configuration and restarts
+// it. Every machine has its own /etc/containerd and its own GPU, so every
+// machine migrates itself — the same reason the mainline 1.12.7 upgrader puts
+// this work here rather than on the control node.
+func (u upgrader_1_12_7_20260723) PreUpgradeNode() []task.Interface {
+	return append(migrateContainerdConfigV3(), u.upgraderBase.PreUpgradeNode()...)
 }
 
 func init() {
