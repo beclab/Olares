@@ -89,6 +89,8 @@ Confirm the settings on both computers. If the app’s Overlay address changes, 
 3. Approve the request on the home computer, or enter the access password shown or configured in its RustDesk client.
 4. When the remote desktop appears, control the home computer from the laptop. End the session in RustDesk when finished.
 
+Leave API Server empty because RustDesk Server OSS does not provide the Pro management API. This does not prevent remote desktop connections.
+
 The server’s public Key identifies the server. It is not the home computer’s access password. A relayed session does not require the two computers to connect directly to each other, but both must reach the relay address negotiated for that session.
 
 ## Resolve a relay connection error
