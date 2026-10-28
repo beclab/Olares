@@ -5,9 +5,9 @@ head:
   - - meta
     - name: keywords
       content: Olares, Unsloth, Unsloth Studio, 模型微调, QLoRA, LoRA, GGUF, JupyterLab, 本地大模型
-app_version: "0.0.5"
-doc_version: "1.0"
-doc_updated: "2026-10-19"
+app_version: "0.0.8"
+doc_version: "1.3"
+doc_updated: "2026-10-28"
 ---
 
 :::warning
@@ -314,6 +314,54 @@ Studio 提供图像和视频生成功能。资源需求取决于模型、精度�
 ```
 
 新密码会显示在终端中并立即生效。使用新密码登录后，请将其保存到 Vault。
+
+### Unsloth 会在加载模型前占用 4 GiB 显存吗？
+
+从应用版本 0.0.8 起，Olares 安装包仅支持 NVIDIA GPU 模式。
+
+GPU 模式显示的最低 4 GiB 是整个应用的显存配额，包含已加载模型使用的显存，并不是 Studio 在加载模型前固定占用的 4 GiB 开销。在容量切分模式下，这个配额会减少其他应用可分配的额度。实际显存占用取决于模型和任务。具体操作见[分配显存](#分配显存)。
+
+### Unsloth 会使用系统的 Hugging Face 配置吗？
+
+会。Unsloth Studio、训练工作进程和 JupyterLab 会继承 Olares 中配置的 Hugging Face 服务地址和访问令牌。
+
+要修改配置，前往 Olares **设置** > **高级** > **系统环境变量**。编辑 `OLARES_SYSTEM_HUGGINGFACE_SERVICE` 设置服务地址，编辑 `OLARES_SYSTEM_HUGGINGFACE_TOKEN` 设置令牌，然后点击**确认**和**应用**。这些是共享的系统设置，修改也会影响其他使用这些配置的应用。具体操作见[设置系统级环境变量](../manual/manage-system-env.md)。
+
+下载公开模型不需要令牌。下载受限模型时，令牌所属的 Hugging Face 账号必须拥有该模型的访问权限。
+
+### 为什么回答结束后仍然占用显存？
+
+Unsloth 会保留已加载的模型供下一次请求使用，即使 GPU 利用率回到 0%，模型仍可能占用显存。从应用版本 0.0.8 起，通过 llama.cpp 加载的 GGUF 对话模型默认空闲 5 分钟后卸载，不中断正在生成的回答，也不删除模型文件。此设置不影响训练任务。要释放 JupyterLab 笔记本占用的显存，请关闭其内核。
+
+要修改应用的默认超时时间，前往 Olares **设置** > **应用** > **Unsloth** > **环境变量** > **管理环境变量**。编辑 `UNSLOTH_MODEL_IDLE_TTL`，点击**确认**，再点击**应用**。应用会重启以应用新配置。
+
+| 值 | 默认行为 |
+|:---|:---|
+| `300` | 空闲 5 分钟后卸载。 |
+| `0` | 关闭自动卸载。 |
+| 大于或等于 `60` 的整数 | 空闲达到指定秒数后卸载。 |
+
+尚未在 Studio 中保存空闲超时时间时，即使 **Switch model by request** 关闭，环境变量中的默认值仍会生效。Studio 已保存的设置会覆盖这个环境变量，即使环境变量设为 `0` 也不例外。如果你已经在 Studio 中保存过空闲超时时间，请在 Studio 中调整：
+
+1. 在 Unsloth Studio 中打开 **Settings** > **API**，找到 **Model auto-switch (OpenAI API)**。
+2. 开启 **Switch model by request**，在 **Idle auto-unload** 中填写所需秒数，然后点击 **Save**。设为 `0` 可关闭自动卸载。关闭 **Switch model by request** 时，已保存的超时设置不会生效。开启该开关也会允许 API 请求按名称加载已下载的模型。
+3. 要让通过 Studio 手动加载的模型也能自动卸载，关闭 **Only unload models loaded by the API**。
+
+此外，Studio **Settings** > **System** > **Model memory** 中的 **Keep model in GPU memory** 必须关闭，自动卸载才会生效。
+
+如需手动释放显存，打开 **Chat** > **模型选择器**，选择右下角的 **Eject model** 或 **Eject all**。需要使用时，重新加载模型即可。
+
+卸载模型不会改变 Olares 的容量切分配额。如需将配额分配给其他应用，请停止 Unsloth 或移除其 GPU 分配。具体操作见[管理 AI 算力资源](../manual/olares/settings/gpu-resource.md)。
+
+### 升级后已有模型会怎样？
+
+升级会保留已下载的模型文件、应用数据和 Studio 已保存的设置。服务重启后需重新加载模型。已保存的自动卸载设置仍会覆盖应用的默认超时时间，具体见[为什么回答结束后仍然占用显存？](#为什么回答结束后仍然占用显存)。
+
+### 可以在 Unsloth 内部更新 llama.cpp 吗？
+
+可以。使用 Unsloth Studio 中的 llama.cpp 升级按钮即可更新。更新程序会卸载当前模型，请等待更新完成并重新加载模型后，再发送请求。
+
+Unsloth 使用自己的 llama.cpp 副本。更新它不会升级或替换 Olares 的独立 llama.cpp 引擎应用。更新后的副本保存在 Unsloth 的持久化应用数据中，停止并恢复应用后仍会保留。
 
 ## 了解更多
 
