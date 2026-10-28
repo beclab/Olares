@@ -401,7 +401,7 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               collapsed: true,
               items: [
                 {
-                  text: "Import photos from NAS",
+                  text: "从 NAS 导入照片",
                   link: "/zh/use-cases/immich-import-from-nas",
                 },
                 {
