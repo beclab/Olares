@@ -19,14 +19,12 @@ Make sure you have the right to download the requested content, such as content 
 
 ## Create a Fetch task
 
-:::info Fetch audio or video resources
-To download media from supported websites, you need to install the `yt-dlp` component first. In LarePass, go to **Settings** > **Downloader** and click **Install in Olares Market** under **yt-dlp**. 
-
-Torrents, Hugging Face, and general links do not require this.
+:::info Audio and video downloads
+Support for downloading audio and video from media websites is coming soon.
 :::
 
 1. Open the LarePass desktop client.
-2. Go to **Transfer** > **Fetch**, then select **Save to Olares**.
+2. Go to **Transfer**, then select **Save to Olares**.
 3. In the **Add task** window, do one of the following:
    - Paste an HTTP, HTTPS, magnet, or Hugging Face address.
    - Select the upload area to choose a `.torrent` file, or drag the file into the area.
@@ -43,7 +41,6 @@ The task appears under **Transfer** > **Fetch**, where you can follow its progre
 | Torrent | A `.torrent` file or magnet link |
 | Web link | A direct HTTP or HTTPS file link |
 | Hugging Face | A public model or repository address |
-| Audio or video | A URL from a supported media website; requires `yt-dlp` |
 
 ## Manage Fetch tasks
 
