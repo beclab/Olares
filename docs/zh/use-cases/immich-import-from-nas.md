@@ -22,7 +22,7 @@ doc_updated: "2026-04-09"
 本教程以 Synology NAS 为例。其他 NAS 品牌的过程可能有所不同。
 :::
 
-## Prerequisites
+## 准备工作 {#prerequisites}
 
 - Immich 已更新至 V1.0.15 或更高版本。
 - Olares 设备和 NAS 在同一本地网络上。
