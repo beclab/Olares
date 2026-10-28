@@ -40,12 +40,6 @@ func AddContainer(c *restful.Container) error {
 		Metadata(restfulspec.KeyOpenAPITags, tags).
 		Returns(http.StatusOK, "", response.Response{}))
 
-	ws.Route(ws.GET("/re-download-cert").
-		To(handler.NetworkUnavailable).
-		Doc("Re-download ssl certificate").
-		Metadata(restfulspec.KeyOpenAPITags, tags).
-		Returns(http.StatusOK, "", response.Response{}))
-
 	ws.Route(ws.POST("/myapps").
 		To(handler.myapps).
 		Doc("List user's apps (Only for Provider) ").

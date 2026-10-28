@@ -1,10 +1,10 @@
 // Package network hosts `olares-cli settings network`. Mirrors the SPA's
-// Settings -> Network page (Reverse Proxy, FRP, External Network, SSL,
+// Settings -> Network page (Reverse Proxy, FRP, SSL,
 // Hosts File). The wire formats here come from two backends:
 //
 //  1. user-service /api/network.controller.ts → BFL endpoints under
 //     /bfl/settings/v1alpha1/...
-//     Some handlers (`/api/reverse-proxy`, `/api/external-network`,
+//     Some handlers (`/api/network/reverse-proxy`,
 //     `/api/launcher-public-domain-access-policy`) forward `data.data`
 //     verbatim to the client, leaving the BFL envelope intact.
 //     Others (`/api/frp-servers`) wrap with `returnSucceed(...)` —

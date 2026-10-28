@@ -41,18 +41,6 @@ func AddContainer(c *restful.Container) error {
 		Metadata(restfulspec.KeyOpenAPITags, tags).
 		Returns(http.StatusOK, "", response.Response{}))
 
-	ws.Route(ws.GET("/unbind-zone").
-		To(handler.NetworkUnavailable).
-		Doc("Unbinding user zone.").
-		Metadata(restfulspec.KeyOpenAPITags, tags).
-		Returns(http.StatusOK, "", response.Response{}))
-
-	ws.Route(ws.POST("/activate").
-		To(handler.NetworkUnavailable).
-		Doc("Activate system.").
-		Metadata(restfulspec.KeyOpenAPITags, tags).
-		Returns(http.StatusOK, "", response.Response{}))
-
 	ws.Route(ws.POST("/network/reverse-proxy").
 		To(handler.handleUpdateDefaultReverseProxy).
 		Doc("Change the current reverse proxy settings.").
@@ -63,18 +51,6 @@ func AddContainer(c *restful.Container) error {
 	ws.Route(ws.GET("/network/reverse-proxy").
 		To(handler.handleGetDefaultReverseProxy).
 		Doc("Get the current reverse proxy settings and provisioning status.").
-		Metadata(restfulspec.KeyOpenAPITags, tags).
-		Returns(http.StatusOK, "", response.Response{}))
-
-	ws.Route(ws.GET("/external-network").
-		To(handler.NetworkUnavailable).
-		Doc("Get external network switch status.").
-		Metadata(restfulspec.KeyOpenAPITags, tags).
-		Returns(http.StatusOK, "", response.Response{}))
-
-	ws.Route(ws.POST("/external-network").
-		To(handler.NetworkUnavailable).
-		Doc("Enable/Disable external network access (owner only).").
 		Metadata(restfulspec.KeyOpenAPITags, tags).
 		Returns(http.StatusOK, "", response.Response{}))
 
@@ -213,78 +189,6 @@ func AddContainer(c *restful.Container) error {
 		Doc("Get application subject list").
 		Metadata(restfulspec.KeyOpenAPITags, tags).
 		Returns(http.StatusOK, "", nil))
-
-	// headscale
-	ws.Route(ws.GET("/headscale/ssh/acl").
-		To(handler.NetworkUnavailable).
-		Doc("get headscale ssh acl").
-		Metadata(restfulspec.KeyOpenAPITags, []string{"headscale"}).
-		Returns(http.StatusOK, "", &response.Response{}))
-
-	ws.Route(ws.POST("/headscale/enable/ssh").
-		To(handler.NetworkUnavailable).
-		Doc("enable headscale ssh acl").
-		Metadata(restfulspec.KeyOpenAPITags, []string{"headscale"}).
-		Returns(http.StatusOK, "", &response.Response{}))
-
-	ws.Route(ws.POST("/headscale/disable/ssh").
-		To(handler.NetworkUnavailable).
-		Doc("disable headscale ssh acl").
-		Metadata(restfulspec.KeyOpenAPITags, []string{"headscale"}).
-		Returns(http.StatusOK, "", &response.Response{}))
-
-	ws.Route(ws.GET("/headscale/{"+ParamAppName+"}/acl").
-		To(handler.NetworkUnavailable).
-		Doc("get app's headscale acl").
-		Metadata(restfulspec.KeyOpenAPITags, []string{"headscale"}).
-		Param(ws.PathParameter(ParamAppName, "app name").DataType("string").Required(true)).
-		Returns(http.StatusOK, "", &response.Response{}))
-
-	ws.Route(ws.POST("/headscale/{"+ParamAppName+"}/acl").
-		To(handler.NetworkUnavailable).
-		Doc("set app's headscale acl").
-		Metadata(restfulspec.KeyOpenAPITags, []string{"headscale"}).
-		Param(ws.PathParameter(ParamAppName, "app name").DataType("string").Required(true)).
-		Returns(http.StatusOK, "", &response.Response{}))
-
-	ws.Route(ws.GET("/headscale/acls").
-		To(handler.NetworkUnavailable).
-		Doc("get app's headscale acl list").
-		Metadata(restfulspec.KeyOpenAPITags, []string{"headscale"}).
-		Returns(http.StatusOK, "", &response.Response{}))
-
-	ws.Route(ws.POST("/tailscale/enable/subroutes").
-		To(handler.NetworkUnavailable).
-		Doc("enable tailscale subroutes").
-		Returns(http.StatusOK, "", &response.Response{}))
-
-	ws.Route(ws.POST("/tailscale/disable/subroutes").
-		To(handler.NetworkUnavailable).
-		Doc("enable tailscale subroutes").
-		Returns(http.StatusOK, "", &response.Response{}))
-
-	ws.Route(ws.GET("/tailscale/subroutes").
-		To(handler.NetworkUnavailable).
-		Doc("get tailscale subroutes").
-		Returns(http.StatusOK, "", &response.Response{}))
-
-	ws.Route(ws.GET("/tailscale/advertise-exit-node").
-		To(handler.NetworkUnavailable).
-		Doc("get tailscale advertise exit node setting").
-		Metadata(restfulspec.KeyOpenAPITags, []string{"headscale"}).
-		Returns(http.StatusOK, "", &response.Response{}))
-
-	ws.Route(ws.POST("/tailscale/enable/advertise-exit-node").
-		To(handler.NetworkUnavailable).
-		Doc("enable tailscale advertise exit node").
-		Metadata(restfulspec.KeyOpenAPITags, []string{"headscale"}).
-		Returns(http.StatusOK, "", &response.Response{}))
-
-	ws.Route(ws.POST("/tailscale/disable/advertise-exit-node").
-		To(handler.NetworkUnavailable).
-		Doc("disable tailscale advertise exit node").
-		Metadata(restfulspec.KeyOpenAPITags, []string{"headscale"}).
-		Returns(http.StatusOK, "", &response.Response{}))
 
 	c.Add(ws)
 	return nil
