@@ -5,6 +5,30 @@ import (
 	"testing"
 )
 
+func TestStateClusterNameIsIndependentOfUsername(t *testing.T) {
+	username := "alice@olares.local"
+	for _, clusterName := range []string{"lab", ""} {
+		raw, err := json.Marshal(State{TerminusName: &username, ClusterName: clusterName})
+		if err != nil {
+			t.Fatal(err)
+		}
+		var got map[string]any
+		if err := json.Unmarshal(raw, &got); err != nil {
+			t.Fatal(err)
+		}
+		if got["terminusName"] != username {
+			t.Fatalf("terminusName = %v, want %q", got["terminusName"], username)
+		}
+		if clusterName == "" {
+			if _, exists := got["clusterName"]; exists {
+				t.Fatal("unset clusterName must not be inferred from the username")
+			}
+		} else if got["clusterName"] != clusterName {
+			t.Fatalf("clusterName = %v, want %q", got["clusterName"], clusterName)
+		}
+	}
+}
+
 func TestStateGPUFieldsKeepLegacyInfoAndExposeFullList(t *testing.T) {
 	primary := "NVIDIA Corporation GeForce RTX 4070"
 	s := State{

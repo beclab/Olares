@@ -45,6 +45,10 @@ type State struct {
 	// It remains available when the cluster cannot be reached.
 	TerminusName *string `json:"terminusName,omitempty"`
 
+	// ClusterName is the machine LAN name from Terminus.spec.localName,
+	// independent of the first user's login name.
+	ClusterName string `json:"clusterName,omitempty"`
+
 	// PrimaryUserDID is the first user's DID recorded in the local release file.
 	PrimaryUserDID *string `json:"primaryUserDID,omitempty"`
 

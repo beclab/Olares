@@ -15,6 +15,7 @@ import (
 	"github.com/beclab/Olares/daemon/pkg/nets"
 	"github.com/beclab/Olares/daemon/pkg/onboarding"
 	"github.com/beclab/Olares/daemon/pkg/utils"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
 
@@ -65,6 +66,16 @@ func primaryGPU(gpuList []string) *string {
 		return nil
 	}
 	return pointer.String(gpuList[0])
+}
+
+// refreshClusterName is called with TerminusStateMu held.
+func refreshClusterName(ctx context.Context, client dynamic.Interface) error {
+	terminus, err := utils.GetTerminusInfo(ctx, client)
+	if err != nil {
+		return err
+	}
+	CurrentState.ClusterName = terminus.Spec.LocalName
+	return nil
 }
 
 // CheckCurrentStatus refreshes the state and publishes the result.
@@ -365,6 +376,10 @@ func refreshCurrentStatus(ctx context.Context) error {
 	if err != nil {
 		currentTerminusState = SystemError
 		return err
+	}
+
+	if err := refreshClusterName(ctx, dynamicClient); err != nil {
+		klog.Error("get machine LAN name error, ", err)
 	}
 
 	pressure, err := utils.GetNodesPressure(ctx, kubeClient)
