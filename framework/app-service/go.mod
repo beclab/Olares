@@ -8,9 +8,9 @@ require (
 	github.com/apecloud/kubeblocks v1.0.0
 	github.com/argoproj/argo-workflows/v3 v3.7.15
 	github.com/beclab/Olares/framework/oac v0.0.0-20261020082448-869e3c1834d8
-	github.com/beclab/api v0.0.27-0.20260929062526-d281261cdff4
+	github.com/beclab/api v0.0.27-0.20261012054558-5bf33ba22b5b
 	github.com/beclab/lldap-client v0.0.11
-	github.com/containerd/containerd v1.7.29
+	github.com/containerd/containerd v1.7.36
 	github.com/containers/image/v5 v5.36.1
 	github.com/emicklei/go-restful-openapi/v2 v2.11.0
 	github.com/emicklei/go-restful/v3 v3.13.0

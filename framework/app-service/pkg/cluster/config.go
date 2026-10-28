@@ -66,7 +66,8 @@ func GetDomainName(ctx context.Context, reader client.Reader) (string, error) {
 	domain := strings.ToLower(strings.TrimSuffix(strings.TrimSpace(terminus.Spec.Settings["domainName"]), "."))
 	if domain == "" {
 		//FIXME:
-		return "olares.local", nil
+		localName := strings.ToLower(strings.TrimSuffix(strings.TrimSpace(terminus.Spec.LocalName), "."))
+		return localName + ".olares.local", nil
 	}
 	return domain, nil
 }
@@ -104,6 +105,13 @@ func GetPlatformDomain(ctx context.Context) string {
 		return ""
 	}
 
-	defaultCache.set(domain)
-	return domain
+	if domain == "" {
+		klog.Errorf("Platform domain is empty")
+		return ""
+	}
+
+	platformDomain := strings.Join(strings.Split(domain, ".")[1:], ".")
+
+	defaultCache.set(platformDomain)
+	return platformDomain
 }
