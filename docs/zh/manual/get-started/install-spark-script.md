@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: 在 NVIDIA DGX Spark 上通过命令行安装脚本快速部署 Olares。
+description: 了解如何在 NVIDIA DGX Spark 上通过脚本安装 Olares，以及如何停止、重新启动和安全卸载 Olares。
 head:
   - - meta
     - name: keywords
@@ -9,7 +9,7 @@ head:
 
 # 在 Spark 上使用命令行安装 Olares
 
-本文介绍如何在 NVIDIA DGX Spark 上通过命令行安装脚本安装 Olares。
+本文介绍如何在 NVIDIA DGX Spark 上通过脚本安装 Olares。如果你已通过脚本完成安装，也可以直接查看[停止和启动 Olares](#停止和启动-olares) 或[卸载 Olares](#卸载-olares)。
 
 ## 前提条件
 
@@ -104,6 +104,49 @@ DGX Spark 采用统一内存架构，CPU 和 GPU 共享 128 GB 的 LPDDR5x 内�
 
 3. 点击显存值旁边的 <i class="material-symbols-outlined">edit_square</i>。
 4. 在**编辑显存分配**对话框中，输入所需的显存大小（GB），然后点击**确认**。
+
+## 停止和启动 Olares
+
+如果想暂时停止 Olares 的服务和应用，同时保留数据，可以使用 `stop` 命令。停止后，DGX Spark 仍保持开机，但 Olares 桌面和应用暂时无法访问，需要重新启动 Olares 后才能使用。
+
+在 DGX Spark 上打开终端，或通过 SSH 连接后执行以下命令。
+
+1. 保存当前工作，等待模型训练、文件传输等任务完成。
+2. 停止 Olares：
+
+   ```bash
+   sudo olares-cli stop
+   ```
+
+   等待命令执行完毕，确认输出包含 `StopOlares execute successfully` 且没有报错。停止不会删除已安装的应用、配置或用户数据，也不会禁用 DGX Spark 重启后的自动启动。
+
+3. 需要继续使用时，启动 Olares：
+
+   ```bash
+   sudo olares-cli start
+   ```
+
+   等待命令执行完毕，然后打开 Olares 桌面，确认可以登录并访问应用。
+
+## 卸载 Olares
+
+如果不再需要在 DGX Spark 上运行 Olares，可以将其卸载。加上 `--all` 选项还会移除安装准备阶段安装的依赖，包括 Olares 使用的容器运行时。
+
+:::warning 卸载前先备份
+卸载会删除 Olares 的配置、已安装的应用和用户数据。即使不加 `--all`，`uninstall` 也会删除这些数据。
+
+请在 Olares 仍在运行时，将[文件和支持备份的应用数据](../olares/settings/backup.md)备份到外部存储或云存储。其他应用的数据请使用各自的备份工具导出，并确认备份已成功完成。如果 Olares 已停止，请先启动。若要保留安装和数据，请改用 `stop`。
+:::
+
+1. 在 DGX Spark 上打开终端，或通过 SSH 连接后运行：
+
+   ```bash
+   sudo olares-cli uninstall --all
+   ```
+
+2. 等待命令执行完毕，确认输出包含 `Uninstall Olares execute successfully`，并检查是否有报错。
+
+卸载不会恢复[准备 DGX Spark](#准备-dgx-spark) 时移除的 Docker 或原有 containerd 环境。如需继续使用，请单独重新安装和配置。
 
 <!--@include: ./reusables.md#protect-olares-id-->
 

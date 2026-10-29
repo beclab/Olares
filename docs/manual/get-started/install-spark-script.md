@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Install Olares on NVIDIA DGX Spark using the command-line installation script for quick deployment.
+description: Install Olares on NVIDIA DGX Spark using the installation script, stop and restart it, or uninstall it safely.
 head:
   - - meta
     - name: keywords
@@ -9,7 +9,7 @@ head:
 
 # Install Olares on DGX Spark via script
 
-This guide explains how to install Olares on NVIDIA DGX Spark using the command-line installation script.
+This guide explains how to install Olares on NVIDIA DGX Spark using the command-line installation script. If you already installed Olares this way, you can also [stop and restart it](#stop-and-start-olares) or [uninstall it](#uninstall-olares).
 
 ## Prerequisites
 
@@ -104,6 +104,49 @@ If needed, you can manually adjust the memory allocation for each AI application
 
 3. Click <i class="material-symbols-outlined">edit_square</i> next to the VRAM value.
 4. In the **Edit VRAM allocation** dialog, enter the desired VRAM amount in GB and click **Confirm**.
+
+## Stop and start Olares
+
+Stop Olares when you want to pause its services and apps while keeping your data. DGX Spark stays powered on, but Olares Desktop and its apps are unavailable until you start Olares again.
+
+Run the following commands in a terminal on DGX Spark, either directly or through SSH.
+
+1. Save your work and wait for running tasks, such as model training or file transfers, to finish.
+2. Stop Olares:
+
+   ```bash
+   sudo olares-cli stop
+   ```
+
+   Wait for the command to finish and report `StopOlares execute successfully` without errors. Stopping does not delete installed apps, configuration, or user data, and does not disable automatic startup when DGX Spark reboots.
+
+3. When you want to use Olares again, start it:
+
+   ```bash
+   sudo olares-cli start
+   ```
+
+   Wait for the command to finish, then open Olares Desktop and check that you can sign in and access your apps.
+
+## Uninstall Olares
+
+Uninstall Olares when you want to remove it from DGX Spark. The `--all` option also removes dependencies installed during the preparation phase, including the Olares container runtime.
+
+:::warning Back up before uninstalling
+Uninstalling deletes Olares configuration, installed apps, and user data. This also applies to `uninstall` without `--all`; omitting that option does not preserve your data.
+
+While Olares is still running, [back up your files and supported app data](../olares/settings/backup.md) to external storage or cloud storage. Export other app data using each app's own backup tools, and check that your backups completed successfully. If Olares is stopped, start it first. To keep your installation and data, use `stop` instead.
+:::
+
+1. Open a terminal on DGX Spark, either directly or through SSH, and run:
+
+   ```bash
+   sudo olares-cli uninstall --all
+   ```
+
+2. Wait for the command to finish and report `Uninstall Olares execute successfully`. Check the output for errors before considering the uninstall complete.
+
+Uninstalling does not restore Docker or the previous containerd setup removed in [Prepare DGX Spark](#prepare-dgx-spark). If you need them again, reinstall and configure them separately.
 
 <!--@include: ./reusables.md#protect-olares-id-->
 
