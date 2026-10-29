@@ -75,7 +75,7 @@ Paperclip 是一个开源平台，用于在同一个统一工作区下协调多�
 
    Paperclip 支持以下变量：
 
-   | Variable | Used by |
+   | 变量 | 使用该变量的智能体 |
    |:---------|:--------|
    | `ANTHROPIC_API_KEY` | Claude Code, OpenCode, Pi |
    | `OPENAI_API_KEY` | Codex, OpenCode, Pi |
@@ -260,7 +260,7 @@ Paperclip 是一个完全自主的多智能体协作平台。完全在本地模�
    }
    ```
 
-   :::tip OpenAI-compatible Base URL
+   :::tip OpenAI 兼容接口的 Base URL
    Qwen3.6-27B 的 Base URL 已以 `/v1` 结尾。如果改用基于 Ollama 的模型，请在模型控制台中选择 **OpenAI-Compatible**，并复制该格式下显示的 Base URL。如果使用的是从其他位置获得的 Ollama 格式 Base URL，请在末尾添加 `/v1`，以便 OpenCode 访问其 OpenAI-compatible API。
    :::
 

@@ -164,7 +164,7 @@ ACE-Step 提供强大的工具来完善和修改生成曲目的特定部分。
 6. 点击下方的 **Play** 按钮预览变化。
     ![延长标签](/images/manual/use-cases/ace-step-extend.png#bordered)
 
-## Audio2Audio
+## 根据参考音频生成音乐 {#audio2audio}
 
 你可以基于上传的**参考音频**片段创建新曲目。它分析音色、节奏和风格等特征，生成具有相似感觉的曲目。
 1. 勾选 **Enable Audio2Audio** 复选框。

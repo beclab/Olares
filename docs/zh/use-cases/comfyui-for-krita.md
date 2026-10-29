@@ -274,9 +274,9 @@ Krita AI Diffusion 插件需要以下自定义节点：
 
 5. 选择一个首选结果，然后点击 **Apply** 将其添加到图层中。
 
-## Inpaint
+## 局部重绘 {#inpaint}
 
-要完善生成图像的特定区域，请使用 inpainting。这允许你在保持其余部分完整的同时修改图像的某些部分。
+要完善生成图像的特定区域，请使用局部重绘。这允许你在保持其余部分完整的同时修改图像的某些部分。
 
 1. 选择自由手选择工具并在要修改的区域周围绘制。
    ![使用自由手选择工具](/images/manual/use-cases/krita-use-selection-tool.png#bordered)

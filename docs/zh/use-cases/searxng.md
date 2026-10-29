@@ -22,7 +22,7 @@ SearXNG 是 Olares 上注重隐私的网页搜索共享应用。Olares 1.12.6 �
 
 SearXNG 不在服务器端存储用户数据。所有偏好设置（如界面语言、主题、启用的搜索引擎和插件）都保存在浏览器的 Cookie 中。因此，你只需要在卸载之前安装的 SearXNG 应用前，备份 preferences hash。
 
-:::tip Preferences hash
+:::tip 偏好设置字符串
 Preferences hash 是一串包含你所有 SearXNG 设置的编码字符串。复制该 hash 并粘贴到新版应用中，即可恢复你的偏好设置。
 :::
 

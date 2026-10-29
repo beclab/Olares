@@ -248,5 +248,5 @@ Pool CLI 在一个预配置的 Ubuntu 24.04 环境中运行。根据你的项目
 
 ## 了解更多
 
-- [Poolside documentation](https://docs.poolside.ai/get-started/overview)
+- [Poolside 文档](https://docs.poolside.ai/get-started/overview)
 - [使用 Claude Code 编写代码](claude-code-1.12.6.md)

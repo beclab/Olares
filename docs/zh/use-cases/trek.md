@@ -324,4 +324,4 @@ TREK 默认使用 OpenStreetMap。要获得更全面的搜索结果，请在 **A
 
 ## 了解更多
 
-- [TREK on GitHub](https://github.com/mauriceboe/NOMAD)
+- [TREK 的 GitHub 仓库](https://github.com/mauriceboe/NOMAD)

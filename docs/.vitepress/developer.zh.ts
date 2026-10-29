@@ -466,7 +466,7 @@ export const developerSidebar: DefaultTheme.Sidebar = {
                           link: "/zh/developer/contribute/olares-id/contract/did/release-history",
                         },
                         {
-                          text: "FAQ",
+                          text: "常见问题",
                           link: "/zh/developer/contribute/olares-id/contract/did/faq",
                         },
                       ],

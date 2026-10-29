@@ -71,7 +71,7 @@ Speaches 是一个兼容 OpenAI API 的语音服务器，支持语音转文本�
 
 Speaches 预装了两个开箱即用的模型：
 
-| Model | Type | Purpose |
+| 模型 | 类型 | 用途 |
 |:------|:-----|:--------|
 | `Systran/faster-whisper-small` | STT | 语音识别和翻译 |
 | `speaches-ai/Kokoro-82M-v1.0-ONNX` | TTS | 语音合成 |

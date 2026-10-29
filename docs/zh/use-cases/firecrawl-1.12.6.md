@@ -266,7 +266,7 @@ console.log(data.data.summary);
 console.log("markdown length:", data.data.markdown?.length);
 ```
 
-## FAQs
+## 常见问题 {#faqs}
 
 ### 为什么 Bull Dashboard 显示 0 Jobs？
 

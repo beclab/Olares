@@ -75,7 +75,7 @@ Paperclip 是一个开源平台，用于在同一个统一工作区下协调多�
 
    Paperclip 支持以下变量：
 
-   | Variable | Used by |
+   | 变量 | 使用该变量的智能体 |
    |:---------|:--------|
    | `ANTHROPIC_API_KEY` | Claude Code, OpenCode, Pi |
    | `OPENAI_API_KEY` | Codex, OpenCode, Pi |

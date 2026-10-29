@@ -376,11 +376,11 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               collapsed: true,
               items:[
                 {
-                  text: "Enable Intel integrated GPU passthrough",
+                  text: "启用 Intel 集成显卡直通",
                   link: "/zh/use-cases/windows-intel-gpu-passthrough",
                 },
                 {
-                  text: "Known issues",
+                  text: "已知问题",
                   link: "/zh/use-cases/windows-issues",
                 },
               ]
@@ -428,7 +428,7 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               collapsed: true,
               items: [
                 {
-                  text: "Advanced settings",
+                  text: "高级设置",
                   link: "/zh/use-cases/trek-advanced-settings",
                 }
               ]

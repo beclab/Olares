@@ -609,6 +609,22 @@ export const zh = defineConfig({
   lang: "zh",
   titleTemplate: ":title | Olares 中文文档",
   themeConfig: {
+    docFooter: { prev: "上一页", next: "下一页" },
+    outline: { label: "本页目录" },
+    lastUpdated: { text: "最后更新" },
+    langMenuLabel: "切换语言",
+    returnToTopLabel: "返回顶部",
+    sidebarMenuLabel: "菜单",
+    darkModeSwitchLabel: "外观",
+    darkModeSwitchTitle: "切换到深色主题",
+    lightModeSwitchTitle: "切换到浅色主题",
+    skipToContentLabel: "跳转到正文",
+    notFound: {
+      title: "找不到页面",
+      quote: "链接可能已失效，或页面已移至其他位置。",
+      linkLabel: "返回首页",
+      linkText: "返回首页",
+    },
     editLink: {
       pattern: "https://github.com/beclab/Olares/edit/main/docs/:path",
       text: "在 GitHub 上编辑此页面",
