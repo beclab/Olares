@@ -34,7 +34,7 @@ Subcommands:
   status
   registries list
   images list [--registry <name>]
-  env (system|user) list
+  env (system|user) set --var KEY=VALUE
 
 Out of scope until a JWS key sourcing path exists:
   registries mirrors put/delete, registries prune,

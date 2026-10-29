@@ -145,25 +145,31 @@ func newDomainListCommand(f *cmdutil.Factory) *cobra.Command {
 the app exposes. Internally fans out one "domain get" per entrance and
 collates the results into one table.
 
-Pass --output json for the raw {entrance: SetupDomain} map.
+Shows the configured domains, CNAME status, and certificate configuration status.
 
 Examples:
   olares-cli settings apps domain list files
-  olares-cli settings apps domain list files -o json
 `,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			return runDomainList(c.Context(), f, args[0], output)
 		},
 	}
-	addOutputFlag(cmd, &output)
+	cmd.Flags().StringVarP(&output, "output", "o", "table", "output format: table")
 	return cmd
 }
 
-// domainListEntry pairs an entrance name with its SetupDomain so we can
-// keep the JSON output structurally explicit (callers can iterate
-// entries[].entrance / entries[].setup) without us inventing an ad-hoc
-// {entrance: SetupDomain} envelope.
+// validateDomainReadOutput validates the output format for domain reads.
+func validateDomainReadOutput(output string) error {
+	switch strings.ToLower(strings.TrimSpace(output)) {
+	case "", "table":
+		return nil
+	default:
+		return fmt.Errorf("unsupported --output %q for domain get/list (allowed: table)", output)
+	}
+}
+
+// domainListEntry pairs an entrance with its setup for table rendering.
 type domainListEntry struct {
 	Entrance string      `json:"entrance"`
 	Setup    SetupDomain `json:"setup"`
@@ -177,8 +183,7 @@ func runDomainList(ctx context.Context, f *cmdutil.Factory, app, outputRaw strin
 	if app == "" {
 		return fmt.Errorf("app name is required")
 	}
-	format, err := parseFormat(outputRaw)
-	if err != nil {
+	if err := validateDomainReadOutput(outputRaw); err != nil {
 		return err
 	}
 	pc, err := prepare(ctx, f)
@@ -201,9 +206,6 @@ func runDomainList(ctx context.Context, f *cmdutil.Factory, app, outputRaw strin
 			return fmt.Errorf("entrance %q: %w", name, err)
 		}
 		entries = append(entries, domainListEntry{Entrance: name, Setup: sd})
-	}
-	if format == FormatJSON {
-		return printJSON(os.Stdout, entries)
 	}
 	return renderDomainList(os.Stdout, app, entries)
 }
@@ -251,19 +253,17 @@ unset; "domain finish" moves them to set / pending. Updating an
 unchanged domain may preserve its existing state. Unrecognized values
 are printed as-is.
 
-cert / key are NEVER printed in the default table view; pass
---output json to retrieve them too.
+Shows the configured domains, CNAME status, and certificate configuration status.
 
 Examples:
   olares-cli settings apps domain get files file
-  olares-cli settings apps domain get files file -o json
 `,
 		Args: cobra.ExactArgs(2),
 		RunE: func(c *cobra.Command, args []string) error {
 			return runDomainGet(c.Context(), f, args[0], args[1], output)
 		},
 	}
-	addOutputFlag(cmd, &output)
+	cmd.Flags().StringVarP(&output, "output", "o", "table", "output format: table")
 	return cmd
 }
 
@@ -275,8 +275,7 @@ func runDomainGet(ctx context.Context, f *cmdutil.Factory, app, entrance, output
 	if app == "" || entrance == "" {
 		return fmt.Errorf("both <app> and <entrance> are required")
 	}
-	format, err := parseFormat(outputRaw)
-	if err != nil {
+	if err := validateDomainReadOutput(outputRaw); err != nil {
 		return err
 	}
 	pc, err := prepare(ctx, f)
@@ -287,12 +286,7 @@ func runDomainGet(ctx context.Context, f *cmdutil.Factory, app, entrance, output
 	if err != nil {
 		return err
 	}
-	switch format {
-	case FormatJSON:
-		return printJSON(os.Stdout, current)
-	default:
-		return renderDomainSetup(os.Stdout, app, entrance, current)
-	}
+	return renderDomainSetup(os.Stdout, app, entrance, current)
 }
 
 func getDomainSetup(ctx context.Context, d Doer, app, entrance string) (SetupDomain, error) {
@@ -331,12 +325,12 @@ func renderDomainSetup(w io.Writer, app, entrance string, sd SetupDomain) error 
 // we need that distinction for the RMW merge.
 func newDomainSetCommand(f *cmdutil.Factory) *cobra.Command {
 	var (
-		thirdLevel       string
-		thirdParty       string
-		clearThirdLevel  bool
-		clearThirdParty  bool
-		certFile         string
-		keyFile          string
+		thirdLevel      string
+		thirdParty      string
+		clearThirdLevel bool
+		clearThirdParty bool
+		certFile        string
+		keyFile         string
 	)
 	cmd := &cobra.Command{
 		Use:   "set <app> <entrance>",
@@ -373,7 +367,7 @@ Examples:
 				clearThirdLevel: clearThirdLevel,
 				clearThirdParty: clearThirdParty,
 				certFile:        certFile,
-				keyFile:          keyFile,
+				keyFile:         keyFile,
 			})
 		},
 	}
@@ -387,14 +381,14 @@ Examples:
 }
 
 type domainSetFlags struct {
-	thirdLevel       string
-	thirdLevelSet    bool
-	thirdParty       string
-	thirdPartySet    bool
-	clearThirdLevel  bool
-	clearThirdParty  bool
-	certFile         string
-	keyFile          string
+	thirdLevel      string
+	thirdLevelSet   bool
+	thirdParty      string
+	thirdPartySet   bool
+	clearThirdLevel bool
+	clearThirdParty bool
+	certFile        string
+	keyFile         string
 }
 
 func runDomainSet(ctx context.Context, f *cmdutil.Factory, app, entrance string, flags domainSetFlags) error {

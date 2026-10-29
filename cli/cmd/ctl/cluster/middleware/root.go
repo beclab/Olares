@@ -28,9 +28,7 @@ endpoint returns a custom envelope ({code, data:[MiddlewareItem]})
 rather than a K8s-native shape — see
 apps/packages/app/src/apps/controlPanelCommon/network/middleware.ts.
 
-Sensitive fields (admin password) are redacted by default. Pass
---show-passwords to include them in -o json output (table mode never
-shows passwords).
+Use table output for a summary or JSON output for structured instance details.
 `,
 	}
 	cmd.SilenceUsage = true
