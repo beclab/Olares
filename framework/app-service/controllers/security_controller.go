@@ -475,7 +475,7 @@ func (r *SecurityReconciler) reconcileNetworkPolicy(ctx context.Context, ns *cor
 				})
 			}
 		} else if security.IsUserSpaceNamespaces(ns.Name) {
-			networkPolicy = security.NetworkPolicies{security.NPUserSpace.DeepCopy(), security.NPIngress.DeepCopy()}
+			networkPolicy = security.NetworkPolicies{security.NPUserSpace.DeepCopy()}
 			networkPolicy.SetName("user-space-np")
 			networkPolicy.SetNamespace(ns.Name)
 			npFix = func(np *netv1.NetworkPolicy) {
