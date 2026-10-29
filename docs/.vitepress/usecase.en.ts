@@ -307,6 +307,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   link: "/use-cases/whisper-webui",
                 },
                 {
+                  text: "Presenton",
+                  link: "/use-cases/presenton",
+                },
+                {
                   text: "Speaches",
                   link: "/use-cases/speaches",
                 },

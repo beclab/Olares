@@ -71,6 +71,7 @@ export const useCases: UseCase[] = [
   { title: "Open Design", link: "/use-cases/open-design", category: "Creative media", description: "Turn prompts into prototypes, pages, and slide decks", descriptionZh: "将提示词转化为原型、页面和幻灯片" },
   { title: "ACE-Step 1.5", link: "/use-cases/ace-step-1.5", category: "Creative media", description: "Generate music from prompts or lyrics", descriptionZh: "根据提示词或歌词生成音乐" },
   { title: "Whisper-WebUI", link: "/use-cases/whisper-webui", category: "Creative media", description: "Speech-to-text, subtitles, and translation", descriptionZh: "语音转文字、字幕生成与翻译" },
+  { title: "Presenton", link: "/use-cases/presenton", category: "Creative media", description: "Generate, edit and export presentations with AI Router", descriptionZh: "使用 AI Router 生成、编辑并导出演示文稿" },
   { title: "Speaches", link: "/use-cases/speaches", category: "Creative media", description: "Speech-to-text, text-to-speech, and voice chat", descriptionZh: "语音转文字、文字转语音与语音对话" },
   { title: "IndexTTS2", link: "/use-cases/indextts2", category: "Creative media", description: "Text-to-speech with zero-shot voice cloning", descriptionZh: "支持零样本声音克隆的文字转语音" },
   { title: "Bifrost", link: "/use-cases/bifrost", category: "Model services", description: "AI gateway that aggregates models behind one endpoint", descriptionZh: "将多个模型聚合到单一端点的 AI 网关" },
