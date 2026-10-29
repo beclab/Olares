@@ -25,14 +25,7 @@ These signals mean the URL is downloadable but the server has no session for it 
 | `error_code` 507 / 511 / 512 | inspect data |
 | `error_category` `authorization_failed` / `private_resource` / `bot_detected` | inspect data, or `info` on a failed task |
 
-This is not a dead end, but it is also **not something you can finish on your own**: `cookies.txt` is a Netscape-format export taken from the user's own logged-in browser. No command generates it, and there is no conventional path to guess at — do not go looking for one on disk. Stop and ask the user to export it and tell you where it is. Then import and retry:
-
-```bash
-olares-cli settings integration cookie import --domain youtube.com --file cookies.txt
-olares-cli knowledge download inspect 'https://www.youtube.com/watch?v=…'
-```
-
-The CLI prints this command for you, with the domain already filled in from the URL — quote it when you ask, so the user knows exactly what the file is for. If their `cookies.txt` export turns out to be missing the login, open [`olares-settings`](../../olares-settings/SKILL.md) and use the `header` import path under `settings integration cookie` — that is the fix.
+For downloads that require login cookies, update the cookies in Olares Settings > Integration, then retry the original inspect or download.
 
 ## prefs get / set
 

@@ -1,8 +1,7 @@
 // Package backup implements the `olares-cli settings backup` subtree
 // (Settings -> Backup). Unlike most areas, backup rides a different ingress
 // path prefix on the same desktop origin: `/apis/backup/v1/plans/backup/...`
-// served by BFL's backup-server. Only the password endpoint goes through
-// user-service at `/api/backup/password/:name` (backup.new.controller.ts).
+// served by BFL's backup-server.
 package backup
 
 import (
@@ -12,14 +11,12 @@ import (
 )
 
 // NewBackupCommand returns the `settings backup` parent: plan + snapshot
-// management against BFL's backup-server, plus the repository password
-// helper served by user-service.
+// management against BFL's backup-server.
 func NewBackupCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "backup",
-		Short: "Backup plans + snapshots + repository password (Settings -> Backup)",
-		Long: `Manage backup plans (BFL backup-server, /apis/backup/v1/plans/backup/...)
-and the repository password (user-service, /api/backup/password/:name).
+		Short: "Backup plans + snapshots (Settings -> Backup)",
+		Long: `Manage backup plans and snapshots (BFL backup-server, /apis/backup/v1/plans/backup/...).
 
 Subcommands:
   plans list
@@ -32,6 +29,5 @@ Out of scope until a richer flag/file UX exists:
 	cmd.SilenceUsage = true
 	cmd.AddCommand(NewPlansCommand(f))
 	cmd.AddCommand(NewSnapshotsCommand(f))
-	cmd.AddCommand(NewPasswordCommand(f))
 	return cmd
 }

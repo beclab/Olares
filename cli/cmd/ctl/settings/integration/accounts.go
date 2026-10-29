@@ -16,29 +16,8 @@ import (
 
 // `olares-cli settings integration accounts ...`
 //
-// Backed by user-service's /api/account/* (account.controller.ts):
-//
-//   GET  /api/account/all                   → mini list                (list verb)
-//   GET  /api/account/:type                 → mini list per type       (list-by-type verb)
-//   POST /api/account/retrieve {name}       → single full record       (get verb)
-//
-// `GET /api/account/:type` upstream returns
-// `[]IntegrationAccountMiniData` (same shape as `/all` but filtered to
-// one type/name) — see account.service.ts:88-95
-// `getIntegrationAccountByAccountType` → `IntegrationAccountMiniData[]`.
-// The SPA hits a *different* endpoint for the full record:
-// settings/src/stores/settings/integration.ts:166-174
-// `getAccountFullData` → `POST /api/account/retrieve { name: key }`
-// where `key = "integration-account:<type>:<name>"`. The CLI mirrors
-// that split:
-//
-//   accounts list                          // GET  /api/account/all
-//   accounts list-by-type <type>           // GET  /api/account/<type>     -> []mini
-//   accounts get <type> <name>             // POST /api/account/retrieve   -> full
-//
-// The mini list omits raw_data/tokens; the per-account GET returns the
-// full IntegrationAccount including raw_data. We never print raw_data
-// in --output table, but pass --output json to get it back.
+// Account lists use user-service's mini account records from
+// GET /api/account/all and GET /api/account/:type.
 //
 // Olares-Space NFT cloud-binding lives behind separate routes that need
 // wallet context, so it stays out of CLI scope.
@@ -52,7 +31,6 @@ authenticate against third-party storage / identity providers.
 Subcommands:
   list
   list-by-type <type>
-  get          <type> <name>
   add          <type> [flags]
   delete       <type> [name]
 
@@ -60,14 +38,11 @@ The "add" verb covers the *direct* object-storage flows (awss3, tencent)
 that don't need an OAuth/wallet redirect. OAuth flows (Google Drive,
 Dropbox) and Olares-Space NFT cloud-binding stay in the SPA — they need
 browser- or wallet-bound state that has no CLI surface.
-
-Cookies live under "settings integration cookie".
 `,
 	}
 	cmd.SilenceUsage = true
 	cmd.AddCommand(newAccountsListCommand(f))
 	cmd.AddCommand(newAccountsListByTypeCommand(f))
-	cmd.AddCommand(newAccountsGetCommand(f))
 	cmd.AddCommand(newAccountsAddCommand(f))
 	cmd.AddCommand(newAccountsDeleteCommand(f))
 	return cmd
@@ -95,8 +70,7 @@ func newAccountsListByTypeCommand(f *cmdutil.Factory) *cobra.Command {
 		Long: `List the mini records of all integration accounts of the given type.
 
 Use this when you have multiple accounts of the same provider (e.g. two
-google drives) and want to see their names + availability before
-calling "accounts get <type> <name>" for the full record.
+google drives) and want to see their names and availability.
 
 This mirrors the SPA's getAccount(<type>) action, which feeds the
 integration list view filtered to one provider. Pass <type> = "all" to

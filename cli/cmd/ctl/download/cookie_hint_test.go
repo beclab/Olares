@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-const wantImportPrefix = "olares-cli settings integration cookie import --domain "
+const wantCookieSettings = "Olares Settings > Integration"
 
 func TestCookieHostFromURLNormalizes(t *testing.T) {
 	cases := []struct {
@@ -27,12 +27,10 @@ func TestCookieHostFromURLNormalizes(t *testing.T) {
 	}
 }
 
-// Cookies live in another command family, so a hint that only says
-// "upload a cookie" leaves an agent with nowhere to go. Every cookie
-// path has to spell out the whole runnable command.
+// Cookie recovery must direct users to Settings rather than an unavailable CLI command.
 func TestCookieRequiredHintNamesTheDomain(t *testing.T) {
 	got := cookieRequiredHint("https://www.youtube.com/watch?v=abc")
-	if !strings.Contains(got, wantImportPrefix+"youtube.com --file cookies.txt") {
+	if !strings.Contains(got, wantCookieSettings) || !strings.Contains(got, "youtube.com") || strings.Contains(got, "settings integration cookie") {
 		t.Fatalf("hint = %q", got)
 	}
 }
@@ -40,7 +38,7 @@ func TestCookieRequiredHintNamesTheDomain(t *testing.T) {
 func TestCookieRequiredHintFallsBackWithoutAHost(t *testing.T) {
 	for _, raw := range []string{"", "magnet:?xt=urn:btih:abc", "not a url"} {
 		got := cookieRequiredHint(raw)
-		if !strings.Contains(got, wantImportPrefix+"<domain>") {
+		if !strings.Contains(got, wantCookieSettings) {
 			t.Fatalf("hint for %q = %q", raw, got)
 		}
 	}
@@ -74,7 +72,7 @@ func TestTaskCookieHintUsesTheTaskURL(t *testing.T) {
 		URL:         "https://www.bilibili.com/video/BV1",
 		ErrCategory: "authorization_failed",
 	})
-	if !strings.Contains(got, wantImportPrefix+"bilibili.com") {
+	if !strings.Contains(got, wantCookieSettings) {
 		t.Fatalf("hint = %q", got)
 	}
 	if other := taskCookieHint(DownloadTask{ErrCategory: "network_error"}); other != "" {
@@ -82,15 +80,15 @@ func TestTaskCookieHintUsesTheTaskURL(t *testing.T) {
 	}
 }
 
-func TestTaskErrorRecoveryHintsCookieImportOnCreate(t *testing.T) {
+func TestTaskErrorRecoveryHintsCookieSettingsOnCreate(t *testing.T) {
 	req := NewDownloadReq{URL: "https://www.youtube.com/watch?v=abc"}
 
 	got := taskErrorRecovery("POST", "/api/download", 501, "cookies required", "", req)
-	if !strings.Contains(got, wantImportPrefix+"youtube.com") {
+	if !strings.Contains(got, wantCookieSettings) {
 		t.Fatalf("501 status recovery = %q", got)
 	}
 	got = taskErrorRecovery("POST", "/api/download", 501, "cookies required", "", &req)
-	if !strings.Contains(got, wantImportPrefix+"youtube.com") {
+	if !strings.Contains(got, wantCookieSettings) {
 		t.Fatalf("501 status recovery with pointer body = %q", got)
 	}
 }

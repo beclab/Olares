@@ -15,7 +15,7 @@ import (
 )
 
 // NewListCommand: `olares-cli cluster middleware list [-t TYPE]
-// [--show-passwords] [-o table|json]`.
+// [-o table|json]`.
 //
 // Calls SPA's getMiddlewareListAll
 // (apps/packages/app/src/apps/controlPanelCommon/network/index.ts:624):
@@ -31,30 +31,24 @@ import (
 // flag a pure projection over the all-types result.
 func NewListCommand(f *cmdutil.Factory) *cobra.Command {
 	o := clusteropts.NewClusterOptions(f)
-	var (
-		typeFilter   string
-		showPassword bool
-	)
+	var typeFilter string
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "list Olares middleware instances visible to the active profile",
 		Long: `List Olares middleware instances visible to the active profile.
 
 Output (table mode): TYPE, NAME, NAMESPACE, NODES, ADMIN-USER.
-Admin password is never printed in table mode. In ` + "`-o json`" + ` mode,
-the password is redacted as "<redacted>" unless --show-passwords is
-explicitly set.
+Use ` + "`-o json`" + ` for structured middleware instance details.
 
 --type filters the output to one middleware type (case-insensitive).
 Empty (default) means all types.
 `,
 		Args: cobra.NoArgs,
 		RunE: func(c *cobra.Command, _ []string) error {
-			return runList(c.Context(), o, typeFilter, showPassword)
+			return runList(c.Context(), o, typeFilter)
 		},
 	}
 	cmd.Flags().StringVarP(&typeFilter, "type", "t", "", "filter by middleware type (mongodb / postgres / redis / rabbitmq / minio / nats / mysql / mariadb / elasticsearch)")
-	cmd.Flags().BoolVar(&showPassword, "show-passwords", false, "include the admin password in -o json output (table mode always redacts)")
 	o.AddOutputFlags(cmd)
 	return cmd
 }
@@ -99,7 +93,7 @@ type Item struct {
 	} `json:"proxy,omitempty"`
 }
 
-func runList(ctx context.Context, o *clusteropts.ClusterOptions, typeFilter string, showPassword bool) error {
+func runList(ctx context.Context, o *clusteropts.ClusterOptions, typeFilter string) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -145,11 +139,7 @@ func runList(ctx context.Context, o *clusteropts.ClusterOptions, typeFilter stri
 	})
 
 	if o.IsJSON() {
-		out := items
-		if !showPassword {
-			out = redactPasswords(items)
-		}
-		return o.PrintJSON(out)
+		return o.PrintJSON(redactPasswords(items))
 	}
 	if o.Quiet {
 		return nil
@@ -180,9 +170,7 @@ func renderListTable(items []Item, noHeaders bool) error {
 }
 
 // redactPasswords returns a copy of items with Password replaced by
-// the literal "<redacted>". We never mutate the caller's slice so
-// re-rendering with --show-passwords from the same fetch (future
-// repeated invocations of the run loop) stays safe.
+// the literal "<redacted>", leaving the caller's slice unchanged.
 func redactPasswords(items []Item) []Item {
 	out := make([]Item, len(items))
 	for i, it := range items {

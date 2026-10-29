@@ -44,8 +44,8 @@ Olares injects into apps. The corresponding per-app surface lives at
 "olares-cli settings apps env get <name>".
 
 Subcommands:
-  system list
-  user   list
+  system set --var KEY=VALUE
+  user   set --var KEY=VALUE
 `,
 	}
 	cmd.SilenceUsage = true
@@ -59,7 +59,6 @@ func newEnvScopeCommand(f *cmdutil.Factory, scope, basePath string) *cobra.Comma
 		Use:   scope,
 		Short: fmt.Sprintf("%s environment variables (%s)", scope, basePath),
 	}
-	cmd.AddCommand(newEnvListCommand(f, scope, basePath))
 	cmd.AddCommand(newEnvSetCommand(f, scope, basePath))
 	return cmd
 }
