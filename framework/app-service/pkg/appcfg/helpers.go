@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/cluster"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
@@ -146,7 +147,12 @@ func (s AppName) IsGeneratedApp() bool {
 // user's zone. It is a package-level re-implementation of the in-tree
 // (*Application).GenEntranceURL method.
 func GenEntranceURL(ctx context.Context, app *Application) ([]Entrance, error) {
-	zone, err := getUserZone(ctx, app.Spec.Owner)
+	reader, err := cluster.NewDomainReader()
+	if err != nil {
+		klog.Errorf("Failed to initialize platform domain reader: %v", err)
+		return nil, err
+	}
+	zone, err := cluster.GetDomainName(ctx, reader)
 	if err != nil {
 		klog.Errorf("failed to get user zone: %v", err)
 	}

@@ -72,7 +72,7 @@ func GetDomainName(ctx context.Context, reader client.Reader) (string, error) {
 	return domain, nil
 }
 
-var newDomainReader = func() (client.Reader, error) {
+var NewDomainReader = func() (client.Reader, error) {
 	cfg, err := ctrl.GetConfig()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Kubernetes config: %w", err)
@@ -94,7 +94,7 @@ func GetPlatformDomain(ctx context.Context) string {
 		return d
 	}
 
-	reader, err := newDomainReader()
+	reader, err := NewDomainReader()
 	if err != nil {
 		klog.Errorf("Failed to initialize platform domain reader: %v", err)
 		return ""
