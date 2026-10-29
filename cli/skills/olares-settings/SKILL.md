@@ -73,6 +73,6 @@ Load the shared [platform model](../olares-shared/references/olares-platform.md)
 - Treat the requested configuration change as task-scope authorisation; do not ask again for each idempotent write in that scope.
 - Confirm destructive or wider consequences separately: user deletion, ACL replacement, accelerator unbind/type changes, app restart/stop, index rebuild, and gateway-wide overlay changes.
 - Treat app lifecycle requests as [`olares-market`](../olares-market/SKILL.md), not settings configuration.
-- For downloads or collections that require login cookies, update the cookies in Olares Settings > Integration, then retry.
+- For downloads or collections that require login cookies, update the cookies in Olares Settings > Integration, then retry. See [integration cookies](references/olares-settings-cookies.md).
 - There is no theme verb: a desktop's light/dark state is a cookie the SPA never sends upstream, so no CLI can change it. Report that rather than hunting for a verb or writing `OLARES_USER_THEME`, which nothing reads.
 - Stop when the requested verb is not registered, the role is insufficient, the target user/app/device is ambiguous, or the action requires a JWS/device interaction the CLI cannot perform.
