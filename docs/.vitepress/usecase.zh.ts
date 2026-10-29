@@ -226,6 +226,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   link: "/zh/use-cases/anythingllm",
                 },
                 {
+                  text: "Cognee",
+                  link: "/zh/use-cases/cognee",
+                },
+                {
                   text: "Local Deep Research",
                   link: "/zh/use-cases/local-deep-research",
                 },
@@ -305,6 +309,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                 {
                   text: "Whisper-WebUI",
                   link: "/zh/use-cases/whisper-webui",
+                },
+                {
+                  text: "Presenton",
+                  link: "/zh/use-cases/presenton",
                 },
                 {
                   text: "Speaches",
@@ -501,6 +509,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             {
               text: "Karakeep",
               link: "/zh/use-cases/karakeep",
+            },
+            {
+              text: "Linkwarden",
+              link: "/zh/use-cases/linkwarden",
             },
             {
               text: "n8n",
