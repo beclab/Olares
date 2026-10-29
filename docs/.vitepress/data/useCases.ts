@@ -58,6 +58,7 @@ export const useCases: UseCase[] = [
   { title: "Open WebUI", link: "/use-cases/openwebui", category: "AI workbench", description: "Full-featured web chat for local LLMs", descriptionZh: "面向本地 LLM 的全功能 Web 聊天界面" },
   { title: "LobeHub (LobeChat)", link: "/use-cases/lobechat", category: "AI workbench", description: "Build local custom AI assistants", descriptionZh: "构建本地自定义 AI 助手" },
   { title: "AnythingLLM", link: "/use-cases/anythingllm", category: "AI workbench", description: "Local knowledge base with RAG over your documents", descriptionZh: "基于文档 RAG 的本地知识库" },
+  { title: "Cognee", link: "/use-cases/cognee", category: "AI workbench", description: "Build and explore connected knowledge from documents", descriptionZh: "从文档构建并浏览相互关联的知识" },
   { title: "Local Deep Research", link: "/use-cases/local-deep-research", category: "AI workbench", description: "Research questions with cited sources through AI Router", descriptionZh: "通过 AI Router 生成带来源引用的研究报告" },
   { title: "Open Notebook", link: "/use-cases/open-notebook", category: "AI workbench", description: "Research notebook with AI insights and podcasts", descriptionZh: "支持 AI 洞察和播客的研究笔记本" },
   { title: "TrustGraph", link: "/use-cases/trustgraph", category: "AI workbench", description: "Ask questions about documents and explore their connections", descriptionZh: "围绕文档提问，探索内容之间的联系" },

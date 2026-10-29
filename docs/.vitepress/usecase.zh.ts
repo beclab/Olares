@@ -226,6 +226,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   link: "/zh/use-cases/anythingllm",
                 },
                 {
+                  text: "Cognee",
+                  link: "/zh/use-cases/cognee",
+                },
+                {
                   text: "Local Deep Research",
                   link: "/zh/use-cases/local-deep-research",
                 },
