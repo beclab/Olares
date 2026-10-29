@@ -499,6 +499,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               link: "/use-cases/karakeep",
             },
             {
+              text: "Linkwarden",
+              link: "/use-cases/linkwarden",
+            },
+            {
               text: "n8n",
               link: "/use-cases/n8n",
             },

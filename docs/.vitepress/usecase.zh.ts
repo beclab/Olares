@@ -503,6 +503,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               link: "/zh/use-cases/karakeep",
             },
             {
+              text: "Linkwarden",
+              link: "/zh/use-cases/linkwarden",
+            },
+            {
               text: "n8n",
               link: "/zh/use-cases/n8n",
             },
