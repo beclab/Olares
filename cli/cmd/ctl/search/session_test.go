@@ -62,6 +62,7 @@ func TestSessionAppConstants(t *testing.T) {
 		{"google_drive", appGoogleDrive, "google_drive"},
 		{"dropbox", appDropbox, "dropbox"},
 		{"knowledge", appKnowledge, "knowledge"},
+		{"market", appMarket, "market"},
 	}
 	for _, tc := range cases {
 		tc := tc

@@ -12,7 +12,7 @@ import (
 func NewSearchCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "search",
-		Short: "Search files, Sync, Wise, or installed applications",
+		Short: "Search files, Sync, Wise, installed applications, or the Market catalog",
 		Long: `Run the same searches the Olares Desktop global search dialog uses.
 
 Subcommands:
@@ -20,6 +20,7 @@ Subcommands:
   sync        Search Seafile/Sync libraries only
   knowledge   Search Wise / Knowledge content (Olares >= 1.12.7; alias: wise)
   app         Search installed applications by title
+  market      Search the Market app catalog, installed or not
 
 On Olares 1.12.7+, drive and sync both use the asynchronous federated search
 channel (search3). drive covers files_v2, google_drive, dropbox, and seafile
@@ -33,6 +34,7 @@ Examples:
   olares-cli search sync notes --offset 20 -o json
   olares-cli search knowledge design
   olares-cli search app wise
+  olares-cli search market music
 `,
 	}
 	cmd.SilenceUsage = true
@@ -42,5 +44,6 @@ Examples:
 	cmd.AddCommand(newSyncCommand(f))
 	cmd.AddCommand(newKnowledgeCommand(f))
 	cmd.AddCommand(newAppCommand(f))
+	cmd.AddCommand(newMarketCommand(f))
 	return cmd
 }
