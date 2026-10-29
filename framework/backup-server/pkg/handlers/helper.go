@@ -546,8 +546,12 @@ func ParseBackupUrl(owner, s string) (*BackupUrlType, error) {
 
 	log.Infof("backup url type: %s", u.Path)
 
+	if u.Path == "" {
+		return nil, fmt.Errorf("url invalid: path is empty")
+	}
+
 	var location string
-	if u.Scheme == "" && u.Path[:1] == "/" {
+	if u.Scheme == "" && strings.HasPrefix(u.Path, "/") {
 		location = constant.BackupLocationFileSystem.String()
 	} else if strings.Contains(u.Path, constant.LocationTypeSpaceTag) {
 		location = constant.BackupLocationSpace.String()
@@ -764,7 +768,7 @@ func GetUserspacePvc(owner string) (string, string, string, string, error) {
 	return p, userspacePvc, cachePath, appcachePvc, nil
 }
 
-func TrimPathPrefix(p string) (bool, bool, bool,string) {
+func TrimPathPrefix(p string) (bool, bool, bool, string) {
 	if !strings.HasSuffix(p, "/") {
 		p = p + "/"
 	}
@@ -772,15 +776,15 @@ func TrimPathPrefix(p string) (bool, bool, bool,string) {
 	var cache = fmt.Sprintf("/Cache/%s/", constant.NodeName)
 	var common = "/Common/"
 	if strings.HasPrefix(p, external) {
-		return true, false,false, strings.TrimPrefix(p, external)
+		return true, false, false, strings.TrimPrefix(p, external)
 	} else if strings.HasPrefix(p, cache) {
-		return false, true,false, strings.TrimPrefix(p, cache)
-	} else if strings.HasPrefix(p,common) {
-		return false,false,true,strings.TrimPrefix(p, common)
-	}else if strings.HasPrefix(p, "/Files/") {
-		return false, false,false, strings.TrimPrefix(p, "/Files/")
+		return false, true, false, strings.TrimPrefix(p, cache)
+	} else if strings.HasPrefix(p, common) {
+		return false, false, true, strings.TrimPrefix(p, common)
+	} else if strings.HasPrefix(p, "/Files/") {
+		return false, false, false, strings.TrimPrefix(p, "/Files/")
 	} else {
-		return false, false,false, p
+		return false, false, false, p
 	}
 }
 
@@ -802,16 +806,9 @@ func FormatEndpoint(location, schema, host, urlPath, pvc, cachepvc string) (*rep
 		result.Endpoint = strings.TrimPrefix(result.Endpoint, "s3:")
 		return result, nil
 	case constant.BackupLocationFileSystem.String():
-		external, cache,common, relativePath := TrimPathPrefix(p)
-		var endpoint string
-		if external {
-			endpoint = path.Join(constant.ExternalPath, relativePath)
-		} else if cache {
-			endpoint = path.Join(cachepvc, relativePath)
-		} else if common{
-			endpoint = path.Join(constant.CommonPath,relativePath)
-		}else {
-			endpoint = path.Join(pvc, relativePath)
+		endpoint, err := ResolveStoragePath(p, pvc, cachepvc)
+		if err != nil {
+			return nil, err
 		}
 		return &repo.RepositoryInfo{
 			Endpoint: endpoint,

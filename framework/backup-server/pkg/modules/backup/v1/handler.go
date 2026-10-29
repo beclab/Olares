@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -43,6 +44,42 @@ func (h *Handler) ready(req *restful.Request, resp *restful.Response) {
 	resp.Write([]byte("ok"))
 }
 
+func (h *Handler) getOwnedBackup(ctx context.Context, id, owner string) (*sysv1.Backup, error) {
+	backup, err := h.handler.GetBackupHandler().GetById(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if backup.Spec.Owner != owner {
+		return nil, apierrors.NewNotFound(sysv1.Resource("Backup"), id)
+	}
+	return backup, nil
+}
+
+func (h *Handler) getOwnedSnapshot(ctx context.Context, backupID, snapshotID, owner string) (*sysv1.Snapshot, error) {
+	if _, err := h.getOwnedBackup(ctx, backupID, owner); err != nil {
+		return nil, err
+	}
+	snapshot, err := h.handler.GetSnapshotHandler().GetById(ctx, snapshotID)
+	if err != nil {
+		return nil, err
+	}
+	if snapshot.Spec.BackupId != backupID {
+		return nil, apierrors.NewNotFound(sysv1.Resource("Snapshot"), snapshotID)
+	}
+	return snapshot, nil
+}
+
+func (h *Handler) getOwnedRestore(ctx context.Context, id, owner string) (*sysv1.Restore, error) {
+	restore, err := h.handler.GetRestoreHandler().GetById(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if restore.Spec.Owner != owner {
+		return nil, apierrors.NewNotFound(sysv1.Resource("Restore"), id)
+	}
+	return restore, nil
+}
+
 func (h *Handler) listBackup(req *restful.Request, resp *restful.Response) {
 	ctx := req.Request.Context()
 	owner := req.HeaderParameter(constant.BflUserKey)
@@ -78,9 +115,7 @@ func (h *Handler) listBackup(req *restful.Request, resp *restful.Response) {
 func (h *Handler) get(req *restful.Request, resp *restful.Response) {
 	ctx, backupId := req.Request.Context(), req.PathParameter("id")
 	owner := req.HeaderParameter(constant.BflUserKey)
-	_ = owner
-
-	backup, err := h.handler.GetBackupHandler().GetById(ctx, backupId)
+	backup, err := h.getOwnedBackup(ctx, backupId, owner)
 	if err != nil && !apierrors.IsNotFound(err) {
 		response.HandleError(resp, errors.WithMessage(err, fmt.Sprintf("get backup %s error", backupId)))
 		return
@@ -97,9 +132,7 @@ func (h *Handler) get(req *restful.Request, resp *restful.Response) {
 func (h *Handler) getBackupPlan(req *restful.Request, resp *restful.Response) {
 	ctx, backupId := req.Request.Context(), req.PathParameter("id")
 	owner := req.HeaderParameter(constant.BflUserKey)
-	_ = owner
-
-	backup, err := h.handler.GetBackupHandler().GetById(ctx, backupId)
+	backup, err := h.getOwnedBackup(ctx, backupId, owner)
 	if err != nil && !apierrors.IsNotFound(err) {
 		response.HandleError(resp, errors.WithMessage(err, fmt.Sprintf("get backup %s error", backupId)))
 		return
@@ -199,7 +232,7 @@ func (h *Handler) update(req *restful.Request, resp *restful.Response) {
 
 	format := "failed to update backup plan %q"
 
-	backup, err := h.handler.GetBackupHandler().GetById(ctx, backupId)
+	backup, err := h.getOwnedBackup(ctx, backupId, owner)
 	if err != nil && !apierrors.IsNotFound(err) {
 		response.HandleError(resp, errors.WithMessage(err, fmt.Sprintf("get backup %s error", backupId)))
 		return
@@ -250,10 +283,11 @@ func (h *Handler) update(req *restful.Request, resp *restful.Response) {
 
 func (h *Handler) deleteBackupPlan(req *restful.Request, resp *restful.Response) {
 	ctx, backupId := req.Request.Context(), req.PathParameter("id")
+	owner := req.HeaderParameter(constant.BflUserKey)
 
 	log.Infof("delete backup: %s", backupId)
 
-	backup, err := h.handler.GetBackupHandler().GetById(ctx, backupId)
+	backup, err := h.getOwnedBackup(ctx, backupId, owner)
 	if err != nil && !apierrors.IsNotFound(err) {
 		response.HandleError(resp, errors.WithMessagef(err, fmt.Sprintf("get backup %s error", backupId)))
 		return
@@ -291,10 +325,11 @@ func (h *Handler) enabledBackupPlan(req *restful.Request, resp *restful.Response
 	}
 
 	ctx, backupId := req.Request.Context(), req.PathParameter("id")
+	owner := req.HeaderParameter(constant.BflUserKey)
 
 	log.Infof("backup: %s, event: %s", backupId, b.Event)
 
-	backup, err := h.handler.GetBackupHandler().GetById(ctx, backupId)
+	backup, err := h.getOwnedBackup(ctx, backupId, owner)
 	if err != nil && !apierrors.IsNotFound(err) {
 		response.HandleError(resp, errors.WithMessagef(err, "get backup %s error", backupId))
 		return
@@ -330,13 +365,14 @@ func (h *Handler) addSnapshot(req *restful.Request, resp *restful.Response) {
 	}
 
 	ctx, backupId := req.Request.Context(), req.PathParameter("id")
+	owner := req.HeaderParameter(constant.BflUserKey)
 
 	if backupId == "" {
 		response.HandleError(resp, errors.New("backupId is empty"))
 		return
 	}
 
-	backup, err := h.handler.GetBackupHandler().GetById(ctx, backupId)
+	backup, err := h.getOwnedBackup(ctx, backupId, owner)
 	if err != nil && !apierrors.IsNotFound(err) {
 		response.HandleError(resp, errors.WithMessagef(err, "get backup %s error", backupId))
 		return
@@ -370,8 +406,14 @@ func (h *Handler) addSnapshot(req *restful.Request, resp *restful.Response) {
 func (h *Handler) listSnapshots(req *restful.Request, resp *restful.Response) {
 	ctx := req.Request.Context()
 	backupId := req.PathParameter("id")
+	owner := req.HeaderParameter(constant.BflUserKey)
 	limit := util.ParseToInt64(req.QueryParameter("limit"))
 	offset := util.ParseToInt64(req.QueryParameter("offset"))
+
+	if _, err := h.getOwnedBackup(ctx, backupId, owner); err != nil {
+		response.HandleError(resp, errors.WithMessagef(err, "get backup %s error", backupId))
+		return
+	}
 
 	var labelSelector = "backup-id=" + backupId
 	var snapshots, err = h.handler.GetSnapshotHandler().ListSnapshots(ctx, offset, limit, labelSelector, "")
@@ -392,9 +434,10 @@ func (h *Handler) listSnapshots(req *restful.Request, resp *restful.Response) {
 
 func (h *Handler) getSnapshot(req *restful.Request, resp *restful.Response) {
 	ctx := req.Request.Context()
-	snapshotId := req.PathParameter("snapshotId")
+	backupId, snapshotId := req.PathParameter("id"), req.PathParameter("snapshotId")
+	owner := req.HeaderParameter(constant.BflUserKey)
 
-	snapshot, err := h.handler.GetSnapshotHandler().GetById(ctx, snapshotId)
+	snapshot, err := h.getOwnedSnapshot(ctx, backupId, snapshotId, owner)
 	if err != nil && !apierrors.IsNotFound(err) {
 		response.HandleError(resp, errors.WithMessage(err, fmt.Sprintf("snapshot %s get error", snapshotId)))
 		return
@@ -410,9 +453,10 @@ func (h *Handler) getSnapshot(req *restful.Request, resp *restful.Response) {
 
 func (h *Handler) getSnapshotOne(req *restful.Request, resp *restful.Response) {
 	ctx := req.Request.Context()
-	snapshotId := req.PathParameter("snapshotId")
+	backupId, snapshotId := req.PathParameter("id"), req.PathParameter("snapshotId")
+	owner := req.HeaderParameter(constant.BflUserKey)
 
-	snapshot, err := h.handler.GetSnapshotHandler().GetById(ctx, snapshotId)
+	snapshot, err := h.getOwnedSnapshot(ctx, backupId, snapshotId, owner)
 	if err != nil && !apierrors.IsNotFound(err) {
 		response.HandleError(resp, errors.WithMessage(err, fmt.Sprintf("snapshot %s get error", snapshotId)))
 		return
@@ -445,22 +489,11 @@ func (h *Handler) cancelSnapshot(req *restful.Request, resp *restful.Response) {
 	ctx := req.Request.Context()
 	backupId := req.PathParameter("id")
 	snapshotId := req.PathParameter("snapshotId")
-	_ = ctx
+	owner := req.HeaderParameter(constant.BflUserKey)
 
 	log.Debugf("backup: %s, snapshot: %s, event: %s", backupId, snapshotId, b.Event)
 
-	_, err = h.handler.GetBackupHandler().GetById(ctx, backupId)
-	if err != nil && !apierrors.IsNotFound(err) {
-		response.HandleError(resp, errors.WithMessage(err, fmt.Sprintf("get backup %s error", backupId)))
-		return
-	}
-
-	if apierrors.IsNotFound(err) {
-		response.HandleError(resp, fmt.Errorf("backup %s not found", backupId))
-		return
-	}
-
-	snapshot, err := h.handler.GetSnapshotHandler().GetById(ctx, snapshotId)
+	snapshot, err := h.getOwnedSnapshot(ctx, backupId, snapshotId, owner)
 	if err != nil && !apierrors.IsNotFound(err) {
 		response.HandleError(resp, errors.WithMessagef(err, "get snapshot %s error", snapshotId))
 		return
@@ -656,6 +689,10 @@ func (h *Handler) addRestore(req *restful.Request, resp *restful.Response) {
 			response.HandleError(resp, fmt.Errorf("backup %s not found", snapshot.Spec.BackupId))
 			return
 		}
+		if backup.Spec.Owner != owner {
+			response.HandleError(resp, fmt.Errorf("snapshot %s not found", snapshotId))
+			return
+		}
 
 		backupId = backup.Name
 		backupName = backup.Spec.Name
@@ -717,6 +754,14 @@ func (h *Handler) addRestore(req *restful.Request, resp *restful.Response) {
 			response.HandleError(resp, fmt.Errorf("path or subPath is empty"))
 			return
 		}
+		if _, _, err := handlers.ParseStoragePath(b.Path); err != nil {
+			response.HandleError(resp, fmt.Errorf("restore path invalid: %w", err))
+			return
+		}
+		if err := handlers.ValidateStorageName(strings.TrimSpace(b.SubPath)); err != nil {
+			response.HandleError(resp, fmt.Errorf("restore directory invalid: %w", err))
+			return
+		}
 	} else {
 		if ok := h.handler.GetBackupHandler().CheckAppInstalled("wisev3-shared-wisev3"); !ok {
 			response.HandleError(resp, fmt.Errorf("Wise is not installed. Please go to the Market to install this app."))
@@ -768,9 +813,8 @@ func (h *Handler) addRestore(req *restful.Request, resp *restful.Response) {
 func (h *Handler) getRestore(req *restful.Request, resp *restful.Response) {
 	ctx, restoreId := req.Request.Context(), req.PathParameter("id")
 	owner := req.HeaderParameter(constant.BflUserKey)
-	_ = owner
 
-	restore, err := h.handler.GetRestoreHandler().GetById(ctx, restoreId)
+	restore, err := h.getOwnedRestore(ctx, restoreId, owner)
 	if err != nil && !apierrors.IsNotFound(err) {
 		response.HandleError(resp, errors.WithMessagef(err, "get restore %s error", restoreId))
 		return
@@ -791,9 +835,8 @@ func (h *Handler) getRestore(req *restful.Request, resp *restful.Response) {
 func (h *Handler) getRestoreOne(req *restful.Request, resp *restful.Response) {
 	ctx, restoreId := req.Request.Context(), req.PathParameter("id")
 	owner := req.HeaderParameter(constant.BflUserKey)
-	_ = owner
 
-	restore, err := h.handler.GetRestoreHandler().GetById(ctx, restoreId)
+	restore, err := h.getOwnedRestore(ctx, restoreId, owner)
 	if err != nil && !apierrors.IsNotFound(err) {
 		response.HandleError(resp, errors.WithMessagef(err, "get restore %s error", restoreId))
 		return
@@ -842,10 +885,11 @@ func (h *Handler) cancelRestore(req *restful.Request, resp *restful.Response) {
 
 	ctx := req.Request.Context()
 	restoreId := req.PathParameter("id")
+	owner := req.HeaderParameter(constant.BflUserKey)
 
 	log.Debugf("restore: %s, event: %s", restoreId, b.Event)
 
-	restore, err := h.handler.GetRestoreHandler().GetById(ctx, restoreId)
+	restore, err := h.getOwnedRestore(ctx, restoreId, owner)
 	if err != nil && !apierrors.IsNotFound(err) {
 		response.HandleError(resp, errors.WithMessagef(err, "get restore %s error", restoreId))
 		return

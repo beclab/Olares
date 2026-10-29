@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -184,8 +183,6 @@ func (s *StorageRestore) prepareRestoreParams() error {
 	var locationConfig = make(map[string]string)
 	var err error
 	var token string
-	var external, cache, common bool
-
 	if s.RestoreType.Type == constant.RestoreTypeSnapshot {
 		token, err = integration.IntegrationService.GetAuthToken(s.Backup.Spec.Owner, fmt.Sprintf("user-system-%s", s.Backup.Spec.Owner), constant.DefaultServiceAccountSettings)
 		if err != nil {
@@ -210,16 +207,11 @@ func (s *StorageRestore) prepareRestoreParams() error {
 		location := locationConfig["location"]
 		if location == constant.BackupLocationFileSystem.String() {
 			locPath := locationConfig["path"]
-			external, cache, common, locPath = handlers.TrimPathPrefix(locPath)
-			if external {
-				locationConfig["path"] = path.Join(constant.ExternalPath, locPath)
-			} else if cache {
-				locationConfig["path"] = path.Join(s.AppcachePvcPath, locPath)
-			} else if common {
-				locationConfig["path"] = path.Join(constant.CommonPath, locPath)
-			} else {
-				locationConfig["path"] = path.Join(s.UserspacePvcPath, locPath)
+			resolvedLocation, err := handlers.ResolveStoragePath(locPath, s.UserspacePvcPath, s.AppcachePvcPath)
+			if err != nil {
+				return fmt.Errorf("Restore %s resolve location path: %w", s.RestoreId, err)
 			}
+			locationConfig["path"] = resolvedLocation
 		}
 	} else {
 		// ~ backupUrl
@@ -254,25 +246,14 @@ func (s *StorageRestore) prepareRestoreParams() error {
 	var restorePath string
 	var rootRestorePath string
 	if s.BackupType == constant.BackupTypeFile {
-		var dotRestorePath = path.Join(s.RestoreType.Path, fmt.Sprintf("%s.restore-%d", s.RestoreType.SubPath, s.RestoreType.SubPathTimestamp)) + "/"
-		var dotRestoreRootPath = path.Join(s.RestoreType.Path)
-		var tmpRestoreExternal, tmpRestoreCache, tmpRestoreCommon, tmpRestorePath = handlers.TrimPathPrefix(dotRestorePath)
-		log.Infof("Restore %s, dotRPath: %s, dotRRootPath: %s, tmpRestorePath: %s", s.RestoreId, dotRestorePath, dotRestoreRootPath, tmpRestorePath)
-		log.Infof("Restore %s, cachePvcPath: %s, userPvcPath: %s,", s.RestoreId, s.AppcachePvcPath, s.UserspacePvcPath)
-		var _, _, _, tmpRootRestorePath = handlers.TrimPathPrefix(dotRestoreRootPath)
-		if tmpRestoreExternal {
-			restorePath = path.Join(constant.ExternalPath, tmpRestorePath)
-			rootRestorePath = path.Join(constant.ExternalPath, tmpRootRestorePath)
-		} else if tmpRestoreCache {
-			restorePath = path.Join(s.AppcachePvcPath, tmpRestorePath)
-			rootRestorePath = path.Join(s.AppcachePvcPath, tmpRootRestorePath)
-		} else if tmpRestoreCommon {
-			restorePath = path.Join(constant.CommonPath, tmpRestorePath)
-			rootRestorePath = path.Join(constant.CommonPath, tmpRootRestorePath)
-		} else {
-			restorePath = path.Join(s.UserspacePvcPath, tmpRestorePath)
-			rootRestorePath = path.Join(s.UserspacePvcPath, tmpRootRestorePath)
+		rootRestorePath, err = handlers.ResolveStoragePath(s.RestoreType.Path, s.UserspacePvcPath, s.AppcachePvcPath)
+		if err != nil {
+			return fmt.Errorf("Restore %s resolve target path: %w", s.RestoreId, err)
 		}
+		if err := handlers.ValidateStorageName(s.RestoreType.SubPath); err != nil {
+			return fmt.Errorf("Restore %s target directory: %w", s.RestoreId, err)
+		}
+		restorePath = filepath.Join(rootRestorePath, fmt.Sprintf("%s.restore-%d", s.RestoreType.SubPath, s.RestoreType.SubPathTimestamp))
 	} else {
 		restorePath = filepath.Join(s.UserspacePvcPath, "Home") // for app restore
 		rootRestorePath = filepath.Join(s.UserspacePvcPath, "Home")

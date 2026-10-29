@@ -84,6 +84,14 @@ func (b *BackupCreate) verifyBackupFiles() error {
 	if b.Path == "" {
 		return errors.New("backup path is required")
 	}
+	if _, _, err := handlers.ParseStoragePath(b.Path); err != nil {
+		return fmt.Errorf("backup path invalid: %w", err)
+	}
+	if b.Location == constant.BackupLocationFileSystem.String() && b.LocationConfig != nil {
+		if _, _, err := handlers.ParseStoragePath(b.LocationConfig.Path); err != nil {
+			return fmt.Errorf("backup location path invalid: %w", err)
+		}
+	}
 
 	return nil
 }
