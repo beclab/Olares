@@ -1,8 +1,6 @@
 package upgrade
 
 import (
-	"time"
-
 	"github.com/Masterminds/semver/v3"
 	"github.com/beclab/Olares/cli/pkg/core/task"
 )
@@ -21,14 +19,7 @@ func (u upgrader_1_12_8_20261023) Version() *semver.Version {
 }
 
 func (u upgrader_1_12_8_20261023) UpgradeSystemComponents() []task.Interface {
-	return append(u.upgraderBase.UpgradeSystemComponents(),
-		&task.LocalTask{
-			Name:   "MigrateIntelDGPUToHAMI",
-			Action: new(migrateIntelDGPUToHAMI),
-			Retry:  3,
-			Delay:  15 * time.Second,
-		},
-	)
+	return append(u.upgraderBase.UpgradeSystemComponents(), migrateIntelDGPUToHAMITasks()...)
 }
 
 func init() {

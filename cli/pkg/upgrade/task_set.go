@@ -839,6 +839,21 @@ func (a *applyPrometheusAction) Execute(runtime connector.Runtime) error {
 	return nil
 }
 
+func upgradePrometheus() []task.Interface {
+	return []task.Interface{
+		&task.LocalTask{
+			Name:   "CopyEmbeddedKSManifests",
+			Action: new(plugins.CopyEmbedFiles),
+		},
+		&task.LocalTask{
+			Name:   "ApplyPrometheus",
+			Action: new(applyPrometheusAction),
+			Retry:  5,
+			Delay:  5 * time.Second,
+		},
+	}
+}
+
 // upgradeIntelGPUPlugin reuses the install-time Intel GPU stack tasks
 // (labels, optional dGPU drivers, NFD, device plugin, xpumd). Individual
 // tasks are gated by HasAnyIntelGPU / HasQualifyingIntelDGPU so non-Intel
