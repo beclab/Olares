@@ -560,30 +560,6 @@ var (
 			},
 		},
 	} // end NPSharedEntrance
-
-	NPIngress = netv1.NetworkPolicy{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "ingress-np",
-		},
-		Spec: netv1.NetworkPolicySpec{
-			PodSelector: metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"tier": "bfl",
-				},
-			},
-			Ingress: []netv1.NetworkPolicyIngressRule{
-				{
-					From: []netv1.NetworkPolicyPeer{
-						{
-							IPBlock: &netv1.IPBlock{
-								CIDR: "10.233.0.0/16",
-							},
-						},
-					},
-				},
-			},
-		},
-	} // end NPIngress
 )
 
 // NodeTunnelRule returns node tunnel rule.
