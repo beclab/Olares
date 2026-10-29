@@ -6,7 +6,45 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/spf13/cobra"
 )
+
+func TestDomainReadsRejectJSONBeforeAccessingBackend(t *testing.T) {
+	for _, verb := range []string{"get", "list"} {
+		for _, flag := range []string{"-o", "--output"} {
+			for _, value := range []string{"json", "JSON", " json "} {
+				t.Run(verb+flag+value, func(t *testing.T) {
+					// A nil factory ensures rejection does not require credentials or a backend.
+					var cmd *cobra.Command
+					args := []string{"files"}
+					if verb == "get" {
+						cmd = newDomainGetCommand(nil)
+						args = append(args, "file")
+					} else {
+						cmd = newDomainListCommand(nil)
+					}
+					cmd.SilenceErrors = true
+					cmd.SetArgs(append(args, flag, value))
+					if err := cmd.Execute(); err == nil || !strings.Contains(err.Error(), "allowed: table") {
+						t.Fatalf("JSON must be rejected before contacting the backend: %v", err)
+					}
+				})
+			}
+		}
+	}
+}
+
+func TestDomainReadTableOmitsCertificateAndPrivateKey(t *testing.T) {
+	var out strings.Builder
+	setup := SetupDomain{ThirdPartyDomain: "files.example.com", Cert: "PRIVATE-CERT-CONTENT", Key: "PRIVATE-KEY-CONTENT"}
+	if err := renderDomainList(&out, "files", []domainListEntry{{Entrance: "file", Setup: setup}}); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out.String(), setup.ThirdPartyDomain) || strings.Contains(out.String(), setup.Cert) || strings.Contains(out.String(), setup.Key) {
+		t.Fatalf("table must retain domain information without certificate or key contents: %s", out.String())
+	}
+}
 
 func TestRunDomainSet_RMWPreservesUntouchedFields(t *testing.T) {
 	doer := &fakeDoer{}
@@ -101,9 +139,9 @@ func TestRunDomainSet_CertKeyFromFile(t *testing.T) {
 
 func TestRunDomainSet_RejectsConflictingFlags(t *testing.T) {
 	cases := []struct {
-		name    string
-		flags   domainSetFlags
-		errSub  string
+		name   string
+		flags  domainSetFlags
+		errSub string
 	}{
 		{
 			name:   "third-level and clear-third-level mutex",

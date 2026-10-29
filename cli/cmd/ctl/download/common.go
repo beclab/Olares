@@ -516,18 +516,13 @@ func cookieHostFromURL(rawURL string) string {
 	return host
 }
 
-// cookieRequiredHint is the copy-pasteable next step for a failure a
-// login cookie fixes. Cookies live under `settings integration cookie`,
-// a different command family, so the hint has to spell the whole
-// command out rather than say "upload a cookie first".
+// cookieRequiredHint directs users to the cookie settings for the URL.
 func cookieRequiredHint(rawURL string) string {
 	domain := cookieHostFromURL(rawURL)
 	if domain == "" {
-		domain = "<domain>"
+		domain = "this site"
 	}
-	return "this URL needs your login cookies; import them with " +
-		"`olares-cli settings integration cookie import --domain " + domain +
-		" --file cookies.txt`"
+	return "this URL needs your login cookies for " + domain + "; manage cookies in Olares Settings > Integration"
 }
 
 func taskErrorRecovery(method, path string, status int, message, errorCode string, body interface{}) string {

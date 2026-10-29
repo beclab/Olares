@@ -2,9 +2,8 @@
 
 > **Prerequisite:** Read [`../../olares-shared/SKILL.md`](../../olares-shared/SKILL.md) and the parent [`../SKILL.md`](../SKILL.md) first.
 > **Flags & examples:** `olares-cli settings integration accounts --help` and `olares-cli settings integration <group> <verb> --help`.
-> **Cookies:** the per-domain cookie store lives in the sibling [cookie store](olares-settings-cookies.md) reference.
 
-External integration accounts (S3 / Tencent COS / Google Drive / Dropbox / Olares Space / NFT cloud binding). Cookie import/list/rm/validate is documented separately — see the sibling cookie reference above.
+List external integration accounts, add S3 or Tencent COS accounts, and remove existing integrations. Manage Google Drive, Dropbox, Olares Space, and NFT cloud binding in Olares Settings > Integration.
 
 ## What's covered by the CLI
 
@@ -24,7 +23,6 @@ External integration accounts (S3 / Tencent COS / Google Drive / Dropbox / Olare
 |---|---|---|
 | `accounts list` | normal | `accountMini` shape (no `raw_data`) |
 | `accounts list-by-type <type>` | normal | Filter by account type |
-| `accounts get <type> [name]` | normal | `accountFull` shape (includes `raw_data`); `name` optional for single-tenant types |
 | `accounts add awss3 [flags]` | normal | AWS S3 / S3-compatible |
 | `accounts add tencent [flags]` | normal | Tencent COS |
 | `accounts delete <type> [name]` | normal | `name` optional for single-tenant types |
@@ -54,15 +52,13 @@ olares-cli settings integration accounts add tencent \
 - Region is encoded in the endpoint URL — e.g. `cos.ap-beijing.myqcloud.com`, `cos.ap-shanghai.myqcloud.com`.
 - Tencent COS is **single-tenant**: no `--bucket` flag, no `<name>` argument on add. There is at most one Tencent account per profile.
 
-## `accounts get` / `accounts delete` — name handling
+## `accounts delete` — name handling
 
 ```bash
 # Multi-tenant types (S3, Drive, Dropbox) — need a name.
-olares-cli settings integration accounts get awss3 my-bucket
 olares-cli settings integration accounts delete awss3 my-bucket
 
 # Single-tenant types (Tencent, Space, NFT) — name omitted.
-olares-cli settings integration accounts get tencent
 olares-cli settings integration accounts delete tencent
 ```
 
@@ -76,18 +72,10 @@ The store key is composed as `integration-account:<type>:<name>` (or `integratio
 - Bash history retention is the user's responsibility, but the agent's default phrasing should make it easy to keep secrets out of the transcript / scrollback.
 - For the agent's own suggestions: write `--access-key-secret "$AWS_SECRET_ACCESS_KEY"` (placeholder), NOT `--access-key-secret "AKIA..."` (real-looking).
 
-## `accounts get` JSON shape
-
-```bash
-olares-cli settings integration accounts get awss3 my-bucket -o json
-```
-
-Returns the `accountFull` shape including the un-redacted `raw_data` field. **The secret-key value WILL appear in the output** — pipe to `jq` and select only the fields you need rather than dumping the whole payload.
-
 ## Agent best practices
 
 - For "add my S3 credentials" → prompt the user to **set the secret in an env var FIRST**, then construct the command using `"$VAR"` interpolation.
-- For "show me my integration accounts" → `accounts list` (no secrets) instead of `accounts get` (with secrets) unless the user specifically needs the credential payload.
+- For "show me my integration accounts" → `accounts list` shows account names, types, and availability.
 - For "delete my old S3 account" → `accounts list-by-type awss3` first to confirm the right name, then `accounts delete awss3 <name>`.
 - If the user asks for Google Drive / Dropbox / Olares Space / NFT cloud binding, **redirect to the SPA** — explain that OAuth tokens are browser-scoped and can't be captured by one-shot CLI calls.
 
