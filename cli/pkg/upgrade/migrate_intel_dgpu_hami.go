@@ -12,6 +12,7 @@ import (
 	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/core/connector"
 	"github.com/beclab/Olares/cli/pkg/core/logger"
+	"github.com/beclab/Olares/cli/pkg/core/task"
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -49,6 +50,17 @@ const (
 //     gpu.intel.com/xe, so the gpu-limit webhook injects intel.com/vgpu.
 type migrateIntelDGPUToHAMI struct {
 	common.KubeAction
+}
+
+func migrateIntelDGPUToHAMITasks() []task.Interface {
+	return []task.Interface{
+		&task.LocalTask{
+			Name:   "MigrateIntelDGPUToHAMI",
+			Action: new(migrateIntelDGPUToHAMI),
+			Retry:  3,
+			Delay:  15 * time.Second,
+		},
+	}
 }
 
 type intelCardInfo struct {
