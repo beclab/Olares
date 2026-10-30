@@ -8,8 +8,8 @@ head:
     - name: keywords
       content: Olares, Claude Code, Anthropic, AI coding, Ollama, terminal, TUI, self-hosted
 app_version: "0.1.13"
-doc_version: "2.0"
-doc_updated: "2026-09-23"
+doc_version: "2.1"
+doc_updated: "2026-10-30"
 ---
 
 # Write code using Claude Code
@@ -31,13 +31,18 @@ In this guide, you will learn how to:
 Before you begin, you need:
 
 <!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
+- Additional requirements depend on how you connect:
 
-Depending on how you connect, prepare one of the following:
-
-- **Claude**: An active Claude Pro or Max subscription.
-- **Local model**: Qwen3.8-27B (llama.cpp) installed from Market.
+  | Connection method | Requirements |
+  | :--- | :--- |
+  | Anthropic subscription | An active Claude Pro or Max subscription |
+  | Local model | Qwen3.8-27B (llama.cpp) installed from Market |
 
 <!--@include: ../reusables/ai-service-connections.md#use-different-model-->
+
+:::warning Model compatibility
+Some local models, including Qwen3.5-9B-GGUF Q4_K_M (llama.cpp), use chat templates that are incompatible with Claude Code's system-message ordering. If you encounter a system-message error, switch to another model. See the [FAQ](#system-message-error) for details.
+:::
 
 ## Install Claude Code
 
@@ -77,7 +82,7 @@ Use this method if you hold an active Claude Pro or Max subscription.
 
 ### Connect using a local model
 
-Use this method to run Claude Code locally. This example uses the model app **Qwen3.8-27B (llama.cpp)**.
+Use this method to run Claude Code locally. This example uses the model app Qwen3.8-27B (llama.cpp).
 
 <!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
 
@@ -221,6 +226,10 @@ The container preconfigures the environment variable `PIP_BREAK_SYSTEM_PACKAGES=
 :::
 
 ## FAQs
+
+### `System message must be at the beginning.` {#system-message-error}
+
+This error occurs when the model's chat template only accepts system messages at the beginning of a conversation. Claude Code can send additional system messages later in the conversation. A template with this restriction rejects those messages, causing HTTP 500 errors and repeated retries.
 
 ### `claude: command not found`
 

@@ -8,8 +8,8 @@ head:
     - name: keywords
       content: Olares, Claude Code, Anthropic, AI coding, Ollama, terminal, TUI, self-hosted
 app_version: "0.1.13"
-doc_version: "2.0"
-doc_updated: "2026-09-23"
+doc_version: "2.1"
+doc_updated: "2026-10-30"
 ---
 
 :::warning
@@ -35,13 +35,18 @@ Claude Code 是一个 AI 编码助手，帮助你使用自然语言编写、测�
 开始前，你需要：
 
 <!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
+- 根据连接方式，还需准备以下内容：
 
-根据连接方式，准备以下其中一项：
-
-- **Claude**：有效的 Claude Pro 或 Max 订阅。
-- **本地模型**：从应用市场安装 Qwen3.8-27B (llama.cpp)。
+  | 连接方式 | 所需条件 |
+  | :--- | :--- |
+  | Anthropic 订阅 | 有效的 Claude Pro 或 Max 订阅 |
+  | 本地模型 | 已从 Market 安装 Qwen3.8-27B (llama.cpp) |
 
 <!--@include: ../reusables/ai-service-connections.md#use-different-model-->
+
+:::warning 模型兼容性
+部分本地模型（包括 Qwen3.5-9B-GGUF Q4_K_M (llama.cpp)）使用的聊天模板不兼容 Claude Code 的系统消息顺序。如果遇到系统消息相关报错，请切换到其他模型。原因详见[常见问题](#system-message-error)。
+:::
 
 ## 安装 Claude Code
 
@@ -81,7 +86,7 @@ Claude Code 是一个 AI 编码助手，帮助你使用自然语言编写、测�
 
 ### 使用本地模型连接
 
-使用此方法在本地运行 Claude Code。此示例使用模型应用 **Qwen3.8-27B (llama.cpp)**。
+使用此方法在本地运行 Claude Code。此示例使用模型应用 Qwen3.8-27B (llama.cpp)。
 
 <!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
 
@@ -225,6 +230,10 @@ Claude Code 容器在严格的最小权限设置下运行以确保安全。
 :::
 
 ## 常见问题
+
+### `System message must be at the beginning.` {#system-message-error}
+
+当模型的聊天模板仅允许系统消息出现在对话开头时，会出现此错误。Claude Code 可能在对话后续位置发送额外的系统消息。有此限制的模板会拒绝这些消息，导致 HTTP 500 错误和反复重试。
 
 ### `claude: command not found`
 
