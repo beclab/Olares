@@ -448,6 +448,22 @@ type upgradeL4BFLProxy struct {
 }
 
 func (u *upgradeL4BFLProxy) Execute(runtime connector.Runtime) error {
+	kube, err := kubeClientFromRuntime()
+	if err != nil {
+		return errors.Wrap(errors.WithStack(err), "failed to create kubernetes client")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+	exists, err := l4ProxyDeploymentExists(ctx, kube)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		logger.Infof("%s deployment not found in namespace %s, skipping L4 upgrade to version %s",
+			l4ProxyDeploymentName, l4ProxyNamespace, u.Tag)
+		return nil
+	}
+
 	if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf(
 		"/usr/local/bin/kubectl set image deployment/l4-bfl-proxy proxy=beclab/l4-bfl-proxy:%s -n os-network", u.Tag), false, true); err != nil {
 		return errors.Wrapf(errors.WithStack(err), "failed to upgrade L4 network proxy to version %s", u.Tag)
@@ -455,6 +471,18 @@ func (u *upgradeL4BFLProxy) Execute(runtime connector.Runtime) error {
 
 	logger.Infof("L4 upgrade to version %s completed successfully", u.Tag)
 	return nil
+}
+
+func l4ProxyDeploymentExists(ctx context.Context, kube kkubernetes.Interface) (bool, error) {
+	_, err := kube.AppsV1().Deployments(l4ProxyNamespace).Get(ctx, l4ProxyDeploymentName, metav1.GetOptions{})
+	if apierrors.IsNotFound(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, errors.Wrapf(errors.WithStack(err), "failed to get deployment %s/%s",
+			l4ProxyNamespace, l4ProxyDeploymentName)
+	}
+	return true, nil
 }
 
 type upgradeGPUDriverIfNeeded struct {
