@@ -75,13 +75,11 @@ For Qwen3.8-27B (llama.cpp):
 
 <!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
-Use the **OpenAI-Compatible** API format. The model name is `default-chat`.
-
 ### Configure the translation service
 
 1. In PDFMathTranslate, select **OpenAI** from the **Service** list.
 2. In the **OPENAI_BASE_URL** field, enter the Base URL copied from Router.
-3. In the **OPENAI_API_KEY** field, enter any non-empty value, such as `none`. The local model endpoint does not require an API key.
+3. In the **OPENAI_API_KEY** field, enter `olares`.
 4. In the **OPENAI_MODEL** field, enter `default-chat`.
 
 ### Select languages and scope

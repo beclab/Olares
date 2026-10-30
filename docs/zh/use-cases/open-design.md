@@ -73,7 +73,7 @@ Olares 上的 Open Design 0.22.1 暂不支持通过文本直接生成独立图�
 4. 配置提供方：
 
    - **Base URL**：粘贴从 Router 复制的 Base URL，包括末尾的 `/v1`。
-   - **API Key**：输入任意非空值，例如 `olares`。同一 Olares 集群中的应用调用本地模型时，不需要真实密钥。
+   - **API Key**：填写 `olares`。
    - **Model**：填写 `default-chat`。
    - **Max tokens（可选）**：输入 `65536`。如需使用更小的上下文窗口，可改为 `32768`。
 
