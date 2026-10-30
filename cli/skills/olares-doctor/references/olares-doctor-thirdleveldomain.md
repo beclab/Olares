@@ -17,7 +17,7 @@ This command uses Kubernetes credentials, not the active Olares profile token. K
 - `duplicate`: two or more app/entrance pairs use the same prefix in one user zone.
 - `reserved`: the prefix is `auth`, `desktop`, or `wizard`.
 - Shared apps are evaluated through each user's effective settings; per-user apps contribute only to their owner's zone.
-- Default app-id prefixes and `third_party_domain` are outside this audit.
+- Default app-id prefixes are outside this audit.
 
 The read-only audit exits non-zero while findings remain. `-q` suppresses output but preserves that exit-code contract.
 

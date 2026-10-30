@@ -115,7 +115,7 @@ Two red lines: never `chown -R` at runtime, and never set an explicit root `secu
 | GPU/accelerator scheduling modes or resource envelope | [accelerator](references/olares-chart-accelerator.md) |
 | The app must run Docker or Compose | [DinD](references/olares-chart-dind.md) |
 | One heavy backend serves multiple users | [shared backend](references/olares-chart-shared.md) |
-| The running app needs a memorable route or custom FQDN | [custom URL](references/olares-chart-custom-domain.md) |
+| The running app needs a memorable route ID | [custom URL](references/olares-chart-custom-domain.md) |
 
 The full assembly sequence is in [workflow](references/olares-chart-workflow.md).
 
