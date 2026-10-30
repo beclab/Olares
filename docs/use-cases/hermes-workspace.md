@@ -64,6 +64,15 @@ Select the conversation under **SESSIONS** to reopen its history. Conversations,
 
 Install and configure [Hermes Agent](hermes.md) with Router `default-chat`. In its application environment settings, enable **API_SERVER_ENABLED** and set **HERMES_API_SERVER_KEY** to a strong key of at least 16 characters. Keep this key private.
 
+For Hermes Agent 0.22.2, keep the API settings in its persistent profile as well. In Files, open **Data** > **hermesagent** > **home** > **.env**, then set `API_SERVER_ENABLED=true` and `API_SERVER_KEY` to the same key. Preserve other entries and keep this file private. In the Hermes CLI terminal, run:
+
+```bash
+hermes config set platforms.api_server.enabled true
+hermes gateway restart
+```
+
+Wait for the gateway to restart before connecting Workspace. This prevents the API from remaining disabled after an Agent restart.
+
 1. In Settings, open **Applications** > **Hermes Agent** > **Entrances**. Obtain the URLs for **Hermes Gateway API** and **Dashboard** from this instance.
 2. Open **Applications** > **Hermes Workspace** > **Environment**, then set these fields:
 

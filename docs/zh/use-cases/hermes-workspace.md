@@ -68,6 +68,15 @@ Hermes Workspace 将 AI 对话和工作区文件集中在浏览器中。在 Olar
 
 安装并配置 [Hermes Agent](hermes.md)，使用 Router `default-chat`。在其应用环境变量中启用 **API_SERVER_ENABLED**，并将 **HERMES_API_SERVER_KEY** 设置为至少 16 个字符的强密钥。请妥善保管该密钥。
 
+使用 Hermes Agent 0.22.2 时，还需要将 API 设置保存在其持久配置中。在文件管理器中打开 **Data** > **hermesagent** > **home** > **.env**，设置 `API_SERVER_ENABLED=true`，并将 `API_SERVER_KEY` 设为同一密钥。保留其他配置项，妥善保护该文件。然后在 Hermes CLI 终端中运行：
+
+```bash
+hermes config set platforms.api_server.enabled true
+hermes gateway restart
+```
+
+等待网关重启完成后再连接 Workspace，避免 Agent 重启后 API 仍处于停用状态。
+
 1. 在设置中打开**应用** > **Hermes Agent** > **入口**，获取当前实例的 **Hermes Gateway API** 和 **Dashboard** 地址。
 2. 打开**应用** > **Hermes Workspace** > **环境变量**，填写以下字段：
 
