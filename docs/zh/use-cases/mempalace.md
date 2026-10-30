@@ -1,71 +1,63 @@
 ---
 outline: [2, 3]
-description: 在 Olares 上使用 MemPalace 保存项目笔记和对话记忆。导入文档、查回原文，并通过 MCP 让 Hermes Agent 和 OpenClaw 使用同一个记忆库。
+description: 在 Olares 上使用 MemPalace 保存项目笔记和对话记忆。导入文档、查找原文，并通过 MCP 让 Hermes Agent 和 OpenClaw 共享记忆。
 head:
   - - meta
     - name: keywords
       content: Olares, MemPalace, AI 记忆, MCP, Hermes Agent, OpenClaw, 语义搜索, 本地记忆
 app_version: "0.0.12"
 doc_version: "1.0"
-doc_updated: "2026-10-25"
+doc_updated: "2026-10-30"
 ---
 
 # 使用 MemPalace 在不同 AI Agent 之间共享项目记忆
 
-MemPalace 是面向 AI Agent 的本地记忆服务。它保留笔记和对话的原始措辞，通过语义检索找回相关内容，并按项目和主题组织记录。它的知识图谱还可以跟踪事实随时间的变化。
+MemPalace 是面向 AI Agent 的本地记忆服务。它按原文保存笔记和对话，并帮助你通过语义搜索找到相关内容。
 
-在 Olares 上，导入的记忆独立于 Agent 的聊天会话持久保存。Hermes Agent 和 OpenClaw 可以通过 MCP 使用同一个记忆库，原始文件则保存在 Files 中。默认的文本嵌入和搜索在本地运行，无需云端 API 密钥。
+在 Olares 上，导入的记忆独立于 Agent 的聊天会话持久保存。Hermes Agent 和 OpenClaw 可以通过 MCP 使用同一个记忆库，源文档则保存在 Files 中。默认的文本嵌入和搜索在本地运行，无需云端 API 密钥。
 
-本指南以一个名为 Lakeview 的虚构厨房翻新项目为例。你也可以用同样的方法管理自由职业客户的需求、家庭事务，或软件团队的设计决策。
-
-::: info 翻译说明
-本文为对应英文指南的中文译稿，使用 AI 辅助翻译并结合实际操作核对。
-:::
+本指南以虚构的 Lakeview 厨房翻新项目为例。你将导入项目简报，让 Hermes Agent 查找文件并保存会议笔记，再在新会话和 OpenClaw 中找回这条笔记。MCP 连接为 Agent 提供记忆工具。本流程不会配置自动保存或自动召回，你需要明确要求 Agent 搜索或保存记录。
 
 ## 学习目标
 
-- 从 Files 导入项目笔记，并查回原始内容。
-- 连接 Hermes Agent，在新的会话中找回已经保存的决定。
-- 让 OpenClaw 使用同一份项目记忆。
-- 添加办公文档，并了解日记、时序事实和记忆整理工具的用途。
-
-## 适用场景
-
-| 你想完成的事 | 对应能力 |
-| --- | --- |
-| 在多次客户会议之间保留偏好和决定 | 原文记录、语义搜索、来源筛选 |
-| 将项目从一个助手交接给另一个助手 | MCP 共享记忆和 Agent 日记 |
-| 从方案、电子表格或会议导出记录中查找细节 | 项目、对话和办公文档导入 |
-| 跟踪预算、供应商或技术方案的变化 | 时序知识图谱、主题连接和组织审查 |
-
-打开 MemPalace 后会进入 Web 终端。你可以直接运行命令，也可以让连接到 MCP 的 Agent 使用记忆工具。
+- 从 Files 导入项目简报并搜索原文。
+- 让 Hermes Agent 阅读简报并保存会议笔记。
+- 在新的 Hermes 会话中找回会议笔记。
+- 让 OpenClaw 找回 Hermes 保存的笔记。
 
 ## 前提条件
 
-- Olares 1.12.7 或更高版本。
-- 已[配置 Hermes Agent](hermes.md#配置-hermes-agent)，通过 Router 使用 `default-chat` 模型。
+- **Olares OS：** 1.12.7 或更高版本。
 
-模型地址和身份验证规则参见[连接 AI 应用](../manual/best-practices/connect-ai-apps.md)。本流程使用本地终端会话，无需配置消息平台。
+如需借助 AI Agent 整理和查找项目信息，请在阅读相应章节前配置好以下应用：
 
-::: info 应用上架状态
-本指南对应 MemPalace 3.11.0 测试包。请在你的 Market 中可以找到该版本后按下文安装，或使用应用提交中提供的测试包。
-:::
+- **Hermes Agent：** 按照 [Hermes Agent 配置指南](hermes.md#配置-hermes-agent)完成配置，并选择 Router 的 `default-chat` 模型。
+- **OpenClaw：** 按照 [OpenClaw 配置指南](openclaw.md#初始化-openclaw)完成配置，使用 OpenClaw 2026.10.5 或更高版本，并选择 Router 的 `default-chat` 模型。
+
+## MemPalace 如何组织记忆
+
+MemPalace 将保存的文本分为三个层级：
+
+| 层级 | 保存什么 | 本指南中的例子 |
+| --- | --- | --- |
+| **Wing** | 同一项目、人物或其他主题的记录 | 导入的简报放在 `lakeview-home`，Hermes 将会议笔记保存在 `lakeview-agent`。 |
+| **Room** | Wing 中某个话题的记录 | 简报放在 `general`，会议笔记放在 `client-meeting`。 |
+| **Drawer** | 单条记录或导入文件一部分的原始文本 | 搜索结果可以通过 Drawer ID 标明来自 `brief.md` 的段落或保存的会议笔记。 |
+
+两个 Wing 都属于同一个 MemPalace 记忆库，连接的 Agent 均可访问。使用 `--wing` 可以只搜索指定 Wing。限定为 `lakeview-home` 时，结果不会包含 `lakeview-agent` 中的会议笔记。
 
 ## 安装 MemPalace
 
-1. 打开 Market，搜索 `MemPalace`。
+1. 打开 Market，搜索“MemPalace”。
 2. 点击 **Get**，再点击 **Install**，等待安装完成。
-3. 从启动台打开 MemPalace Terminal，运行：
 
-   ```bash
-   mempalace status
-   ```
-
-首次导入或写入记忆时，会下载约 80 MB 的默认本地嵌入模型。应用安装可以先完成，模型在需要使用时再下载。如果下载超时，待网络恢复后重试原操作，已经下载好的模型会在后续操作中复用。
+::: tip 首次导入可能需要更长时间
+首次导入文件或写入记忆时，会下载约 80 MB 的本地嵌入模型。如果下载超时，请在网络恢复后重试。MemPalace 会缓存模型，供后续操作使用。
+:::
 
 ## 从 Files 导入项目资料
 
-1. 在电脑上将下面的虚构项目笔记保存为 `brief.md`：
+1. 在电脑上将下面的示例笔记保存为 `brief.md`：
 
    ```markdown
    # Lakeview kitchen renovation
@@ -78,48 +70,53 @@ MemPalace 是面向 AI Agent 的本地记忆服务。它保留笔记和对话的
    Northstar Joinery will supply the cabinets.
    ```
 
-2. 打开 Files，在 **Home** 中新建 `MemPalace-demo` 文件夹，将 `brief.md` 上传到其中。
-3. 在 MemPalace Terminal 中导入该文件夹：
+2. 打开 Olares Files，在 **Home** 中新建 `MemPalace-demo` 文件夹，并将 `brief.md` 上传到其中。
+3. 从启动台打开 MemPalace Terminal。Olares Files 中的 `/Files/Home/MemPalace-demo/` 在终端内挂载为 `/home/app/userdata/Home/MemPalace-demo`。运行以下命令导入：
 
    ```bash
    mempalace mine /home/app/userdata/Home/MemPalace-demo --wing lakeview-home
    ```
 
-   等待输出 `Done.` 和已归档的 Drawer 数量。Home 通过只读方式挂载，导入的记忆会保存在 MemPalace 自己的应用数据中。
+   等待输出 `Done.` 和已归档的 Drawer 数量。Home 以只读方式挂载。MemPalace 会将导入的记忆保存在自己的应用数据中。
 
-4. 使用笔记中的主题提出问题：
+4. 搜索导入笔记中的橱柜送货日期：
 
    ```bash
    mempalace search "When is cabinet delivery?" --wing lakeview-home --results 3
    ```
 
-   阅读返回的原文和来源文件名。你可以使用与原文不同的表达方式查询，再根据来源内容作出项目决定。
+   检查返回的段落是否写明送货日期为 2026 年 11 月 10 日，并将 `brief.md` 列为来源。
 
-   ![通过项目问题查回 Lakeview 笔记原文](https://cdn.olares.com/images/2026/10/ee7fefa1275966f278391220fd52869a.jpg)
+::: tip 关于这次搜索
+- `--wing lakeview-home` 将搜索范围限定在导入简报的 Wing。
+- `--results 3` 最多返回三个匹配结果。你可以将 `3` 改成其他数字。
 
-Wing 用于组织项目，Room 用于组织项目中的主题，Drawer 保存单条记录。重复导入会跳过未变化的文件。后续继续导入同一项目时，请沿用原来的 Wing。
+后续导入 Lakeview 简报的其他资料时，请沿用同一个 Wing。
+:::
 
 ## 让 Hermes Agent 使用同一个记忆库
 
-### 获取 MCP 地址
+无需配置消息平台，也可以使用 Hermes CLI。本节先让 Hermes 阅读导入的简报，再保存一条供后续会话查找的笔记。
+
+### 复制 MCP Endpoint
 
 1. 打开 **Settings** > **Applications** > **MemPalace**。
 2. 在 **Entrances** 下选择 **MemPalace MCP**。
-3. 复制 **Endpoint** 地址，在末尾添加一次 `/mcp`。
+3. 确认 **Authentication level** 为 **Internal**。
+4. 复制 **Endpoint** URL。
 
-   ![从 MemPalace MCP 入口复制 Endpoint 地址](https://cdn.olares.com/images/2026/10/dd2af69c620cb23c62900ad5f868787f.jpg)
-
-本连接使用 MCP 入口，保留其 **Internal** 身份验证级别。下面的示例适用于运行在同一个 Olares 上的 Agent。
+   ![从 MemPalace MCP 入口复制 Endpoint](/images/manual/use-cases/mempalace-endpoint.png#bordered)
 
 ### 在 Hermes 中添加连接
 
-1. 打开 Files，找到 **Data** > **hermesagent** > **home** > `config.yaml`。
-2. 在 `mcp_servers` 下添加 `mempalace`，将示例 URL 替换为刚才复制的地址：
+1. 打开 Olares Files，找到 **Data** > **hermesagent** > **home** > `config.yaml`。
+2. 点击 <i class="material-symbols-outlined">edit_square</i> 进入编辑。
+3. 在 `mcp_servers` 下添加 `mempalace`。将 `<mempalace-endpoint-url>` 替换为上一步复制的完整 URL：
 
    ```yaml
    mcp_servers:
      mempalace:
-       url: "https://<your-mempalace-mcp-endpoint>/mcp"
+       url: "<mempalace-endpoint-url>/mcp"
        tools:
          include:
            - mempalace_status
@@ -129,7 +126,7 @@ Wing 用于组织项目，Room 用于组织项目中的主题，Drawer 保存单
            - mempalace_diary_write
    ```
 
-3. 在现有的 `platform_toolsets.cli` 列表中追加 `mcp-mempalace`：
+4. 在现有的 `platform_toolsets.cli` 列表中添加 `mcp-mempalace`：
 
    ```yaml
    platform_toolsets:
@@ -138,58 +135,86 @@ Wing 用于组织项目，Room 用于组织项目中的主题，Drawer 保存单
        - mcp-mempalace
    ```
 
-   请将这些内容合并到已有配置段中，保留当前模型、其他 MCP 服务和已经使用的工具集。
+   将上述内容加入 `config.yaml` 中已有的列表，不要删除其他 MCP 服务或 CLI 工具集。
 
-4. 保存文件，在 Hermes CLI 中启动新的会话：
+5. 点击 <i class="material-symbols-outlined">save</i> 保存更改。
+
+### 阅读导入的简报
+
+1. 在 Hermes CLI 中开始新会话：
 
    ```bash
    hermes chat
    ```
 
-### 保存决定，再在新会话中召回
+2. 让 Hermes 搜索 `lakeview-home` Wing：
 
-向 Hermes 提出请求：
+   ```text
+   Search MemPalace's lakeview-home wing for the Lakeview kitchen brief.
+   What's the approved budget and who supplies the cabinets? Include the source.
+   ```
 
-```text
-请使用 MemPalace，将下面的项目笔记原文保存到
-wing lakeview-agent、room client-meeting：
-"Lakeview client meeting: cabinet delivery is booked for 10 November 2026.
-Delivery contact is Olivia Carter. Project reference: LV-7421."
-请在记忆工具执行成功后确认。
-```
+### 保存会议笔记并在新会话中找回
 
-保存成功后结束当前会话，再开始一个新会话，要求它查找共享记忆：
+这条会议笔记重复了简报中的送货信息，并增加了项目编号。
 
-```text
-请先使用 MemPalace 搜索 Lakeview client meeting。
-我们记录的送货日期、联系人和项目编号是什么？
-请附上来源 Drawer ID。
-```
+1. 在当前 Hermes CLI 会话中，让 Hermes 保存会议笔记：
 
-打开返回的记录，或将引用内容与原笔记核对。需要供后续会话使用的事实，可以让 Agent 通过 MemPalace 保存，也可以导入其来源文件。
+   ```text
+   Use MemPalace to save this exact project note in wing lakeview-agent,
+   room client-meeting:
+   "Lakeview client meeting: cabinet delivery is booked for 10 November 2026.
+   Delivery contact is Olivia Carter. Project reference: LV-7421."
+   Confirm after the memory tool succeeds.
+   ```
+
+   Hermes 可能像下面这样确认保存：
+
+   ```text
+   Confirmed. The note is in MemPalace under wing lakeview-agent, room client-meeting.
+   ```
+
+2. 输入 `/exit` 并按 **Enter** 退出 Hermes CLI，然后运行 `hermes chat` 开始新会话。
+
+3. 在新会话中，让 Hermes 搜索共享记忆：
+
+   ```text
+   Search MemPalace for the Lakeview client meeting.
+   What delivery date, contact, and project reference did we record?
+   Include the source drawer ID.
+   ```
+
+4. 检查 Hermes 是否找回会议笔记并给出来源 Drawer ID。
 
 ## 从 OpenClaw 使用这份记忆
 
-下面的可选流程使用支持原生 MCP 的 OpenClaw 2026.10.5。请先[配置 OpenClaw](openclaw.md#初始化-openclaw)，通过 Router 使用 `default-chat` 模型。
+OpenClaw 可以连接同一个 MemPalace 服务，找回 Hermes 保存的会议笔记。
 
-1. 打开 OpenClaw CLI，添加同一个 MemPalace 地址：
+1. 打开 OpenClaw CLI，注册 MemPalace MCP Endpoint。将 `<mempalace-endpoint-url>` 替换为[复制 MCP Endpoint](#复制-mcp-endpoint)中获得的完整 URL：
 
    ```bash
    openclaw mcp add mempalace \
-     --url "https://<your-mempalace-mcp-endpoint>/mcp" \
+     --url "<mempalace-endpoint-url>/mcp" \
      --transport streamable-http \
      --include mempalace_search,mempalace_add_drawer,mempalace_get_drawer,mempalace_status,mempalace_diary_write
    ```
 
-2. 运行 `openclaw mcp probe`，连接结果中应列出 `mempalace` 的五个工具。
-3. 在 Market 中重启 OpenClaw，待其运行后，从 Control UI 开始一个新会话。
-4. 要求 OpenClaw 使用 MemPalace 搜索 Lakeview client meeting，并返回送货日期、联系人、项目编号和 Drawer ID。
+2. 运行 `openclaw mcp probe`，输出中应显示 `mempalace` 有五个工具。
+3. 在 Market 中打开 **My Olares**，找到 OpenClaw。打开操作菜单，选择 **Stop**，然后选择 **Resume**。等待 OpenClaw 恢复运行。
+4. 从启动台打开 Control UI，选择 **New Session**。
+5. 向 OpenClaw 提问：
 
-现在两个 Agent 使用的是同一份记录。你也可以让 OpenClaw 保存安装预约，再让 Hermes 在新的会话中查询。
+   ```text
+   Search MemPalace for the Lakeview client meeting.
+   What delivery date, contact, and project reference did we record?
+   Include the source drawer ID.
+   ```
+
+OpenClaw 应返回 Hermes 保存的会议笔记中的送货日期、联系人和项目编号。
 
 ## 添加文档和对话导出记录
 
-将更多来源文件上传到 Files 中的文件夹，再在 MemPalace Terminal 中选择对应的导入模式：
+将文件上传到 Olares Files 中的文件夹，然后在 MemPalace Terminal 中按文件类型运行对应命令：
 
 | 来源 | 命令 |
 | --- | --- |
@@ -197,59 +222,75 @@ Delivery contact is Olivia Carter. Project reference: LV-7421."
 | 对话导出记录 | `mempalace mine <folder> --mode convos --wing <project>` |
 | PDF、DOCX、PPTX、XLSX、RTF 和 EPUB | `mempalace mine <folder> --mode extract --wing <project>` |
 
-将 `<folder>` 替换为挂载后的路径，例如 `/home/app/userdata/Home/MemPalace-demo`，将 `<project>` 替换为 Wing 名称。本应用包已包含文档提取所需的依赖。
+运行前替换占位符：
 
-办公文档导入会提取其中的文本供检索。原文档继续保存在 Files 中，用于查看版式和图片。扫描件需要先完成 OCR，再使用这个文本导入流程。查询一个主题时，可以添加 `--wing` 和 `--room`。来源及日期筛选参数可通过 `mempalace search --help` 查看。
+- `<folder>`：文件夹在 MemPalace Terminal 中的挂载路径。
+- `<project>`：保存导入记录的 Wing。要将文件加入简报所在的 Wing，请使用 `lakeview-home`。
 
-## 整理长期积累的记忆
+::: tip 文档导入
+`extract` 模式导入可搜索的文本，不保留文档的版式或图片。原文件请保留在 Olares Files 中。扫描件需要先进行 OCR，再导入。本应用已包含所需的文本提取工具。
+:::
 
-对于持续推进的项目，MemPalace 还提供以下工具：
+## 进阶用法
 
-| 需要处理的事 | 对应工具 |
-| --- | --- |
-| 会议结束后留下交接记录 | Agent 日记写入和读取 |
-| 修改预算，同时保留之前的事实 | 知识图谱新增、替换和时间线 |
-| 将供应商主题连接到项目简报 | Room 隧道和关系遍历 |
-| 交换任务进度或完整的文本附件记录 | 任务事件、确认和 Artifact 工具 |
+### 检查记忆的组织情况
 
-要从 Hermes 使用这些功能，可将相应工具名加入 `tools.include`，或移除该筛选段以发现完整工具集。例如，时序事实相关工具为 `mempalace_kg_add`、`mempalace_kg_query`、`mempalace_kg_supersede` 和 `mempalace_kg_timeline`。修改配置后开始新的会话。
-
-在 MemPalace Terminal 中运行以下命令，可以查看记忆库的组织情况：
+在 MemPalace Terminal 中运行以下命令，查看整个记忆库的组织情况：
 
 ```bash
 mempalace audit
 ```
 
-::: details 可选：通过 Router 生成并应用主题分类
-当某个 Wing 已积累较多笔记时，可以让模型建议主题分类。按照[连接 AI 应用](../manual/best-practices/connect-ai-apps.md)中的说明，复制 Router 为 **Apps in Olares** 提供的 **Base URL**，保留 `/v1`。
+评分衡量的是记忆的组织情况，并非搜索准确率。查看分数下方的具体发现，了解哪些问题值得检查。`n/a` 表示该项没有可报告的分数。
 
-先结束当前 Agent 任务。维护命令会在执行期间暂停 MCP，并在完成后自动恢复服务。
+:::: details 可选：通过 Router 整理项目记忆
 
-```bash
-mempalace-maintenance rooms propose --wing lakeview-home \
-  --llm-provider openai-compat \
-  --llm-model default-chat \
-  --llm-endpoint "https://<your-router-endpoint>/v1" \
-  --accept-external-llm
-```
+随着项目记录增多，你可以按主题将它们归入不同 Room。MemPalace 可以通过 Olares Router 调用模型，为指定 Wing 建议 Room。应用更改前，请查看建议并预览记录将移动到哪里。
 
-最后一个参数表示允许把抽样笔记发送到你指定的模型地址。模型在本地还是云端运行，取决于 Router 当前的 `default-chat` 路由。
+Lakeview 示例只导入了一份简报，因此建议中可能包含没有记录的 Room。如果一个 Wing 中有多个不同主题的笔记，MemPalace 就有更多记录可供分类。
 
-查看建议的分类后，先预览重新归类的结果：
+<!--@include: ../../reusables/ai-service-connections.md#app-endpoint-overview-->
 
-```bash
-mempalace-maintenance rooms apply --wing lakeview-home --from all
-```
+1. 获取 Router Endpoint。打开 Olares **Settings** > **Applications** > **Router** > **Entrances**。选择 **Router**，然后复制 **Endpoint** URL。
 
-确认方案合适后再应用：
+   在下面的命令中，用该 URL 替换 `<router-endpoint-url>`。命令会添加 `/v1`，并使用 Router 中选为默认聊天模型的模型。
 
-```bash
-mempalace-maintenance rooms apply --wing lakeview-home --from all --yes
-```
-:::
+2. 先完成当前运行中的 Agent 任务。维护命令会在执行期间暂停 MCP，并在完成后自动恢复服务。在 MemPalace Terminal 中运行以下命令，为 `lakeview-home` 建议 Room：
 
-## 保存源文件和记忆数据
+   ```bash
+   mempalace-maintenance rooms propose --wing lakeview-home \
+     --llm-provider openai-compat \
+     --llm-model default-chat \
+     --llm-endpoint "<router-endpoint-url>/v1" \
+     --accept-external-llm
+   ```
 
-源文件保留在 Files 中，导入的记忆、日记和图谱数据保存在 MemPalace 的应用存储中。手动复制备份时，先在 Market 中停止 MemPalace，再通过 Files 将 **Data** > **mempalace** > **mempalace** 复制到备份位置，完成后恢复应用运行。源文档也应纳入平时的 Files 备份。
+   `--accept-external-llm` 允许将抽样笔记发送到指定的模型 Endpoint。模型在本地还是云端运行，取决于 Router 当前的 `default-chat` 路由。
 
-默认嵌入模型和搜索在 Olares 上运行。Agent 对话及可选的模型辅助整理，会使用通过 Router 配置的模型服务商。需要让这些模型调用也保留在设备上时，请在 Router 中选择本地模型。
+3. `rooms propose` 完成后，在输出的 `Saved to` 行找到建议文件的路径。在 MemPalace Terminal 中运行 `cat`，后面接该路径，查看建议的 Room 名称和描述。确认它们适合项目后再继续。
+
+4. 预览记录将如何归入建议的 Room：
+
+   ```bash
+   mempalace-maintenance rooms apply --wing lakeview-home --from all --show 3
+   ```
+
+   此命令只预览，不会应用更改。`--from all` 包含 `lakeview-home` 所有 Room 中的记录，`--show 3` 最多显示每个目标 Room 的三个例子。检查建议的归类是否符合记录内容。
+
+5. 确认预览结果后应用更改：
+
+   ```bash
+   mempalace-maintenance rooms apply --wing lakeview-home --from all --yes
+   ```
+
+::::
+
+### 备份记忆
+
+源文件仍保存在 Olares Files 中。导入的记忆、日记和图谱数据保存在 MemPalace 的应用存储中。如需手动复制备份，请先在 Market 中停止 MemPalace，通过 Files 将 **Data** > **mempalace** > **mempalace** 复制到备份位置，然后恢复应用运行。源文档也应纳入日常 Files 备份。
+
+默认的嵌入模型和搜索在 Olares 上运行。Agent 对话和可选的模型辅助整理使用 Router 中配置的模型服务商。如果希望这些模型调用也留在设备上，请在 Router 中选择本地模型。
+
+## 了解更多
+
+- [MemPalace 官方指南](https://mempalaceofficial.com/guide/getting-started)
