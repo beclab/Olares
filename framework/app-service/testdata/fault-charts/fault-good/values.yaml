@@ -1,0 +1,5 @@
+userspace:
+  appData: ""
+workloads:
+  faultgood:
+    replicaCount: 1

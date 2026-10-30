@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: faultmw
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: {{ .Values.workloads.faultmw.replicaCount }}
+  selector:
+    matchLabels:
+      app: faultmw
+  template:
+    metadata:
+      labels:
+        app: faultmw
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/control-plane
+                operator: Exists
+      containers:
+        - name: faultmw
+          image: docker.io/library/redis:7.4
+          args: ["--bind", "0.0.0.0", "--port", "80", "--protected-mode", "no"]
+          ports:
+            - name: http
+              containerPort: 80
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: faultmw-svc
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    app: faultmw
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80

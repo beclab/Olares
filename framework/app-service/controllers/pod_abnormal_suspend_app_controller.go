@@ -3,21 +3,20 @@ package controllers
 import (
 	"context"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
-	"github.com/beclab/Olares/framework/app-service/pkg/appstate"
+	"github.com/beclab/Olares/framework/app-service/pkg/applifecycle/domain"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
+	"github.com/google/uuid"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -278,49 +277,72 @@ func (r *PodAbnormalSuspendAppController) trySuspendApp(ctx context.Context, own
 		klog.Errorf("failed to get applicationmanager name=%s for app=%s owner=%s: %v", name, appName, owner, err)
 		return false, err
 	}
-	if am.Status.OpType == appv1alpha1.StopOp || am.Status.State == appv1alpha1.Stopped || am.Status.State == appv1alpha1.Stopping {
+	if stopAlreadyInFlight(&am) {
 		return true, nil
 	}
-
-	if !appstate.IsOperationAllowed(am.Status.State, appv1alpha1.StopOp) {
-		klog.Infof("operation StopOp not allowed in state=%s for app=%s owner=%s", am.Status.State, appName, owner)
+	// Status still describes the previous operation. Requeue instead of
+	// replacing an unconsumed Uninstall, Upgrade, or ApplyEnv. After the
+	// Runner consumes it, AllowsOp decides whether this pod can still stop
+	// the app.
+	if deferSuspend(&am) {
+		op, _ := domain.UnconsumedOperation(&am)
+		klog.Infof("app %s owner %s has unconsumed %s request, deferring suspend", appName, owner, op)
 		return false, nil
 	}
 
-	isServerPod := strings.HasSuffix(podNamespace, "-shared")
-	if isServerPod {
-		if am.Annotations == nil {
-			am.Annotations = make(map[string]string)
-		}
-		am.Annotations[api.AppStopAllKey] = "true"
+	if !domain.DefaultTable.AllowsOp(am.Status.State, appv1alpha1.StopOp) {
+		klog.Infof("operation StopOp not allowed in state=%s for app=%s owner=%s", am.Status.State, appName, owner)
+		return false, nil
 	}
-
-	am.Spec.OpType = appv1alpha1.StopOp
-	if err := r.Update(ctx, &am); err != nil {
-		klog.Errorf("failed to update applicationmanager spec to StopOp name=%s app=%s owner=%s: %v", am.Name, appName, owner, err)
-		return false, err
-	}
-
-	opID := strconv.FormatInt(time.Now().Unix(), 10)
-	now := metav1.Now()
-	status := appv1alpha1.ApplicationManagerStatus{
-		OpType:     appv1alpha1.StopOp,
-		OpID:       opID,
-		State:      appv1alpha1.Stopping,
-		StatusTime: &now,
-		UpdateTime: &now,
-		Reason:     reason,
-		Message:    message,
-	}
-	if _, err := apputils.UpdateAppMgrStatus(name, status, func(manager *appv1alpha1.ApplicationManager) {
-		if reason == constants.AppHamiSchedulable || reason == constants.AppUnschedulable {
-			manager.Annotations[api.AppStopByControllerDuePendingPod] = "true"
-		}
-	}); err != nil {
+	if err := r.suspendResolved(ctx, &am, reason, message, podNamespace); err != nil {
 		return false, err
 	}
 	klog.Infof("suspend requested for app=%s owner=%s, reason=%s", am.Spec.AppName, am.Spec.AppOwner, message)
 	return true, nil
+}
+
+// stopAlreadyInFlight reports that a stop is accepted or finished.
+// Status stays on the previous operation until the Runner copies the
+// durable request into Status.OpID, so Spec.OpType plus an unconsumed
+// request id counts too. Another evicted pod must not mint a new id.
+func stopAlreadyInFlight(am *appv1alpha1.ApplicationManager) bool {
+	return am.Status.OpType == appv1alpha1.StopOp ||
+		am.Status.State == appv1alpha1.Stopped ||
+		am.Status.State == appv1alpha1.Stopping ||
+		domain.OperationRequestPending(am, appv1alpha1.StopOp)
+}
+
+// deferSuspend reports a non-stop request the Runner has not consumed.
+// trySuspendApp requeues those instead of minting a Stop that erases them.
+func deferSuspend(am *appv1alpha1.ApplicationManager) bool {
+	op, pending := domain.UnconsumedOperation(am)
+	return pending && op != appv1alpha1.StopOp
+}
+
+// suspendResolved writes the stop intent. Status stays where it is:
+// the ApplicationManager watch enqueues the Runner, and OnRunningStop
+// (and the other StopOp entries) perform the transition. The reason
+// annotations keep an eviction from being reported as a user stop.
+func (r *PodAbnormalSuspendAppController) suspendResolved(ctx context.Context, am *appv1alpha1.ApplicationManager, reason, message, podNamespace string) error {
+	patched := am.DeepCopy()
+	if patched.Annotations == nil {
+		patched.Annotations = make(map[string]string)
+	}
+	patched.Spec.OpType = appv1alpha1.StopOp
+	if strings.HasSuffix(podNamespace, "-shared") {
+		patched.Annotations[api.AppStopAllKey] = "true"
+	}
+	if reason == constants.AppHamiSchedulable || reason == constants.AppUnschedulable {
+		patched.Annotations[api.AppStopByControllerDuePendingPod] = "true"
+	}
+	patched.Annotations[api.AppStopReasonKey] = reason
+	patched.Annotations[api.AppStopMessageKey] = message
+	patched.Annotations[domain.AnnotationOperationRequestID] = uuid.NewString()
+	if err := r.Patch(ctx, patched, client.MergeFrom(am)); err != nil {
+		klog.Errorf("failed to patch applicationmanager stop intent name=%s: %v", am.Name, err)
+		return err
+	}
+	return nil
 }
 
 func parseTimeWithDefault(name string, defaultValue time.Duration) time.Duration {

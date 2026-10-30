@@ -1,0 +1,6 @@
+apiVersion: v2
+name: faulthanginit
+description: Process stays up without listening so initializing can hit its deadline
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

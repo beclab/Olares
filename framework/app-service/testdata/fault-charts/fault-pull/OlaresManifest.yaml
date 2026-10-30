@@ -1,0 +1,47 @@
+olaresManifest.version: '0.12.0'
+olaresManifest.type: app
+apiVersion: 'v3'
+workloadReplicas:
+  faultpull: 1
+metadata:
+  name: faultpull
+  description: Image pull failure test app
+  icon: https://app.cdn.olares.com/appstore/adguard/icon.png
+  appid: faultpull
+  version: '0.1.0'
+  title: Fault Pull
+  categories:
+    - Utilities_v112
+permission:
+  appData: true
+  appCache: true
+spec:
+  versionName: '0.1.0'
+  fullDescription: Image pull failure test app
+  developer: test
+  website: https://example.com
+  submitter: test
+  locale:
+    - en-US
+  requiredMemory: 64Mi
+  limitedMemory: 512Mi
+  requiredDisk: 64Mi
+  limitedDisk: 256Mi
+  requiredCpu: 50m
+  limitedCpu: 1
+  supportArch:
+    - amd64
+    - arm64
+options:
+  dependencies:
+    - name: olares
+      type: system
+      version: '>=1.12.6-0'
+entrances:
+  - authLevel: internal
+    host: fault-pull-svc
+    icon: https://app.cdn.olares.com/appstore/adguard/icon.png
+    name: fault-pull
+    openMethod: window
+    port: 80
+    title: Fault Pull

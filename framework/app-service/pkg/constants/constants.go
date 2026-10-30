@@ -319,7 +319,7 @@ func IsRemoteOptionsHostAllowed(host string) bool {
 
 // AppMgrTerminalRetention bounds how long an ApplicationManager is allowed to
 // linger in a safely-deletable terminal state (Uninstalled / InstallingCanceled
-// / PendingCanceled / DownloadingCanceled / DownloadFailed / InstallFailed)
+// / PendingCanceled / DownloadingCanceled / DownloadFailed)
 // before the GC controller reclaims it. The retention gives operators a window
 // to inspect the failure reason / op record and gives the install-failure
 // cleanup helper plenty of time to converge the rare NS-finalizer-stuck case

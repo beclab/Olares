@@ -1,0 +1,6 @@
+apiVersion: v2
+name: faultgpu
+description: Pod requests more GPUs than are bound so HAMi records InsufficientGPU
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

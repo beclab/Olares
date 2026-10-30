@@ -1,0 +1,108 @@
+# .golangci.yml — repo-wide linter config for framework/app-service.
+#
+# Scope note: this repo has historically run `go vet` and `go test`
+# only, so we introduce golangci-lint scoped tightly to the new
+# pkg/applifecycle/ subtree — specifically to enforce the
+# handler contract documented in
+# pkg/applifecycle/CONTRACT.md. Legacy packages continue to be
+# governed by the existing `make test-unit` gate.
+#
+# The primary enforcer is the go/analysis pass in
+# pkg/applifecycle/lint/handlerpurity, which:
+#   - runs as part of `go test ./pkg/applifecycle/...` via
+#     pkg/applifecycle/handlers/purity_test.go → handlerpurity.CheckDir
+#   - runs as a standalone binary via cmd/handlerpurity
+#     (invoked by `make handler-contract-check`)
+#
+# The forbidigo rules below are a *second line of defense* against
+# regressions and — importantly — they catch violations regardless of
+# whether the offending expression type-checks (e.g. inside a copy-
+# paste block during a WIP PR). They only fire inside
+# pkg/applifecycle/handlers/ so the rest of the codebase is not
+# affected.
+
+version: "2"
+
+run:
+  timeout: 5m
+  # Only lint the applifecycle subtree; the rest of the repo has its
+  # own conventions and its own gate (make test-unit).
+  build-tags: []
+
+linters:
+  default: none
+  enable:
+    - forbidigo
+
+  settings:
+    forbidigo:
+      # Analyze arguments AND package identifiers so patterns match
+      # `time.Sleep(...)` even when called through a dot-import
+      # alias. `analyze-types: true` requires typechecking, which is
+      # what enables the qualified-selector matches below.
+      analyze-types: true
+      forbid:
+        # CONTRACT.md rule 3.1 — no time.Sleep in handlers.
+        - pattern: ^time\.Sleep$
+          msg: |
+            CONTRACT.md rule 3: handlers must not block. Return a
+            domain.ScheduleTick effect instead of calling time.Sleep.
+
+        # CONTRACT.md rule 3.2 — no wait.Poll* in handlers.
+        - pattern: ^wait\.(Poll|PollImmediate|PollUntil|PollImmediateUntil|PollUntilContextCancel|PollUntilContextTimeout)$
+          msg: |
+            CONTRACT.md rule 3: handlers must not block. Return a
+            domain.ScheduleTick effect (or a domain.CallWorkload
+            effect with an OnSuccess/OnFailure callback pair for
+            genuinely long-running work) instead of polling.
+
+        # CONTRACT.md rule 1 — no client-side mutations in handlers.
+        # We match method names on any receiver here (not just
+        # controller-runtime clients) because at the golangci layer
+        # we prefer a slightly noisier rule with fewer false
+        # negatives; the handlerpurity analyzer's type-aware pass
+        # narrows the same rule to controller-runtime receivers.
+        - pattern: ^.*\.Update$
+          msg: |
+            CONTRACT.md rule 1: handlers must not mutate cluster
+            state. Return a domain.PatchAM effect for AppManager
+            writes, or a domain.CallWorkload effect for anything
+            else.
+        - pattern: ^.*\.Patch$
+          msg: |
+            CONTRACT.md rule 1: handlers must not mutate cluster
+            state. Return a domain.PatchAM effect for AppManager
+            writes, or a domain.CallWorkload effect for anything
+            else.
+        - pattern: ^.*\.Create$
+          msg: |
+            CONTRACT.md rule 1: handlers must not mutate cluster
+            state. Return a domain.CallWorkload effect (or, for
+            AppManager creation, a domain.PatchAM effect).
+        - pattern: ^.*\.Delete$
+          msg: |
+            CONTRACT.md rule 1: handlers must not mutate cluster
+            state. Return a domain.CallWorkload effect.
+        - pattern: ^.*\.DeleteAllOf$
+          msg: |
+            CONTRACT.md rule 1: handlers must not mutate cluster
+            state. Return a domain.CallWorkload effect.
+
+  exclusions:
+    # These rules only apply inside handlers/. Everywhere else the
+    # noise-to-signal ratio makes them impractical.
+    rules:
+      - path-except: pkg/applifecycle/handlers/.*\.go$
+        linters:
+          - forbidigo
+      # _test.go files inside handlers/ still lint — an escape hatch
+      # in a test file is just as bad as one in production code, per
+      # CONTRACT.md rule 2/3 which apply to the observable behaviour
+      # of the handler regardless of caller.
+
+# --- ROADMAP ---
+# Once handlers land (see plan §8.4), add:
+#   - govet with fieldalignment for domain/effect.go
+#   - unused (a subset — full unused is noisy on the legacy packages)
+#   - custom plugin wrapping cmd/handlerpurity for one-shot golangci
+#     runs; the standalone binary + `go test` gate already cover it.

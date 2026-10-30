@@ -32,3 +32,25 @@ func SnapshotPreUpgradeState(annotations map[string]string, state appv1alpha1.Ap
 	}
 	annotations[AppPreUpgradeStateKey] = string(appv1alpha1.Running)
 }
+
+// SnapshotPreUpgradeConfig preserves the config that described the deployed
+// release before an upgrade. Retries from UpgradeFailed keep the original
+// snapshot instead of replacing it with the already-updated target config.
+func SnapshotPreUpgradeConfig(annotations map[string]string, config string) {
+	if annotations == nil {
+		return
+	}
+	if _, exists := annotations[AppPreUpgradeConfigKey]; !exists {
+		annotations[AppPreUpgradeConfigKey] = config
+	}
+}
+
+// PrepareUpgradeMetadata records the rollback config and the requested target
+// version without changing AppVersionKey, which represents the deployed chart.
+func PrepareUpgradeMetadata(annotations map[string]string, currentConfig, targetVersion string) {
+	if annotations == nil {
+		return
+	}
+	SnapshotPreUpgradeConfig(annotations, currentConfig)
+	annotations[AppTargetChartVersionKey] = targetVersion
+}

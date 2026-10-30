@@ -1,0 +1,5 @@
+userspace:
+  appData: ""
+workloads:
+  ginit:
+    replicaCount: 1
