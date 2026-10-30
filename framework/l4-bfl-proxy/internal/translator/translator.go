@@ -336,7 +336,7 @@ func (t *Translator) applyDenyAllRestrictions(user *message.UserInfo, vhosts []*
 //
 // SNI strategy: one filter chain per ServerNameDomain entry, each matching
 // exactly zoneDomain + *.zoneDomain. Custom domains get separate chains with
-// their own TLS cert.
+// their own TLS cert and only the virtual hosts serving that custom domain.
 func (t *Translator) buildUserFilterChains(user *message.UserInfo, vhosts []*ir.VirtualHostIR, port uint32, proxyProtocol bool) []*ir.HTTPListenerIR {
 	defaultResponse := &ir.DirectResponseIR{
 		Status:      421,
@@ -399,7 +399,11 @@ func (t *Translator) buildUserFilterChains(user *message.UserInfo, vhosts []*ir.
 		))
 	}
 
-	// Custom domain filter chains (separate TLS certs, same virtual hosts)
+	// Custom domain filter chains carry their own TLS cert and ONLY the
+	// virtual hosts that serve that custom domain. A connection whose SNI is
+	// the custom domain must not reach the user's zone services by forging
+	// :authority (e.g. desktop.<zone>); such requests fall through to the
+	// default 421 virtual host.
 	for _, cert := range user.CustomDomainCerts {
 		customTLS := &ir.SecretIR{
 			Name:     fmt.Sprintf("custom-tls-%s-%s", user.Name, cert.Domain),
@@ -412,7 +416,7 @@ func (t *Translator) buildUserFilterChains(user *message.UserInfo, vhosts []*ir.
 			Port:            port,
 			TLS:             true,
 			ProxyProtocol:   proxyProtocol,
-			VirtualHosts:    vhosts,
+			VirtualHosts:    vhostsForDomain(vhosts, cert.Domain),
 			DefaultResponse: defaultResponse,
 			PingRoute:       true,
 			SNIMatches:      []string{cert.Domain},
@@ -423,6 +427,22 @@ func (t *Translator) buildUserFilterChains(user *message.UserInfo, vhosts []*ir.
 	}
 
 	return result
+}
+
+// vhostsForDomain returns the virtual hosts whose Domains contain domain
+// (exact match), preserving order. The returned entries share pointers with
+// vhosts so per-VH state such as deny_all SourceCIDRs is kept.
+func vhostsForDomain(vhosts []*ir.VirtualHostIR, domain string) []*ir.VirtualHostIR {
+	var out []*ir.VirtualHostIR
+	for _, vh := range vhosts {
+		for _, d := range vh.Domains {
+			if d == domain {
+				out = append(out, vh)
+				break
+			}
+		}
+	}
+	return out
 }
 
 // buildZoneWildcardSNI returns the two SNI patterns for every domain in
