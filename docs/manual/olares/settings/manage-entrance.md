@@ -4,7 +4,7 @@ description: Learn how to manage application entrances in Olares, including sett
 head:
   - - meta
     - name: keywords
-      content: Olares, application access, authentication, access policy, entrance, custom domain, reverse proxy
+      content: Olares, application access, authentication, access policy, entrance, custom route ID, reverse proxy
 ---
 
 # Manage application entrances
@@ -13,7 +13,7 @@ Entrances define how users access your applications on Olares. For more details,
 
 Each entrance consists of two parts:
 
-* The **endpoint**: the URL used to access the app. To customize the endpoint, such as setting a custom route ID or domain, see [Customize application URLs](custom-app-domain.md).
+* The **endpoint**: the URL used to access the app. To set a custom route ID, see [Customize application URLs](custom-app-domain.md).
 * The **access policy**: controls who can access the app and which authentication method is required. This page covers access policies.
 
 ## Understand authentication levels and modes
@@ -65,5 +65,5 @@ Use sub-policies to apply fine-grained access rules to specific paths within the
 
 ## Resources
 
-- [Customize app domain](custom-app-domain.md): Use your own domain to access an app.
+- [Customize application URLs](custom-app-domain.md): Set a memorable route ID for an app.
 - [Entrance concept](../../../developer/concepts/network.md#entrance): Learn the technical background.

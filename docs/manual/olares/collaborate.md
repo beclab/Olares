@@ -26,10 +26,7 @@ Vault lets you store and share sensitive data within your team:
 For details, see [Share vault items](./vault/share-vault-items.md).
 
 ## Set up application entrances
-Give your team flexible ways to access applications through public and private entrances. Public entrances are ideal for team services open to the world (like public websites), while private entrances ensure secure access to internal tools or assets. You can:
-
-* Replace default route IDs with memorable custom ones (like changing `de463205` to `team-wiki`).
-* Set up custom domains for easier team access.
+Give your team flexible ways to access applications through public and private entrances. Public entrances are ideal for team services open to the world (like public websites), while private entrances ensure secure access to internal tools or assets. You can replace default route IDs with memorable custom ones (like changing `de463205` to `team-wiki`).
 
 For details, see [Customize application URLs](./settings/custom-app-domain.md).
 ## Simplify remote access with VPN
