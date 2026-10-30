@@ -433,7 +433,10 @@ func (t *Translator) buildUserFilterChains(user *message.UserInfo, vhosts []*ir.
 	}
 
 	// Custom domain filter chains carry their own TLS cert and ONLY the
-	// virtual hosts that serve that custom domain.
+	// virtual hosts that serve that custom domain. A connection whose SNI is
+	// the custom domain must not reach the user's zone services by forging
+	// :authority (e.g. desktop.<zone>); such requests fall through to the
+	// default 421 virtual host.
 	for _, cert := range user.CustomDomainCerts {
 		customTLS := &ir.SecretIR{
 			Name:     fmt.Sprintf("custom-tls-%s-%s", user.Name, cert.Domain),
