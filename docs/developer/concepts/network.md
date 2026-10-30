@@ -90,5 +90,5 @@ Inside the application, Olares has multiple layers of security.
 
 ## Learn more
 
-- [Set up custom domain name for application](../../manual/olares/settings/custom-app-domain.md#set-a-custom-domain-name)
+- [Set a custom route ID for an application](../../manual/olares/settings/custom-app-domain.md#set-a-custom-route-id)
 - [Access Olares via VPN](/manual/larepass/private-network.md)

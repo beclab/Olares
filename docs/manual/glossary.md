@@ -20,7 +20,7 @@ head:
 
 ## C
 ### CNAME Record
-A CNAME (Canonical Name) record is a type of DNS (Domain Name System) record that maps your custom domain name to an Olares-provided address, enabling domain-to-application mapping.
+A CNAME (Canonical Name) record is a type of DNS (Domain Name System) record that maps one domain name to another domain name.
 
 ## D
 ### DID
