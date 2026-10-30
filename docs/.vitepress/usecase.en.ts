@@ -156,6 +156,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   text: "Codex CLI",
                   link: "/use-cases/codex-cli",
                 },
+                  {
+                  text: "Hermes Workspace",
+                  link: "/use-cases/hermes-workspace",
+                },
                 {
                   text: "Goose",
                   link: "/use-cases/goose",
