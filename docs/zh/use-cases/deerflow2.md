@@ -66,7 +66,7 @@ DeerFlow 2.0 使用 `config.yaml` 文件作为核心配置。要将其连接到�
 
 1. 打开 Files，导航至 DeerFlow 2.0 应用数据目录：`/Data/deerflowv2/config/`。
 2. 打开 `config.yaml`，然后点击右上角的 <span class="material-symbols-outlined">edit_square</span> 打开编辑器。
-3. 在 `models:` 部分下添加以下模型配置。
+3. 在 `models:` 部分下添加以下模型配置。将 `PASTE_ROUTER_BASE_URL` 替换为从 Router 复制的 Base URL。
 
    ```yaml
    models:

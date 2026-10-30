@@ -69,7 +69,7 @@ In this guide, Open Design connects to Qwen3.8-27B (llama.cpp) using the **OpenA
 4. Configure the provider:
 
    - **Base URL**: Paste the Base URL copied from Router, including the trailing `/v1`.
-   - **API key**: Enter any non-empty value, such as `olares`. Local model apps do not require a real key for requests from another app in the same Olares cluster.
+   - **API key**: Enter `olares`.
    - **Model**: Enter `default-chat`.
    - **Max tokens (optional)**: Enter `65536`. You can use `32768` for a smaller context window.
 

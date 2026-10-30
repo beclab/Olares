@@ -73,7 +73,7 @@ Olares 支持克隆应用。如果你想同时运行多个独立的 AI 助手，
 
 <!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
-5. 在 Router 的 **LLM** 页面，点击 Qwen3.8-27B (llama.cpp) 所在行的信息图标，打开 **Model card**。在 **Engine args** 中读取 `-c` 后的数值。例如，`-c 104448` 表示下一步应填写 `104448`。截图说明见[查看实际上下文大小](llm-base-apps.md#在-router-中查看模型详情)。
+6. 在 Router 的 **LLM** 页面，点击 Qwen3.8-27B (llama.cpp) 所在行的信息图标，打开 **Model card**。在 **Engine args** 中读取 `-c` 后的数值。例如，`-c 104448` 表示下一步应填写 `104448`。截图说明见[查看实际上下文大小](llm-base-apps.md#在-router-中查看模型详情)。
 
 ### 第 2 步：运行设置向导
 
@@ -93,7 +93,7 @@ Olares 支持克隆应用。如果你想同时运行多个独立的 AI 助手，
     | How would you like to set up Hermes | 选择 **Full setup — configure every provider, tool & option yourself (bring your own keys)**。 |
     | Select provider | 选择 **Custom endpoint (enter URL manually)**。  |
     | API base URL  | 输入从 Router 复制的 **Base URL**。<br>例如 `https://router.<your-olares-domain>/v1`。  |
-    | API key  | 输入任意占位值，例如 `local`。<br>出于安全考虑，输入内容会被隐藏。 |
+    | API key  | 填写 `olares`。<br>出于安全考虑，输入内容会被隐藏。 |
     | Select API compatibility mode | 输入 `1`，选择 **Auto-detect**。 |
     | Use this model? [Y/n] — 仅检测到一个模型时出现 | 输入 `n`，然后在接下来的 **Model name** 提示中填写 `default-chat`。确认提示只接受是/否，不是在这里输入模型名。 |
     | Select model [1-N] or type name — 检测到多个模型时出现 | 直接输入 `default-chat`，不要选择列表中的编号。 |

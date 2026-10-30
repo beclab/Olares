@@ -83,10 +83,10 @@ Use this method to run Claude Code locally. This example uses the model app **Qw
 
 <!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-anthropic-->
 
-5. Open Olares Settings, and then go to **Applications** > **Claude Code** > **Manage environment variables**.
-6. Specify the following environment variables:
+6. Open Olares Settings, and then go to **Applications** > **Claude Code** > **Manage environment variables**.
+7. Specify the following environment variables:
 
-   - **ANTHROPIC_AUTH_TOKEN**: Enter any text, such as `local`. Router identifies this Olares app through the platform. Claude Code still requires a non-empty token field.
+   - **ANTHROPIC_AUTH_TOKEN**: Enter `olares`.
    - **ANTHROPIC_BASE_URL**: Enter the **Base URL** you copied from Router. For example, `https://router.<your-olares-domain>`.
    - **ANTHROPIC_MODEL**: Enter `default-chat`.
 
@@ -96,8 +96,8 @@ Use this method to run Claude Code locally. This example uses the model app **Qw
    -->
 
 
-7. Click **Apply**. Wait about 10 seconds for the container to restart.
-8. Open the Claude Code CLI from the Launchpad, and then enter `claude` in the terminal to start your session.
+8. Click **Apply**. Wait about 10 seconds for the container to restart.
+9. Open the Claude Code CLI from the Launchpad, and then enter `claude` in the terminal to start your session.
 
 ## Use Claude Code
 

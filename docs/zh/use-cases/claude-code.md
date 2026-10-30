@@ -87,10 +87,10 @@ Claude Code 是一个 AI 编码助手，帮助你使用自然语言编写、测�
 
 <!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-anthropic-->
 
-5. 打开 Olares Settings，前往 **Applications** > **Claude Code** > **Manage environment variables**。
-6. 设置以下环境变量：
+6. 打开 Olares Settings，前往 **Applications** > **Claude Code** > **Manage environment variables**。
+7. 设置以下环境变量：
 
-   - **ANTHROPIC_AUTH_TOKEN**: 输入任何文本，例如 `local`。Router 通过平台识别 Olares 内应用。Claude Code 仍要求此字段非空。
+   - **ANTHROPIC_AUTH_TOKEN**: 填写 `olares`。
    - **ANTHROPIC_BASE_URL**: 输入从 Router 复制的 **Base URL**。例如，`https://router.<your-olares-domain>`。
    - **ANTHROPIC_MODEL**: 填写 `default-chat`。
 
@@ -100,8 +100,8 @@ Claude Code 是一个 AI 编码助手，帮助你使用自然语言编写、测�
    -->
 
 
-7. 点击 **Apply**。等待约 10 秒让容器重启。
-8. 从 Launchpad 打开 Claude Code CLI，然后在终端中输入 `claude` 以启动你的会话。
+8. 点击 **Apply**。等待约 10 秒让容器重启。
+9. 从 Launchpad 打开 Claude Code CLI，然后在终端中输入 `claude` 以启动你的会话。
 
 ## 使用 Claude Code
 

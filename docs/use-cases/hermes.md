@@ -76,7 +76,7 @@ Run a quick setup to connect Hermes Agent to your local model.
 
 <!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
-5. In Router, open **LLM** and click the information icon on the Qwen3.8-27B (llama.cpp) row to open **Model card**. Under **Engine args**, read the number after `-c`. For example, `-c 104448` means you should enter `104448` in the next step. See [Check the configured context size](llm-base-apps.md#view-model-details-in-router) for screenshots.
+6. In Router, open **LLM** and click the information icon on the Qwen3.8-27B (llama.cpp) row to open **Model card**. Under **Engine args**, read the number after `-c`. For example, `-c 104448` means you should enter `104448` in the next step. See [Check the configured context size](llm-base-apps.md#view-model-details-in-router) for screenshots.
 
 ### Step 2: Run the setup wizard
 
@@ -96,7 +96,7 @@ Run a quick setup to connect Hermes Agent to your local model.
     | How would you like to set up Hermes | Select **Full setup — configure every provider, tool & option yourself (bring your own keys)**. |
     | Select provider | Select **Custom endpoint (enter URL manually)**.  |
     | API base URL  | Enter the **Base URL** you copied from Router.<br>For example, `https://router.<your-olares-domain>/v1`.  |
-    | API key  | Enter any text as a placeholder value, such as `local`.<br>The input remains hidden for security. |
+    | API key  | Enter `olares`.<br>The input remains hidden for security. |
     | Select API compatibility mode | Enter `1` to select **Auto-detect**. |
     | Use this model? [Y/n] — only when one model is detected | Enter `n`. At the following **Model name** prompt, enter `default-chat`. This confirmation accepts yes/no, not a model name. |
     | Select model [1-N] or type name — only when multiple models are detected | Type `default-chat` instead of selecting a numbered model. |

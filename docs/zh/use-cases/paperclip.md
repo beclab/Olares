@@ -194,14 +194,11 @@ OpenCode 可以通过 Olares Router 调用兼容 OpenAI API 的本地模型。�
 
 ### 准备本地模型
 
-1. 从 Market 安装并启动 Qwen3.8-27B (llama.cpp)。
-2. 在 Router 中配置模型并复制连接信息。
+从 Market 安装并启动 Qwen3.8-27B (llama.cpp)，然后在 Router 中获取连接信息。
 
 <!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
 
 <!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
-
-3. 使用 Router 默认模型时，模型名为 `default-chat`，并须确认该别名实际路由到本地模型。直连模型服务时，改为该接口实际接受的模型 ID。
 
 ### 配置 OpenCode
 

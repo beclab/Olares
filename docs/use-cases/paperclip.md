@@ -188,14 +188,11 @@ OpenCode can call an OpenAI-compatible local model through Olares Router. This O
 
 ### Prepare the local model
 
-1. Install and start Qwen3.8-27B (llama.cpp) from Market.
-2. Configure the model in Router and copy its connection details.
+Install and start Qwen3.8-27B (llama.cpp) from Market, then get its connection details from Router.
 
 <!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
 
 <!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
-
-3. For the Router default model, use `default-chat`. Ensure Router actually routes that alias to your local model. For a direct model endpoint, use the model ID that endpoint accepts instead.
 
 ### Configure OpenCode
 

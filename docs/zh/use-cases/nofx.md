@@ -220,15 +220,15 @@ NOFX 需要两个不同的钱包用于不同的目的：
 - 已从应用市场安装 Qwen3.8-27B (llama.cpp)。
 
 <!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
-5. 打开 NOFX，然后点击 **Config** 页面上的 **+ MODELS_CONFIG**。
-6. 点击 **Other API Providers**，然后选择 **OpenAI**。
-7. 指定以下设置：
+6. 打开 NOFX，然后点击 **Config** 页面上的 **+ MODELS_CONFIG**。
+7. 点击 **Other API Providers**，然后选择 **OpenAI**。
+8. 指定以下设置：
 
-   - **API Key**：输入任意文本字符串，例如 `local`。
+   - **API Key**：填写 `olares`。
    - **Base URL**：输入从 Router 复制的 **Base URL**。确保 URL 以 `/v1` 结尾。
    - **Model Name (Optional)**： 填写 `default-chat`。
 
-8. 点击 **Save Configuration**。
+9. 点击 **Save Configuration**。
 
 ### 模型未输出结构化 JSON 决策
 
