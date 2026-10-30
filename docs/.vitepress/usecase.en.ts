@@ -122,6 +122,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   ],
                 },
                 {
+                  text: "MemPalace",
+                  link: "/use-cases/mempalace",
+                },
+                {
                   text: "OpenCode",
                   link: "/use-cases/opencode",
                   collapsed: true,

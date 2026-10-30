@@ -46,6 +46,7 @@ export const useCases: UseCase[] = [
   { title: "OpenClaw", link: "/use-cases/openclaw", category: "AI agent", description: "Personal AI assistant that integrates with Discord and runs tasks", descriptionZh: "可集成 Discord 并执行任务的个人 AI 助手" },
   { title: "NemoClaw", link: "/use-cases/nemoclaw", category: "AI agent", description: "Always-on AI agent backed by a local LLM", descriptionZh: "由本地 LLM 驱动的常驻 AI 智能体" },
   { title: "Hermes Agent", link: "/use-cases/hermes", category: "AI agent", description: "Self-directed agent with Olares skills and a Gateway API", descriptionZh: "具备 Olares 技能和 Gateway API 的自主智能体" },
+  { title: "MemPalace", link: "/use-cases/mempalace", category: "AI agent", description: "Keep original project notes and share local memory between AI agents", descriptionZh: "保留项目原文，通过 MCP 在不同 AI Agent 之间共享本地记忆" },
   { title: "OpenCode", link: "/use-cases/opencode", category: "AI agent", description: "AI coding agent driven by natural language", descriptionZh: "通过自然语言驱动的 AI 编程智能体" },
   { title: "Claude Code", link: "/use-cases/claude-code", category: "AI agent", description: "Write, test, and manage code through natural language", descriptionZh: "通过自然语言编写、测试和管理代码" },
   { title: "Codex CLI", link: "/use-cases/codex-cli", category: "AI agent", description: "Read, edit, and test code from an Olares terminal", descriptionZh: "在 Olares 终端中读取、编辑和测试代码" },
