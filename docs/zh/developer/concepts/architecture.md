@@ -1,12 +1,12 @@
 ---
 noindex: true
-description: Olares 的 BEC 架构概述，阐述分布式节点实现数据存储和安全机制。包含 Snowinning Protocol、Olares OS 和 LarePass 三大核心组件。
+description: Olares 的 BEC 架构概述，阐述分布式节点实现数据存储和安全机制。包含 Olares ID、Olares OS 和 LarePass 三大核心组件。
 ---
 # Olares BEC 架构
 
 Olares 通过区块链-边缘-客户端（BEC）架构提供了新一代去中心化互联网框架。BEC 通过在不同平台间合理分配信息，实现了数据存储的去中心化和安全性提升。
 
-![BEC](/images/overview/snowinning/network-topology.jpeg)
+![BEC](/images/manual/concepts/network-topology.jpeg)
 
 - **区块链层**：通过智能合约在区块链上存储高价值数据，包括去中心化身份标识（DID）和交易信息。这确保了数据的透明度、不可篡改性和可发现性。
 - **边缘层**：作为用户的去中心化网络节点，在私有边缘服务器上托管个人数据，如文档、聊天记录和照片。数据始终保持在边缘层用户的掌控之中，保障隐私和本地数据主权。
