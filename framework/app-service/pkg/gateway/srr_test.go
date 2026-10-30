@@ -63,6 +63,7 @@ func TestBuildSpecForEntrance(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Name: "demo-svc", Namespace: "demo-shared"},
 		Spec:       corev1.ServiceSpec{Ports: []corev1.ServicePort{{Port: 8080, Protocol: corev1.ProtocolTCP}}},
 	}
+	persistGatewayFixture(app)
 	spec, err := BuildSpecForEntrance(app, app.Spec.SharedEntrances[0], 0, len(app.Spec.SharedEntrances), svc, "olares.com",
 		srrv1alpha1.EntranceClassShared)
 	if err != nil {
@@ -105,6 +106,7 @@ func TestBuildSpecForEntranceSharedIgnoresPlatformDomain(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Name: "demo-svc", Namespace: "demo-shared"},
 		Spec:       corev1.ServiceSpec{Ports: []corev1.ServicePort{{Port: 8080, Protocol: corev1.ProtocolTCP}}},
 	}
+	persistGatewayFixture(app)
 	spec, err := BuildSpecForEntrance(app, app.Spec.SharedEntrances[0], 0, len(app.Spec.SharedEntrances), svc, "bytetrade.io",
 		srrv1alpha1.EntranceClassShared)
 	if err != nil {
@@ -153,13 +155,14 @@ func TestBuildSpecForEntranceApplication(t *testing.T) {
 		Spec:       corev1.ServiceSpec{Ports: []corev1.ServicePort{{Port: 8080, Protocol: corev1.ProtocolTCP}}},
 	}
 
+	persistGatewayFixture(app)
 	spec, err := BuildSpecForEntrance(app, app.Spec.Entrances[0], 0, len(app.Spec.Entrances), svc, "olares.com",
 		srrv1alpha1.EntranceClassApplication)
 	if err != nil {
 		t.Fatalf("BuildSpecForEntrance application: %v", err)
 	}
 
-	wantHost := appv1alpha1.EntranceID(app.Spec.Appid, 0, len(app.Spec.Entrances)) + ".*.olares.com"
+	wantHost := appv1alpha1.EntranceID(app.Spec.Appid, 0, len(app.Spec.Entrances)) + ".olares.com"
 	if len(spec.HostPatterns) != 1 || spec.HostPatterns[0] != wantHost {
 		t.Errorf("hostPatterns = %v, want %q", spec.HostPatterns, wantHost)
 	}
@@ -189,13 +192,14 @@ func TestBuildSpecForEntranceApplicationUsesThirdLevelOverride(t *testing.T) {
 		Spec:       corev1.ServiceSpec{Ports: []corev1.ServicePort{{Port: 8080, Protocol: corev1.ProtocolTCP}}},
 	}
 
+	persistGatewayFixture(app)
 	spec, err := BuildSpecForEntrance(app, app.Spec.Entrances[0], 0, len(app.Spec.Entrances), svc, "olares.com",
 		srrv1alpha1.EntranceClassApplication)
 	if err != nil {
 		t.Fatalf("BuildSpecForEntrance: %v", err)
 	}
-	wantHost := "router.*.olares.com"
-	wantHash := appv1alpha1.EntranceID(app.Spec.Appid, 0, len(app.Spec.Entrances)) + ".*.olares.com"
+	wantHost := "router.olares.com"
+	wantHash := appv1alpha1.EntranceID(app.Spec.Appid, 0, len(app.Spec.Entrances)) + ".olares.com"
 	if len(spec.HostPatterns) != 2 || spec.HostPatterns[0] != wantHost || spec.HostPatterns[1] != wantHash {
 		t.Fatalf("hostPatterns = %v, want [%q %q]", spec.HostPatterns, wantHost, wantHash)
 	}
@@ -210,7 +214,7 @@ func TestBuildSpecForEntranceApplicationUsesThirdLevelOverride(t *testing.T) {
 	if err != nil {
 		t.Fatalf("BuildSpecForEntrance api: %v", err)
 	}
-	wantAPI := appv1alpha1.EntranceID(app.Spec.Appid, 1, len(app.Spec.Entrances)) + ".*.olares.com"
+	wantAPI := appv1alpha1.EntranceID(app.Spec.Appid, 1, len(app.Spec.Entrances)) + ".olares.com"
 	if len(apiSpec.HostPatterns) != 1 || apiSpec.HostPatterns[0] != wantAPI {
 		t.Fatalf("api hostPatterns = %v, want %q", apiSpec.HostPatterns, wantAPI)
 	}
@@ -235,13 +239,31 @@ func TestBuildSpecForEntranceApplicationMalformedThirdLevelFallsBack(t *testing.
 		ObjectMeta: metav1.ObjectMeta{Name: "demo-svc", Namespace: "demo-user"},
 		Spec:       corev1.ServiceSpec{Ports: []corev1.ServicePort{{Port: 8080, Protocol: corev1.ProtocolTCP}}},
 	}
+	persistGatewayFixture(app)
 	spec, err := BuildSpecForEntrance(app, app.Spec.Entrances[0], 0, len(app.Spec.Entrances), svc, "olares.com",
 		srrv1alpha1.EntranceClassApplication)
 	if err != nil {
 		t.Fatalf("BuildSpecForEntrance: %v", err)
 	}
-	wantHost := appv1alpha1.EntranceID(app.Spec.Appid, 0, len(app.Spec.Entrances)) + ".*.olares.com"
+	wantHost := appv1alpha1.EntranceID(app.Spec.Appid, 0, len(app.Spec.Entrances)) + ".olares.com"
 	if len(spec.HostPatterns) != 1 || spec.HostPatterns[0] != wantHost {
 		t.Fatalf("hostPatterns = %v, want fallback %q", spec.HostPatterns, wantHost)
+	}
+}
+
+func persistGatewayFixture(a *appv1alpha1.Application) {
+	for i := range a.Spec.Entrances {
+		if a.Spec.Entrances[i].ID == "" {
+			a.Spec.Entrances[i].ID = appv1alpha1.EntranceID(a.Spec.Appid, i, len(a.Spec.Entrances))
+		}
+	}
+	for i := range a.Spec.SharedEntrances {
+		if a.Spec.SharedEntrances[i].ID == "" {
+			if appv1alpha1.IsShared(a) {
+				a.Spec.SharedEntrances[i].ID = appv1alpha1.SharedEntranceID(a.Spec.Appid, i, len(a.Spec.SharedEntrances))
+			} else {
+				a.Spec.SharedEntrances[i].ID = appv1alpha1.SharedEntranceIDV2(a.Spec.Appid, i, len(a.Spec.SharedEntrances))
+			}
+		}
 	}
 }

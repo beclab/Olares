@@ -392,7 +392,11 @@ func (t *Translator) buildAppVirtualHosts(user *message.UserInfo, app *message.A
 			continue
 		}
 
-		prefix := appv1alpha1.ResolveEntranceIDWithDefaultThirdLevelDomainOverride(app.Entrances, index, app.Appid, appDomainConfigs)
+		prefix, err := appv1alpha1.PersistedEntrancePrefix(app.Entrances, index, appDomainConfigs)
+		if err != nil {
+			klog.Errorf("skip app %s entrance: %v", app.Name, err)
+			continue
+		}
 
 		hostname := fmt.Sprintf("%s.%s", prefix, zone)
 
@@ -409,18 +413,7 @@ func (t *Translator) buildAppVirtualHosts(user *message.UserInfo, app *message.A
 			}
 		}
 
-		// A "dev" entrance additionally answers on `<appid>-<port>.<zone>`
-		// (plus its .olares.local alias), routed to the same upstream as the
-		// entrance's primary hostname.
-		if entrance.Type == entranceTypeDev {
-			devPrefix := fmt.Sprintf("%s-%d", app.Appid, entrance.Port)
-			devHostname := fmt.Sprintf("%s.%s", devPrefix, zone)
-
-			domains = append(domains, devHostname)
-			if devLocal := devPrefix + "." + localZone; devLocal != devHostname {
-				domains = append(domains, devLocal)
-			}
-		}
+		// Dev entrance IDs already contain the user prefix and port.
 
 		clusterName := fmt.Sprintf("app_%s_%s_%s", user.Name, app.Name, entrance.Name)
 		cluster := &ir.ClusterIR{
@@ -694,7 +687,7 @@ func (t *Translator) buildCustomDomainVirtualHosts(user *message.UserInfo, app *
 	}
 
 	for _, entrance := range app.Entrances {
-		if entrance.Host == "" {
+		if entrance.Host == "" || entrance.ID == "" {
 			klog.Warningf("buildCustomDomainVirtualHosts:app: %s,entrance: %s with empty host, skipping...", app.Name, entrance.Name)
 			continue
 		}

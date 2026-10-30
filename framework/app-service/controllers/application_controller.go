@@ -57,7 +57,7 @@ type ApplicationReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
 
-	AppClientset *versioned.Clientset
+	AppClientset versioned.Interface
 	Kubeconfig   *rest.Config
 }
 
@@ -291,6 +291,15 @@ func (r *ApplicationReconciler) createApplication(ctx context.Context, req ctrl.
 	} else {
 		appid = appcfg.AppName(name).GetAppID()
 	}
+	ctx, releaseEntranceWrite, err := r.entranceWriteContext(ctx)
+	if err != nil {
+		return err
+	}
+	defer releaseEntranceWrite()
+	entrancesMap[name], err = r.assignOrdinaryIDs(ctx, appid, owner, nil, entrancesMap[name])
+	if err != nil {
+		return err
+	}
 	settings, sharedEntrances := r.getAppSettings(ctx, name, appid, owner, deployment, isMultiApp, entrancesMap[name])
 	meshinagent.ApplyDecide(name, settings, meshinagent.DefaultRules(), appcfg.IsShared(deployment))
 
@@ -332,6 +341,13 @@ func (r *ApplicationReconciler) createApplication(ctx context.Context, req ctrl.
 			Icon:            icon[name],
 			Settings:        settings,
 		},
+	}
+	newapp, err = r.assignApplicationIDs(ctx, newapp, nil)
+	if err != nil {
+		return err
+	}
+	if err = r.validateEntranceClaims(ctx, newapp); err != nil {
+		return err
 	}
 	if tailScale != nil {
 		newapp.Spec.TailScale = *tailScale
@@ -409,6 +425,15 @@ func (r *ApplicationReconciler) updateApplication(ctx context.Context, req ctrl.
 		}
 	}
 
+	ctx, releaseEntranceWrite, err := r.entranceWriteContext(ctx)
+	if err != nil {
+		return err
+	}
+	defer releaseEntranceWrite()
+	app, err = r.AppClientset.AppV1alpha1().Applications().Get(ctx, app.Name, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
 	appCopy := app.DeepCopy()
 	appNames := getAppName(deployment)
 	isMultiApp := len(appNames) > 1
@@ -438,6 +463,10 @@ func (r *ApplicationReconciler) updateApplication(ctx context.Context, req ctrl.
 		appid = name
 	} else {
 		appid = appcfg.AppName(name).GetAppID()
+	}
+	entrancesMap[name], err = r.assignOrdinaryIDs(ctx, appid, owner, app.Spec.Entrances, entrancesMap[name])
+	if err != nil {
+		return err
 	}
 	settings, sharedEntrances := r.getAppSettings(ctx, name, appid, owner, deployment, isMultiApp, entrancesMap[name])
 	// Preserve callee / intent / explicit decide already stored on the Application CR.
@@ -554,7 +583,14 @@ func (r *ApplicationReconciler) updateApplication(ctx context.Context, req ctrl.
 		klog.Warningf("apply gateway route-mode for app %s err=%v", appCopy.Spec.Name, err)
 	}
 
-	err = r.Patch(ctx, appCopy, client.MergeFrom(app))
+	appCopy, err = r.assignApplicationIDs(ctx, appCopy, app)
+	if err != nil {
+		return err
+	}
+	if err = r.validateEntranceClaims(ctx, appCopy); err != nil {
+		return err
+	}
+	err = r.Patch(ctx, appCopy, client.MergeFromWithOptions(app, client.MergeFromWithOptimisticLock{}))
 	if err != nil {
 		klog.Infof("update spec failed %v", err)
 		return err
@@ -852,15 +888,9 @@ func (r *ApplicationReconciler) getAppSettings(ctx context.Context, appName, app
 						klog.Error("get user zone error, ", err)
 					} else {
 
-						multiEntrance := len(appCfg.Entrances) > 1
-						for i, e := range appCfg.Entrances {
+						for _, e := range entrances {
 							if e.Name == appCfg.OIDC.EntranceName {
-								var appUrl string
-								if multiEntrance {
-									appUrl = fmt.Sprintf("https://%s%d.%s%s", appId, i, zone, appCfg.OIDC.RedirectUri)
-								} else {
-									appUrl = fmt.Sprintf("https://%s.%s%s", appId, zone, appCfg.OIDC.RedirectUri)
-								}
+								appUrl := fmt.Sprintf("https://%s.%s%s", e.ID, zone, appCfg.OIDC.RedirectUri)
 								settings["oidc.client.redirect_uri"] = appUrl
 							}
 						}

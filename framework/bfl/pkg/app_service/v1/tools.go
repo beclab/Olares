@@ -28,7 +28,10 @@ func appURLGenerators(req *restful.Request) (URLGenerator, URLGeneratorMultiEntr
 	}
 	single := func(appname, appid string) string { return fmt.Sprintf("%s.%s", appid, zone) }
 	multi := func(appname, appid string, index int, entrances []*appv1.Entrance, domains []appv1.DefaultThirdLevelDomainConfig) string {
-		prefix := appv1.ResolveEntranceIDWithDefaultThirdLevelDomainOverride(entrances, index, appid, domains)
+		prefix, err := appv1.PersistedEntrancePrefix(entrances, index, domains)
+		if err != nil {
+			return ""
+		}
 		return fmt.Sprintf("%s.%s", prefix, zone)
 	}
 	return single, multi, nil

@@ -73,6 +73,9 @@ func BuildSpecForEntrance(app *appv1alpha1.Application, entrance appv1alpha1.Ent
 	if app == nil {
 		return srrv1alpha1.SharedRouteRegistrySpec{}, errors.New("application is nil")
 	}
+	if err := appv1alpha1.ValidatePersistedEntranceIDs([]appv1alpha1.Entrance{entrance}); err != nil {
+		return srrv1alpha1.SharedRouteRegistrySpec{}, err
+	}
 	if entrance.Name == "" {
 		return srrv1alpha1.SharedRouteRegistrySpec{}, errors.New("entrance has empty name")
 	}
@@ -105,12 +108,7 @@ func BuildSpecForEntrance(app *appv1alpha1.Application, entrance appv1alpha1.Ent
 		// canonical hosts hit app-gateway (CoreDNS + HTTPRoute).
 		patterns = applicationEntranceHostPatterns(app, entranceIndex, platformDomain)
 	default:
-		var err error
-		isShared := appv1alpha1.IsShared(app)
-		pattern, err := appcfg.LogicalHostPattern(appid, entranceIndex, entranceCount, isShared)
-		if err != nil {
-			return srrv1alpha1.SharedRouteRegistrySpec{}, err
-		}
+		pattern := fmt.Sprintf("%s.shared.%s", entrance.ID, appcfg.SharedMeshDomain)
 		patterns = []string{pattern}
 	}
 	norms := make([]string, 0, len(patterns))
@@ -153,14 +151,19 @@ func BuildSpecForEntrance(app *appv1alpha1.Application, entrance appv1alpha1.Ent
 // the bare EntranceID when an override is active so hash hosts stay on
 // app-gateway alongside the friendly name.
 func applicationEntranceHostPatterns(app *appv1alpha1.Application, entranceIndex int, platformDomain string) []string {
-	appid := strings.ToLower(strings.TrimSpace(app.Spec.Appid))
 	entrances := app.Spec.Entrances
-	canonical := appv1alpha1.EntranceID(appid, entranceIndex, len(entrances))
+	if entranceIndex < 0 || entranceIndex >= len(entrances) || entrances[entranceIndex].ID == "" {
+		return nil
+	}
+	canonical := entrances[entranceIndex].ID
 	primary := applicationEntranceHostPrefix(app, entranceIndex)
+	if primary == "" {
+		return nil
+	}
 
-	out := []string{fmt.Sprintf("%s.*.%s", primary, platformDomain)}
+	out := []string{fmt.Sprintf("%s.%s", primary, platformDomain)}
 	if primary != canonical && canonical != "" {
-		out = append(out, fmt.Sprintf("%s.*.%s", canonical, platformDomain))
+		out = append(out, fmt.Sprintf("%s.%s", canonical, platformDomain))
 	}
 	return out
 }
@@ -170,10 +173,9 @@ func applicationEntranceHostPatterns(app *appv1alpha1.Application, entranceIndex
 // defaultThirdLevelDomainConfig and call the shared api helper; on missing or
 // malformed settings it falls back to EntranceID.
 func applicationEntranceHostPrefix(app *appv1alpha1.Application, entranceIndex int) string {
-	appid := strings.ToLower(strings.TrimSpace(app.Spec.Appid))
 	entrances := app.Spec.Entrances
 	if entranceIndex < 0 || entranceIndex >= len(entrances) {
-		return appv1alpha1.EntranceID(appid, entranceIndex, len(entrances))
+		return ""
 	}
 
 	var cfgs []appv1alpha1.DefaultThirdLevelDomainConfig
@@ -188,7 +190,11 @@ func applicationEntranceHostPrefix(app *appv1alpha1.Application, entranceIndex i
 	for i := range entrances {
 		ptrs[i] = &entrances[i]
 	}
-	return appv1alpha1.ResolveEntranceIDWithDefaultThirdLevelDomainOverride(ptrs, entranceIndex, appid, cfgs)
+	prefix, err := appv1alpha1.PersistedEntrancePrefix(ptrs, entranceIndex, cfgs)
+	if err != nil {
+		return ""
+	}
+	return prefix
 }
 
 // pickHTTPPort prefers the entrance-declared port; otherwise the first TCP port

@@ -52,15 +52,21 @@ func resolveProviderRefFromAlias(host string, apps ApplicationLister) (string, b
 	}
 
 	hostLabels := strings.Split(host, ".")
-	var thirdLevelPrefix, zoneUser string
+	var thirdLevelPrefix string
 	if len(hostLabels) >= 2 {
 		thirdLevelPrefix = hostLabels[0]
-		zoneUser = hostLabels[1]
 	}
 
 	for _, app := range list {
 		if app == nil {
 			continue
+		}
+		for _, entrance := range app.Spec.Entrances {
+			if entrance.ID != "" && strings.EqualFold(entrance.ID, thirdLevelPrefix) {
+				if ref, ok := canonicalProviderRef(app, entrance.Name); ok {
+					return ref, true
+				}
+			}
 		}
 		for _, owned := range allCustomDomainBlobs(app) {
 			customDomainMap := parseCustomDomainBlob(owned.blob)
@@ -77,7 +83,7 @@ func resolveProviderRefFromAlias(host string, apps ApplicationLister) (string, b
 				}
 				if !matched && thirdLevelPrefix != "" {
 					thirdLevel := strings.ToLower(strings.TrimSpace(cfg[settingsCustomDomainThirdLevelDomain]))
-					if thirdLevel != "" && thirdLevel == thirdLevelPrefix && zoneUser == strings.ToLower(owned.zoneUser) {
+					if thirdLevel != "" && thirdLevel == thirdLevelPrefix {
 						matched = true
 					}
 				}
@@ -153,12 +159,14 @@ func canonicalProviderRef(app *appv1alpha1.Application, entranceName string) (st
 		}
 	}
 
-	appid := strings.ToLower(strings.TrimSpace(app.Spec.Appid))
 	ptrs := make([]*appv1alpha1.Entrance, len(entrances))
 	for i := range entrances {
 		ptrs[i] = &entrances[i]
 	}
-	prefix := appv1alpha1.ResolveEntranceIDWithDefaultThirdLevelDomainOverride(ptrs, index, appid, configs)
+	prefix, err := appv1alpha1.PersistedEntrancePrefix(ptrs, index, configs)
+	if err != nil {
+		return "", false
+	}
 	if prefix == "" {
 		return "", false
 	}

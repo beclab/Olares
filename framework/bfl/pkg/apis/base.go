@@ -40,18 +40,13 @@ func (h *Base) GetAppListAndServicePort(req *restful.Request, getApps func() (st
 		return nil, err
 	}
 
-	appURL, err := app_service.AppUrlGenerator(req, user)
-	if err != nil {
-		return nil, err
-	}
-
 	appURLMulti, err := app_service.AppUrlGeneratorMultiEntrance(req, user)
 	if err != nil {
 		return nil, err
 	}
 
 	for i, app := range apps {
-		apps[i].URL = appURL(app.Name, app.ID)
+		apps[i].URL = ""
 
 		if len(apps[i].Entrances) == 0 {
 			continue
@@ -69,6 +64,7 @@ func (h *Base) GetAppListAndServicePort(req *restful.Request, getApps func() (st
 		for k := range apps[i].Entrances {
 			e := apps[i].Entrances[k]
 			apiEntrances[k] = &appv1alpha1.Entrance{
+				ID:         e.ID,
 				Name:       e.Name,
 				Icon:       e.Icon,
 				Title:      e.Title,
@@ -82,7 +78,11 @@ func (h *Base) GetAppListAndServicePort(req *restful.Request, getApps func() (st
 		// return all entrances, let the frontend filter invisible or not
 		// filteredEntrances := make([]app_service.Entrance, 0)
 		for j := range apps[i].Entrances {
-			apps[i].Entrances[j].ID = appv1alpha1.ResolveEntranceIDWithDefaultThirdLevelDomainOverride(apiEntrances, j, app.ID, appDomainConfigs)
+			prefix, err := appv1alpha1.PersistedEntrancePrefix(apiEntrances, j, appDomainConfigs)
+			if err != nil {
+				return nil, err
+			}
+			apps[i].Entrances[j].ID = prefix
 			apps[i].Entrances[j].URL = appURLMulti(app.Name, app.ID, j, apiEntrances, appDomainConfigs)
 			if apps[i].Entrances[j].Icon == "" {
 				apps[i].Entrances[j].Icon = app.Icon
@@ -91,6 +91,7 @@ func (h *Base) GetAppListAndServicePort(req *restful.Request, getApps func() (st
 			// 	filteredEntrances = append(filteredEntrances, apps[i].Entrances[j])
 			// }
 		}
+		apps[i].URL = apps[i].Entrances[0].URL
 		//		apps[i].Entrances = filteredEntrances
 	}
 

@@ -28,8 +28,8 @@ func TestResolveProviderRefFromHost(t *testing.T) {
 			Name:  "demo",
 			Owner: "alice",
 			Entrances: []appv1alpha1.Entrance{
-				{Name: "web"},
-				{Name: "admin"},
+				{Name: "web", ID: "appidabc0"},
+				{Name: "admin", ID: "appidabc1"},
 			},
 			Settings: map[string]string{
 				"defaultThirdLevelDomainConfig": `[{"appName":"demo","entranceName":"admin","thirdLevelDomain":"custom-admin"}]`,
@@ -53,7 +53,7 @@ func TestResolveProviderRefFromHost(t *testing.T) {
 			Name:  "sharedemo",
 			Owner: "admin",
 			Entrances: []appv1alpha1.Entrance{
-				{Name: "web"},
+				{Name: "web", ID: "sharexyz"},
 			},
 			Settings: map[string]string{},
 			UserSettings: map[string]map[string]string{
@@ -91,10 +91,10 @@ func TestResolveProviderRefFromHost(t *testing.T) {
 			want:   "alice/custom-admin",
 		},
 		{
-			name:   "third_level zone mismatch does not match",
+			name:   "third_level resolves globally in the unified zone",
 			host:   "myweb.bob.olares.com",
 			lister: lister,
-			want:   ProviderRefFromHost("myweb.bob.olares.com"),
+			want:   "alice/appidabc0",
 		},
 		{
 			name:   "shared user third_level maps to owner canonical",

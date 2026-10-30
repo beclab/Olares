@@ -30,8 +30,8 @@ func dcApp(specName, owner, appid string, shared bool, entrances ...string) *v1a
 		labels[constants.AppApiVersionLabel] = constants.AppVersionV3
 	}
 	ents := make([]v1alpha1.Entrance, 0, len(entrances))
-	for _, e := range entrances {
-		ents = append(ents, v1alpha1.Entrance{Name: e})
+	for i, e := range entrances {
+		ents = append(ents, v1alpha1.Entrance{Name: e, ID: v1alpha1.EntranceID(appid, i, len(entrances))})
 	}
 	return &v1alpha1.Application{
 		ObjectMeta: metav1.ObjectMeta{
@@ -205,7 +205,7 @@ func TestCheckEntranceDomainDuplicate_ThirdPartyConflictOtherUsersOverlay(t *tes
 
 	// alice edits the very same shared entrance and asks for the value bob
 	// already claimed in his zone -> conflict.
-	err := checkEntranceDomainDuplicate(context.Background(), client, "alice", "cloud", "web", "", "bob.example.com")
+	err := checkEntranceDomainDuplicate(context.Background(), client, "alice", "cloud-alice", "web", "", "bob.example.com")
 	if err == nil || !strings.Contains(err.Error(), "third_party_domain") {
 		t.Fatalf("expected conflict against another user's overlay, got %v", err)
 	}
@@ -218,7 +218,7 @@ func TestCheckEntranceDomainDuplicate_ThirdPartySelfIsNotConflict(t *testing.T) 
 	setUserCustomDomain(t, app, "bob", "web", "", "bob.example.com")
 	client := newDomainClient(app)
 
-	err := checkEntranceDomainDuplicate(context.Background(), client, "bob", "cloud", "web", "", "bob.example.com")
+	err := checkEntranceDomainDuplicate(context.Background(), client, "bob", "cloud-alice", "web", "", "bob.example.com")
 	if err != nil {
 		t.Fatalf("re-saving own third_party value must not conflict, got %v", err)
 	}
@@ -282,19 +282,14 @@ func TestCheckEntranceDomainDuplicate_ThirdLevelConflictOwnDefault(t *testing.T)
 	}
 }
 
-// Another user's per-user app renders under THEIR zone, so neither its default
-// subdomain nor its custom domain can collide with the caller's request.
-func TestCheckEntranceDomainDuplicate_ThirdLevelOtherUsersPerUserAppNoConflict(t *testing.T) {
+// All users now share a zone, so every saved default and custom prefix is reserved.
+func TestCheckEntranceDomainDuplicate_ThirdLevelOtherUsersPerUserAppConflict(t *testing.T) {
 	hers := setCustomDomain(t, dcApp("hers", "bob", "herid", false, "web"), "web", "taken", "")
 	client := newDomainClient(hers)
-
-	// Neither the default "herid" nor the custom "taken" is in alice's zone.
-	if err := checkEntranceDomainDuplicate(context.Background(), client, "alice", "bar", "x", "herid", ""); err != nil {
-		t.Fatalf("other user's per-user default must not collide, got %v", err)
-	}
-
-	if err := checkEntranceDomainDuplicate(context.Background(), client, "alice", "bar", "x", "taken", ""); err != nil {
-		t.Fatalf("other user's per-user custom domain must not collide, got %v", err)
+	for _, prefix := range []string{"herid", "taken"} {
+		if err := checkEntranceDomainDuplicate(context.Background(), client, "alice", "bar", "x", prefix, ""); err == nil {
+			t.Fatalf("other user's %q accepted", prefix)
+		}
 	}
 }
 
@@ -304,7 +299,7 @@ func TestCheckEntranceDomainDuplicate_ThirdLevelSelfDefaultSkipped(t *testing.T)
 	shared := dcApp("cloud", "admin", "cloudid", true, "web")
 	client := newDomainClient(shared)
 
-	err := checkEntranceDomainDuplicate(context.Background(), client, "alice", "cloud", "web", "cloudid", "")
+	err := checkEntranceDomainDuplicate(context.Background(), client, "admin", "cloud-admin", "web", "cloudid", "")
 	if err != nil {
 		t.Fatalf("an entrance's own default domain must not conflict with itself, got %v", err)
 	}
@@ -325,19 +320,12 @@ func TestCheckEntranceDomainDuplicate_ThirdLevelSharedOwnOverlayConflict(t *test
 	}
 }
 
-// A third_level_domain set only in ANOTHER user's per-user overlay of a shared
-// app is invisible to the caller: it resolves in that other user's zone, not
-// the caller's, so it must not collide. This is the counterpart to
-// TestCheckEntranceDomainDuplicate_ThirdLevelSharedOwnOverlayConflict — a
-// per-user overlay is scoped to that one user's zone.
-func TestCheckEntranceDomainDuplicate_ThirdLevelOtherUsersOverlayNoConflict(t *testing.T) {
+// Other users' overlays occupy the same shared zone.
+func TestCheckEntranceDomainDuplicate_ThirdLevelOtherUsersOverlayConflict(t *testing.T) {
 	shared := dcApp("svc", "admin", "svcid", true, "web")
 	setUserCustomDomain(t, shared, "admin", "web", "adminonly", "")
-	client := newDomainClient(shared)
-
-	err := checkEntranceDomainDuplicate(context.Background(), client, "bob", "bar", "x", "adminonly", "")
-	if err != nil {
-		t.Fatalf("another user's third_level overlay must not collide in the caller's zone, got %v", err)
+	if err := checkEntranceDomainDuplicate(context.Background(), newDomainClient(shared), "bob", "bar", "x", "adminonly", ""); err == nil {
+		t.Fatal("ignored other user's overlay")
 	}
 }
 
@@ -367,9 +355,9 @@ func TestCheckEntranceDomainDuplicate_ThirdLevelDefaultConfigOverride(t *testing
 		!strings.Contains(err.Error(), "default domain") {
 		t.Fatalf("configured default override must collide, got %v", err)
 	}
-	// ...and the positional value it replaced no longer does.
-	if err := checkEntranceDomainDuplicate(context.Background(), client, "alice", "bar", "x", "mid0", ""); err != nil {
-		t.Fatalf("replaced positional default must not collide, got %v", err)
+	// The persisted canonical ID remains reserved as well.
+	if err := checkEntranceDomainDuplicate(context.Background(), client, "alice", "bar", "x", "mid0", ""); err == nil {
+		t.Fatal("persisted canonical ID must remain reserved")
 	}
 }
 
@@ -394,5 +382,24 @@ func TestCheckEntranceDomainDuplicate_NoConflict(t *testing.T) {
 	client := newDomainClient(dcApp("cloud", "admin", "cloudid", true, "web"))
 	if err := checkEntranceDomainDuplicate(context.Background(), client, "alice", "bar", "x", "freshdom", "fresh.example.com"); err != nil {
 		t.Fatalf("unused values must be accepted, got %v", err)
+	}
+}
+
+func TestDomainClaimsUseCRUserEntranceIdentity(t *testing.T) {
+	a := setUserCustomDomain(t, dcApp("cloud", "admin", "saved", true, "web"), "bob", "web", "occupied", "")
+	client := newDomainClient(a)
+	if err := checkEntranceDomainDuplicate(context.Background(), client, "bob", a.Name, "web", "occupied", ""); err != nil {
+		t.Fatal(err)
+	}
+	if err := checkEntranceDomainDuplicate(context.Background(), client, "alice", a.Name, "web", "occupied", ""); err == nil {
+		t.Fatal("another user's claim treated as self")
+	}
+	a.Spec.UserSettings["bob"]["customDomain"] = `{"web":{"third_level_domain":"","unrelated":true}}`
+	if err := findEntranceDomainConflict([]v1alpha1.Application{*a}, "alice", "another", "web", "occupied", ""); err != nil {
+		t.Fatal("released ID still occupied", err)
+	}
+	a.Spec.UserSettings["bob"]["customDomain"] = `{broken`
+	if err := findEntranceDomainConflict([]v1alpha1.Application{*a}, "alice", "another", "web", "occupied", ""); err == nil {
+		t.Fatal("malformed JSON failed open")
 	}
 }

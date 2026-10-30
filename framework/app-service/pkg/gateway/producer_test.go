@@ -57,6 +57,7 @@ func TestSharedRouteProducerReconcilerSetsEntranceClassShared(t *testing.T) {
 		Spec:       corev1.ServiceSpec{Ports: []corev1.ServicePort{{Port: 8080, Protocol: corev1.ProtocolTCP}}},
 	}
 
+	persistGatewayFixture(app)
 	c := fake.NewClientBuilder().WithScheme(producerTestScheme(t)).WithObjects(app, svc).Build()
 	r := &SharedRouteProducerReconciler{Client: c}
 	if err := r.reconcileApp(context.Background(), app); err != nil {
@@ -104,6 +105,7 @@ func TestSharedRouteProducerReconcilerBuildsApplicationSRRs(t *testing.T) {
 		Spec:       corev1.ServiceSpec{Ports: []corev1.ServicePort{{Port: 9090, Protocol: corev1.ProtocolTCP}}},
 	}
 
+	persistGatewayFixture(app)
 	c := fake.NewClientBuilder().WithScheme(producerTestScheme(t)).WithObjects(app, webSvc, apiSvc).Build()
 	r := &SharedRouteProducerReconciler{Client: c}
 	if err := r.reconcileApp(context.Background(), app); err != nil {
@@ -119,7 +121,7 @@ func TestSharedRouteProducerReconcilerBuildsApplicationSRRs(t *testing.T) {
 		if got.Spec.EntranceClass != srrv1alpha1.EntranceClassApplication {
 			t.Fatalf("%s entranceClass = %q, want %q", name, got.Spec.EntranceClass, srrv1alpha1.EntranceClassApplication)
 		}
-		wantHost := appv1alpha1.EntranceID(app.Spec.Appid, i, len(app.Spec.Entrances)) + ".*.olares.com"
+		wantHost := appv1alpha1.EntranceID(app.Spec.Appid, i, len(app.Spec.Entrances)) + ".olares.com"
 		if len(got.Spec.HostPatterns) != 1 || got.Spec.HostPatterns[0] != wantHost {
 			t.Fatalf("%s hostPatterns = %v, want %q", name, got.Spec.HostPatterns, wantHost)
 		}
@@ -160,6 +162,7 @@ func TestSharedRouteProducerReconcilerApplicationUsesThirdLevelOverride(t *testi
 		Spec:       corev1.ServiceSpec{Ports: []corev1.ServicePort{{Port: 9090, Protocol: corev1.ProtocolTCP}}},
 	}
 
+	persistGatewayFixture(app)
 	c := fake.NewClientBuilder().WithScheme(producerTestScheme(t)).WithObjects(app, webSvc, apiSvc).Build()
 	r := &SharedRouteProducerReconciler{Client: c}
 	if err := r.reconcileApp(context.Background(), app); err != nil {
@@ -172,9 +175,9 @@ func TestSharedRouteProducerReconcilerApplicationUsesThirdLevelOverride(t *testi
 		t.Fatalf("get web SRR: %v", err)
 	}
 	if len(got.Spec.HostPatterns) != 2 ||
-		got.Spec.HostPatterns[0] != "router.*.olares.com" ||
-		got.Spec.HostPatterns[1] != appv1alpha1.EntranceID(app.Spec.Appid, 0, len(app.Spec.Entrances))+".*.olares.com" {
-		t.Fatalf("web hostPatterns = %v, want [router.*.olares.com, hash.*.olares.com]", got.Spec.HostPatterns)
+		got.Spec.HostPatterns[0] != "router.olares.com" ||
+		got.Spec.HostPatterns[1] != appv1alpha1.EntranceID(app.Spec.Appid, 0, len(app.Spec.Entrances))+".olares.com" {
+		t.Fatalf("web hostPatterns = %v, want [router.olares.com, hash.olares.com]", got.Spec.HostPatterns)
 	}
 }
 
@@ -204,6 +207,7 @@ func TestSharedRouteProducerReconcilerSingleApplicationEntranceUsesBareAppID(t *
 		Spec:       corev1.ServiceSpec{Ports: []corev1.ServicePort{{Port: 8080, Protocol: corev1.ProtocolTCP}}},
 	}
 
+	persistGatewayFixture(app)
 	c := fake.NewClientBuilder().WithScheme(producerTestScheme(t)).WithObjects(app, webSvc).Build()
 	r := &SharedRouteProducerReconciler{Client: c}
 	if err := r.reconcileApp(context.Background(), app); err != nil {
@@ -215,7 +219,7 @@ func TestSharedRouteProducerReconcilerSingleApplicationEntranceUsesBareAppID(t *
 	if err := c.Get(context.Background(), types.NamespacedName{Namespace: app.Spec.Namespace, Name: name}, got); err != nil {
 		t.Fatalf("get application SRR: %v", err)
 	}
-	wantHost := app.Spec.Appid + ".*.olares.com"
+	wantHost := app.Spec.Appid + ".olares.com"
 	if len(got.Spec.HostPatterns) != 1 || got.Spec.HostPatterns[0] != wantHost {
 		t.Fatalf("single entrance hostPatterns = %v, want %q", got.Spec.HostPatterns, wantHost)
 	}
@@ -267,6 +271,7 @@ func TestSharedRouteProducerReconcilerNotOptedInDeletesOwnedSRRs(t *testing.T) {
 		},
 	}
 
+	persistGatewayFixture(app)
 	c := fake.NewClientBuilder().WithScheme(producerTestScheme(t)).
 		WithObjects(app, targetAppSRR, targetSharedSRR, otherAppSRR).Build()
 	r := &SharedRouteProducerReconciler{Client: c}
@@ -338,6 +343,7 @@ func TestSharedRouteProducerReconcilerPrunesSharedAndApplicationSeparately(t *te
 		},
 	}
 
+	persistGatewayFixture(app)
 	c := fake.NewClientBuilder().WithScheme(producerTestScheme(t)).
 		WithObjects(app, sharedSvc, appSvc, staleShared, staleApp).Build()
 	r := &SharedRouteProducerReconciler{Client: c}

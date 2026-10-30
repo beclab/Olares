@@ -83,8 +83,8 @@ func (h *Handler) list(req *restful.Request, resp *restful.Response) {
 					IsSysApp:        appcfg.AppName(am.Spec.AppName).IsSysApp(),
 					Namespace:       am.Spec.AppNamespace,
 					Owner:           owner,
-					Entrances:       appconfig.Entrances,
-					SharedEntrances: appconfig.SharedEntrances,
+					Entrances:       nil, // No URL before the Application CR allocates IDs.
+					SharedEntrances: nil,
 					Icon:            appconfig.Icon,
 				},
 			}
@@ -164,12 +164,6 @@ func (h *Handler) listBackend(req *restful.Request, resp *restful.Response) {
 			}
 		}
 
-		appconfig.SharedEntrances, err = appconfig.GenSharedEntranceURL(req.Request.Context())
-		if err != nil {
-			api.HandleError(resp, req, err)
-			return
-		}
-
 		// Visibility for non-owners:
 		//   • Shared apps: always visible (vis.VisibleSharedApp == true).
 		//   • Per-user apps (v1 and v3+per-user): legacy SharedEntrances
@@ -210,9 +204,9 @@ func (h *Handler) listBackend(req *restful.Request, resp *restful.Response) {
 				Namespace:       am.Spec.AppNamespace,
 				Owner:           am.Spec.AppOwner,
 				TailScale:       appconfig.TailScale,
-				Entrances:       appconfig.Entrances,
+				Entrances:       nil, // No URL before the Application CR allocates IDs.
 				Ports:           appconfig.Ports,
-				SharedEntrances: appconfig.SharedEntrances,
+				SharedEntrances: nil,
 				Icon:            appconfig.Icon,
 				Settings: map[string]string{
 					"title":         am.Annotations[constants.ApplicationTitleLabel],
@@ -300,11 +294,17 @@ func (h *Handler) listBackend(req *restful.Request, resp *restful.Response) {
 				v.Spec.Settings["version"] = version
 			}
 			v.Spec.Entrances = a.EffectiveEntrances(owner)
+			v.Spec.SharedEntrances = a.Spec.SharedEntrances
 			v.Spec.Ports = a.Spec.Ports
 			v.Labels = a.Labels
 		}
 	}
 	for _, app := range appsMap {
+		app.Spec.SharedEntrances, err = appcfg.GenSharedEntranceURL(req.Request.Context(), app)
+		if err != nil {
+			api.HandleError(resp, req, err)
+			return
+		}
 		if v, ok := appsEntranceMap[app.Name]; ok {
 			app.Status.EntranceStatuses = v.Status.EntranceStatuses
 		}

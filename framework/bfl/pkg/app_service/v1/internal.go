@@ -27,6 +27,12 @@ func (c *Client) getAppListFromData(apps []appv1.Application) ([]*AppInfo, error
 		appACLs := make([]ACL, 0)
 
 		appSpec := app.Spec
+		if err := appv1.ValidatePersistedEntranceIDs(appSpec.Entrances); err != nil {
+			return nil, err
+		}
+		if err := appv1.ValidatePersistedEntranceIDs(appSpec.SharedEntrances); err != nil {
+			return nil, err
+		}
 
 		isSysApp := appSpec.IsSysApp
 
@@ -70,6 +76,7 @@ func (c *Client) getAppListFromData(apps []appv1.Application) ([]*AppInfo, error
 
 		for _, entrance := range app.EffectiveEntrances(c.username) {
 			var appEntrance Entrance
+			appEntrance.ID = entrance.ID
 			appEntrance.Name = entrance.Name
 			appEntrance.Title = entrance.Title
 			appEntrance.Icon = entrance.Icon
@@ -95,6 +102,7 @@ func (c *Client) getAppListFromData(apps []appv1.Application) ([]*AppInfo, error
 
 		for _, entrance := range appSpec.SharedEntrances {
 			var appEntrance Entrance
+			appEntrance.ID = entrance.ID
 			appEntrance.Name = entrance.Name
 			appEntrance.URL = entrance.URL
 			appEntrance.Title = entrance.Title

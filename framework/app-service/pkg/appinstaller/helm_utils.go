@@ -281,15 +281,25 @@ func (h *HelmOps) SetValues(isInstallOp bool) (values map[string]interface{}, er
 		}
 	}
 
-	entries := make(map[string]interface{})
-	for i, entrance := range h.app.Entrances {
-		var url string
-		if len(h.app.Entrances) == 1 {
-			url = fmt.Sprintf("%s.%s", h.app.AppID, zone)
-		} else {
-			url = fmt.Sprintf("%s%d.%s", h.app.AppID, i, zone)
+	appClientForIDs := versioned.NewForConfigOrDie(h.kubeConfig)
+	term, err := appClientForIDs.SysV1alpha1().Terminuses().Get(ctx, "terminus", metav1.GetOptions{})
+	if err != nil {
+		return values, err
+	}
+	var old []v1alpha1.Entrance
+	for _, a := range installedApps {
+		if a.Spec.Namespace == h.app.Namespace && a.Spec.Name == h.app.AppName {
+			old = a.Spec.Entrances
+			break
 		}
-		entries[entrance.Name] = url
+	}
+	assigned, err := v1alpha1.AssignOrdinaryEntranceIDs(h.app.AppID, h.app.OwnerName, term.Spec.LocalName, old, h.app.Entrances)
+	if err != nil {
+		return values, err
+	}
+	entries := make(map[string]interface{})
+	for _, entrance := range assigned {
+		entries[entrance.Name] = fmt.Sprintf("%s.%s", entrance.ID, zone)
 	}
 
 	values["domain"] = entries

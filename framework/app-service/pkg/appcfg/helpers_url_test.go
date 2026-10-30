@@ -2,6 +2,11 @@ package appcfg
 
 import (
 	"context"
+	sys "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"strings"
 	"testing"
 
@@ -11,12 +16,23 @@ import (
 )
 
 func withMockZone(zone string) func() {
-	orig := getUserZone
-	getUserZone = func(context.Context, string) (string, error) {
-		return zone, nil
+	old := cluster.NewDomainReader
+	scheme := runtime.NewScheme()
+	_ = sys.AddToScheme(scheme)
+	reader := fake.NewClientBuilder().WithScheme(scheme).WithObjects(&sys.Terminus{ObjectMeta: metav1.ObjectMeta{Name: "terminus"}, Spec: sys.TerminusSpec{Settings: map[string]string{"domainName": zone}}}).Build()
+	cluster.NewDomainReader = func() (client.Reader, error) { return reader, nil }
+	return func() { cluster.NewDomainReader = old }
+}
+func persistURLFixture(a *Application) {
+	for i := range a.Spec.Entrances {
+		a.Spec.Entrances[i].ID = appv1alpha1.EntranceID(a.Spec.Appid, i, len(a.Spec.Entrances))
 	}
-	return func() {
-		getUserZone = orig
+	for i := range a.Spec.SharedEntrances {
+		if IsShared(a) {
+			a.Spec.SharedEntrances[i].ID = appv1alpha1.SharedEntranceID(a.Spec.Appid, i, len(a.Spec.SharedEntrances))
+		} else {
+			a.Spec.SharedEntrances[i].ID = appv1alpha1.SharedEntranceIDV2(a.Spec.Appid, i, len(a.Spec.SharedEntrances))
+		}
 	}
 }
 
@@ -36,6 +52,7 @@ func TestGenSharedEntranceURLSingleEntranceUsesApiSharedID(t *testing.T) {
 		},
 	}
 
+	persistURLFixture(app)
 	got, err := GenSharedEntranceURL(context.Background(), app)
 	if err != nil {
 		t.Fatalf("GenSharedEntranceURL: %v", err)
@@ -73,6 +90,7 @@ func TestGenEntranceURLPreservesCustomThirdLevelDomain(t *testing.T) {
 		},
 	}
 
+	persistURLFixture(app)
 	got, err := GenEntranceURL(context.Background(), app)
 	if err != nil {
 		t.Fatalf("GenEntranceURL: %v", err)
@@ -106,6 +124,8 @@ func TestApplicationConfigGenURLPassesAppID(t *testing.T) {
 		},
 	}
 
+	cfg.Entrances[0].ID = cfg.AppID
+	cfg.SharedEntrances[0].ID = appv1alpha1.SharedEntranceIDV2(cfg.AppID, 0, 1)
 	entrances, err := cfg.GenEntranceURL(context.Background())
 	if err != nil {
 		t.Fatalf("ApplicationConfig.GenEntranceURL: %v", err)
@@ -134,11 +154,12 @@ func TestGenSharedEntranceURLUsesPlatformDomain(t *testing.T) {
 	cluster.PrimePlatformDomainForTest("owner.org.example.cn")
 	t.Cleanup(cluster.ResetPlatformDomainForTest)
 	app := &Application{Spec: ApplicationSpec{Appid: "demo", Owner: "alice", SharedEntrances: []Entrance{{Name: "web", Port: 8080}}}}
+	persistURLFixture(app)
 	got, err := GenSharedEntranceURL(context.Background(), app)
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := appv1alpha1.SharedEntranceIDV2("demo", 0, 1) + ".shared.owner.org.example.cn:8080"
+	want := appv1alpha1.SharedEntranceIDV2("demo", 0, 1) + ".shared.olares.com:8080"
 	if got[0].URL != want {
 		t.Fatalf("got %q, want %q", got[0].URL, want)
 	}
@@ -161,17 +182,40 @@ func TestGenSharedEntranceURLSharedAppMultipleEntrances(t *testing.T) {
 	t.Cleanup(cluster.ResetPlatformDomainForTest)
 	app := &Application{Spec: ApplicationSpec{Appid: "demo", SharedEntrances: []Entrance{{Name: "web"}, {Name: "api", Port: 9000}}}}
 	app.Labels = map[string]string{appv1alpha1.AppSharedLabel: appv1alpha1.AppSharedTrue}
+	persistURLFixture(app)
 	got, err := GenSharedEntranceURL(context.Background(), app)
 	if err != nil {
 		t.Fatal(err)
 	}
 	for i := range got {
-		want := appv1alpha1.SharedEntranceID("demo", i, len(got)) + ".shared.org.example.com"
+		want := appv1alpha1.SharedEntranceID("demo", i, len(got)) + ".shared.olares.com"
 		if i == 1 {
 			want += ":9000"
 		}
 		if got[i].URL != want {
 			t.Fatalf("entrance %d URL=%q, want %q", i, got[i].URL, want)
 		}
+	}
+}
+
+func TestRuntimeURLsUseSavedIDs(t *testing.T) {
+	restore := withMockZone("machine.example.com")
+	defer restore()
+	a := &Application{Spec: ApplicationSpec{Appid: "abcd1234", Owner: "bob", Entrances: []Entrance{{Name: "web", ID: "saved-web"}}, SharedEntrances: []Entrance{{Name: "shared", ID: "saved-share"}}}}
+	normal, err := GenEntranceURL(context.Background(), a)
+	if err != nil || normal[0].URL != "saved-web.machine.example.com" {
+		t.Fatal(normal, err)
+	}
+	shared, err := GenSharedEntranceURL(context.Background(), a)
+	if err != nil || shared[0].URL != "saved-share.shared.olares.com" {
+		t.Fatal(shared, err)
+	}
+	a.Spec.Entrances[0].ID = ""
+	if _, err := GenEntranceURL(context.Background(), a); err == nil {
+		t.Fatal("runtime recomputed missing ID")
+	}
+	a.Spec.SharedEntrances[0].ID = ""
+	if _, err := GenSharedEntranceURL(context.Background(), a); err == nil {
+		t.Fatal("runtime recomputed missing shared ID")
 	}
 }

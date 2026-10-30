@@ -1,10 +1,10 @@
 package translator
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 
+	appv1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/l4-bfl-proxy/internal/ir"
 	"github.com/beclab/l4-bfl-proxy/internal/message"
 	"github.com/stretchr/testify/assert"
@@ -18,6 +18,7 @@ func TestTranslate_DefaultDomainAndCustomCertificate(t *testing.T) {
 		SSL:   &message.SSLConfig{CertData: "machine-cert", KeyData: "machine-key"},
 		Users: []*message.UserInfo{{Name: "alice", CustomDomainCerts: []*message.CertInfo{{Domain: "myapp.custom.io", CertData: "custom-cert", KeyData: "custom-key"}}, Apps: []*message.AppInfo{{Name: "myapp", Appid: "myapp", Namespace: "myapp-alice", Owner: "alice", Entrances: []*message.EntranceInfo{{Name: "web", Host: "web", Port: 8080}}, Settings: map[string]string{"customDomain": `{"web":{"third_party_domain":"myapp.custom.io"}}`}}}}},
 	}
+	persistResourceFixtures(resources)
 	xds := tr.Translate(resources)
 	require.Len(t, xds.Secrets, 2)
 	require.Len(t, xds.HTTPListeners, 5)
@@ -42,6 +43,7 @@ func TestTranslate_DenyAllRestrictsPersonalApps(t *testing.T) {
 		{Name: "allowed", Appid: "allowed", Namespace: "allowed-alice", Entrances: []*message.EntranceInfo{{Name: "web", Host: "web", Port: 8080}}},
 		{Name: "private", Appid: "private", Namespace: "private-alice", Entrances: []*message.EntranceInfo{{Name: "web", Host: "web", Port: 8080}}},
 	}}}}
+	persistResourceFixtures(resources)
 	xds := tr.Translate(resources)
 	require.Len(t, xds.HTTPListeners, 1)
 	found := false
@@ -65,6 +67,7 @@ func TestTranslate_Full(t *testing.T) {
 		SSL:   &message.SSLConfig{CertData: "machine-cert", KeyData: "machine-key"},
 		Users: []*message.UserInfo{{Name: "alice", Apps: []*message.AppInfo{{Name: "vault", Appid: "vault", Owner: "alice", Namespace: "vault-alice", Entrances: []*message.EntranceInfo{{Name: "main", Host: "vault-svc", Port: 8080}}, Ports: []*message.PortInfo{{Host: "vault-svc", Port: 8080, ExposePort: 48126, Protocol: "tcp"}}}}}},
 	}
+	persistResourceFixtures(resources)
 	xds := tr.Translate(resources)
 	require.Len(t, xds.Listeners, 1)
 	assert.Equal(t, "http_redirect_81", xds.Listeners[0].Name)
@@ -296,7 +299,7 @@ func makeSharedApp() *message.AppInfo {
 		Owner:     "admin",
 		IsShared:  true,
 		Entrances: []*message.EntranceInfo{
-			{Name: "web", Host: "shareme-svc", Port: 8080},
+			{ID: "shareme", Name: "web", Host: "shareme-svc", Port: 8080},
 		},
 	}
 }
@@ -321,6 +324,8 @@ func TestBuildAppVirtualHosts_HeadscalePublicRoutes(t *testing.T) {
 		Entrances: []*message.EntranceInfo{{Name: "headscale", Host: "headscale-svc", Port: 80}},
 	}
 
+	persistTranslatorFixture(app)
+
 	vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", make(map[string]*ir.ClusterIR))
 	require.Len(t, vhosts, 1)
 	require.Len(t, vhosts[0].Routes, 6)
@@ -344,7 +349,7 @@ func TestBuildAppVirtualHosts_HeadscalePublicRoutes(t *testing.T) {
 		assert.Equal(t, expected.cluster, route.Cluster)
 		assert.True(t, route.BypassSourceCIDR)
 		require.NotNil(t, route.ExtAuth)
-		assert.Equal(t, "authelia_backend_alice", route.ExtAuth.Cluster)
+		assert.Equal(t, "authelia_backend", route.ExtAuth.Cluster)
 		assert.Equal(t, autheliaVerifyPathPrefix, route.ExtAuth.PathPrefix)
 	}
 	assert.Equal(t, "/", vhosts[0].Routes[5].PathPrefix)
@@ -352,6 +357,7 @@ func TestBuildAppVirtualHosts_HeadscalePublicRoutes(t *testing.T) {
 	require.NotNil(t, vhosts[0].Routes[5].ExtAuth)
 
 	user.DenyAll = false
+	persistTranslatorFixture(app)
 	vhosts = tr.buildAppVirtualHosts(user, app, "alice.example.com", make(map[string]*ir.ClusterIR))
 	require.Len(t, vhosts, 1)
 	require.Len(t, vhosts[0].Routes, 1)
@@ -371,6 +377,8 @@ func TestBuildAppVirtualHosts_HeadscalePrefixDoesNotGrantPublicRoutes(t *testing
 			"defaultThirdLevelDomainConfig": `[{"entranceName":"web","thirdLevelDomain":"headscale"}]`,
 		},
 	}
+
+	persistTranslatorFixture(app)
 
 	vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", make(map[string]*ir.ClusterIR))
 	require.Len(t, vhosts, 1)
@@ -401,7 +409,7 @@ func TestBuildAppVirtualHosts_SharedApp_OpenToAllUsers(t *testing.T) {
 			assert.NotEmpty(t, clusterSet, "an upstream cluster must be registered")
 
 			require.NotNil(t, r.ExtAuth, "shared apps must be gated behind Authelia ext_auth")
-			assert.Equal(t, fmt.Sprintf("authelia_backend_%s", name), r.ExtAuth.Cluster)
+			assert.Equal(t, "authelia_backend", r.ExtAuth.Cluster)
 			assert.Equal(t, autheliaVerifyPathPrefix, r.ExtAuth.PathPrefix)
 			assert.False(t, r.ExtAuth.Disabled)
 		})
@@ -419,7 +427,7 @@ func TestBuildCustomDomainVirtualHosts_SharedApp_ExtAuth(t *testing.T) {
 	require.Len(t, vhosts[0].Routes, 1)
 	r := vhosts[0].Routes[0]
 	require.NotNil(t, r.ExtAuth, "shared apps must stay gated even on a custom domain")
-	assert.Equal(t, "authelia_backend_alice", r.ExtAuth.Cluster)
+	assert.Equal(t, "authelia_backend", r.ExtAuth.Cluster)
 	assert.Equal(t, autheliaVerifyPathPrefix, r.ExtAuth.PathPrefix)
 }
 
@@ -440,13 +448,14 @@ func TestBuildAppVirtualHosts_NonSharedApp(t *testing.T) {
 			{Name: "web", Host: "v1app-svc", Port: 8080},
 		},
 	}
+	persistTranslatorFixture(app)
 	vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", clusterSet)
 	require.Len(t, vhosts, 1)
 	require.Len(t, vhosts[0].Routes, 1)
 	r := vhosts[0].Routes[0]
 	assert.Nil(t, r.DirectResponse)
 	require.NotNil(t, r.ExtAuth, "non-shared apps must also be gated behind Authelia ext_auth")
-	assert.Equal(t, "authelia_backend_alice", r.ExtAuth.Cluster)
+	assert.Equal(t, "authelia_backend", r.ExtAuth.Cluster)
 	assert.Equal(t, autheliaVerifyPathPrefix, r.ExtAuth.PathPrefix)
 	assert.False(t, r.ExtAuth.Disabled)
 	assert.NotEmpty(t, clusterSet)
@@ -465,12 +474,13 @@ func TestBuildAppVirtualHosts_PublicKeepsExtAuthOmitsOutboundXBFLUser(t *testing
 			{Name: "web", Host: "pub-svc", Port: 8080, AuthLevel: "public"},
 		},
 	}
+	persistTranslatorFixture(app)
 	vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", clusterSet)
 	require.Len(t, vhosts, 1)
 	require.Len(t, vhosts[0].Routes, 1)
 	r := vhosts[0].Routes[0]
 	require.NotNil(t, r.ExtAuth, "public must still mount ExtAuth (Bypass at Authelia)")
-	assert.Equal(t, "authelia_backend_alice", r.ExtAuth.Cluster)
+	assert.Equal(t, "authelia_backend", r.ExtAuth.Cluster)
 	assert.Nil(t, r.RequestHeaders, "outbound zone-owner X-BFL-USER stamp must be omitted")
 }
 
@@ -504,6 +514,7 @@ func TestBuildAppVirtualHosts_ProbeBypassBeforeDefault(t *testing.T) {
 			{Name: "web", Host: "v1app-svc", Port: 8080},
 		},
 	}
+	persistTranslatorFixture(app)
 	vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", clusterSet)
 	require.Len(t, vhosts, 1)
 	require.GreaterOrEqual(t, len(vhosts[0].Routes), 2)
@@ -532,10 +543,11 @@ func TestBuildAppVirtualHosts_DevEntranceAlias(t *testing.T) {
 			{Name: "web", Host: "10.244.1.23", Port: 9999, Type: "dev"},
 		},
 	}
+	persistTranslatorFixture(app)
 	vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", clusterSet)
 	require.Len(t, vhosts, 1)
 
-	assert.Contains(t, vhosts[0].Domains, "28f57292.alice.example.com", "primary hostname must remain")
+	assert.NotContains(t, vhosts[0].Domains, "28f57292.alice.example.com", "dev entrance uses the saved port-specific ID")
 	assert.Contains(t, vhosts[0].Domains, "28f57292-9999.alice.example.com", "dev alias must be added")
 
 	// The alias shares the single upstream cluster of the entrance, which points
@@ -563,6 +575,7 @@ func TestBuildAppVirtualHosts_NonDevEntranceUsesDNS(t *testing.T) {
 			{Name: "web", Host: "app-svc", Port: 9999},
 		},
 	}
+	persistTranslatorFixture(app)
 	vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", clusterSet)
 	require.Len(t, vhosts, 1)
 	require.Len(t, vhosts[0].Routes, 1)
@@ -588,6 +601,7 @@ func TestBuildAppVirtualHosts_EmptyHostSkipped(t *testing.T) {
 			{Name: "web", Host: "", Port: 8080, Type: "dev"},
 		},
 	}
+	persistTranslatorFixture(app)
 	vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", clusterSet)
 	assert.Empty(t, vhosts, "entrance with empty host must be skipped")
 	assert.Empty(t, clusterSet)
@@ -608,6 +622,7 @@ func TestBuildAppVirtualHosts_NonDevEntranceNoAlias(t *testing.T) {
 			{Name: "web", Host: "app-svc", Port: 9999},
 		},
 	}
+	persistTranslatorFixture(app)
 	vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", clusterSet)
 	require.Len(t, vhosts, 1)
 	assert.NotContains(t, vhosts[0].Domains, "28f57292-9999.alice.example.com")
@@ -804,6 +819,7 @@ func TestShareEntranceInstallsFileserverRoutes(t *testing.T) {
 	tr := &Translator{cfg: &Config{}}
 	user := &message.UserInfo{Name: "owner", FileserverNodes: []*message.FileserverNodeInfo{{NodeName: "worker", PodIP: "10.233.1.2"}}}
 	app := &message.AppInfo{Name: "share", Appid: "share", Namespace: "os-frontend", Owner: "owner", Entrances: []*message.EntranceInfo{{Name: "web", Host: "share", Port: 80}}}
+	persistTranslatorFixture(app)
 	vhosts := tr.buildAppVirtualHosts(user, app, "owner.example.com", make(map[string]*ir.ClusterIR))
 	require.NotEmpty(t, vhosts)
 	found := false
@@ -815,4 +831,34 @@ func TestShareEntranceInstallsFileserverRoutes(t *testing.T) {
 		}
 	}
 	assert.True(t, found, "share entrance must install node routes before the frontend catch-all")
+}
+
+func persistTranslatorFixture(a *message.AppInfo) {
+	for i, e := range a.Entrances {
+		if e.ID == "" {
+			if e.Type == "dev" {
+				e.ID = appv1.NewDevEntranceID(a.Appid, a.Owner, a.Owner, int32(e.Port))
+			} else {
+				e.ID = appv1.EntranceID(a.Appid, i, len(a.Entrances))
+			}
+		}
+	}
+}
+func persistResourceFixtures(r *message.Resources) {
+	for _, u := range r.Users {
+		for _, a := range u.Apps {
+			persistTranslatorFixture(a)
+		}
+	}
+}
+
+func TestPersistedUserDevIDHasNoLegacyAlias(t *testing.T) {
+	tr := &Translator{cfg: &Config{}}
+	a := &message.AppInfo{Name: "dev", Appid: "abcd1234", Namespace: "dev-bob", Owner: "bob", Entrances: []*message.EntranceInfo{{ID: "saved-8080", Name: "dev-8080", Type: "dev", Host: "10.0.0.2", Port: 8080}}}
+	hosts := tr.buildAppVirtualHosts(&message.UserInfo{Name: "bob"}, a, "machine.example.com", map[string]*ir.ClusterIR{})
+	require.Len(t, hosts, 1)
+	assert.Contains(t, hosts[0].Domains, "saved-8080.machine.example.com")
+	assert.NotContains(t, hosts[0].Domains, "abcd1234-8080.machine.example.com")
+	a.Entrances[0].ID = ""
+	assert.Empty(t, tr.buildAppVirtualHosts(&message.UserInfo{Name: "bob"}, a, "machine.example.com", map[string]*ir.ClusterIR{}))
 }

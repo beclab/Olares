@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/cluster"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
@@ -147,6 +146,9 @@ func (s AppName) IsGeneratedApp() bool {
 // user's zone. It is a package-level re-implementation of the in-tree
 // (*Application).GenEntranceURL method.
 func GenEntranceURL(ctx context.Context, app *Application) ([]Entrance, error) {
+	if err := appv1alpha1.ValidatePersistedEntranceIDs(app.Spec.Entrances); err != nil {
+		return nil, err
+	}
 	reader, err := cluster.NewDomainReader()
 	if err != nil {
 		klog.Errorf("Failed to initialize platform domain reader: %v", err)
@@ -166,14 +168,16 @@ func GenEntranceURL(ctx context.Context, app *Application) ([]Entrance, error) {
 			}
 		}
 
-		appid := strings.ToLower(strings.TrimSpace(app.Spec.Appid))
 		apiEntrances := make([]*appv1alpha1.Entrance, len(app.Spec.Entrances))
 		for k := range app.Spec.Entrances {
 			entrance := app.Spec.Entrances[k]
 			apiEntrances[k] = &entrance
 		}
 		for i := range app.Spec.Entrances {
-			prefix := appv1alpha1.ResolveEntranceIDWithDefaultThirdLevelDomainOverride(apiEntrances, i, appid, appDomainConfigs)
+			prefix, err := appv1alpha1.PersistedEntrancePrefix(apiEntrances, i, appDomainConfigs)
+			if err != nil {
+				return nil, err
+			}
 			app.Spec.Entrances[i].URL = fmt.Sprintf("%s.%s", prefix, zone)
 		}
 	}
@@ -187,15 +191,11 @@ func GenSharedEntranceURL(ctx context.Context, app *Application) ([]Entrance, er
 	}
 	sharedZone := "shared.olares.com"
 
-	appid := strings.ToLower(strings.TrimSpace(app.Spec.Appid))
-	isShared := appv1alpha1.IsShared(app)
-	// The API SharedForZone helpers use a fixed mesh domain; UI URLs use the platform domain.
-	entranceCount := len(app.Spec.SharedEntrances)
+	if err := appv1alpha1.ValidatePersistedEntranceIDs(app.Spec.SharedEntrances); err != nil {
+		return nil, err
+	}
 	for i := range app.Spec.SharedEntrances {
-		id := appv1alpha1.SharedEntranceIDV2(appid, i, entranceCount)
-		if isShared {
-			id = appv1alpha1.SharedEntranceID(appid, i, entranceCount)
-		}
+		id := app.Spec.SharedEntrances[i].ID
 		app.Spec.SharedEntrances[i].URL = fmt.Sprintf("%s.%s", id, sharedZone)
 		if app.Spec.SharedEntrances[i].Port > 0 {
 			app.Spec.SharedEntrances[i].URL = fmt.Sprintf("%s:%d", app.Spec.SharedEntrances[i].URL, app.Spec.SharedEntrances[i].Port)

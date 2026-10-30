@@ -90,6 +90,14 @@ rules:
 - apiGroups:
   - sys.bytetrade.io
   resources:
+  - terminuses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - sys.bytetrade.io
+  resources:
   - appenvs
   - systemenvs
   - userenvs

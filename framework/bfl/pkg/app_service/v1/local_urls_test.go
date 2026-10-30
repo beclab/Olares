@@ -13,7 +13,7 @@ func TestLocalURLGeneratorsWithoutOwnerOrPublicDomain(t *testing.T) {
 	if got := single("app", "abc123"); got != "abc123.machine.olares.local" {
 		t.Fatal(got)
 	}
-	entrances := []*appv1.Entrance{{Name: "settings"}, {Name: "files"}}
+	entrances := []*appv1.Entrance{{Name: "settings", ID: "abc1230"}, {Name: "files", ID: "abc1231"}}
 	domains := []appv1.DefaultThirdLevelDomainConfig{{AppName: "olares-app", EntranceName: "settings", ThirdLevelDomain: "settings"}}
 	if got := multi("olares-app", "abc123", 0, entrances, domains); got != "settings.machine.olares.local" {
 		t.Fatal(got)

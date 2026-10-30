@@ -688,13 +688,6 @@ func (p *Provider) listApplicationDetails(username string, appList []*appv1alpha
 	var publicApps []string
 	var publicCustomDomainApps []string
 
-	getAppPrefix := func(entranceCount, index int, appid string) string {
-		if entranceCount == 1 {
-			return appid
-		}
-		return fmt.Sprintf("%s%d", appid, index)
-	}
-
 	for _, app := range appList {
 		effectiveEntrances := app.EffectiveEntrances(username)
 		if len(effectiveEntrances) == 0 {
@@ -703,11 +696,13 @@ func (p *Provider) listApplicationDetails(username string, appList []*appv1alpha
 
 		var customDomains []string
 		var customDomainsPrefix []string
-		entranceCount := len(effectiveEntrances)
 		customDomainEntrancesMap := getSettingsKeyMap(app, username, settingsCustomDomain)
 
-		for index, entrance := range effectiveEntrances {
-			prefix := getAppPrefix(entranceCount, index, app.Spec.Appid)
+		for _, entrance := range effectiveEntrances {
+			prefix := entrance.ID
+			if prefix == "" {
+				continue
+			}
 			authLevel := entrance.AuthLevel
 
 			if cdEntrance, ok := customDomainEntrancesMap[entrance.Name]; ok {

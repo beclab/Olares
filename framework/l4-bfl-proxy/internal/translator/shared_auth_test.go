@@ -1,7 +1,6 @@
 package translator
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/beclab/l4-bfl-proxy/internal/ir"
@@ -22,13 +21,14 @@ func TestSharedAutheliaBackendRetainsUserContexts(t *testing.T) {
 			}},
 		})
 	}
+	persistResourceFixtures(resources)
 	xds := tr.Translate(resources)
 	clusters := make(map[string]*ir.ClusterIR)
 	for _, c := range xds.Clusters {
 		clusters[c.Name] = c
 	}
-	for _, name := range []string{"alice", "bob"} {
-		cluster := clusters["authelia_backend_"+name]
+	for range []string{"alice", "bob"} {
+		cluster := clusters["authelia_backend"]
 		require.NotNil(t, cluster)
 		assert.Equal(t, "authelia-backend.os-framework.svc.cluster.local", cluster.Host)
 		assert.Equal(t, uint32(9091), cluster.Port)
@@ -45,6 +45,6 @@ func TestSharedAutheliaBackendRetainsUserContexts(t *testing.T) {
 		}
 	}
 	for _, name := range []string{"alice", "bob"} {
-		assert.Equal(t, fmt.Sprintf("authelia_backend_%s", name), contexts[name])
+		assert.Equal(t, "authelia_backend", contexts[name])
 	}
 }

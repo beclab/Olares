@@ -22,7 +22,9 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
+	"github.com/beclab/api/pkg/entranceids"
 	"github.com/beclab/api/pkg/generated/clientset/versioned"
+	"k8s.io/apimachinery/pkg/util/validation"
 
 	"github.com/emicklei/go-restful/v3"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -104,6 +106,25 @@ func (h *Handler) setupApp(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
+	if _, ok := settings["customDomain"]; ok {
+		api.HandleBadRequest(resp, req, fmt.Errorf("use the entrance domain endpoint to update customDomain"))
+		return
+	}
+	clientForIDs := req.Attribute(constants.KubeSphereClientAttribute).(*clientset.ClientSet)
+	if _, ok := settings["addedEntrances"]; ok {
+		ctx, release, lockErr := entranceids.AcquireWriteLock(req.Request.Context(), clientForIDs.KubeClient.Kubernetes())
+		if lockErr != nil {
+			api.HandleError(resp, req, lockErr)
+			return
+		}
+		defer release()
+		req.Request = req.Request.WithContext(ctx)
+		app, err = clientForIDs.AppClient.AppV1alpha1().Applications().Get(ctx, app.Name, metav1.GetOptions{})
+		if err != nil {
+			api.HandleError(resp, req, err)
+			return
+		}
+	}
 	appCopy := app.DeepCopy()
 	caller := req.Attribute(constants.UserContextAttribute).(string)
 	shared := v1alpha1.IsShared(appCopy)
@@ -152,7 +173,7 @@ func (h *Handler) setupApp(req *restful.Request, resp *restful.Response) {
 		}
 		var str []byte
 		switch v.(type) {
-		case map[string]interface{}:
+		case map[string]interface{}, []interface{}:
 			str, err = json.Marshal(v)
 			if err != nil {
 				api.HandleError(resp, req, err)
@@ -179,6 +200,27 @@ func (h *Handler) setupApp(req *restful.Request, resp *restful.Response) {
 			appCopy.Spec.Settings = map[string]string{}
 		}
 		appCopy.Spec.Settings[k] = string(str)
+	}
+	if _, ok := settings["addedEntrances"]; ok {
+		term, termErr := client.AppClient.SysV1alpha1().Terminuses().Get(req.Request.Context(), "terminus", metav1.GetOptions{})
+		if termErr != nil {
+			api.HandleError(resp, req, termErr)
+			return
+		}
+		appCopy, err = v1alpha1.AssignApplicationEntranceIDs(appCopy, app, term.Spec.LocalName)
+		if err != nil {
+			api.HandleBadRequest(resp, req, err)
+			return
+		}
+		all, listErr := client.AppClient.AppV1alpha1().Applications().List(req.Request.Context(), metav1.ListOptions{})
+		if listErr != nil {
+			api.HandleError(resp, req, listErr)
+			return
+		}
+		if err = v1alpha1.ValidateOrdinaryIDClaims(appCopy, all.Items); err != nil {
+			api.HandleBadRequest(resp, req, err)
+			return
+		}
 	}
 	appUpdated, err := client.AppClient.AppV1alpha1().Applications().Update(req.Request.Context(), appCopy, metav1.UpdateOptions{})
 	if err != nil {
@@ -210,6 +252,19 @@ func (h *Handler) setupAppEntranceDomain(req *restful.Request, resp *restful.Res
 	// authenticated user may set their own customDomain for a v3 shared
 	// app. Global Settings mutations stay admin-only via setupApp.
 	caller := req.Attribute(constants.UserContextAttribute).(string)
+	kclient := req.Attribute(constants.KubeSphereClientAttribute).(*clientset.ClientSet)
+	ctx, release, err := entranceids.AcquireWriteLock(req.Request.Context(), kclient.KubeClient.Kubernetes())
+	if err != nil {
+		api.HandleError(resp, req, err)
+		return
+	}
+	defer release()
+	req.Request = req.Request.WithContext(ctx)
+	app, err = kclient.AppClient.AppV1alpha1().Applications().Get(ctx, app.Name, metav1.GetOptions{})
+	if err != nil {
+		api.HandleError(resp, req, err)
+		return
+	}
 	entranceName := req.PathParameter(ParamEntranceName)
 	// Validate against the caller's effective entrances so user-added entrances
 	// (e.g. proxylistener-managed "dev-<port>" entrances that live only in the
@@ -248,9 +303,27 @@ func (h *Handler) setupAppEntranceDomain(req *restful.Request, resp *restful.Res
 	}
 	appCopy := app.DeepCopy()
 
-	kclient := req.Attribute(constants.KubeSphereClientAttribute).(*clientset.ClientSet)
-
 	customDomain, ok := settings["customDomain"].(map[string]interface{})
+	if !ok || customDomain == nil {
+		api.HandleBadRequest(resp, req, fmt.Errorf("customDomain must be an object"))
+		return
+	}
+	for _, key := range []string{"third_level_domain", "third_party_domain"} {
+		if value, present := customDomain[key]; present {
+			v, valid := value.(string)
+			if !valid {
+				api.HandleBadRequest(resp, req, fmt.Errorf("%s must be a string", key))
+				return
+			}
+			customDomain[key] = strings.ToLower(strings.TrimSpace(v))
+		}
+	}
+	if v, _ := customDomain["third_level_domain"].(string); v != "" {
+		if errs := validation.IsDNS1123Label(v); len(errs) > 0 {
+			api.HandleBadRequest(resp, req, fmt.Errorf("invalid third_level_domain: %v", errs))
+			return
+		}
+	}
 
 	existing := appCopy.EffectiveSettings(caller)["customDomain"]
 
@@ -258,17 +331,11 @@ func (h *Handler) setupAppEntranceDomain(req *restful.Request, resp *restful.Res
 
 	keys := []string{"third_level_domain", "third_party_domain"}
 
-	// Reject the request if the caller is trying to set a domain that is
-	// already taken. third_party_domain (a full custom domain) must be
-	// globally unique across every user and app; third_level_domain only
-	// needs to be unique within the caller's own apps because it resolves
-	// to "<prefix>.<caller-zone>" and the zone is bound to the user. Only
-	// the values the caller explicitly provided are checked so a re-save
-	// of the untouched sibling field is not flagged against itself.
+	// Check both domain forms globally before writing while holding the lease.
 	if ok {
 		reqThirdLevel, _ := customDomain["third_level_domain"].(string)
 		reqThirdParty, _ := customDomain["third_party_domain"].(string)
-		if err = checkEntranceDomainDuplicate(req.Request.Context(), kclient.AppClient, caller, appCopy.Spec.Name, entranceName, reqThirdLevel, reqThirdParty); err != nil {
+		if err = checkEntranceDomainDuplicate(req.Request.Context(), kclient.AppClient, caller, appCopy.Name, entranceName, reqThirdLevel, reqThirdParty); err != nil {
 			api.HandleBadRequest(resp, req, err)
 			return
 		}
@@ -310,16 +377,18 @@ func (h *Handler) setupAppEntranceDomain(req *restful.Request, resp *restful.Res
 		// origins {"a":{"third_level_domain":"","third_party__domain":""},"b":{"third_level_domain":"","third_party__domain":""}}
 		// {"third_level_domain":"","third_party__domain":""}
 		for k, v := range origins {
-			originV := v.(map[string]interface{})
+			originV, valid := v.(map[string]interface{})
+			if !valid {
+				api.HandleError(resp, req, fmt.Errorf("malformed stored customDomain entry %q", k))
+				return
+			}
 			if k != entranceName {
 				merge[k] = originV
 				continue
 			} else {
-				for _, key := range keys {
-					if ov, ok := originV[key]; ok {
-						if _, exists := customDomain[key]; !exists {
-							customDomain[key] = ov
-						}
+				for key, ov := range originV {
+					if _, exists := customDomain[key]; !exists {
+						customDomain[key] = ov
 					}
 				}
 			}
@@ -345,6 +414,7 @@ func (h *Handler) setupAppEntranceDomain(req *restful.Request, resp *restful.Res
 	patchData := overridePatch(appCopy, caller, map[string]string{
 		"customDomain": string(settingsBytes),
 	})
+	patchData["metadata"] = map[string]string{"resourceVersion": appCopy.ResourceVersion}
 	patchByte, err := json.Marshal(patchData)
 	if err != nil {
 		api.HandleError(resp, req, err)
@@ -368,11 +438,8 @@ func (h *Handler) setupAppEntranceDomain(req *restful.Request, resp *restful.Res
 
 		vals := make(map[string]interface{})
 		entries := make(map[string]interface{})
-		for i, entrance := range app.Spec.Entrances {
-			cfg, ok := customDomain[entrance.Name].(map[string]interface{})
-			if !ok {
-				continue
-			}
+		for _, entrance := range appUpdated.Spec.Entrances {
+			cfg, _ := merge[entrance.Name].(map[string]interface{})
 			urls := make([]string, 0)
 			if cDomain, _ := cfg["third_party_domain"].(string); cDomain != "" {
 				urls = append(urls, cDomain)
@@ -380,12 +447,11 @@ func (h *Handler) setupAppEntranceDomain(req *restful.Request, resp *restful.Res
 			if prefix := cfg["third_level_domain"]; prefix != "" {
 				urls = append(urls, fmt.Sprintf("%s.%s", prefix, zone))
 			}
-			var url string
-			if len(app.Spec.Entrances) == 1 {
-				url = fmt.Sprintf("%s.%s", app.Spec.Appid, zone)
-			} else {
-				url = fmt.Sprintf("%s%d.%s", app.Spec.Appid, i, zone)
+			if entrance.ID == "" {
+				api.HandleError(resp, req, fmt.Errorf("missing persisted entrance ID; run the entrance ID upgrade task"))
+				return
 			}
+			url := fmt.Sprintf("%s.%s", entrance.ID, zone)
 			urls = append(urls, url)
 
 			entries[entrance.Name] = strings.Join(urls, ",")
@@ -562,10 +628,7 @@ func resolveDefaultThirdLevelPrefix(entrances []v1alpha1.Entrance, index int, ap
 			return cfg.ThirdLevelDomain
 		}
 	}
-	if len(entrances) == 1 {
-		return appid
-	}
-	return fmt.Sprintf("%s%d", appid, index)
+	return entrances[index].ID
 }
 
 // checkEntranceDomainDuplicate reports an error when the requested
@@ -588,16 +651,8 @@ func checkEntranceDomainDuplicate(ctx context.Context, appClient versioned.Inter
 	return findEntranceDomainConflict(applist.Items, caller, currentApp, currentEntrance, thirdLevel, thirdParty)
 }
 
-// domainRecord is one already-claimed entrance domain, flattened out of the
-// whole cluster so the conflict check is a single linear scan.
-//   - thirdParty is compared globally (across every user and app);
-//   - thirdLevel is only compared when inCallerZone, i.e. the value resolves
-//     under the caller's own zone, because third_level_domain expands to
-//     "<prefix>.<caller-zone>" and the zone is bound to the user;
-//   - isSelf marks the exact entry the caller is editing (same app + entrance,
-//     owned by the caller) so re-saving an unchanged value never conflicts;
-//   - isDefault marks a synthesized default subdomain (appid / appid<i>) rather
-//     than a user-set value, so the error can say so.
+// domainRecord identifies one claim in the machine's shared zone. isSelf
+// identifies the exact CR, user and entrance being edited.
 type domainRecord struct {
 	app          string
 	entrance     string
@@ -613,51 +668,29 @@ type domainRecord struct {
 // scan needs (see domainRecord). currentApp/currentEntrance identify the entry
 // being edited so it can be excluded.
 func collectDomainRecords(apps []v1alpha1.Application, caller, currentApp, currentEntrance string) []domainRecord {
-	records := make([]domainRecord, 0)
+	var records []domainRecord
 	for i := range apps {
 		app := &apps[i]
-
-		// Global third_party scope: every stored blob, tagged with the user
-		// that actually set it so only the caller's own target entry is
-		// treated as self (a same-named install owned by another user, or
-		// another user's overlay on a shared app, still counts).
 		for _, ob := range allCustomDomainBlobs(app) {
 			for entrance, cfg := range parseCustomDomain(ob.blob) {
-				records = append(records, domainRecord{
-					app:        app.Spec.Name,
-					entrance:   entrance,
-					thirdParty: cfg.thirdParty,
-					isSelf:     app.Spec.Name == currentApp && entrance == currentEntrance && ob.owner == caller,
-				})
+				records = append(records, domainRecord{app: app.Name, entrance: entrance, thirdParty: strings.TrimSpace(cfg.thirdParty), thirdLevel: strings.TrimSpace(cfg.thirdLevel), inCallerZone: true, isSelf: app.Name == currentApp && entrance == currentEntrance && ob.owner == caller})
 			}
 		}
-
-		// Caller-zone third_level scope: the blob effective in the caller's
-		// zone (their overlay, or the shared/global default they inherit).
-		for entrance, cfg := range parseCustomDomain(callerCustomDomainBlob(app, caller)) {
-			records = append(records, domainRecord{
-				app:          app.Spec.Name,
-				entrance:     entrance,
-				thirdLevel:   cfg.thirdLevel,
-				inCallerZone: true,
-				isSelf:       app.Spec.Name == currentApp && entrance == currentEntrance,
-			})
+		for entrance, prefix := range defaultThirdLevelPrefixes(app) {
+			records = append(records, domainRecord{app: app.Name, entrance: entrance, thirdLevel: prefix, inCallerZone: true, isDefault: true, isSelf: app.Name == currentApp && entrance == currentEntrance})
 		}
-
-		// Default subdomains (appid / appid<i>) resolve in the caller's zone
-		// for shared apps and for per-user apps the caller owns; other users'
-		// per-user apps render under their own zones and cannot collide.
-		if appcfg.IsShared(app) || app.Spec.Owner == caller {
-			for entrance, prefix := range defaultThirdLevelPrefixes(app) {
-				records = append(records, domainRecord{
-					app:          app.Spec.Name,
-					entrance:     entrance,
-					thirdLevel:   prefix,
-					inCallerZone: true,
-					isDefault:    true,
-					isSelf:       app.Spec.Name == currentApp && entrance == currentEntrance,
-				})
+		for _, e := range app.Spec.Entrances {
+			records = append(records, domainRecord{app: app.Name, entrance: e.Name, thirdLevel: e.ID, inCallerZone: true, isDefault: true, isSelf: app.Name == currentApp && e.Name == currentEntrance && app.Spec.Owner == caller})
+		}
+		appendAdded := func(user string, settings map[string]string) {
+			added, _ := v1alpha1.ParseAddedEntrances(settings)
+			for _, e := range added {
+				records = append(records, domainRecord{app: app.Name, entrance: e.Name, thirdLevel: e.ID, inCallerZone: true, isDefault: true, isSelf: app.Name == currentApp && e.Name == currentEntrance && user == caller})
 			}
+		}
+		appendAdded(app.Spec.Owner, app.Spec.Settings)
+		for user, settings := range app.Spec.UserSettings {
+			appendAdded(user, settings)
 		}
 	}
 	return records
@@ -670,6 +703,39 @@ func collectDomainRecords(apps []v1alpha1.Application, caller, currentApp, curre
 // and at least one is non-empty. The (currentApp, currentEntrance) entrance is
 // excluded so re-saving an unchanged value is never a conflict.
 func findEntranceDomainConflict(apps []v1alpha1.Application, caller, currentApp, currentEntrance, thirdLevel, thirdParty string) error {
+	thirdLevel = strings.ToLower(strings.TrimSpace(thirdLevel))
+	thirdParty = strings.ToLower(strings.TrimSpace(thirdParty))
+	for i := range apps {
+		if err := v1alpha1.ValidatePersistedEntranceIDs(apps[i].Spec.Entrances); err != nil {
+			return err
+		}
+		for _, ob := range allCustomDomainBlobs(&apps[i]) {
+			var domains map[string]map[string]json.RawMessage
+			if err := json.Unmarshal([]byte(ob.blob), &domains); err != nil {
+				return fmt.Errorf("%s malformed customDomain: %w", apps[i].Name, err)
+			}
+			for _, fields := range domains {
+				for _, key := range []string{"third_level_domain", "third_party_domain"} {
+					if raw, ok := fields[key]; ok {
+						var value string
+						if err := json.Unmarshal(raw, &value); err != nil {
+							return fmt.Errorf("%s malformed %s: %w", apps[i].Name, key, err)
+						}
+					}
+				}
+			}
+
+		}
+		for _, settings := range append([]map[string]string{apps[i].Spec.Settings}, valuesOfSettings(apps[i].Spec.UserSettings)...) {
+			added, err := v1alpha1.ParseAddedEntrances(settings)
+			if err != nil {
+				return err
+			}
+			if err = v1alpha1.ValidatePersistedEntranceIDs(added); err != nil {
+				return err
+			}
+		}
+	}
 	// Reserved system subdomains (auth.<zone>, desktop.<zone>,
 	// wizard-<user>.<zone>, ...) can never be claimed as a custom
 	// third-level domain regardless of which apps exist.
@@ -1187,4 +1253,12 @@ func (h *Handler) getApplicationSubject(req *restful.Request, resp *restful.Resp
 		}
 	}
 	resp.WriteAsJson(ret)
+}
+
+func valuesOfSettings(m map[string]map[string]string) []map[string]string {
+	var out []map[string]string
+	for _, v := range m {
+		out = append(out, v)
+	}
+	return out
 }

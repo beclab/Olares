@@ -363,8 +363,8 @@ func (h *Handler) apps(req *restful.Request, resp *restful.Response) {
 				IsSysApp:        appcfg.AppName(am.Spec.AppName).IsSysApp(),
 				Namespace:       am.Spec.AppNamespace,
 				Owner:           owner,
-				Entrances:       appconfig.Entrances,
-				SharedEntrances: appconfig.SharedEntrances,
+				Entrances:       nil, // No URL before the Application CR allocates IDs.
+				SharedEntrances: nil,
 				Ports:           appconfig.Ports,
 				Icon:            appconfig.Icon,
 				Settings: map[string]string{
@@ -430,11 +430,17 @@ func (h *Handler) apps(req *restful.Request, resp *restful.Response) {
 			// app's install owner, so a non-owner listing a shared app sees their
 			// own authLevel / added-entrance overlays — matching handler_service.
 			v.Spec.Entrances = a.EffectiveEntrances(owner)
+			v.Spec.SharedEntrances = a.Spec.SharedEntrances
 			v.Spec.Ports = a.Spec.Ports
 			v.Labels = a.Labels
 		}
 	}
 	for _, app := range appsMap {
+		app.Spec.SharedEntrances, err = appcfg.GenSharedEntranceURL(req.Request.Context(), app)
+		if err != nil {
+			api.HandleError(resp, req, err)
+			return
+		}
 		if v, ok := appsEntranceMap[app.Name]; ok {
 			app.Status.EntranceStatuses = v.Status.EntranceStatuses
 		}
@@ -649,10 +655,10 @@ func (h *Handler) allUsersApps(req *restful.Request, resp *restful.Response) {
 				IsSysApp:        appcfg.AppName(am.Spec.AppName).IsSysApp(),
 				Namespace:       am.Spec.AppNamespace,
 				Owner:           am.Spec.AppOwner,
-				Entrances:       appconfig.Entrances,
+				Entrances:       nil, // No URL before the Application CR allocates IDs.
 				TailScale:       appconfig.TailScale,
 				Ports:           appconfig.Ports,
-				SharedEntrances: appconfig.SharedEntrances,
+				SharedEntrances: nil,
 				Icon:            appconfig.Icon,
 				Settings: map[string]string{
 					"title":         am.Annotations[constants.ApplicationTitleLabel],
@@ -707,6 +713,7 @@ func (h *Handler) allUsersApps(req *restful.Request, resp *restful.Response) {
 				v.Spec.Settings["version"] = version
 			}
 			v.Spec.Entrances = a.EffectiveEntrances(a.Spec.Owner)
+			v.Spec.SharedEntrances = a.Spec.SharedEntrances
 			v.Spec.Ports = a.Spec.Ports
 			v.Labels = a.Labels
 		}
