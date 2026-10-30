@@ -574,6 +574,89 @@ func TestBuildMultiUserHTTPSListener_EarliestCreatedWins(t *testing.T) {
 	assert.Equal(t, "chain_old", listener.FilterChains[0].Name)
 }
 
+// A custom-domain chain only carries its own virtual host, so a request on a
+// connection with SNI=custom domain but :authority=desktop.<zone> must match
+// only the catch-all default virtual host (421), while the zone chain still
+// routes desktop.<zone>.
+func TestBuildMultiUserHTTPSListener_CustomDomainChainIsolated(t *testing.T) {
+	desktopVH := &ir.VirtualHostIR{
+		Name:    "nonapp_desktop_alice",
+		Domains: []string{"desktop.alice.example.com"},
+		Routes:  []*ir.HTTPRouteIR{{Name: "desktop", PathPrefix: "/", Cluster: "nonapp_desktop_alice"}},
+	}
+	customVH := &ir.VirtualHostIR{
+		Name:    "custom_alice_myapp_web",
+		Domains: []string{"aaa.com"},
+		Routes:  []*ir.HTTPRouteIR{{Name: "custom", PathPrefix: "/", Cluster: "custom_alice_myapp_web"}},
+	}
+	defaultResp := &ir.DirectResponseIR{Status: 421, Body: "olares", ContentType: "text/html"}
+
+	httpListeners := []*ir.HTTPListenerIR{
+		{
+			Name:            "https_443_alice_alice_example_com",
+			Port:            443,
+			TLS:             true,
+			SNIMatches:      []string{"*.alice.example.com", "alice.example.com"},
+			TLSCert:         &ir.SecretIR{Name: "main-tls-alice", CertData: "cert", KeyData: "key"},
+			UserName:        "alice",
+			VirtualHosts:    []*ir.VirtualHostIR{desktopVH, customVH},
+			DefaultResponse: defaultResp,
+			PingRoute:       true,
+		},
+		{
+			Name:            "https_443_alice_custom_aaa_com",
+			Port:            443,
+			TLS:             true,
+			SNIMatches:      []string{"aaa.com"},
+			TLSCert:         &ir.SecretIR{Name: "custom-tls-alice-aaa.com", CertData: "cert", KeyData: "key"},
+			UserName:        "alice",
+			VirtualHosts:    []*ir.VirtualHostIR{customVH},
+			DefaultResponse: defaultResp,
+			PingRoute:       true,
+		},
+	}
+	clusterMap := map[string]*ir.ClusterIR{
+		"nonapp_desktop_alice":   {Name: "nonapp_desktop_alice", Host: "desktop.svc", Port: 80, UseDNS: true},
+		"custom_alice_myapp_web": {Name: "custom_alice_myapp_web", Host: "myapp.svc", Port: 8080, UseDNS: true},
+	}
+
+	listener, routeConfigs, _ := buildMultiUserHTTPSListener(443, false, httpListeners, clusterMap, make(map[string]bool))
+	require.NotNil(t, listener)
+	require.Len(t, listener.FilterChains, 2)
+	require.Len(t, routeConfigs, 2)
+
+	vhostFor := func(rc *routev3.RouteConfiguration, host string) *routev3.VirtualHost {
+		var wildcard *routev3.VirtualHost
+		for _, vh := range rc.VirtualHosts {
+			for _, d := range vh.Domains {
+				if d == host {
+					return vh
+				}
+				if d == "*" {
+					wildcard = vh
+				}
+			}
+		}
+		return wildcard
+	}
+
+	zoneRC := asRouteConfig(t, routeConfigs[0])
+	customRC := asRouteConfig(t, routeConfigs[1])
+	require.Equal(t, "https_443_alice_alice_example_com_routes", zoneRC.Name)
+	require.Equal(t, "https_443_alice_custom_aaa_com_routes", customRC.Name)
+
+	assert.Equal(t, "nonapp_desktop_alice", vhostFor(zoneRC, "desktop.alice.example.com").Name)
+
+	forged := vhostFor(customRC, "desktop.alice.example.com")
+	require.NotNil(t, forged)
+	assert.Equal(t, "default_https_443_alice_custom_aaa_com", forged.Name)
+	last := forged.Routes[len(forged.Routes)-1]
+	require.NotNil(t, last.GetDirectResponse())
+	assert.Equal(t, uint32(421), last.GetDirectResponse().Status)
+
+	assert.Equal(t, "custom_alice_myapp_web", vhostFor(customRC, "aaa.com").Name)
+}
+
 // Chains for distinct SNIs must all be preserved.
 func TestBuildMultiUserHTTPSListener_DistinctSNIKept(t *testing.T) {
 	mk := func(domain string) *ir.HTTPListenerIR {
