@@ -2,7 +2,7 @@
 connectionVersion: "1.12.7"
 connectionLatestPath: /use-cases/perplexica
 outline: [2, 3]
-description: Self-host Vane (formerly Perplexica) on Olares as a private Perplexity alternative. Get cited answers using models through Olares Router and SearXNG search.
+description: Run Vane on Olares for private AI search. Connect chat models through Router and use built-in embeddings with SearXNG to get answers with source citations.
 head:
   - - meta
     - name: keywords
@@ -32,10 +32,13 @@ In this guide, you will learn how to:
 Before you begin, you need:
 
 <!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
-- Qwen3.8-27B (llama.cpp) installed from Market.
-- SearXNG installed from Market and running.
+- [SearXNG](searxng.md) installed from Market and running.
+- The following models:
 
-Vane includes embedding models. You do not need to install EmbeddingGemma for this workflow.
+  | Model type | Model | How to get it |
+  | :--- | :--- | :--- |
+  | Chat | Qwen3.8-27B (llama.cpp) | Install from Market |
+  | Embedding | all-MiniLM-L6-v2 | Built into Vane |
 
 <!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
@@ -48,7 +51,7 @@ Vane includes embedding models. You do not need to install EmbeddingGemma for th
 
 ## Configure models
 
-Configure the chat connection and embedding model in Vane's own settings. In app package version 1.1.35, the custom OpenAI environment variables exposed in Olares Settings do not configure Vane's chat connection. Use the steps below.
+In Vane, connect to Olares Router for chat and select a built-in embedding model.
 
 ### Get the Router connection
 

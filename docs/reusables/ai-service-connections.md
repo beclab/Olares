@@ -23,9 +23,13 @@ This guide uses Qwen3.8-27B (llama.cpp) as the default chat model. For connectio
 
    <!-- ![Copy the Router Base URL for apps in Olares](/images/manual/use-cases/router-how-to-call-model.png#bordered) -->
 
-4. Use `default-chat` as the model name in the client. Apps in Olares do not need a Router API key. Leave the key empty where possible, or use `olares` if the client requires a value.
+4. For the model name, use `default-chat`.
 
-   `default-chat` is a routing name and is not returned by the model-list API. Add it manually if the client fetches a model list. If the client only supports selecting a listed model, use the full model name from Router instead.
+   :::info Selecting a model in your app
+   `default-chat` is a routing name and does not appear in model lists loaded from Router. If the app you are connecting to Router loads a model list, add `default-chat` manually. If the app only supports selecting a listed model, select the full model name shown in Router's **How to call this model** window.
+   :::
+
+5. For the API key, leave the field empty. If the app you are connecting to Router requires a value, enter `olares`.
 <!-- #endregion get-model-connection-details -->
 
 <!-- #region use-different-model -->
@@ -52,9 +56,13 @@ When a client connects to another Olares app, it uses that app's endpoint as the
 
    <!-- ![Copy the Router Base URL for apps in Olares](/images/manual/use-cases/router-how-to-call-model.png#bordered) -->
 
-4. Use `default-chat` as the model name in the client. Apps in Olares do not need a Router API key. Leave the key empty where possible, or use `olares` if the client requires a value.
+4. For the model name, use `default-chat`.
 
-   `default-chat` is a routing name and is not returned by the model-list API. Add it manually if the client fetches a model list. If the client only supports selecting a listed model, use the full model name from Router instead.
+   :::info Selecting a model in your app
+   `default-chat` is a routing name and does not appear in model lists loaded from Router. If the app you are connecting to Router loads a model list, add `default-chat` manually. If the app only supports selecting a listed model, select the full model name shown in Router's **How to call this model** window.
+   :::
+
+5. For the API key, leave the field empty. If the app you are connecting to Router requires a value, enter `olares`.
 <!-- #endregion get-model-connection-details-anthropic -->
 
 <!-- #region get-embedding-model-connection-details-openai -->

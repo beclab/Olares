@@ -23,9 +23,13 @@
 
    <!-- ![复制 Olares 内应用使用的 Router Base URL](/images/manual/use-cases/router-how-to-call-model.png#bordered) -->
 
-4. 在客户端中将模型名称填写为 `default-chat`。Olares 内的应用无需 Router API 密钥。允许留空时留空，必填时可填写 `olares`。
+4. 模型名称使用 `default-chat`。
 
-   `default-chat` 是路由名称，不会出现在模型列表 API 的返回结果中。如果客户端自动获取模型列表，需要手动添加它。如果客户端只允许选择列表中的模型，请改用 Router 中显示的完整模型名称。
+   :::info 在应用中选择模型
+   `default-chat` 是路由名称，不会出现在从 Router 获取的模型列表中。如果要连接 Router 的应用会加载模型列表，请手动添加 `default-chat`。如果应用只允许选择列表中的模型，请选择 Router 的 **How to call this model** 窗口中显示的完整模型名称。
+   :::
+
+5. API 密钥留空。如果要连接 Router 的应用要求填写此字段，请填入 `olares`。
 <!-- #endregion get-model-connection-details -->
 
 <!-- #region use-different-model -->
@@ -52,9 +56,13 @@
 
    <!-- ![复制 Olares 内应用使用的 Router Base URL](/images/manual/use-cases/router-how-to-call-model.png#bordered) -->
 
-4. 在客户端中将模型名称填写为 `default-chat`。Olares 内的应用无需 Router API 密钥。允许留空时留空，必填时可填写 `olares`。
+4. 模型名称使用 `default-chat`。
 
-   `default-chat` 是路由名称，不会出现在模型列表 API 的返回结果中。如果客户端自动获取模型列表，需要手动添加它。如果客户端只允许选择列表中的模型，请改用 Router 中显示的完整模型名称。
+   :::info 在应用中选择模型
+   `default-chat` 是路由名称，不会出现在从 Router 获取的模型列表中。如果要连接 Router 的应用会加载模型列表，请手动添加 `default-chat`。如果应用只允许选择列表中的模型，请选择 Router 的 **How to call this model** 窗口中显示的完整模型名称。
+   :::
+
+5. API 密钥留空。如果要连接 Router 的应用要求填写此字段，请填入 `olares`。
 <!-- #endregion get-model-connection-details-anthropic -->
 
 <!-- #region get-embedding-model-connection-details-openai -->
