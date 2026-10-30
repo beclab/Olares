@@ -14,7 +14,7 @@ doc_updated: "2026-10-28"
 
 MemPalace is a local memory service for AI agents. It stores notes and conversations in their original wording and helps you find relevant passages by meaning.
 
-On Olares, your imported memory persists independently of an agent's chat sessions. Hermes Agent and OpenClaw can use the same memory through MCP, while Files holds your source documents. The default text embedding and search run locally without a cloud API key.
+On Olares, your imported memory persists independently of an agent's chat sessions. Hermes Agent and OpenClaw can use the same memory through MCP, while Olares Files holds your source documents. The default text embedding and search run locally without a cloud API key.
 
 This guide follows a fictional kitchen renovation project called Lakeview. You will import its brief, use Hermes Agent to search the imported file and save a meeting note, then retrieve that note in a new conversation and from OpenClaw. The MCP connection gives each agent memory tools. This workflow does not configure automatic saving or recall: you explicitly ask the agents to search and save records.
 
@@ -77,7 +77,11 @@ The first import or memory write downloads a local embedding model of about 80 M
    mempalace mine /home/app/userdata/Home/MemPalace-demo --wing lakeview-home
    ```
 
-   Wait for `Done.` and the number of filed drawers. The Home mount is read-only. MemPalace stores the imported memory in its own application data.
+   A successful import shows `brief.md` processed and one drawer filed:
+
+   ![MemPalace imports brief.md and files one drawer](/images/manual/use-cases/mempalace-import.png#bordered)
+
+   The Home mount is read-only. MemPalace stores the imported memory in its own application data.
 
 4. Search the imported note for the cabinet delivery date:
 
@@ -154,6 +158,10 @@ You can use Hermes CLI without a messaging channel. This section shows Hermes re
    What's the approved budget and who supplies the cabinets? Include the source.
    ```
 
+   Hermes should find the budget and supplier in `brief.md` and identify the source.
+
+   ![Ask Hermes for info](/images/manual/use-cases/mempalace-hermes-chat1.png#bordered)
+
 ### Save a meeting note and recall it later
 
 The meeting note repeats the delivery details from the brief and adds a project reference.
@@ -168,11 +176,9 @@ The meeting note repeats the delivery details from the brief and adds a project 
    Confirm after the memory tool succeeds.
    ```
 
-   Hermes might confirm the save like this:
+   Hermes may show a confirmation like this:
 
-   ```text
-   Confirmed. The note is in MemPalace under wing lakeview-agent, room client-meeting.
-   ```
+   ![Hermes confirms the Lakeview meeting note was saved in MemPalace](/images/manual/use-cases/mempalace-hermes-chat2.png#bordered)
 
 2. Type `/exit` and press **Enter** to leave Hermes CLI. Then run `hermes chat` to start a fresh conversation.
 
@@ -184,7 +190,9 @@ The meeting note repeats the delivery details from the brief and adds a project 
    Include the source drawer ID.
    ```
 
-4. Check that Hermes finds the meeting note and cites its source drawer.
+4. Hermes may return the meeting details and source drawer ID like this:
+
+   ![Hermes retrieves the Lakeview meeting details and source drawer ID](/images/manual/use-cases/mempalace-hermes-chat3.png#bordered)
 
 ## Use the memory from OpenClaw
 
@@ -209,6 +217,8 @@ OpenClaw can use the same MemPalace service to retrieve the meeting note saved b
    What delivery date, contact, and project reference did we record?
    Include the source drawer ID.
    ```
+
+   ![Ask OpenClaw](/images/manual/use-cases/mempalace-openclaw.png#bordered)
 
 OpenClaw should return the delivery date, contact, and project reference from the meeting note saved by Hermes.
 

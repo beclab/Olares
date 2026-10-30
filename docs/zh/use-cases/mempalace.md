@@ -14,7 +14,7 @@ doc_updated: "2026-10-30"
 
 MemPalace 是面向 AI Agent 的本地记忆服务。它按原文保存笔记和对话，并帮助你通过语义搜索找到相关内容。
 
-在 Olares 上，导入的记忆独立于 Agent 的聊天会话持久保存。Hermes Agent 和 OpenClaw 可以通过 MCP 使用同一个记忆库，源文档则保存在 Files 中。默认的文本嵌入和搜索在本地运行，无需云端 API 密钥。
+在 Olares 上，导入的记忆独立于 Agent 的聊天会话持久保存。Hermes Agent 和 OpenClaw 可以通过 MCP 使用同一个记忆库，源文档则保存在 Olares Files 中。默认的文本嵌入和搜索在本地运行，无需云端 API 密钥。
 
 本指南以虚构的 Lakeview 厨房翻新项目为例。你将导入项目简报，让 Hermes Agent 查找文件并保存会议笔记，再在新会话和 OpenClaw 中找回这条笔记。MCP 连接为 Agent 提供记忆工具。本流程不会配置自动保存或自动召回，你需要明确要求 Agent 搜索或保存记录。
 
@@ -77,7 +77,11 @@ MemPalace 将保存的文本分为三个层级：
    mempalace mine /home/app/userdata/Home/MemPalace-demo --wing lakeview-home
    ```
 
-   等待输出 `Done.` 和已归档的 Drawer 数量。Home 以只读方式挂载。MemPalace 会将导入的记忆保存在自己的应用数据中。
+   成功导入后，输出会显示 `brief.md` 已处理，并归档了一条 Drawer：
+
+   ![MemPalace 导入 brief.md 并归档一条 Drawer](/images/manual/use-cases/mempalace-import.png#bordered)
+
+   Home 以只读方式挂载。MemPalace 会将导入的记忆保存在自己的应用数据中。
 
 4. 搜索导入笔记中的橱柜送货日期：
 
@@ -154,6 +158,10 @@ MemPalace 将保存的文本分为三个层级：
    What's the approved budget and who supplies the cabinets? Include the source.
    ```
 
+   Hermes 应从 `brief.md` 中找出预算和供应商，并标明来源。
+
+   ![Hermes 查找预算、供应商和来源](/images/manual/use-cases/mempalace-hermes-chat1.png#bordered)
+
 ### 保存会议笔记并在新会话中找回
 
 这条会议笔记重复了简报中的送货信息，并增加了项目编号。
@@ -168,11 +176,9 @@ MemPalace 将保存的文本分为三个层级：
    Confirm after the memory tool succeeds.
    ```
 
-   Hermes 可能像下面这样确认保存：
+   Hermes 可能会显示类似下面的保存确认：
 
-   ```text
-   Confirmed. The note is in MemPalace under wing lakeview-agent, room client-meeting.
-   ```
+   ![Hermes 确认已将 Lakeview 会议笔记保存到 MemPalace](/images/manual/use-cases/mempalace-hermes-chat2.png#bordered)
 
 2. 输入 `/exit` 并按 **Enter** 退出 Hermes CLI，然后运行 `hermes chat` 开始新会话。
 
@@ -184,7 +190,9 @@ MemPalace 将保存的文本分为三个层级：
    Include the source drawer ID.
    ```
 
-4. 检查 Hermes 是否找回会议笔记并给出来源 Drawer ID。
+4. Hermes 可能会像下面这样返回会议详情和来源 Drawer ID：
+
+   ![Hermes 找回 Lakeview 会议详情和来源 Drawer ID](/images/manual/use-cases/mempalace-hermes-chat3.png#bordered)
 
 ## 从 OpenClaw 使用这份记忆
 
