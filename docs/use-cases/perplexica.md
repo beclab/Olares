@@ -23,7 +23,7 @@ This guide uses Qwen3.8-27B (llama.cpp) through Olares Router for answers and Se
 
 In this guide, you will learn how to:
 
-- Connect Vane to SearXNG using an application environment variable in Olares Settings.
+- Connect Vane to SearXNG in Vane's settings or through an application environment variable in Olares Settings.
 - Select a Router chat model and a built-in embedding model in Vane.
 - Ask a question and review the cited sources.
 
@@ -46,23 +46,9 @@ Vane includes embedding models. You do not need to install EmbeddingGemma for th
 
 2. Click **Get**, then **Install**, and wait for installation to complete.
 
-## Connect SearXNG
-
-Configure the search connection in Olares Settings before opening Vane for the first time.
-
-1. Open Olares **Settings** and go to **Applications** > **SearXNG** > **Entrances** > **SearXNG**.
-2. Copy the **Endpoint** URL. Use this URL as the instance address without adding `/search` or query parameters.
-3. Go to **Applications** > **Vane** > **Manage environment variables**.
-4. Click the edit icon beside `SEARXNG_API_URL`, paste the endpoint URL, and click **Confirm**.
-5. Click **Apply**. Vane restarts automatically. Wait for it to return to the running state before opening it.
-
-:::info Updating an existing search connection
-Vane uses `SEARXNG_API_URL` to initialize an empty search address. An address already saved in Vane takes precedence over the environment variable. To change an existing connection, open Vane's bottom-left **Settings** > **Search**, update **SearXNG URL**, and click outside the field to save it.
-:::
-
 ## Configure models
 
-Configure the chat connection and embedding model in Vane's own settings.
+Configure the chat connection and embedding model in Vane's own settings. In app package version 1.1.35, the custom OpenAI environment variables exposed in Olares Settings do not configure Vane's chat connection. Use the steps below.
 
 ### Get the Router connection
 
@@ -87,7 +73,37 @@ Before continuing, confirm that the chat model shows **Callable** on Router's **
 6. Under **Select Chat Model**, choose **Olares Router - Router chat**. Under **Select Embedding Model**, choose the built-in **Transformers - all-MiniLM-L6-v2** model.
 7. In the setup wizard, click **Finish**.
 
+If the newly added model does not appear in **Select Chat Model**, refresh the page and reopen **Settings** > **Models** to select it.
+
 To change models or connections later, open Vane's **Settings** > **Models**.
+
+## Connect SearXNG
+
+Get the SearXNG address, then choose one of the two configuration methods below. Use Vane's settings for an existing setup. The environment variable can initialize the address before first launch.
+
+1. Open Olares **Settings** and go to **Applications** > **SearXNG** > **Entrances** > **SearXNG**.
+2. Copy the **Endpoint** URL. Use this URL as the instance address without adding `/search` or query parameters.
+
+### Option 1: Configure in Vane
+
+1. Open Vane and go to the bottom-left **Settings** > **Search**.
+2. Paste the endpoint URL into **SearXNG URL**.
+3. Click outside the field to save it.
+
+### Option 2: Configure through an environment variable
+
+1. Open Olares **Settings** and go to **Applications** > **Vane** > **Manage environment variables**.
+2. Click the edit icon beside `SEARXNG_API_URL`, paste the endpoint URL, and click **Confirm**.
+3. Click **Apply**. Vane restarts automatically. Wait for it to return to the running state before opening it.
+4. Open Vane's **Settings** > **Search** and check that **SearXNG URL** shows the address you entered.
+
+:::info Existing search settings take precedence
+Vane uses `SEARXNG_API_URL` only when its saved search address is empty. If an address is already saved, use Option 1 to change it. You do not need to configure both methods.
+:::
+
+:::info Can I use Router's default-search?
+Vane's current search integration connects directly to a SearXNG instance. Enter the SearXNG endpoint in **SearXNG URL**, not `default-search` or the Router Base URL. Configuring a search tool in Router does not connect it to Vane. For an app that uses Router's search tools, see [Run a deep research task with Lares](lares.md#run-a-deep-research-task).
+:::
 
 ## Start asking questions
 
