@@ -13,6 +13,8 @@ head:
 
 This guide helps users understand how to install, update, and uninstall applications through the Market. We'll also cover how to install custom applications.
 
+To install and manage apps from your phone, see [Manage apps with LarePass](../../larepass/manage-apps.md).
+
 ## Find applications
 
 When you open Market, the **Discover** page presents curated sections such as featured picks, community choices, top apps, and latest releases. You can also browse apps by category, including Agents, Models, Workspace, Homelab, and Developer.
