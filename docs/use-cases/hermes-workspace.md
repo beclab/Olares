@@ -5,7 +5,7 @@ head:
   - - meta
     - name: keywords
       content: "Olares, Hermes Workspace, Router, AI chat, workspace files"
-app_version: "0.0.7"
+app_version: "0.0.9"
 doc_version: "1.0"
 doc_updated: "2026-10-30"
 ---
@@ -60,8 +60,24 @@ Files stay in this application's workspace. Adding a file does not automatically
 
 Select the conversation under **SESSIONS** to reopen its history. Conversations, workspace files, and local settings remain available after the application restarts.
 
-## Advanced agent features
+## Connect Hermes Agent for tool tasks
 
-This package provides basic Router conversations and workspace files. Agent tools, scheduled jobs, skills, memory, and orchestration require a separately installed and configured Hermes Agent gateway and dashboard. They are not enabled by the basic Router connection.
+Install and configure [Hermes Agent](hermes.md) with Router `default-chat`. In its application environment settings, enable **API_SERVER_ENABLED** and set **HERMES_API_SERVER_KEY** to a strong key of at least 16 characters. Keep this key private.
 
-See [Hermes Agent](hermes.md) for the agent application. Connecting an external gateway is an advanced configuration and is outside this walkthrough.
+1. In Settings, open **Applications** > **Hermes Agent** > **Entrances**. Obtain the URLs for **Hermes Gateway API** and **Dashboard** from this instance.
+2. Open **Applications** > **Hermes Workspace** > **Environment**, then set these fields:
+
+   | Field | Value |
+   | :--- | :--- |
+   | **HERMES_GATEWAY_URL** | The Hermes Gateway API entrance URL |
+   | **HERMES_DASHBOARD_URL** | The Dashboard entrance URL |
+   | **HERMES_API_TOKEN** | The same value as Hermes Agent's HERMES_API_SERVER_KEY |
+
+3. Wait for the application to apply the changes, then reopen Hermes Workspace. Agent skills and scheduled jobs become available through the connected backend.
+4. Start a new conversation and ask the agent to create a small event checklist in its own working directory, read the file back, and report the result. Review the tool results along with the reply.
+
+Hermes Agent executes tools in its own container. Its files and persistent memory are separate from the browser workspace files and the Workspace **Memory** notes. Use the Hermes Agent storage and Dashboard to inspect agent-created files and memory.
+
+The connected backend supports tool tasks, skill management, persistent memory, and scheduled jobs. A job can execute model requests while unattended. Pause a trial job after checking its output.
+
+A delegated child can finish and return a result even when the parent conversation has already ended its turn. Ask the parent to continue if its final report has not appeared. Full Workspace multi-agent orchestration and MCP management depend on backend capabilities beyond this walkthrough.

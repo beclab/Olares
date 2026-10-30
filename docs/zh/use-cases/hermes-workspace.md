@@ -5,7 +5,7 @@ head:
   - - meta
     - name: keywords
       content: "Olares, Hermes Workspace, Router, AI 对话, 工作区文件"
-app_version: "0.0.7"
+app_version: "0.0.9"
 doc_version: "1.0"
 doc_updated: "2026-10-30"
 ---
@@ -64,8 +64,24 @@ Hermes Workspace 将 AI 对话和工作区文件集中在浏览器中。在 Olar
 
 在 **SESSIONS** 下选择对话，即可查看历史记录。应用重启后，对话、工作区文件和本地设置仍然保留。
 
-## 高级智能体功能
+## 连接 Hermes Agent 执行工具任务
 
-本应用提供基础 Router 对话和工作区文件管理。工具调用、定时任务、技能、记忆和编排功能需要另行安装并配置 Hermes Agent 网关和仪表盘，基础 Router 连接不会启用这些功能。
+安装并配置 [Hermes Agent](hermes.md)，使用 Router `default-chat`。在其应用环境变量中启用 **API_SERVER_ENABLED**，并将 **HERMES_API_SERVER_KEY** 设置为至少 16 个字符的强密钥。请妥善保管该密钥。
 
-智能体应用的使用方式请参阅 [Hermes Agent](hermes.md)。连接外部网关属于高级配置，不在本指南范围内。
+1. 在设置中打开**应用** > **Hermes Agent** > **入口**，获取当前实例的 **Hermes Gateway API** 和 **Dashboard** 地址。
+2. 打开**应用** > **Hermes Workspace** > **环境变量**，填写以下字段：
+
+   | 字段 | 值 |
+   | :--- | :--- |
+   | **HERMES_GATEWAY_URL** | Hermes Gateway API 入口地址 |
+   | **HERMES_DASHBOARD_URL** | Dashboard 入口地址 |
+   | **HERMES_API_TOKEN** | 与 Hermes Agent 的 HERMES_API_SERVER_KEY 相同的值 |
+
+3. 等待应用完成配置更新，再打开 Hermes Workspace。连接后端后，即可使用智能体技能和定时任务。
+4. 新建对话，让智能体在自己的工作目录中创建一份简短的活动清单，读回文件并汇报结果。结合工具返回内容检查回复。
+
+Hermes Agent 在自己的容器中执行工具。其文件和持久记忆与浏览器工作区文件、Workspace 的 **Memory** 笔记分别存储。请通过 Hermes Agent 的存储目录和 Dashboard 检查智能体生成的文件与记忆。
+
+连接后的后端支持工具任务、技能管理、持久记忆和定时任务。定时任务可以在无人操作时调用模型。检查试用任务的输出后，请将其暂停。
+
+委派的子任务可能在父对话结束当前轮次后才完成并返回结果。若尚未出现最终报告，可以要求父对话继续。完整的 Workspace 多智能体编排和 MCP 管理依赖更多后端能力，不在本指南范围内。
