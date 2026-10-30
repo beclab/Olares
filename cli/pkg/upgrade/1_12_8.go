@@ -10,31 +10,24 @@ import (
 	"github.com/beclab/Olares/cli/version"
 )
 
-var version_1_12_7 = semver.MustParse("1.12.7")
+var version_1_12_8 = semver.MustParse("1.12.8")
 
-type upgrader_1_12_7 struct {
-	breakingUpgraderBase
+type upgrader_1_12_8 struct {
+	upgraderBase
 }
 
-func (u upgrader_1_12_7) Version() *semver.Version {
+func (u upgrader_1_12_8) Version() *semver.Version {
 	cliVersion, err := semver.NewVersion(version.VERSION)
 	if err != nil {
-		return version_1_12_7
+		return version_1_12_8
 	}
-	if samePatchLevelVersion(version_1_12_7, cliVersion) && getReleaseLineOfVersion(cliVersion) == mainLine {
+	if samePatchLevelVersion(version_1_12_8, cliVersion) && getReleaseLineOfVersion(cliVersion) == mainLine {
 		return cliVersion
 	}
-	return version_1_12_7
+	return version_1_12_8
 }
 
-func (u upgrader_1_12_7) AddedBreakingChange() bool {
-	if u.Version().Equal(version_1_12_7) {
-		return true
-	}
-	return false
-}
-
-func (u upgrader_1_12_7) PrepareForUpgrade() []task.Interface {
+func (u upgrader_1_12_8) PrepareForUpgrade() []task.Interface {
 	tasks := refreshBackupETCDScript()
 	tasks = append(tasks, migrateContainerdConfigV3()...)
 	tasks = append(tasks, &task.LocalTask{
@@ -70,10 +63,10 @@ func refreshBackupETCDScript() []task.Interface {
 	}
 }
 
-func (u upgrader_1_12_7) PostUpgrade() []task.Interface {
+func (u upgrader_1_12_8) PostUpgrade() []task.Interface {
 	return append(regenerateKubeFiles(), u.upgraderBase.PostUpgrade()...)
 }
 
 func init() {
-	registerMainUpgrader(upgrader_1_12_7{})
+	registerMainUpgrader(upgrader_1_12_8{})
 }
