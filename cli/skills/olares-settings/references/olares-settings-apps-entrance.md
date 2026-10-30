@@ -17,7 +17,7 @@ olares-cli settings apps domain set firefox www --third-level my-firefox
 olares-cli settings apps policy set firefox www --default-policy two_factor
 ```
 
-For the complete route ID workflow, see [Custom URL](../../olares-chart/references/olares-chart-custom-domain.md).
+For the complete route ID workflow, enter the [`olares-chart`](../../olares-chart/SKILL.md) skill and follow its custom URL route.
 
 ## `domain set` — custom route ID
 

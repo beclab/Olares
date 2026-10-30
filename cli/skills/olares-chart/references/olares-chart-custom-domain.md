@@ -1,7 +1,7 @@
 # Custom URL: route ID (post-deploy)
 
 > **Prerequisite:** read the parent [`../SKILL.md`](../SKILL.md) first. The app must be installed and `running`.
-> **Verb mechanics** live in the [`olares-settings`](../../olares-settings/SKILL.md) skill under [per-entrance configuration](../../olares-settings/references/olares-settings-apps-entrance.md).
+> **Verb mechanics:** enter the [`olares-settings`](../../olares-settings/SKILL.md) skill and follow its per-entrance configuration route.
 
 A custom route ID gives an application a memorable URL within the user's Olares domain. Olares manages DNS and TLS for that URL.
 
