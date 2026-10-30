@@ -27,13 +27,6 @@ const redirectSources = new Set<string>(
   [...Object.keys(redirects), ...Object.keys(temporaryRedirects)].map(normalizeRoute)
 );
 
-// Deep, low-value reference pages that inflate "Discovered – currently not
-// indexed" without real search demand. noindex them in both locales so crawl
-// budget concentrates on the pages users actually search for. Matched against
-// the locale-stripped route (so it covers /docs/... and /docs/zh/... alike).
-const noindexRoutePattern =
-  /^developer\/contribute\/olares-id\/(contract|verifiable-credential)\//;
-
 // Archived (non-latest) versioned doc builds deploy under /docs/<version>/
 // (e.g. /docs/1.12.4/...) and duplicate the latest docs almost verbatim,
 // which is the main driver of the "duplicate content" / "missing canonical"
@@ -253,9 +246,7 @@ export default defineVersionedConfig2(withMermaid({
     // we don't shift source line numbers, which would break `@include` ranges
     // in files that embed this one as a snippet.
     // Archived versioned builds noindex every page (see isArchivedVersionBuild).
-    const localeStrippedRoute = pageData.relativePath.replace(/^zh\//, "");
-    const noindexByPath = noindexRoutePattern.test(localeStrippedRoute);
-    if (isArchivedVersionBuild || pageData.frontmatter?.noindex || noindexByPath) {
+    if (isArchivedVersionBuild || pageData.frontmatter?.noindex) {
       pageData.frontmatter.head ??= [];
       pageData.frontmatter.head.push([
         'meta',
