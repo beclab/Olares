@@ -296,6 +296,15 @@ func TestServicePortsValidation(t *testing.T) {
 		{name: "expose port above range", ports: []ServicePort{{
 			Name: "api", Host: "api", Port: 4712, ExposePort: 65536,
 		}}, wantErr: "port.exposePort must be between 1 and 65535"},
+		{name: "reserved expose port 81", ports: []ServicePort{{
+			Name: "api", Host: "api", Port: 4712, ExposePort: 81,
+		}}, wantErr: "port.exposePort must not be a reserved port (81, 443, 444)"},
+		{name: "reserved expose port 443", ports: []ServicePort{{
+			Name: "api", Host: "api", Port: 4712, ExposePort: 443,
+		}}, wantErr: "port.exposePort must not be a reserved port (81, 443, 444)"},
+		{name: "reserved expose port 444", ports: []ServicePort{{
+			Name: "api", Host: "api", Port: 4712, ExposePort: 444,
+		}}, wantErr: "port.exposePort must not be a reserved port (81, 443, 444)"},
 		{name: "uppercase protocol", ports: []ServicePort{{
 			Name: "api", Host: "api", Port: 4712, Protocol: "TCP",
 		}}, wantErr: `port.protocol must be one of "", "tcp", "udp"`},

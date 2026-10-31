@@ -54,6 +54,8 @@ var (
 	validAuthLevels      = []any{"", "public", "private", "internal"}
 	validOpenMethods     = []any{"", "default", "iframe", "window"}
 	validPortProtocols   = []any{"", "tcp", "udp"}
+
+	reservedExposePorts = []any{int32(81), int32(443), int32(444)}
 	// validOverlayProtocols enumerates the protocols an overlayGateway
 	// entrance may declare. An empty value is allowed and means the
 	// entrance is reachable over both tcp and udp.
@@ -236,6 +238,7 @@ func validateServicePortValue(v interface{}) error {
 			validation.When(p.ExposePort != 0,
 				validation.Min(int32(1)).Error("port.exposePort must be between 1 and 65535"),
 				validation.Max(int32(65535)).Error("port.exposePort must be between 1 and 65535"),
+				validation.NotIn(reservedExposePorts...).Error("port.exposePort must not be a reserved port (81, 443, 444)"),
 			),
 		),
 		validation.Field(&p.Protocol,
