@@ -2,6 +2,8 @@ package utils
 
 import (
 	"context"
+	"net"
+	"net/http"
 	"slices"
 	"strings"
 	"time"
@@ -38,7 +40,7 @@ func NotifyBrokenMounts(ctx context.Context) {
 		return
 	}
 
-	nodeName, _, nodeRole, err := GetThisNodeName(ctx, client)
+	nodeName, nodeIP, nodeRole, err := GetThisNodeName(ctx, client)
 	if err != nil {
 		klog.Error("failed to get this node name: ", err)
 		return
@@ -76,9 +78,18 @@ func NotifyBrokenMounts(ctx context.Context) {
 				return
 			}
 
-			// send notification to the files pod, and let it handle the broken mount point
-			url := "http://" + ip + ":8080/api/mounted_states/"
-			httpClient := resty.New().SetTimeout(5 * time.Second)
+			// send notification to the files pod, and let it handle the broken mount point.
+			// The pod's backend only listens on loopback, so go through its nginx
+			// on port 80, and connect from this node's IP, which files expects
+			// for mount reports.
+			url := "http://" + ip + "/api/mounted_states/"
+			dialer := &net.Dialer{Timeout: 5 * time.Second}
+			if local := net.ParseIP(nodeIP); local != nil {
+				dialer.LocalAddr = &net.TCPAddr{IP: local}
+			}
+			httpClient := resty.New().
+				SetTimeout(5 * time.Second).
+				SetTransport(&http.Transport{DialContext: dialer.DialContext})
 			res, err := httpClient.R().
 				SetContext(ctx).
 				SetHeader("Content-Type", "application/json").
