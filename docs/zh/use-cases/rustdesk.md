@@ -16,7 +16,7 @@ doc_updated: "2026-10-31"
 
 # 使用 RustDesk 远程操作家里的电脑
 
-借助 RustDesk 和 LarePass 专用网络，你可以在笔记本上远程操作家里的电脑。RustDesk Server 运行在 Olares 上，帮助两台电脑建立连接，并在无法直连时转发远程桌面数据。
+RustDesk 支持通过桌面端或移动端远程操作电脑。RustDesk Server 运行在 Olares 上，帮助设备建立连接，并在无法直连时转发远程桌面数据。本文以笔记本访问家里的电脑为例。Android 和 iOS 的设置方法参阅 [RustDesk 客户端指南](https://rustdesk.com/docs/en/client/)。
 
 ## 学习目标
 
@@ -30,42 +30,69 @@ doc_updated: "2026-10-31"
 
 - Olares 1.12.7 或更高版本。
 - 两台电脑都已安装 [RustDesk 客户端](https://rustdesk.com/download)。
-- 两台电脑都已安装 LarePass，并登录到同一台 Olares 设备。参阅 [LarePass 专用网络访问](../manual/larepass/private-network.md)。
 
 ## 安装 RustDesk Server
 
 1. 打开应用市场，搜索“RustDesk Server”。
 2. 点击**获取**，然后点击**安装**，等待安装完成。
 
-## 获取服务器配置
+## 配置连接
 
-1. 从启动台打开 RustDesk Server。应用会显示连接配置页，列出服务器地址和公钥。接下来需要将这些值填入两台电脑的 RustDesk 客户端。
-2. 选择 **VPN 连接**。
+选择下面一种连接方式，按步骤配置两台电脑。
 
-   ![RustDesk Server 页面中的 VPN 服务器地址和公钥](/images/manual/use-cases/rustdesk-vpn-settings.png#bordered)
+- **LarePass 专用网络**：适合从其他网络访问家里的电脑。两台电脑都通过 LarePass 专用网络连接 Olares，并填写服务器的域名地址。
+- **内网 Overlay**：适合两台电脑都与 Olares 位于同一网络的情况。两台客户端都填写 RustDesk Server 分配到的内网 IP，无需开启 LarePass 专用网络。
 
-配置客户端时，从自己的应用页面复制地址和 Key。
+:::warning 两台电脑都需要能访问中继地址
+两台电脑应使用同一种连接方式。如果一台客户端填写 VPN 域名地址，另一台填写 Overlay IP，而其中一台无法访问本次连接使用的中继地址，中继连接就可能失败。
+:::
 
-点击右上角的地球图标可以切换页面语言，页面会记住选择。
+### 通过 LarePass 专用网络连接
 
-## 为两台电脑配置 LarePass 专用网络连接
-
-以下步骤使用 LarePass 专用网络连接两台电脑。如果两台电脑都与 Olares 位于同一网络，也可以[通过内网 Overlay 连接](#通过内网-overlay-连接)。
-
-两台电脑应使用同一种连接方式。如果一台电脑的 RustDesk 客户端填写 VPN 域名地址，另一台填写 Overlay IP，而其中一台无法访问本次连接使用的中继地址，连接就可能失败。
+在两台电脑上安装 LarePass，并登录到同一台 Olares 设备。
 
 1. 在两台电脑上打开 LarePass，从头像菜单开启**专用网络连接**，并在远程控制期间保持开启。不同平台的设置请参阅[在 LarePass 中启用专用网络](../manual/larepass/private-network.md#在-larepass-中启用专用网络)。
-2. 在每台电脑的 RustDesk 客户端中打开**设置** > **网络** > **ID/中继服务器**。如果提示解锁设置，先完成解锁。
-3. 填写以下字段，然后在两台电脑上保存设置。
+2. 在 Olares 中，从启动台打开 RustDesk Server，选择 **VPN 连接**。此标签页列出了客户端需要填写的服务器地址和公钥。
+
+   点击右上角的地球图标可以切换页面语言。
+
+3. 在每台电脑的 RustDesk 客户端中打开**设置** > **网络**。如果网络设置已锁定，先点击 **Unlock network settings**（解锁网络设置），再打开 **ID/中继服务器**。
+4. 从自己的 RustDesk Server 页面复制配置，填写以下字段。
 
    | 客户端字段 | 填写内容 |
    | --- | --- |
-   | **ID 服务器** | 从应用页面复制完整地址，包括 `:31116` 端口 |
-   | **中继服务器** | 从应用页面复制完整地址，包括 `:31117` 端口 |
+   | **ID 服务器** | 复制完整地址，包括 `:31116` 端口 |
+   | **中继服务器** | 复制完整地址，包括 `:31117` 端口 |
    | **API 服务器** | 留空。RustDesk Server OSS 不提供 Pro 管理 API |
-   | **Key** | 从应用页面复制公钥 |
+   | **Key** | 复制公钥 |
 
    Key 用于识别 RustDesk 服务端。家里电脑的 RustDesk 客户端中显示的访问密码，用于授权远程控制这台电脑。
+
+5. 在两台电脑上保存设置，然后[开始远程控制](#开始远程控制)。
+
+### 通过内网 Overlay 连接
+
+:::warning Overlay 使用条件
+Olares 必须运行在原生 Linux 主机上，并使用有线以太网连接。超级管理员需要先启用系统级 Overlay 网关，之后才能为 RustDesk Server 启用。可用条件和权限说明参阅[管理 Overlay 网关](../manual/olares/settings/overlay-gateway.md)。
+:::
+
+1. 在 Olares 中打开**设置** > **网络** > **Overlay 网关**。如果系统级网关尚未启用，请以超级管理员身份启用，或联系超级管理员操作。
+2. 在**应用**列表中启用 RustDesk Server，并确认重启。等待应用恢复为**运行中**，从此设置页复制分配的内网 IP。
+3. 从启动台打开 RustDesk Server，选择**内网 Overlay**。填写客户端配置时，用从设置页复制的 IP 替换 `Overlay_IP` 占位符。
+
+4. 在每台电脑的 RustDesk 客户端中打开**设置** > **网络**。如果网络设置已锁定，先点击 **Unlock network settings**（解锁网络设置），再打开 **ID/中继服务器**。
+5. 填写以下字段。
+
+   | 客户端字段 | 填写内容 |
+   | --- | --- |
+   | **ID 服务器** | 分配的 Overlay IP，加上 `:21116` |
+   | **中继服务器** | 同一个 Overlay IP，加上 `:21117` |
+   | **API 服务器** | 留空 |
+   | **Key** | 从 RustDesk Server 页面复制公钥 |
+
+6. 在两台电脑上保存设置，然后[开始远程控制](#开始远程控制)。
+
+如果应用的 Overlay 地址变化，请从设置页复制当前地址，并更新两台电脑的客户端。
 
 ## 开始远程控制
 
@@ -77,33 +104,6 @@ doc_updated: "2026-10-31"
 2. 在笔记本上输入家里电脑的 RustDesk ID，发起连接。
 3. 在家里的电脑上接受连接请求，或输入其 RustDesk 客户端显示或配置的访问密码。
 4. 家里电脑的桌面出现后，用笔记本的键盘和鼠标操作它。使用结束后，在 RustDesk 中断开连接。
-
-## 通过内网 Overlay 连接
-
-如果两台电脑都与 Olares 位于同一网络，可以使用 Overlay 连接，无需开启 LarePass 专用网络。Overlay 会为 RustDesk Server 分配独立的内网 IP。
-
-:::warning Overlay 使用条件
-Olares 必须运行在原生 Linux 主机上，并使用有线以太网连接。超级管理员需要先启用系统级 Overlay 网关，之后才能为 RustDesk Server 启用。可用条件和权限说明参阅[管理 Overlay 网关](../manual/olares/settings/overlay-gateway.md)。
-:::
-
-1. 在 Olares 中打开**设置** > **网络** > **Overlay 网关**。如果系统级网关尚未启用，请以超级管理员身份启用，或联系超级管理员操作。
-2. 在**应用**列表中启用 RustDesk Server，并确认重启。等待应用恢复为**运行中**，从此设置页复制分配的内网 IP。
-3. 从启动台打开 RustDesk Server，选择**内网 Overlay**。填写客户端配置时，用从设置页复制的 IP 替换 `Overlay_IP` 占位符。
-
-   ![RustDesk Server 页面中的内网 Overlay 地址格式](/images/manual/use-cases/rustdesk-overlay-settings.png#bordered)
-
-4. 在两台电脑的 RustDesk 客户端中打开**设置** > **网络** > **ID/中继服务器**，填写以下字段。
-
-   | 客户端字段 | 填写内容 |
-   | --- | --- |
-   | **ID 服务器** | 分配的 Overlay IP，加上 `:21116` |
-   | **中继服务器** | 同一个 Overlay IP，加上 `:21117` |
-   | **API 服务器** | 留空 |
-   | **Key** | 从 RustDesk Server 页面复制公钥 |
-
-5. 在两台电脑上保存设置，然后[开始远程控制](#开始远程控制)。
-
-如果应用的 Overlay 地址变化，请从设置页复制当前地址，并更新两台电脑的客户端。
 
 ## 常见问题
 
@@ -123,6 +123,5 @@ Olares 必须运行在原生 Linux 主机上，并使用有线以太网连接。
 
 ## 了解更多
 
-- [LarePass 专用网络访问](../manual/larepass/private-network.md)：将电脑连接到 Olares 专用网络。
 - [管理 Overlay 网关](../manual/olares/settings/overlay-gateway.md)：启用应用的内网地址并查看可用条件。
 - [RustDesk Server OSS 文档](https://rustdesk.com/docs/en/self-host/rustdesk-server-oss/)：了解 ID 和中继服务。
