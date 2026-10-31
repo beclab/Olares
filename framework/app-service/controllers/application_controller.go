@@ -502,6 +502,10 @@ func (r *ApplicationReconciler) updateApplication(ctx context.Context, req ctrl.
 	if v := settings["version"]; v != "" {
 		appCopy.Spec.Settings["version"] = v
 	}
+
+	if v, ok := settings["mobileSupported"]; ok {
+		appCopy.Spec.Settings["mobileSupported"] = v
+	}
 	for _, k := range meshinagent.DecideSettingKeys() {
 		if v, ok := settings[k]; ok {
 			appCopy.Spec.Settings[k] = v
