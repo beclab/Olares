@@ -284,6 +284,10 @@ const side = {
           link: "/manual/olares/market/market",
         },
         {
+          text: "Manage apps with LarePass",
+          link: "/manual/larepass/manage-apps",
+        },
+        {
           text: "Manually update an app image",
           link: "/manual/update-app-image",
         },
