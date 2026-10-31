@@ -103,7 +103,7 @@ export const useCases: UseCase[] = [
   { title: "Falco", link: "/use-cases/falco", category: "Utilities", description: "Runtime security monitoring for hosts and containers", descriptionZh: "面向主机和容器的运行时安全监控" },
   { title: "Firecrawl", link: "/use-cases/firecrawl", category: "Utilities", description: "Web page loader and scraper for apps", descriptionZh: "面向应用的网页加载与抓取工具" },
   { title: "FlareSolverr", link: "/use-cases/flaresolverr", category: "Utilities", description: "Set up FlareSolverr with Prowlarr to bypass Cloudflare", descriptionZh: "设置 FlareSolverr 与 Prowlarr，绕过 Cloudflare" },
-  { title: "RustDesk Server", link: "/use-cases/rustdesk", category: "Utilities", description: "Connect computers through your own ID and relay server", descriptionZh: "通过自托管 ID 和中继服务远程连接电脑" },
+  { title: "RustDesk Server", link: "/use-cases/rustdesk", category: "Utilities", description: "Access your home computer through your own RustDesk server", descriptionZh: "通过自托管 RustDesk 服务远程操作家里的电脑" },
   { title: "SearXNG", link: "/use-cases/searxng", category: "Utilities", description: "Privacy-focused meta search engine", descriptionZh: "注重隐私的元搜索引擎" },
   { title: "Home Assistant", link: "/use-cases/home-assistant", category: "Utilities", description: "Build your smart home hub with local device discovery and automation", descriptionZh: "搭建智能家居中枢，支持本地设备发现与自动化" },
 ];
