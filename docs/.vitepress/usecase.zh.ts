@@ -537,6 +537,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                 },
               ],
             },
+            {
+              text: "wger",
+              link: "/zh/use-cases/wger",
+            },
             // {
             //   text: "Stirling PDF",
             //   link: "/zh/use-cases/stirling-pdf",
