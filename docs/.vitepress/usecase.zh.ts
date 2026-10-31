@@ -582,6 +582,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               link: "/zh/use-cases/flaresolverr",
             },
             {
+              text: "RustDesk Server",
+              link: "/zh/use-cases/rustdesk",
+            },
+            {
               text: "SearXNG",
               link: "/zh/use-cases/searxng",
             },
