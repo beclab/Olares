@@ -1321,23 +1321,6 @@ func TestTranslateRoute_NonDefaultPathKeepsFullOverride(t *testing.T) {
 	assert.Equal(t, "alice", headers[6].GetValue())
 }
 
-func TestTranslateRoute_ProbeBypassHeaderMatch(t *testing.T) {
-	route := translateRoute(&ir.HTTPRouteIR{
-		Name:      "probe",
-		PathExact: "/healthz",
-		Cluster:   "app",
-		HeaderMatches: []ir.HeaderMatchIR{{
-			Name:      "user-agent",
-			SafeRegex: `^[0-9a-fA-F-]+/[0-9a-fA-F]+$`,
-		}},
-	}, nil)
-	require.NotNil(t, route.GetMatch())
-	assert.Equal(t, "/healthz", route.GetMatch().GetPath())
-	require.Len(t, route.GetMatch().GetHeaders(), 1)
-	assert.Equal(t, "user-agent", route.GetMatch().GetHeaders()[0].GetName())
-	assert.Nil(t, route.TypedPerFilterConfig, "probe bypass keeps VH-level ExtAuth disabled")
-}
-
 // ---------------------------------------------------------------------------
 // suppress unused imports
 // ---------------------------------------------------------------------------

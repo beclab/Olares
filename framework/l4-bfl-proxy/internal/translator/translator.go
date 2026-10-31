@@ -22,9 +22,6 @@ const (
 	autheliaPort             = uint32(9091)
 	autheliaVerifyPathPrefix = "/api/verify/"
 
-	// probeUARegex matches webhook.getProbeUA shape: {uuid}/{md5hex}.
-	probeUARegex = `^[0-9a-fA-F-]+/[0-9a-fA-F]+$`
-
 	settingsCustomDomain                 = "customDomain"
 	settingsCustomDomainThirdLevelDomain = "third_level_domain"
 	settingsCustomDomainThirdPartyDomain = "third_party_domain"
@@ -620,14 +617,6 @@ func (t *Translator) buildAppVirtualHosts(user *message.UserInfo, app *message.A
 		}
 
 		defaultRoute.ExtAuth = buildAppExtAuthConfig(user)
-
-		// F3: Exact probe paths with signed UA bypass ExtAuth (oes parity).
-		// Emit before the catch-all so Envoy matches them first.
-		routes = append(routes, buildProbeBypassRoutes(
-			fmt.Sprintf("%s_%s_%s", user.Name, app.Name, entrance.Name),
-			clusterName,
-			app.EntranceProbePaths[entrance.Name],
-		)...)
 		routes = append(routes, defaultRoute)
 
 		vhost.Routes = routes
@@ -635,52 +624,6 @@ func (t *Translator) buildAppVirtualHosts(user *message.UserInfo, app *message.A
 	}
 
 	return vhosts
-}
-
-// buildProbeBypassRoutes emits Exact path routes that skip ExtAuth only when
-// User-Agent matches the webhook probe signature format. Requests to the same
-// path without a valid UA fall through to the default authenticated route.
-func buildProbeBypassRoutes(namePrefix, cluster string, paths []string) []*ir.HTTPRouteIR {
-	if len(paths) == 0 {
-		return nil
-	}
-	seen := map[string]struct{}{}
-	var routes []*ir.HTTPRouteIR
-	for _, path := range paths {
-		path = strings.TrimSpace(path)
-		if path == "" || path == "/" {
-			continue
-		}
-		if !strings.HasPrefix(path, "/") {
-			path = "/" + path
-		}
-		if _, ok := seen[path]; ok {
-			continue
-		}
-		seen[path] = struct{}{}
-		routes = append(routes, &ir.HTTPRouteIR{
-			Name:      fmt.Sprintf("probe_%s_%s", namePrefix, sanitizeProbePath(path)),
-			PathExact: path,
-			Cluster:   cluster,
-			HeaderMatches: []ir.HeaderMatchIR{{
-				Name:      "user-agent",
-				SafeRegex: probeUARegex,
-			}},
-			// ExtAuth nil → keep VH-level ext_authz Disabled (auth bypass).
-			// No outbound zone-owner X-BFL-USER stamp (Authelia owns identity headers).
-		})
-	}
-	return routes
-}
-
-func sanitizeProbePath(path string) string {
-	path = strings.TrimPrefix(path, "/")
-	path = strings.ReplaceAll(path, "/", "_")
-	path = strings.ReplaceAll(path, ".", "_")
-	if path == "" {
-		return "root"
-	}
-	return path
 }
 
 // buildAppExtAuthConfig returns Authelia ext_auth for app routes.
@@ -885,20 +828,13 @@ func (t *Translator) buildCustomDomainVirtualHosts(user *message.UserInfo, app *
 
 		customRoute.ExtAuth = buildAppExtAuthConfig(user)
 
-		routes := buildProbeBypassRoutes(
-			fmt.Sprintf("custom_%s_%s_%s", user.Name, app.Name, entrance.Name),
-			clusterName,
-			app.EntranceProbePaths[entrance.Name],
-		)
-		routes = append(routes, customRoute)
-
 		vhost := &ir.VirtualHostIR{
 			Name:     fmt.Sprintf("custom_%s_%s_%s", user.Name, app.Name, entrance.Name),
 			Domains:  []string{customDomainName},
 			Language: user.Language,
 			UserZone: user.Zone,
 			UserName: user.Name,
-			Routes:   routes,
+			Routes:   []*ir.HTTPRouteIR{customRoute},
 		}
 		vhosts = append(vhosts, vhost)
 	}

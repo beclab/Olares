@@ -704,21 +704,7 @@ func TestBuildAppVirtualHosts_PublicKeepsExtAuthOmitsOutboundXBFLUser(t *testing
 	assert.Nil(t, r.RequestHeaders, "outbound zone-owner X-BFL-USER stamp must be omitted")
 }
 
-func TestBuildProbeBypassRoutes_ExactPathAndUA(t *testing.T) {
-	routes := buildProbeBypassRoutes("alice_app_web", "cluster", []string{"/healthz", "/ready", "/", "healthz", "/healthz"})
-	require.Len(t, routes, 2, "dedupe and drop root path")
-	assert.Equal(t, "/healthz", routes[0].PathExact)
-	assert.Equal(t, "/ready", routes[1].PathExact)
-	for _, r := range routes {
-		assert.Nil(t, r.ExtAuth, "probe bypass must not re-enable ExtAuth")
-		assert.Nil(t, r.RequestHeaders, "probe must not stamp outbound X-BFL-USER")
-		require.Len(t, r.HeaderMatches, 1)
-		assert.Equal(t, "user-agent", r.HeaderMatches[0].Name)
-		assert.Equal(t, probeUARegex, r.HeaderMatches[0].SafeRegex)
-	}
-}
-
-func TestBuildAppVirtualHosts_ProbeBypassBeforeDefault(t *testing.T) {
+func TestBuildAppVirtualHosts_NoUnauthenticatedExactRoute(t *testing.T) {
 	tr := &Translator{cfg: &Config{}}
 	user := &message.UserInfo{Name: "alice", Language: "en"}
 	clusterSet := make(map[string]*ir.ClusterIR)
@@ -727,22 +713,19 @@ func TestBuildAppVirtualHosts_ProbeBypassBeforeDefault(t *testing.T) {
 		Appid:     "v1app",
 		Namespace: "v1app-alice",
 		Owner:     "alice",
-		EntranceProbePaths: map[string][]string{
-			"web": {"/healthz"},
-		},
 		Entrances: []*message.EntranceInfo{
 			{Name: "web", Host: "v1app-svc", Port: 8080},
 		},
 	}
 	vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", false, clusterSet)
 	require.Len(t, vhosts, 1)
-	require.GreaterOrEqual(t, len(vhosts[0].Routes), 2)
-	assert.Equal(t, "/healthz", vhosts[0].Routes[0].PathExact)
-	assert.Nil(t, vhosts[0].Routes[0].ExtAuth)
-	last := vhosts[0].Routes[len(vhosts[0].Routes)-1]
-	assert.Equal(t, "/", last.PathPrefix)
-	require.NotNil(t, last.ExtAuth)
-	assert.Equal(t, autheliaVerifyPathPrefix, last.ExtAuth.PathPrefix)
+	require.Len(t, vhosts[0].Routes, 1)
+	r := vhosts[0].Routes[0]
+	assert.Equal(t, "/", r.PathPrefix)
+	assert.Empty(t, r.PathExact)
+	assert.Empty(t, r.HeaderMatches)
+	require.NotNil(t, r.ExtAuth)
+	assert.Equal(t, autheliaVerifyPathPrefix, r.ExtAuth.PathPrefix)
 }
 
 // A "dev" entrance answers on both its normal hostname and a
