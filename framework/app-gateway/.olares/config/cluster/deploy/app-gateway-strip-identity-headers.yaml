@@ -1,6 +1,8 @@
-# Strip client-supplied platform identity headers before jwt_authn, then
-# SecurityPolicy claimToHeaders re-injects verified values (L4-equivalent
-# clear-then-inject on the Shared east-west path through app-gateway).
+# Strip client-supplied identity headers before jwt_authn on the Shared
+# east-west path through app-gateway. SecurityPolicy claimToHeaders then
+# writes the verified viewer to X-CALLER-USER and the caller appid to
+# X-Caller-Appid. X-BFL-USER is removed and not written back, so an
+# in-cluster app cannot present it to the upstream.
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: ClientTrafficPolicy
 metadata:
@@ -19,4 +21,5 @@ spec:
     earlyRequestHeaders:
       remove:
         - x-bfl-user
+        - x-caller-user
         - x-caller-appid
