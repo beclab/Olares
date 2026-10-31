@@ -688,8 +688,19 @@ data:
         include       /etc/nginx/mime.types;
         default_type  application/octet-stream;
 
-        log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
-                          '$status $body_bytes_sent "$http_referer" '
+        # Share link tokens ride in the query (?token=); keep them out of
+        # the access log, both in the request line and in the Referer.
+        map $request_uri $log_request_uri {
+          "~^(?<tok_pre>.*[?&]token=)[^&]*(?<tok_post>.*)$" "${tok_pre}REDACTED${tok_post}";
+          default $request_uri;
+        }
+        map $http_referer $log_http_referer {
+          "~^(?<ref_pre>.*[?&]token=)[^&]*(?<ref_post>.*)$" "${ref_pre}REDACTED${ref_post}";
+          default $http_referer;
+        }
+
+        log_format  main  '$remote_addr - $remote_user [$time_local] "$request_method $log_request_uri $server_protocol" '
+                          '$status $body_bytes_sent "$log_http_referer" '
                           '"$http_user_agent" "$http_x_forwarded_for"';
 
         access_log  /var/log/nginx/access.log  main;
