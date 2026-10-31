@@ -1,74 +1,133 @@
 ---
 outline: [2, 3]
-description: Use the Apps tab in LarePass to open Olares apps, install and update apps through Market, and stop, resume, or uninstall installed apps.
+description: Open and manage Olares apps from your mobile device with LarePass. Install, update, clone, stop, resume, and uninstall apps.
 ---
 
-# Manage apps with LarePass
+# Manage Olares apps with LarePass
 
-Use the **Apps** tab in the LarePass mobile app to access and manage applications on your Olares. Apps run on Olares. Installing an app through LarePass installs it on Olares, not on your phone.
+Use the **Apps** tab in LarePass to open, install, and manage Olares apps from your mobile device. The apps are installed and run on your Olares.
 
 ## Before you begin
 
+Check the following requirements before accessing apps from your mobile device.
+
 - Your Olares runs version 1.12.8 or later.
 - Your LarePass mobile app includes the **Apps** tab.
-- Your Olares account is signed in to LarePass, and your phone can connect to Olares. For remote access, see [LarePass VPN](private-network.md).
+- Your Olares account is signed in to LarePass, and your mobile device can connect to Olares. For remote access, see [LarePass VPN](private-network.md).
 
 <!-- Release check: Confirm the minimum LarePass mobile version before publishing. -->
 
 ## Mobile support
 
-All system apps support mobile use. Mobile support for other installed apps is rolling out progressively. An app can install successfully but still not open on your phone.
+All system apps support mobile use. Whether other installed apps can open on your mobile device depends on their mobile support. An app can install successfully but still not open on your mobile device.
 
 An entrance that does not support mobile use appears grayed out with a monitor badge. Tapping it displays a message asking you to open it on desktop. You can still tap **Manage**, or long-press its icon, to access management actions allowed for your account.
 
-## Find and open apps
+## Access installed apps
 
-1. Open LarePass and tap **Apps** in the bottom navigation bar. The list shows running apps by default.
+The Apps tab shows apps installed on your Olares. By default, it shows running apps. Use the filter menu to view stopped apps or all apps.
+
+1. Open LarePass and tap **Apps** in the bottom navigation bar.
 
    ![Apps tab in LarePass](/images/manual/larepass/apps-home.png#bordered){width=40%}
 
 2. Find an app in the grid, or enter its name in **Search apps**.
 3. Tap the app icon to open it.
-4. To filter apps by state or reload the list, tap <i class="material-symbols-outlined">more_horiz</i> beside the search box and select **All**, **Running**, **Stopped**, or **Refresh**.
+4. To view stopped apps or all apps, tap <i class="material-symbols-outlined">more_horiz</i> beside the search box, and then select **Stopped** or **All**.
 
    ![Filter and refresh apps](/images/manual/larepass/apps-filter.png#bordered){width=40%}
 
-### Navigate back within an app
+5. To reload the app list, open the same menu and select **Refresh**.
+
+### Go back
+
+Use the app toolbar to return to the previous level after opening an app.
 
 1. Inside an open app, tap its name at the top, such as **Market**, to show the toolbar.
 2. Tap **Back** in the upper-left corner to return to the previous level.
 
 ## Install apps
 
+Use Market in LarePass to find and install new apps on your Olares.
+
 1. In **Apps**, tap **Market**.
-2. Browse the **Discover** page, or open the upper-left menu and select **Search** to find an app.
-3. Open the app details and check its hardware and resource requirements.
-4. Tap **Get**, then **Install**. If prompted, complete the required configuration.
-5. Wait for installation to finish. Return to **Apps** to find the app. If needed, select **Refresh** from the more menu.
-
-## Stop, resume, or uninstall apps
-
-1. In **Apps**, long-press an app icon.
-2. In the **Manage [app name]** panel at the bottom, select an action:
-
-   | Action | Result |
-   | --- | --- |
-   | **Stop app** | Stop the app on Olares. |
-   | **Resume app** | Resume a stopped app on Olares. |
-   | **Uninstall** | Uninstall the app from Olares. |
-
-   :::info
-   Available actions depend on the app's state and your account permissions. System apps cannot be managed in the same way as installed apps.
-   :::
-
-3. Review any confirmation dialog before continuing.
-
-   :::warning Uninstalling apps
-   Uninstalling removes the app from Olares, not just its icon from LarePass. If you choose to delete app data, that data cannot be recovered through reinstallation. Back up any data you need before confirming. Shared-service operations may affect other users. Check the scope shown in the confirmation dialog.
-   :::
+2. Find the app you want to install, open its details page, and check its hardware and resource requirements.
+3. Tap **Get**, then **Install**. If prompted, complete the required configuration.
+4. Once installation is complete, return to **Apps** to find the app. If needed, tap <i class="material-symbols-outlined">more_horiz</i> beside the search box and select **Refresh**.
 
 ## Update apps
+
+Market lists available updates for your installed apps. You can update apps individually or all at once.
 
 1. In **Apps**, open **Market**.
 2. Open the upper-left menu and select **Updates**.
 3. Update an individual app, or select **Update all** to update all available apps.
+
+## Clone apps
+
+Cloning creates another instance of an installed app with its own configuration. Only apps that support multiple instances can be cloned.
+
+1. In **Apps**, open **Market** and go to **My Olares**.
+2. Find the app, tap the drop-down arrow beside its operation button, and select **Clone**.
+3. Follow the prompts to name and configure the new instance, then confirm.
+4. Once cloning is complete, return to **Apps** to find the new instance.
+
+For cloning requirements and configuration details, see [Clone applications](../olares/market/clone-apps.md).
+
+## Stop and resume apps
+
+Stop apps you are not using to free up resources, and resume them when needed. Both actions are available from Apps and Market. Available actions depend on the app's state and your account permissions. System apps cannot be managed in the same way as installed apps.
+
+:::warning Shared apps
+Stopping a shared service may affect other users. Check the scope shown in the confirmation dialog before continuing.
+:::
+
+<tabs>
+<template #From-Apps>
+
+1. Open **Apps**. To find a stopped app, tap <i class="material-symbols-outlined">more_horiz</i> beside the search box and select **All** or **Stopped**.
+2. Long-press the app icon to open the **Manage [app name]** panel.
+3. Select **Stop app** or **Resume app**, and review any confirmation dialog before continuing.
+
+</template>
+<template #From-Market>
+
+1. In **Apps**, open **Market** and go to **My Olares**.
+2. Find the app and tap the drop-down arrow beside its operation button.
+3. Select **Stop** or **Resume**, and review any confirmation dialog before continuing.
+
+</template>
+</tabs>
+
+Check that the app's state updates after the operation. A stopped app no longer appears under **Running** in Apps. Select **All** or **Stopped** to find it again.
+
+For more information about stopping and resuming apps, see the [Market FAQ](../olares/market/market.md#faqs).
+
+## Uninstall apps
+
+Remove apps you no longer need from your Olares through Apps or Market.
+
+:::warning Uninstalling apps
+Uninstalling removes the app from Olares, not just its icon from LarePass. If you choose to delete app data, that data cannot be recovered through reinstallation. Back up any data you need before confirming. Uninstalling a shared service may affect other users. Check the scope shown in the confirmation dialog.
+:::
+
+Uninstall is available only for apps that your account has permission to remove. System apps cannot be uninstalled.
+
+<tabs>
+<template #From-Apps>
+
+1. In **Apps**, find the app. If it is stopped, tap <i class="material-symbols-outlined">more_horiz</i> beside the search box and select **All** or **Stopped** first.
+2. Long-press its icon and select **Uninstall** in the **Manage [app name]** panel.
+3. Review the uninstall options, including whether to delete app data or remove a shared service, then confirm.
+
+</template>
+<template #From-Market>
+
+1. In **Apps**, open **Market** and go to **My Olares**.
+2. Find the app, tap the drop-down arrow beside its operation button, and select **Uninstall**.
+3. Review the uninstall options, including whether to delete app data or remove a shared service, then confirm.
+
+</template>
+</tabs>
+
+For details about uninstall options, see [Uninstall applications](../olares/market/market.md#uninstall-applications).

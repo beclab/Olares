@@ -284,7 +284,7 @@ const side = {
           link: "/manual/olares/market/market",
         },
         {
-          text: "Manage apps with LarePass",
+          text: "Manage Olares apps with LarePass",
           link: "/manual/larepass/manage-apps",
         },
         {
