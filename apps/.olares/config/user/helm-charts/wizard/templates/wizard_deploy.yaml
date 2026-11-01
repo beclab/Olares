@@ -29,7 +29,7 @@ spec:
 
       containers:
       - name: wizard
-        image: beclab/wizard:v1.11.28
+        image: beclab/wizard:v1.12.28
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80
