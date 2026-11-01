@@ -46,3 +46,4 @@ olares-cli files rename sync/<repo_id>/notes/draft.md final.md
 | `new name must be a bare basename` | `<new-name>` contains `/` | Drop the slash; use `mv` if you actually want to move |
 | `new name is empty` / `cannot rename to . or ..` | Invalid basename | Provide a real name |
 | `path contains . or .. segments` | Path-traversal blacklist | Use a clean path |
+| `the folder, or a folder in it, is shared: ... (HTTP 409)` | The target is shared, or holds a shared folder; the message lists the shares | Confirm with the user, then re-run with `--unshare`: the shares are cancelled and do not follow the folder |
