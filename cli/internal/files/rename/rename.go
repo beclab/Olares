@@ -82,6 +82,10 @@ type Op struct {
 type Client struct {
 	HTTPClient *http.Client
 	BaseURL    string
+	// Unshare lets the backend change a folder that is shared, or
+	// holds one: the shares on it are cancelled once the change is
+	// done. Without it the backend answers 409 and lists the shares.
+	Unshare bool
 }
 
 // HTTPError carries the status + truncated body of a non-2xx response
@@ -121,10 +125,13 @@ func (e *HTTPError) Error() string {
 //     it's a no-op and almost always a typo.
 //
 // The Endpoint is built with internal/files/encodepath: per-segment
-// JS-shaped percent-encoding for the path, encodeURIComponent shape
-// for the destination query value. This stays aligned with the rest
-// of the CLI (rm / upload / download / cat) so a path that lists
-// fine via `files ls` also renames via the same encoded bytes.
+// JS-shaped percent-encoding for the path, and the destination query
+// value encoded twice with encodeURIComponent. The files backend
+// unescapes destination once more after the query is decoded, because
+// LarePass sends encodeURIComponent(newName) as a request param, which
+// the HTTP client encodes again. Encoded once, a name with '%' in it
+// would be decoded one time too many ("a%25b" becomes "a%b", "100%"
+// fails as an invalid escape).
 func Plan(t Target, newName string) (Op, error) {
 	if t.FileType == "" || t.Extend == "" {
 		// Defense in depth — the cobra-layer parser shouldn't let
@@ -238,7 +245,7 @@ func Plan(t Target, newName string) (Op, error) {
 		plain += "/"
 	}
 	encPath := encodepath.EncodeURL(plain)
-	encName := encodepath.EncodeURIComponent(clean)
+	encName := encodepath.EncodeURIComponent(encodepath.EncodeURIComponent(clean))
 	endpoint := "/api/resources/" + encPath + "?destination=" + encName
 
 	// Compute the human-readable display destination too — same path
@@ -274,6 +281,9 @@ func (c *Client) Rename(ctx context.Context, op Op) error {
 	}
 
 	endpoint := c.BaseURL + op.Endpoint
+	if c.Unshare {
+		endpoint += "&unshare=true"
+	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPatch, endpoint, nil)
 	if err != nil {
 		return fmt.Errorf("build request: %w", err)
