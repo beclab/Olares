@@ -1,231 +1,140 @@
 package files
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/beclab/Olares/cli/internal/files/share"
 )
 
-// TestValidateShareNamespace_RejectsCloudForAllFlavors pins the
-// uniform cloud-rejection rule: every share-create flavor
-// (internal / public / smb) must reject every cloud namespace
-// (awss3 / google / dropbox / tencent) up front, citing
-// cross-cloud-account semantics rather than the per-flavor allow-
-// list. Mirrors the user requirement "所有和分享相关功能对 cloud
-// 都不支持" (all share-related operations unsupported for cloud).
-//
-// The error message is checked for two anchors:
-//
-//   - the friendly flavor name ("internal" / "public" / "smb") —
-//     NOT the wire value (where Public is the historically
-//     confusing "external"), so the user sees the same word they
-//     typed at the CLI;
-//
-//   - "cloud namespaces" + the recovery hint pointing at
-//     `files download` followed by re-upload to drive.
-//
-// Anchoring on both halves stops a future refactor from quietly
-// dropping the recovery suggestion or merging the message into the
-// generic per-flavor branch.
-func TestValidateShareNamespace_RejectsCloudForAllFlavors(t *testing.T) {
-	flavors := []struct {
-		flavor share.Type
-		// expected friendly name in the rendered error message
-		friendly string
+// TestShareFlavorsFor pins the share flavors each storage takes. It is
+// the same table as common.ShareTypesOf in the files backend and the
+// shareModes of the LarePass adapters; a change here is a change there.
+func TestShareFlavorsFor(t *testing.T) {
+	all := []share.Type{share.TypeInternal, share.TypeSMB, share.TypePublic}
+	smb := []share.Type{share.TypeSMB}
+	cases := []struct {
+		fileType, extend string
+		want             []share.Type
 	}{
-		{share.TypeInternal, "internal"},
-		{share.TypePublic, "public"},
-		{share.TypeSMB, "smb"},
+		{"drive", "Home", all},
+		{"drive", "Data", nil},
+		{"drive", "Common", nil},
+		{"cache", "node-1", nil},
+		{"external", "node-1", smb},
+		{"sync", "repo", []share.Type{share.TypeInternal}},
+		{"awss3", "acct", nil},
+		{"google", "acct", nil},
+		{"dropbox", "acct", nil},
+		{"tencent", "acct", nil},
 	}
-	cloudFTs := []string{"awss3", "google", "dropbox", "tencent"}
-	for _, fl := range flavors {
-		for _, ft := range cloudFTs {
-			t.Run(fl.friendly+"/"+ft, func(t *testing.T) {
-				display := ft + "/account-1/Photos/"
-				err := validateShareNamespace(fl.flavor, ft, display)
-				if err == nil {
-					t.Fatalf("validateShareNamespace(%v, %q, %q): expected refusal",
-						fl.flavor, ft, display)
-				}
-				msg := err.Error()
-				for _, want := range []string{
-					"refusing to create a " + fl.friendly + " share for " + display,
-					"cloud namespaces",
-					"awss3 / google / dropbox / tencent",
-					"`files download`",
-					"drive/Home or drive/Data",
-				} {
-					if !strings.Contains(msg, want) {
-						t.Errorf("error must contain %q; got: %v", want, err)
-					}
-				}
-			})
+	for _, c := range cases {
+		got := shareFlavorsFor(c.fileType, c.extend)
+		if !reflect.DeepEqual(got, c.want) {
+			t.Errorf("shareFlavorsFor(%q, %q) = %v, want %v", c.fileType, c.extend, got, c.want)
+		}
+		for _, fl := range all {
+			err := validateShareNamespace(fl, c.fileType, c.extend, "x/")
+			wantOK := false
+			for _, w := range c.want {
+				wantOK = wantOK || w == fl
+			}
+			if (err == nil) != wantOK {
+				t.Errorf("validateShareNamespace(%v, %q, %q) = %v, want allowed=%v",
+					fl, c.fileType, c.extend, err, wantOK)
+			}
 		}
 	}
 }
 
-// TestValidateShareNamespace_PublicAllowsOnlyDrive pins the Public
-// flavor's tightening: only the `drive` namespace passes; sync,
-// external, cache, and every cloud namespace are refused. The
-// non-cloud branch is exercised here for sync / external / cache
-// (cloud already covered by the cloud-specific test above).
-//
-// The recovery hint is dynamically built from the OTHER flavors'
-// allow-lists — so it depends on which flavors currently accept
-// each fileType:
-//
-//   - sync       → only Internal accepts it (SMB excluded sync to
-//                  match the LarePass GUI), so the hint points at
-//                  `files share internal` only.
-//   - external   → both Internal and SMB accept it, hint mentions
-//                  both.
-//   - cache      → both Internal and SMB accept it, hint mentions
-//                  both.
-//
-// mustNotContain pins the absences too: sync's hint must NOT
-// mention `files share smb` (regression guard if SMB ever
-// accidentally re-allows sync).
-func TestValidateShareNamespace_PublicAllowsOnlyDrive(t *testing.T) {
-	allowed := []string{"drive"}
-	for _, ft := range allowed {
-		t.Run("allow "+ft, func(t *testing.T) {
-			if err := validateShareNamespace(share.TypePublic, ft, ft+"/Home/x/"); err != nil {
-				t.Errorf("validateShareNamespace(public, %q, ...): unexpected error: %v", ft, err)
-			}
-		})
-	}
-
-	rejected := []struct {
-		fileType       string
-		mustContain    []string
-		mustNotContain []string
-	}{
-		{
-			fileType: "sync",
-			mustContain: []string{
-				"refusing to create a public share for sync/abc-repo/",
-				"`files share public` only supports the {drive} namespace(s)",
-				"`files share internal`",
-			},
-			mustNotContain: []string{
-				// SMB excludes sync (matches the LarePass GUI),
-				// so the auto-generated fallback hint must NOT
-				// suggest it.
-				"`files share smb`",
-			},
-		},
-		{
-			fileType: "external",
-			mustContain: []string{
-				"refusing to create a public share for external/node-1/hdd1/",
-				"`files share public` only supports the {drive} namespace(s)",
-				"`files share internal`",
-				"`files share smb`",
-			},
-		},
-		{
-			fileType: "cache",
-			mustContain: []string{
-				"refusing to create a public share for cache/node-1/app1/",
-				"`files share public` only supports the {drive} namespace(s)",
-				"`files share internal`",
-				"`files share smb`",
-			},
-		},
-	}
-	displays := map[string]string{
-		"sync":     "sync/abc-repo/",
-		"external": "external/node-1/hdd1/",
-		"cache":    "cache/node-1/app1/",
-	}
-	for _, c := range rejected {
-		t.Run("reject "+c.fileType, func(t *testing.T) {
-			err := validateShareNamespace(share.TypePublic, c.fileType, displays[c.fileType])
+// TestValidateShareNamespace_RejectsCloudForAllFlavors pins the cloud
+// message: every flavor refuses every cloud namespace, citing the
+// download / re-upload recovery path and the flavor name the user
+// typed (not the wire value, where public is "external").
+func TestValidateShareNamespace_RejectsCloudForAllFlavors(t *testing.T) {
+	for _, fl := range []share.Type{share.TypeInternal, share.TypePublic, share.TypeSMB} {
+		for _, ft := range []string{"awss3", "google", "dropbox", "tencent"} {
+			display := ft + "/account-1/Photos/"
+			err := validateShareNamespace(fl, ft, "account-1", display)
 			if err == nil {
-				t.Fatalf("validateShareNamespace(public, %q, ...): expected refusal", c.fileType)
+				t.Fatalf("validateShareNamespace(%v, %q): expected refusal", fl, ft)
 			}
-			msg := err.Error()
-			for _, want := range c.mustContain {
-				if !strings.Contains(msg, want) {
+			for _, want := range []string{
+				"refusing to create a " + shareFlavorFriendlyName(fl) + " share for " + display,
+				"cloud namespaces",
+				"`files download`",
+				"drive/Home",
+			} {
+				if !strings.Contains(err.Error(), want) {
 					t.Errorf("error must contain %q; got: %v", want, err)
 				}
 			}
-			for _, banned := range c.mustNotContain {
-				if strings.Contains(msg, banned) {
-					t.Errorf("error must NOT contain %q; got: %v", banned, err)
-				}
-			}
-		})
+		}
 	}
 }
 
-// TestValidateShareNamespace_InternalAllowsNonCloud locks in the
-// Internal flavor's white-list: drive / sync / external / cache
-// pass, every cloud namespace is rejected (covered separately by
-// the cloud-specific test).
-func TestValidateShareNamespace_InternalAllowsNonCloud(t *testing.T) {
-	for _, ft := range []string{"drive", "sync", "external", "cache"} {
-		t.Run("allow "+ft, func(t *testing.T) {
-			if err := validateShareNamespace(share.TypeInternal, ft, ft+"/x/y/"); err != nil {
-				t.Errorf("validateShareNamespace(internal, %q, ...): unexpected error: %v", ft, err)
-			}
-		})
+// TestValidateShareNamespace_NamesTheFlavorsThatWork pins the message
+// for a storage that takes other flavors: it names them, and the
+// command to use instead.
+func TestValidateShareNamespace_NamesTheFlavorsThatWork(t *testing.T) {
+	cases := []struct {
+		flavor           share.Type
+		fileType, extend string
+		display          string
+		want             []string
+		notWant          []string
+	}{
+		{share.TypeInternal, "external", "node-1", "external/node-1/hdd1/",
+			[]string{"external only supports smb shares", "`files share smb`"}, nil},
+		{share.TypeSMB, "sync", "abc-repo", "sync/abc-repo/",
+			[]string{"sync only supports internal shares", "`files share internal`"},
+			[]string{"`files share smb`", "cloud namespaces"}},
 	}
-}
-
-// TestValidateShareNamespace_SMB pins the SMB flavor's allow-list
-// against the LarePass GUI exactly: drive / external / cache pass,
-// sync is REJECTED.
-//
-// The sync rejection is the one that diverges between the three
-// flavors — Internal allows it, SMB doesn't, Public doesn't — so
-// the test asserts both the rejection AND the recovery hint
-// pointing at `files share internal` (the only remaining flavor
-// that accepts sync). If a future change accidentally re-allows
-// sync for SMB, the rejection assertion fires; if it accidentally
-// drops sync from Internal too, the hint assertion fires.
-func TestValidateShareNamespace_SMB(t *testing.T) {
-	for _, ft := range []string{"drive", "external", "cache"} {
-		t.Run("allow "+ft, func(t *testing.T) {
-			if err := validateShareNamespace(share.TypeSMB, ft, ft+"/x/y/"); err != nil {
-				t.Errorf("validateShareNamespace(smb, %q, ...): unexpected error: %v", ft, err)
-			}
-		})
-	}
-
-	t.Run("reject sync", func(t *testing.T) {
-		err := validateShareNamespace(share.TypeSMB, "sync", "sync/abc-repo/")
+	for _, c := range cases {
+		err := validateShareNamespace(c.flavor, c.fileType, c.extend, c.display)
 		if err == nil {
-			t.Fatal("validateShareNamespace(smb, sync, ...): expected refusal")
+			t.Fatalf("validateShareNamespace(%v, %s/%s): expected refusal", c.flavor, c.fileType, c.extend)
 		}
-		msg := err.Error()
-		for _, want := range []string{
-			"refusing to create a smb share for sync/abc-repo/",
-			"`files share smb` only supports the {cache, drive, external} namespace(s)",
-			"`files share internal`",
-		} {
-			if !strings.Contains(msg, want) {
-				t.Errorf("error must contain %q; got: %v", want, err)
+		for _, w := range c.want {
+			if !strings.Contains(err.Error(), w) {
+				t.Errorf("error must contain %q; got: %v", w, err)
 			}
 		}
-		// Cloud framing must NOT leak into this branch — sync is
-		// not cloud, and conflating the two would mis-suggest the
-		// download/re-upload recovery flow.
-		if strings.Contains(msg, "cloud namespaces") {
-			t.Errorf("non-cloud rejection must not mention 'cloud namespaces'; got: %v", err)
+		for _, w := range c.notWant {
+			if strings.Contains(err.Error(), w) {
+				t.Errorf("error must not contain %q; got: %v", w, err)
+			}
 		}
-	})
+	}
+}
+
+// TestValidateShareNamespace_NoShareStorages pins the message for the
+// storages that take no share at all.
+func TestValidateShareNamespace_NoShareStorages(t *testing.T) {
+	for _, c := range []struct{ fileType, extend, storage string }{
+		{"drive", "Data", "drive/Data"},
+		{"drive", "Common", "drive/Common"},
+		{"cache", "node-1", "cache"},
+	} {
+		for _, fl := range []share.Type{share.TypeInternal, share.TypeSMB, share.TypePublic} {
+			err := validateShareNamespace(fl, c.fileType, c.extend, "x/")
+			if err == nil || !strings.Contains(err.Error(), c.storage+" cannot be shared") {
+				t.Errorf("validateShareNamespace(%v, %s/%s) = %v, want %q", fl, c.fileType, c.extend, err, c.storage+" cannot be shared")
+			}
+			if err != nil && strings.Contains(err.Error(), "cloud namespaces") {
+				t.Errorf("non-cloud rejection must not mention cloud: %v", err)
+			}
+		}
+	}
 }
 
 // TestValidateShareNamespace_UnknownFlavorIsDefensive guards the
 // defense-in-depth branch in validateShareNamespace: passing a
 // share.Type the cobra layer doesn't construct must surface a
-// typed error rather than silently allowing the share. If a future
-// share-create verb forgets to thread its flavor through, this
-// test fails immediately.
+// typed error rather than silently allowing the share.
 func TestValidateShareNamespace_UnknownFlavorIsDefensive(t *testing.T) {
-	err := validateShareNamespace(share.Type("unknown-flavor"), "drive", "drive/Home/")
+	err := validateShareNamespace(share.Type("unknown-flavor"), "drive", "Home", "drive/Home/")
 	if err == nil {
 		t.Fatal("expected error for unknown share flavor")
 	}
@@ -251,19 +160,6 @@ func TestFrontendPathToShareTarget_RejectsExternalNodeRoot(t *testing.T) {
 		path   string
 		flavor share.Type
 	}{
-		{
-			name:   "internal: trailing slash",
-			path:   "external/node-1/",
-			flavor: share.TypeInternal,
-		},
-		{
-			// Bare <fileType>/<extend> synthesizes SubPath="/", so
-			// the rejection must trip the same way as the trailing-
-			// slash form.
-			name:   "internal: no trailing slash",
-			path:   "external/node-1",
-			flavor: share.TypeInternal,
-		},
 		{
 			name:   "smb: trailing slash",
 			path:   "external/node-1/",
@@ -295,74 +191,14 @@ func TestFrontendPathToShareTarget_RejectsExternalNodeRoot(t *testing.T) {
 	}
 }
 
-// TestFrontendPathToShareTarget_RejectsCacheNodeRoot pins the
-// share-side fast-fail for `share internal|smb cache/<node>/`. As
-// with the external counterpart, the Public flavor never reaches
-// this branch — its namespace gate refuses the entire `cache`
-// namespace earlier.
-//
-// Unlike external (which is fully virtual), cache HAS a real
-// per-node filesystem on the wire — but the LarePass web app's
-// /Files/Cache/ root view is rendered by formatAppDataNode as a
-// node picker (apps/.../api/files/v2/cache/data.ts), so a "share
-// this row" operation at that level points at a node selector,
-// not a dataset. The CLI's share-create path mirrors that UX and
-// refuses up front.
-func TestFrontendPathToShareTarget_RejectsCacheNodeRoot(t *testing.T) {
-	cases := []struct {
-		name   string
-		path   string
-		flavor share.Type
-	}{
-		{
-			name:   "internal: trailing slash",
-			path:   "cache/node-1/",
-			flavor: share.TypeInternal,
-		},
-		{
-			name:   "internal: no trailing slash",
-			path:   "cache/node-1",
-			flavor: share.TypeInternal,
-		},
-		{
-			name:   "smb: trailing slash",
-			path:   "cache/node-1/",
-			flavor: share.TypeSMB,
-		},
-		{
-			name:   "smb: no trailing slash",
-			path:   "cache/node-1",
-			flavor: share.TypeSMB,
-		},
-	}
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			_, err := frontendPathToShareTarget(c.path, c.flavor)
-			if err == nil {
-				t.Fatalf("frontendPathToShareTarget(%q, %v): expected refusal", c.path, c.flavor)
-			}
-			msg := err.Error()
-			if !strings.Contains(msg, "node-picker layer") {
-				t.Errorf("error should mention 'node-picker layer'; got: %v", err)
-			}
-			if !strings.Contains(msg, "cache/node-1/<sub>/") {
-				t.Errorf("error should suggest corrected shape; got: %v", err)
-			}
-			if !strings.Contains(msg, "files ls cache/node-1/") {
-				t.Errorf("error should hint at the discovery command; got: %v", err)
-			}
-		})
-	}
-}
-
 // TestFrontendPathToShareTarget_PublicShortCircuitsBeforeRootCheck
 // confirms ordering: for Public against external/<node>/ or
-// cache/<node>/, the namespace-level rejection (the broader and
-// more actionable error) must surface BEFORE the volume-listing /
+// cache/<node>/, the storage-level rejection (the broader and more
+// actionable error) must surface BEFORE the volume-listing /
 // node-picker root rejection. Same final answer either way (the
-// share isn't created), but the user sees the more useful "Public
-// only supports drive" message instead of the narrower "this is
-// the volume listing layer" one.
+// share isn't created), but the user sees the more useful "only
+// supports smb shares" message instead of the narrower "this is the
+// volume listing layer" one.
 func TestFrontendPathToShareTarget_PublicShortCircuitsBeforeRootCheck(t *testing.T) {
 	cases := []struct {
 		name string
@@ -378,8 +214,8 @@ func TestFrontendPathToShareTarget_PublicShortCircuitsBeforeRootCheck(t *testing
 				t.Fatalf("frontendPathToShareTarget(%q, public): expected refusal", c.path)
 			}
 			msg := err.Error()
-			if !strings.Contains(msg, "`files share public` only supports the {drive} namespace(s)") {
-				t.Errorf("expected namespace-level rejection; got: %v", err)
+			if !strings.Contains(msg, "only supports smb shares") && !strings.Contains(msg, "cannot be shared") {
+				t.Errorf("expected storage-level rejection; got: %v", err)
 			}
 			if strings.Contains(msg, "volume listing layer") || strings.Contains(msg, "node-picker layer") {
 				t.Errorf("namespace gate should short-circuit before the root-layer message; got: %v", err)
@@ -395,10 +231,8 @@ func TestFrontendPathToShareTarget_PublicShortCircuitsBeforeRootCheck(t *testing
 // Otherwise users would lose legitimate share workflows when those
 // workflows are exactly what we want to keep.
 //
-// Cases use the most permissive flavor that accepts the path's
-// fileType — Internal accepts every non-cloud namespace, so it's
-// the right anchor here. Per-flavor coverage of allow / reject is
-// already done by TestValidateShareNamespace_*.
+// Each case uses a flavor its storage accepts. Per-storage coverage
+// of allow / reject is done by TestShareFlavorsFor.
 func TestFrontendPathToShareTarget_AllowsRealPaths(t *testing.T) {
 	cases := []struct {
 		name   string
@@ -406,24 +240,14 @@ func TestFrontendPathToShareTarget_AllowsRealPaths(t *testing.T) {
 		flavor share.Type
 	}{
 		{
-			name:   "internal: external volume root",
+			name:   "smb: external volume root",
 			path:   "external/node-1/hdd1/",
-			flavor: share.TypeInternal,
+			flavor: share.TypeSMB,
 		},
 		{
-			name:   "internal: external nested dir",
+			name:   "smb: external nested dir",
 			path:   "external/node-1/hdd1/Movies/",
-			flavor: share.TypeInternal,
-		},
-		{
-			name:   "internal: cache one segment past node",
-			path:   "cache/node-1/app1/",
-			flavor: share.TypeInternal,
-		},
-		{
-			name:   "internal: cache nested file",
-			path:   "cache/node-1/app1/data/cache.bin",
-			flavor: share.TypeInternal,
+			flavor: share.TypeSMB,
 		},
 		{
 			name:   "public: drive Home root",
@@ -433,14 +257,6 @@ func TestFrontendPathToShareTarget_AllowsRealPaths(t *testing.T) {
 		{
 			name:   "public: drive Home subdir",
 			path:   "drive/Home/Documents/",
-			flavor: share.TypePublic,
-		},
-		{
-			// drive/Common is share-able ONLY as a public link;
-			// the public flavor must accept it (the internal / SMB
-			// rejection has its own dedicated test below).
-			name:   "public: drive Common subdir",
-			path:   "drive/Common/ollama/",
 			flavor: share.TypePublic,
 		},
 		{
@@ -472,69 +288,14 @@ func TestFrontendPathToShareTarget_AllowsRealPaths(t *testing.T) {
 	}
 }
 
-// TestFrontendPathToShareTarget_CommonIsPublicOnly pins the
-// extend-level policy that drive/Common may be shared ONLY as an
-// outbound public link — mirroring TermiPass's `canShowShareOption`
-// (DriveType.Common appears under SHARE_IN_PUBLIC, never under
-// SHARE_IN_INTERNAL / SHARE_IN_SMB). Internal / SMB must be refused
-// even though `drive` is in their fileType allow-list; Public must
-// pass.
-func TestFrontendPathToShareTarget_CommonIsPublicOnly(t *testing.T) {
-	reject := []share.Type{share.TypeInternal, share.TypeSMB}
-	for _, fl := range reject {
-		t.Run("reject_"+shareFlavorFriendlyName(fl), func(t *testing.T) {
-			_, err := frontendPathToShareTarget("drive/Common/ollama/", fl)
-			if err == nil {
-				t.Fatalf("frontendPathToShareTarget(drive/Common, %v): expected refusal", fl)
-			}
-			if !strings.Contains(err.Error(), "drive/Common") ||
-				!strings.Contains(err.Error(), "public") {
-				t.Errorf("error should name drive/Common and the public alternative; got: %v", err)
-			}
-		})
-	}
-	t.Run("allow_public", func(t *testing.T) {
-		tgt, err := frontendPathToShareTarget("drive/Common/ollama/", share.TypePublic)
-		if err != nil {
-			t.Fatalf("frontendPathToShareTarget(drive/Common, public): unexpected error: %v", err)
-		}
-		if tgt.FileType != "drive" || tgt.Extend != "Common" {
-			t.Errorf("unexpected target: %+v", tgt)
-		}
-	})
-}
-
-// TestValidateShareCommonRestriction is the pure-unit companion to
-// the integration-style test above: it exercises the gate directly
-// across flavors and confirms it is a no-op for non-Common paths.
-func TestValidateShareCommonRestriction(t *testing.T) {
-	// Common: public allowed, internal / SMB rejected.
-	if err := validateShareCommonRestriction(share.TypePublic, "drive", "Common", "drive/Common/x/"); err != nil {
-		t.Errorf("public + Common: unexpected error: %v", err)
-	}
-	for _, fl := range []share.Type{share.TypeInternal, share.TypeSMB} {
-		if err := validateShareCommonRestriction(fl, "drive", "Common", "drive/Common/x/"); err == nil {
-			t.Errorf("%v + Common: expected refusal", fl)
-		}
-	}
-	// Non-Common drive extends and other namespaces: always a no-op,
-	// regardless of flavor.
-	noop := []struct {
-		fileType string
-		extend   string
-	}{
-		{"drive", "Home"},
-		{"drive", "Data"},
-		{"external", "node-1"},
-		{"cache", "node-1"},
-		{"sync", "repo"},
-	}
-	for _, fl := range []share.Type{share.TypePublic, share.TypeInternal, share.TypeSMB} {
-		for _, c := range noop {
-			if err := validateShareCommonRestriction(fl, c.fileType, c.extend, "x"); err != nil {
-				t.Errorf("validateShareCommonRestriction(%v, %q, %q): unexpected error: %v",
-					fl, c.fileType, c.extend, err)
-			}
+// TestFrontendPathToShareTarget_CommonCannotBeShared pins that
+// drive/Common takes no share, as the LarePass GUI and the files backend
+// allow: every flavor is refused before any request.
+func TestFrontendPathToShareTarget_CommonCannotBeShared(t *testing.T) {
+	for _, fl := range []share.Type{share.TypeInternal, share.TypeSMB, share.TypePublic} {
+		_, err := frontendPathToShareTarget("drive/Common/ollama/", fl)
+		if err == nil || !strings.Contains(err.Error(), "drive/Common cannot be shared") {
+			t.Errorf("frontendPathToShareTarget(drive/Common, %v) = %v, want a refusal", fl, err)
 		}
 	}
 }

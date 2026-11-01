@@ -60,6 +60,7 @@ import (
 // flags shows up we'll thread `override`/`rename` query params through
 // the rename package.
 func NewRenameCommand(f *cmdutil.Factory) *cobra.Command {
+	var unshare bool
 	cmd := &cobra.Command{
 		Use:     "rename <remote-path> <new-name>",
 		Aliases: []string{"rn"},
@@ -119,12 +120,17 @@ Collision behavior is server-determined (the backend may auto-rename,
 overwrite, or return 409 depending on the storage class). If a target
 with the new name exists, run ` + "`olares-cli files ls`" + ` afterwards to
 confirm what landed.
+
+A shared folder, or a folder holding one, is not renamed: the server
+answers 409 and lists the shares. Pass --unshare to cancel them and
+rename anyway; shares do not follow a renamed folder.
 `,
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runRename(cmd.Context(), f, cmd.OutOrStdout(), args[0], args[1])
+			return runRename(cmd.Context(), f, cmd.OutOrStdout(), args[0], args[1], unshare)
 		},
 	}
+	cmd.Flags().BoolVar(&unshare, "unshare", false, "cancel the shares on a shared folder (or the shared folders in it) and go ahead, instead of refusing")
 	return cmd
 }
 
@@ -141,6 +147,7 @@ func runRename(
 	out io.Writer,
 	pathArg string,
 	newName string,
+	unshare bool,
 ) error {
 	if ctx == nil {
 		ctx = context.Background()
@@ -170,6 +177,7 @@ func runRename(
 	client := &rename.Client{
 		HTTPClient: httpClient,
 		BaseURL:    rp.FilesURL,
+		Unshare:    unshare,
 	}
 
 	// Plan summary first — gives the user a chance to ^C before any
@@ -254,6 +262,9 @@ func reformatRenameHTTPErr(err error, olaresID, src, dst string) error {
 	}
 	var hErr *rename.HTTPError
 	if errors.As(err, &hErr) {
+		if msg, ok := sharedFolderConflict(hErr.Status, hErr.Body); ok {
+			return fmt.Errorf("rename %s: %s", src, msg)
+		}
 		switch hErr.Status {
 		case 401, 403:
 			return credential.FormatHTTPAuthError(hErr.Status, nil, olaresID)
