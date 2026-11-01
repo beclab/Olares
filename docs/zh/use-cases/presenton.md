@@ -9,7 +9,7 @@ head:
 - - meta
   - name: keywords
     content: Olares, Presenton, AI, 演示文稿, PowerPoint, PDF
-app_version: "0.0.10"
+app_version: "0.0.11"
 doc_version: "1.2"
 doc_updated: "2026-11-01"
 ---

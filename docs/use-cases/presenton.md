@@ -7,7 +7,7 @@ head:
   - - meta
     - name: keywords
       content: "Olares, Presenton, self-hosted, presentations, PowerPoint, PDF, AI Router, MCP, Lares, Hermes Agent"
-app_version: "0.0.10"
+app_version: "0.0.11"
 doc_version: "1.2"
 doc_updated: "2026-11-01"
 ---
