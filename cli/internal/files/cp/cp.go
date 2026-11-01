@@ -111,6 +111,10 @@ type Op struct {
 type Client struct {
 	HTTPClient *http.Client
 	BaseURL    string
+	// Unshare lets the backend change a folder that is shared, or
+	// holds one: the shares on it are cancelled once the change is
+	// done. Without it the backend answers 409 and lists the shares.
+	Unshare bool
 }
 
 // HTTPError carries the status + truncated body of a non-2xx response
@@ -626,6 +630,9 @@ func (c *Client) PasteOne(ctx context.Context, op Op) (string, error) {
 		return "", fmt.Errorf("PasteOne: empty Node (Plan should have rejected this)")
 	}
 	endpoint := c.BaseURL + "/api/paste/" + url.PathEscape(op.Node) + "/"
+	if c.Unshare {
+		endpoint += "?unshare=true"
+	}
 
 	body, err := json.Marshal(pasteRequestBody{
 		Action:      op.Action,

@@ -91,14 +91,39 @@ func TestPlan_PercentEncoding(t *testing.T) {
 	if strings.Contains(op.Endpoint, "destination=新+photo.jpg") {
 		t.Errorf("query value should be %%20-encoded, not '+': %q", op.Endpoint)
 	}
-	// Round-trip through net/url to confirm the destination decodes
-	// back to the literal new name (UTF-8 + space preserved).
-	u, err := url.Parse("http://x" + op.Endpoint)
+	if got := serverDestination(t, op.Endpoint); got != "新 photo.jpg" {
+		t.Errorf("destination decoded: got %q", got)
+	}
+}
+
+// serverDestination decodes the destination of endpoint the way the
+// files backend does: the query value, then url.PathUnescape of it.
+func serverDestination(t *testing.T, endpoint string) string {
+	t.Helper()
+	u, err := url.Parse("http://x" + endpoint)
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
-	if got := u.Query().Get("destination"); got != "新 photo.jpg" {
-		t.Errorf("destination decoded: got %q", got)
+	name, err := url.PathUnescape(u.Query().Get("destination"))
+	if err != nil {
+		t.Fatalf("server unescape of %q: %v", u.Query().Get("destination"), err)
+	}
+	return name
+}
+
+// TestPlan_PercentInName pins names holding '%': the server unescapes
+// destination once more after decoding the query, so the CLI encodes it
+// twice, as LarePass does.
+func TestPlan_PercentInName(t *testing.T) {
+	tgt := Target{FileType: "drive", Extend: "Home", SubPath: "/old.txt"}
+	for _, name := range []string{"a%25b 100%.txt", "100%", "%E4%B8%AD.txt", "a+b&c=d#e?.txt"} {
+		op, err := Plan(tgt, name)
+		if err != nil {
+			t.Fatalf("Plan(%q): %v", name, err)
+		}
+		if got := serverDestination(t, op.Endpoint); got != name {
+			t.Errorf("Plan(%q): server reads %q", name, got)
+		}
 	}
 }
 

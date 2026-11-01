@@ -499,68 +499,40 @@ func setupShareClient(ctx context.Context, f *cmdutil.Factory) (*share.Client, *
 	return &share.Client{HTTPClient: httpClient, BaseURL: rp.FilesURL}, rp, nil
 }
 
-// shareFlavorAllowedNamespaces is the per-flavor white-list of
-// fileType namespaces that share-create accepts client-side.
+// shareFlavorsFor lists the share flavors a directory in
+// fileType/extend can have. It is the same table as common.ShareTypesOf
+// in the files backend and the shareModes of the LarePass adapters:
 //
-// Source of truth on the policy is the LarePass app's
-// [`apps/packages/app/src/stores/operation.ts`](apps/packages/app/src/stores/operation.ts)
-// per-driver share-menu condition list. Each row below mirrors the
-// GUI's allow-set, minus the cloud namespaces (those are gated
-// separately via cloudFileTypes — defense in depth, even if a row
-// here ever accidentally includes one).
+//	storage                          internal  smb  public
+//	drive/Home                       yes       yes  yes
+//	sync                             yes       no   no
+//	external                         no        yes  no
+//	drive/Data, drive/Common, cache  no        no   no
+//	cloud drives                     no        no   no
 //
-//   - Internal: Drive / Sync / External / Cache (every non-cloud
-//     namespace).
-//
-//   - SMB: Drive / External / Cache. NOT Sync — the GUI excludes
-//     it, and exposing a Seafile library through SMB doesn't have
-//     a working server-side path either (Seafile uses its own
-//     mount story, not Samba). The CLI was tightened to match.
-//
-//   - Public: Drive only. This is the strictest flavor — the GUI's
-//     per-driver Share-to-Public condition allows ONLY
-//     `event.type === DriveType.Drive || DriveType.Data ||
-//     DriveType.Common`, all of which live under the wire-level
-//     `drive` fileType. drive/Common is admitted by this fileType
-//     allow-list AND is the only flavor that accepts it — the
-//     extend-level "Common is public-only" rule is enforced
-//     separately by [validateShareCommonRestriction] (the fileType
-//     allow-list can't express an extend constraint).
-//
-// Three things this map intentionally does NOT do:
-//
-//   - It does not gate `drive/Home` vs `drive/Data` separately —
-//     the share endpoints work uniformly across both extends, and
-//     the GUI's UI-level differentiation isn't load-bearing on the
-//     wire.
-//   - It does not encode the volume-listing-layer / node-picker-
-//     layer rules for `external/<node>/` and `cache/<node>/`; those
-//     are namespace-orthogonal and applied separately via
-//     IsExternalNodeRoot / IsCacheNodeRoot below.
-//   - It does not encode the GUI's `event.isDir` constraint here.
-//     That dir-only gate IS enforced (matching the LarePass GUI's
-//     per-driver share-menu condition list), but it lives in a
-//     separate cobra-layer preflight — [preflightShareCreate] in
-//     [share_create.go] — because it needs a wire round-trip
-//     (download.Client.Stat) to know whether the target is a file
-//     or a directory. Keeping the namespace allow-list pure
-//     (string in → error out) keeps it independently testable
-//     without standing up an HTTP server.
-var shareFlavorAllowedNamespaces = map[share.Type]map[string]struct{}{
-	share.TypeInternal: {
-		"drive":    {},
-		"sync":     {},
-		"external": {},
-		"cache":    {},
-	},
-	share.TypeSMB: {
-		"drive":    {},
-		"external": {},
-		"cache":    {},
-	},
-	share.TypePublic: {
-		"drive": {},
-	},
+// The backend refuses every other combination; checking here gives a
+// clearer message before any request is sent.
+func shareFlavorsFor(fileType, extend string) []share.Type {
+	switch fileType {
+	case "drive":
+		if extend == "Home" {
+			return []share.Type{share.TypeInternal, share.TypeSMB, share.TypePublic}
+		}
+	case "external":
+		return []share.Type{share.TypeSMB}
+	case "sync":
+		return []share.Type{share.TypeInternal}
+	}
+	return nil
+}
+
+// shareStorageName names fileType/extend in messages: drive/Home,
+// drive/Common, cache, sync ...
+func shareStorageName(fileType, extend string) string {
+	if fileType == "drive" {
+		return "drive/" + extend
+	}
+	return fileType
 }
 
 // cloudFileTypes lists the cloud-drive namespaces (awss3 / google /
@@ -604,37 +576,21 @@ func shareFlavorFriendlyName(t share.Type) string {
 	return string(t)
 }
 
-// validateShareNamespace returns nil when fileType is allowed for
-// the given share flavor, or a self-describing error otherwise.
-//
-// Order of checks:
-//
-//  1. Flavor allow-list lookup. If the fileType is in
-//     shareFlavorAllowedNamespaces[flavor], we're done.
-//  2. Cloud rejection (awss3 / google / dropbox / tencent) gets a
-//     dedicated message citing cross-cloud-account semantics — the
-//     recovery path is "download then re-upload to drive", which
-//     differs from the per-flavor recovery path.
-//  3. Per-flavor rejection (e.g. Public refusing sync / external /
-//     cache) cites the allow-list and points at the alternative
-//     flavors that accept this fileType, plus the "copy into drive"
-//     fallback.
-//
-// Pulled out of the cobra layer so the gate is independently
-// testable without standing up cobra / the factory / the share
-// client; the gate itself is pure (string in → error out).
-func validateShareNamespace(flavor share.Type, fileType, displayPath string) error {
-	allowed, ok := shareFlavorAllowedNamespaces[flavor]
-	if !ok {
-		// Defense in depth — flavor must be one of the three
-		// known types that the cobra layer constructs. Returning
-		// a typed error here beats a silent "everything is
-		// allowed" failure mode if a future verb forgets to call
-		// us with a real flavor.
+// validateShareNamespace returns nil when a directory in
+// fileType/extend can have a share of the given flavor (see
+// [shareFlavorsFor]), or an error that says which flavors it can have.
+// Cloud drives get their own message: they take no share at all.
+func validateShareNamespace(flavor share.Type, fileType, extend, displayPath string) error {
+	switch flavor {
+	case share.TypeInternal, share.TypeSMB, share.TypePublic:
+	default:
 		return fmt.Errorf("validateShareNamespace: unknown share flavor %q", string(flavor))
 	}
-	if _, accepted := allowed[fileType]; accepted {
-		return nil
+	allowed := shareFlavorsFor(fileType, extend)
+	for _, f := range allowed {
+		if f == flavor {
+			return nil
+		}
 	}
 	flavorName := shareFlavorFriendlyName(flavor)
 
@@ -646,81 +602,24 @@ func validateShareNamespace(flavor share.Type, fileType, displayPath string) err
 				"and the resulting share record would point at a path that no other "+
 				"Olares user has the credential to read. "+
 				"If you need to share cloud-backed data, download it first "+
-				"(`files download`) and re-upload it to drive/Home or drive/Data, "+
-				"then share that.",
+				"(`files download`) and re-upload it to drive/Home, then share that.",
 			flavorName, displayPath)
 	}
 
-	// Non-cloud namespace failing this flavor's allow-list. Today
-	// only Public hits this branch (it allows only `drive` while
-	// the user might pass sync / external / cache). Build a
-	// recovery hint citing the OTHER flavors that DO accept this
-	// fileType, so the user has a concrete next command to try.
-	var fallbacks []string
-	for _, alt := range []share.Type{share.TypeInternal, share.TypeSMB} {
-		if alt == flavor {
-			continue
-		}
-		if _, ok := shareFlavorAllowedNamespaces[alt][fileType]; ok {
-			fallbacks = append(fallbacks, "`files share "+shareFlavorFriendlyName(alt)+"`")
-		}
+	storage := shareStorageName(fileType, extend)
+	if len(allowed) == 0 {
+		return fmt.Errorf("refusing to create a %s share for %s: %s cannot be shared. "+
+			"Copy the data into drive/Home first.", flavorName, displayPath, storage)
 	}
-	hint := "copy the data into drive/Home or drive/Data first."
-	if len(fallbacks) > 0 {
-		hint = "use " + strings.Join(fallbacks, " or ") + " for that namespace, " +
-			"or copy the data into drive/Home or drive/Data first."
+	var names, cmds []string
+	for _, f := range allowed {
+		names = append(names, shareFlavorFriendlyName(f))
+		cmds = append(cmds, "`files share "+shareFlavorFriendlyName(f)+"`")
 	}
 	return fmt.Errorf(
-		"refusing to create a %s share for %s: `files share %s` only supports the "+
-			"{%s} namespace(s) (matches the LarePass GUI's per-driver gating). %s",
-		flavorName, displayPath, flavorName,
-		sortedNamespaceList(allowed), hint)
-}
-
-// validateShareCommonRestriction enforces the extend-level policy
-// that the flavor allow-list (which keys on fileType only) can't
-// express: drive/Common may be shared ONLY as an outbound public
-// link.
-//
-// drive/Common is the Olares app common data area (JuiceFS
-// /rootfs/Common — ollama / huggingface / comfyui caches). It lives
-// under the wire-level `drive` fileType, so it passes the per-flavor
-// fileType allow-list for internal / SMB just like Home / Data —
-// but TermiPass's per-driver share gating
-// (FileOperationItem.vue `canShowShareOption`) lists DriveType.Common
-// ONLY under SHARE_IN_PUBLIC, never under SHARE_IN_INTERNAL or
-// SHARE_IN_SMB. We mirror that here so the CLI can't create an
-// internal / SMB share the GUI would never offer.
-//
-// Returns nil for every non-Common path (the helper is a no-op
-// outside the Common case) and for Common + Public; rejects Common +
-// internal / SMB with a self-describing error.
-func validateShareCommonRestriction(flavor share.Type, fileType, extend, displayPath string) error {
-	if fileType != "drive" || extend != "Common" {
-		return nil
-	}
-	if flavor == share.TypePublic {
-		return nil
-	}
-	return fmt.Errorf(
-		"refusing to create a %s share for %s: drive/Common (the app common data area) "+
-			"only supports outbound public links — use `files share public`. "+
-			"Matching the LarePass GUI, the common data area cannot be shared internally "+
-			"to other Olares users or exported over SMB.",
-		shareFlavorFriendlyName(flavor), displayPath)
-}
-
-// sortedNamespaceList renders an allowed-namespace set as a
-// stable, alphabetical, comma-joined string — used in error
-// messages so the list is deterministic across runs and easy to
-// snapshot in tests.
-func sortedNamespaceList(m map[string]struct{}) string {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	return strings.Join(keys, ", ")
+		"refusing to create a %s share for %s: %s only supports %s shares "+
+			"(matches the LarePass GUI). Use %s instead, or copy the data into drive/Home first.",
+		flavorName, displayPath, storage, strings.Join(names, " / "), strings.Join(cmds, " or "))
 }
 
 // frontendPathToShareTarget converts a user-supplied path into the
@@ -730,8 +629,8 @@ func sortedNamespaceList(m map[string]struct{}) string {
 // through this helper, so the rejections below scope cleanly to
 // share creation only.
 //
-// The flavor parameter selects which per-verb namespace allow-list
-// to enforce — see shareFlavorAllowedNamespaces. Caller passes
+// The flavor parameter selects which share flavor to check the
+// storage against — see shareFlavorsFor. Caller passes
 // share.TypeInternal / share.TypePublic / share.TypeSMB; passing
 // any other value lands on the defense-in-depth branch in
 // validateShareNamespace.
@@ -741,21 +640,15 @@ func sortedNamespaceList(m map[string]struct{}) string {
 //  1. Path parse via [ParseFrontendPath] (catches bad fileType,
 //     missing extend, drive-extend-not-Home/Data, etc.).
 //
-//  2. Flavor namespace allow-list / cloud rejection via
-//     [validateShareNamespace]. Runs before the volume-listing /
-//     node-picker checks below so a Public share against
-//     `external/<node>/` surfaces the broader "Public only allows
-//     drive" message rather than the narrower "external/<node>/
-//     is the volume listing layer" one — same final answer, but a
-//     more actionable error for the user.
+//  2. Storage / flavor check via [validateShareNamespace]. Runs
+//     before the volume-listing / node-picker checks below so an
+//     internal or public share against `external/<node>/` surfaces
+//     the broader "external only supports smb" message rather than
+//     the narrower "external/<node>/ is the volume listing layer"
+//     one — same final answer, but a more actionable error.
 //
-//  3. `external/<node>/` (volume-listing layer) rejection. Applies
-//     uniformly to internal / SMB; never reachable for Public
-//     because step (2) already rejected the entire `external`
-//     namespace.
-//
-//  4. `cache/<node>/` (node-picker layer) rejection. Same
-//     rationale as (3).
+//  3. `external/<node>/` (volume-listing layer) rejection. Only SMB
+//     reaches it: step (2) already rejected the other flavors.
 //
 // Volume-root targets (e.g. `drive/Home/`, `sync/<repo>/`) are NOT
 // rejected here: sharing the entire Home volume is unusual but
@@ -765,10 +658,7 @@ func frontendPathToShareTarget(raw string, flavor share.Type) (share.Target, err
 	if err != nil {
 		return share.Target{}, err
 	}
-	if err := validateShareNamespace(flavor, fp.FileType, raw); err != nil {
-		return share.Target{}, err
-	}
-	if err := validateShareCommonRestriction(flavor, fp.FileType, fp.Extend, raw); err != nil {
+	if err := validateShareNamespace(flavor, fp.FileType, fp.Extend, raw); err != nil {
 		return share.Target{}, err
 	}
 	if fp.IsExternalNodeRoot() {
@@ -776,13 +666,6 @@ func frontendPathToShareTarget(raw string, flavor share.Type) (share.Target, err
 			"refusing to share external/%s/: this is the volume listing layer (read-only); "+
 				"point at a real volume, e.g. external/%s/<volume>/<sub>/. "+
 				"Use `files ls external/%s/` first to discover the attached volumes.",
-			fp.Extend, fp.Extend, fp.Extend)
-	}
-	if fp.IsCacheNodeRoot() {
-		return share.Target{}, fmt.Errorf(
-			"refusing to share cache/%s/: this is the node-picker layer (no concrete dataset to share); "+
-				"point at a directory inside the node, e.g. cache/%s/<sub>/. "+
-				"Use `files ls cache/%s/` first to discover the available subdirectories.",
 			fp.Extend, fp.Extend, fp.Extend)
 	}
 	return share.Target{
