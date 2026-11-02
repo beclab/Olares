@@ -31,7 +31,26 @@ To keep SMB credentials in one place, save them in **Settings** > **Integration*
 - Saved accounts are for reference only. Files does not list them in the mount dialog, so you still need to enter the username and password manually when mounting a share.
 :::
 
-## Mount an SMB share## Unmount an SMB share
+## Mount an SMB share
+
+1. Open the Files app, and then go to **Drive** > **External**.
+2. Click **Connect to server** in the upper-right corner.
+3. In the popup window, click the **Protocol** list, and then select **SMB**.
+
+    ![Configure SMB connection](/images/manual/olares/add-SMB-share-path.png#bordered)
+
+4. In the **Server address** field, enter the SMB share path. For example, `//192.168.1.100/Documents`.
+5. (Optional) Save frequently used server addresses for quick access next time:
+
+    - To add an address to **Favorite servers**, click <i class="material-symbols-outlined">add</i> after entering the share path.
+    - To remove a saved address, click it in **Favorite servers**, and then click <i class="material-symbols-outlined">remove</i>.
+
+6. Click **Confirm**.
+7. Enter the username and password, and then click **Confirm**.
+
+    Once connected, the SMB share appears in the **External** directory, and you can access your shared files and folders seamlessly.
+
+## Unmount an SMB share
 
 When you no longer need access to the network files, you can safely disconnect the share.
 
