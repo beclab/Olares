@@ -28,7 +28,8 @@ func (u upgrader_1_12_8) Version() *semver.Version {
 }
 
 func (u upgrader_1_12_8) PrepareForUpgrade() []task.Interface {
-	tasks := refreshBackupETCDScript()
+	tasks := juiceFSXattrTasks()
+	tasks = append(tasks, refreshBackupETCDScript()...)
 	tasks = append(tasks, migrateContainerdConfigV3()...)
 	tasks = append(tasks, &task.LocalTask{
 		Name:   "RestartNvidiaApplicationPods",
