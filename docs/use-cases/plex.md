@@ -27,6 +27,7 @@ In this guide, you will learn how to:
 
 ## Prerequisites
 
+- Olares 1.12.7 or later.
 - A Plex account you can sign in to.
 - A video file of your own, such as a travel recording.
 
