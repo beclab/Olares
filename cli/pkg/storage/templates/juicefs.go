@@ -19,7 +19,7 @@ StartLimitIntervalSec=0
 WorkingDirectory=/usr/local
 
 EnvironmentFile=
-ExecStart={{ .JuiceFsBinPath }} mount -o writeback_cache --entry-cache 300 --attr-cache 300 --cache-dir {{ .JuiceFsCachePath }} {{ .JuiceFsMetaDb }} {{ .JuiceFsMountPoint }}
+ExecStart={{ .JuiceFsBinPath }} mount --enable-xattr --cache-dir {{ .JuiceFsCachePath }} {{ .JuiceFsMetaDb }} {{ .JuiceFsMountPoint }}
 
 # Let systemd restart this service always
 Restart=always
