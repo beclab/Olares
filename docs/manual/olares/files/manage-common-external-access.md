@@ -41,6 +41,9 @@ The following defaults apply to Common folders and External mounts. For more abo
 1. Log in to Olares as the owner or an admin who can manage the folder, then open **Files**.
 2. Go to **Application** > **Common** or **Drive** > **External**.
 3. Right-click the top-level folder or mounted directory, and select **Access settings**.
+
+   ![Access settings in the Common folder context menu](/images/manual/olares/files-access-settings.png#bordered)
+
 4. Find the member and choose a permission:
 
    | Permission | What the member can do |
@@ -54,8 +57,6 @@ The following defaults apply to Common folders and External mounts. For more abo
 6. Ask the member to refresh Files and open the folder. Check that they can browse its contents. With **Can view**, they should be unable to upload or delete files.
 
 Edit access does not let a member change access settings, create SMB shares from the mounted directory, or connect or unmount storage. It also does not let them rename, move, or delete the top-level Common folder or the mount point itself.
-
-<!-- Add EN screenshot of Access settings here after alpha.2 verification. -->
 
 ## Changing or revoking access
 
