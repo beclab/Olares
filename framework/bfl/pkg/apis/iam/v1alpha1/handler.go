@@ -13,7 +13,6 @@ import (
 	"bytetrade.io/web3os/bfl/pkg/apiserver/runtime"
 	app_service "bytetrade.io/web3os/bfl/pkg/app_service/v1"
 	"bytetrade.io/web3os/bfl/pkg/constants"
-	"bytetrade.io/web3os/bfl/pkg/lldap"
 	"bytetrade.io/web3os/bfl/pkg/utils/httpclient"
 	iamV1alpha2 "github.com/beclab/api/iam/v1alpha2"
 	"github.com/emicklei/go-restful/v3"
@@ -149,54 +148,6 @@ func (h *Handler) handleListUsers(req *restful.Request, resp *restful.Response) 
 	}
 
 	response.Success(resp, api.NewListResult(usersInfo))
-}
-
-func (h *Handler) handleListUserLoginRecords(req *restful.Request, resp *restful.Response) {
-	name := req.PathParameter("user")
-
-	users, err := h.listUsers(req.Request.Context())
-	if err != nil {
-		response.HandleError(resp, errors.Errorf("list user login records: %v", err))
-		return
-	}
-
-	userIsExists := func() bool {
-		for _, user := range users {
-			if user.Name == name {
-				return true
-			}
-		}
-		return false
-	}
-	if !userIsExists() {
-		response.HandleError(resp, errors.Errorf("list user login records: user %q not exists", name))
-		return
-	}
-	lldapClient, err := lldap.New()
-	if err != nil {
-		log.Errorf("make lldap client err=%v", err)
-		return
-	}
-	loginRecords, err := lldapClient.Users().LoginRecords(req.Request.Context(), name)
-	if err != nil {
-		response.HandleError(resp, errors.Errorf("list user login records: %v", err))
-		return
-	}
-	records := make([]LoginRecord, 0)
-	for _, r := range loginRecords {
-		records = append(records, LoginRecord{
-			Type:      "Token",
-			Success:   r.Success,
-			UserAgent: r.UserAgent,
-			Reason:    r.Reason,
-			SourceIP:  r.SourceIp,
-			LoginTime: func() *int64 {
-				t := r.CreationDate.Unix()
-				return &t
-			}(),
-		})
-	}
-	response.Success(resp, api.NewListResult(records))
 }
 
 func (h *Handler) handleListUserRoles(_ *restful.Request, resp *restful.Response) {
