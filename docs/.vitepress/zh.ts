@@ -284,8 +284,8 @@ const side = {
           link: "/zh/manual/olares/market/market",
         },
         {
-          text: "使用 LarePass 管理 Olares 应用",
-          link: "/zh/manual/larepass/manage-apps",
+          text: "使用 LarePass 管理应用",
+          link: "/zh/manual/larepass/manage-apps-with-larepass",
         },
         {
           text: "手动更新应用镜像",
