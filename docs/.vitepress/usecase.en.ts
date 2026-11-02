@@ -427,6 +427,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               link: "/use-cases/navidrome",
             },
             {
+              text: "Plex",
+              link: "/use-cases/plex",
+            },
+            {
               text: "TREK (NOMAD)",
               link: "/use-cases/trek",
               collapsed: true,
