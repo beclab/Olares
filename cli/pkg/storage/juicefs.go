@@ -2,6 +2,7 @@ package storage
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -120,39 +121,52 @@ func (t *InstallJuiceFs) Execute(runtime connector.Runtime) error {
 
 type EnableJuiceFsService struct {
 	common.KubeAction
+	ConfigOnly bool // Refresh the unit without starting or enabling the service.
 }
 
 func (t *EnableJuiceFsService) Execute(runtime connector.Runtime) error {
 	var redisAddress, _ = t.PipelineCache.GetMustString(common.CacheHostRedisAddress)
 	var redisPassword, _ = t.PipelineCache.GetMustString(common.CacheHostRedisPassword)
-	if redisAddress == "" || redisPassword == "" {
-		exist, err := runtime.GetRunner().FileExist(JuiceFsServiceFile)
+	var redisService string
+	if redisAddress != "" && redisPassword != "" {
+		redisService = fmt.Sprintf("redis://:%s@%s:6379/1", redisPassword, redisAddress)
+	} else {
+		// Node-local upgrade stages have no Redis config in their pipeline
+		// cache. Reuse the metadata URL already configured on this node.
+		content, err := os.ReadFile(JuiceFsServiceFile)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "read existing juicefs service")
 		}
-		if !exist {
+		for _, field := range strings.Fields(string(content)) {
+			if strings.HasPrefix(field, "redis://") {
+				redisService = field
+				break
+			}
+		}
+		if redisService == "" {
 			return errors.New("no redis config is available")
 		}
-	} else {
-		redisService := fmt.Sprintf("redis://:%s@%s:6379/1", redisPassword, redisAddress)
-		data := util.Data{
-			"JuiceFsBinPath":    JuiceFsFile,
-			"JuiceFsCachePath":  JuiceFsCacheDir,
-			"JuiceFsMetaDb":     redisService,
-			"JuiceFsMountPoint": OlaresJuiceFSRootDir,
-		}
+	}
+	data := util.Data{
+		"JuiceFsBinPath":    JuiceFsFile,
+		"JuiceFsCachePath":  JuiceFsCacheDir,
+		"JuiceFsMetaDb":     redisService,
+		"JuiceFsMountPoint": OlaresJuiceFSRootDir,
+	}
 
-		juiceFsServiceStr, err := util.Render(juicefsTemplates.JuicefsService, data)
-		if err != nil {
-			return errors.Wrap(errors.WithStack(err), "render juicefs service template failed")
-		}
-		if err := util.WriteFile(JuiceFsServiceFile, []byte(juiceFsServiceStr), cc.FileMode0644); err != nil {
-			return errors.Wrap(errors.WithStack(err), fmt.Sprintf("write juicefs service %s failed", JuiceFsServiceFile))
-		}
+	juiceFsServiceStr, err := util.Render(juicefsTemplates.JuicefsService, data)
+	if err != nil {
+		return errors.Wrap(errors.WithStack(err), "render juicefs service template failed")
+	}
+	if err := util.WriteFile(JuiceFsServiceFile, []byte(juiceFsServiceStr), cc.FileMode0644); err != nil {
+		return errors.Wrap(errors.WithStack(err), fmt.Sprintf("write juicefs service %s failed", JuiceFsServiceFile))
 	}
 
 	if _, err := runtime.GetRunner().SudoCmd("systemctl daemon-reload", false, false); err != nil {
 		return err
+	}
+	if t.ConfigOnly {
+		return nil
 	}
 
 	if _, err := runtime.GetRunner().SudoCmd("systemctl restart juicefs", false, false); err != nil {
@@ -234,9 +248,9 @@ func (t *CleanupStaleJuiceFSMount) Execute(runtime connector.Runtime) error {
 		return nil
 	}
 	// Liveness is decided by the unit state, not by touching the path: the
-	// client mounts with --attr-cache 300, so the kernel keeps answering stat()
-	// on the mount root from its attribute cache for minutes after the serving
-	// process is gone. A mount whose unit is not active has nothing behind it.
+	// kernel can keep answering stat() on the mount root from its attribute
+	// cache after the serving process is gone. A mount whose unit is not
+	// active has nothing behind it.
 	if out, _ := runtime.GetRunner().SudoCmd("systemctl is-active juicefs", false, false); strings.TrimSpace(out) == "active" {
 		return nil
 	}

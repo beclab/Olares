@@ -584,7 +584,7 @@ AssertFileIsExecutable=$juicefs_bin
 WorkingDirectory=/usr/local
 
 EnvironmentFile=
-ExecStart=$juicefs_bin mount -o writeback_cache --entry-cache 300 --attr-cache 300 --cache-dir $jfs_cachedir $metadb $jfs_mountpoint
+ExecStart=$juicefs_bin mount --enable-xattr --cache-dir $jfs_cachedir $metadb $jfs_mountpoint
 
 # Let systemd restart this service always
 Restart=always

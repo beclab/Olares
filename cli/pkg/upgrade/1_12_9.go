@@ -31,6 +31,10 @@ func (u upgrader_1_12_9) AddedBreakingChange() bool {
 	return false
 }
 
+func (u upgrader_1_12_9) PreUpgradeNode() []task.Interface {
+	return append(juiceFSXattrTasks(), u.upgraderBase.PreUpgradeNode()...)
+}
+
 func (u upgrader_1_12_9) UpgradeSystemComponents() []task.Interface {
 	tasks := []task.Interface{terminus.GenericDevicePluginTask()}
 	tasks = append(tasks, upgradePrometheus()...)
