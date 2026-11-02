@@ -11,3 +11,16 @@ subjects:
 - kind: ServiceAccount
   name: system-frontend
   namespace: {{ .Release.Namespace }}
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: user:{{ .Values.bfl.username }}:headscale-svc
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ .Values.bfl.username }}:headscale-svc
+subjects:
+- kind: User
+  name: '{{ .Values.bfl.username }}'
