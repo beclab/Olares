@@ -15,9 +15,7 @@ import (
 	v1alpha1client "bytetrade.io/web3os/bfl/pkg/client/clientset/v1alpha1"
 	"bytetrade.io/web3os/bfl/pkg/constants"
 
-	restfulspec "github.com/emicklei/go-restful-openapi/v2"
 	"github.com/emicklei/go-restful/v3"
-	"github.com/go-openapi/spec"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	urlruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -83,7 +81,6 @@ func (s *APIServer) PrepareRun() error {
 	s.container.Router(restful.CurlyRouter{})
 
 	s.installModuleAPI()
-	s.installAPIDocs()
 
 	var modulePaths []string
 	for _, ws := range s.container.RegisteredWebServices() {
@@ -104,43 +101,9 @@ func (s *APIServer) Run() error {
 	return nil
 }
 
-func (s *APIServer) installAPIDocs() {
-	config := restfulspec.Config{
-		WebServices:                   s.container.RegisteredWebServices(), // you control what services are visible
-		APIPath:                       "/bfl/apidocs.json",
-		PostBuildSwaggerObjectHandler: enrichSwaggerObject}
-	s.container.Add(restfulspec.NewOpenAPIService(config))
-}
-
 func (s *APIServer) installModuleAPI() {
 	urlruntime.Must(iamV1alpha1.AddToContainer(s.container))
 	urlruntime.Must(backendv1.AddContainer(s.container))
 	urlruntime.Must(settingsV1alpha1.AddContainer(s.container))
 	urlruntime.Must(monitov1alpha1.AddContainer(s.container))
-}
-
-func enrichSwaggerObject(swo *spec.Swagger) {
-	swo.Info = &spec.Info{
-		InfoProps: spec.InfoProps{
-			Title:       "BFL",
-			Description: "Backend For Launcher",
-			Contact: &spec.ContactInfo{
-				ContactInfoProps: spec.ContactInfoProps{
-					Name:  "bytetrade",
-					Email: "dev@bytetrade.io",
-					URL:   "http://bytetrade.io",
-				},
-			},
-			License: &spec.License{
-				LicenseProps: spec.LicenseProps{
-					Name: "Apache License 2.0",
-					URL:  "http://www.apache.org/licenses/LICENSE-2.0",
-				},
-			},
-			Version: "1.0.0",
-		},
-	}
-	swo.Tags = []spec.Tag{{TagProps: spec.TagProps{
-		Name:        "Launcher",
-		Description: "Web 3 OS Launcher"}}}
 }
