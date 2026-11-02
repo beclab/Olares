@@ -29,13 +29,13 @@ The Apps tab shows apps installed on your Olares. By default, it shows running a
 
 1. Open LarePass and tap **Apps** in the bottom navigation bar.
 
-   ![Apps tab in LarePass](/images/manual/larepass/apps-home.png#bordered){width=40%}
+   ![Apps tab in LarePass](/images/manual/larepass/larepass-apps-tab.png#bordered)
 
 2. Find an app in the grid, or enter its name in **Search apps**.
 3. Tap the app icon to open it.
 4. To view stopped apps or all apps, tap <i class="material-symbols-outlined">more_horiz</i> beside the search box, and then select **Stopped** or **All**.
 
-   ![Filter and refresh apps](/images/manual/larepass/apps-filter.png#bordered){width=40%}
+   ![Filter and refresh apps](/images/manual/larepass/larepass-apps-filter-menu.png#bordered)
 
 5. To reload the app list, open the same menu and select **Refresh**.
 
