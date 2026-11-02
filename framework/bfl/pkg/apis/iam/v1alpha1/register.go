@@ -43,13 +43,6 @@ func AddToContainer(c *restful.Container) error {
 		Produces(restful.MIME_JSON).
 		Returns(http.StatusOK, "", response.Response{}))
 
-	ws.Route(ws.GET("/users/{user}/login-records").
-		To(handler.handleListUserLoginRecords).
-		Doc("List user login records.").
-		Param(ws.PathParameter("user", "user name").DataType("string").Required(true)).
-		Produces(restful.MIME_JSON).
-		Returns(http.StatusOK, "", response.Response{}))
-
 	ws.Route(ws.PUT("/users/{user}/password").
 		To(handler.handleResetUserPassword).
 		Doc("Reset user password.").
