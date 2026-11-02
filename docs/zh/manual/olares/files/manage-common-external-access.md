@@ -48,6 +48,8 @@ description: 在 Olares 文件管理器中设置公共目录和外部存储的�
 
 4. 找到需要授权的成员，选择权限：
 
+   ![权限设置对话框](/images/manual/olares/files-access-settings-dialog.png#bordered)
+
    | 权限 | 成员可以执行的操作 |
    | --- | --- |
    | **无权限** | 无法在列表中看到该文件夹，也不能通过文件管理器访问其中的内容。 |

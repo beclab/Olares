@@ -36,7 +36,7 @@ The following defaults apply to Common folders and External mounts. For more abo
 | Admin | Full management access, unless restricted by the owner | Members, while the admin retains management access to the folder |
 | Member | No access | Cannot change folder access settings |
 
-## Granting member access
+## Grant member access
 
 1. Log in to Olares as the owner or an admin who can manage the folder, then open **Files**.
 2. Go to **Application** > **Common** or **Drive** > **External**.
@@ -46,19 +46,21 @@ The following defaults apply to Common folders and External mounts. For more abo
 
 4. Find the member and choose a permission:
 
+   ![Access settings dialog](/images/manual/olares/files-access-settings-dialog.png#bordered)
+
    | Permission | What the member can do |
    | --- | --- |
    | **No access** | Cannot see the folder in the list or access its contents through Files. |
    | **Can view** | Browse, preview, and download files. Cannot add, edit, or delete content. |
    | **Can edit** | View files, create folders, upload files, and edit or delete content inside the folder. |
-   | **Default** | Restore the member’s default permission: **No access**. |
+   | **Default (No access)** | Restore the member’s default permission: **No access**. |
 
 5. Click **Confirm**.
 6. Ask the member to refresh Files and open the folder. Check that they can browse its contents. With **Can view**, they should be unable to upload or delete files.
 
 Edit access does not let a member change access settings, create SMB shares from the mounted directory, or connect or unmount storage. It also does not let them rename, move, or delete the top-level Common folder or the mount point itself.
 
-## Changing or revoking access
+## Change or revoke access
 
 1. Right-click the same folder and select **Access settings**.
 2. Change the user's permission. To revoke a member's access, select **No access**.
