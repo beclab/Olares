@@ -12,16 +12,16 @@ Use the **Apps** tab in LarePass to open, install, and manage Olares apps from y
 Check the following requirements before accessing apps from your mobile device.
 
 - Your Olares runs version 1.12.8 or later.
-- Your LarePass mobile app includes the **Apps** tab.
+- Your LarePass mobile app is upgraded to the latest version and includes the **Apps** tab.
 - Your Olares account is signed in to LarePass, and your mobile device can connect to Olares. For remote access, see [LarePass VPN](private-network.md).
 
 <!-- Release check: Confirm the minimum LarePass mobile version before publishing. -->
 
 ## Mobile support
 
-All the Olares system apps support mobile use. Whether other installed apps can open on your mobile device depends on their mobile support. An app can install successfully but still not open on your mobile device.
+All the Olares system apps support mobile use. Other apps installed on your Olares always appear in the Apps tab on your mobile device, though some of their entrances may not support mobile use. This only affects whether an entrance opens on mobile. The app itself is installed and runs on Olares as expected, even if you installed it from your phone.
 
-An entrance that does not support mobile use appears grayed out with a monitor badge. Tapping it displays a message asking you to open it on desktop. You can still tap **Manage**, or long-press its icon, to access management actions allowed for your account.
+An unsupported entrance appears grayed out with a monitor badge. Tapping it displays an **Entrance unavailable** panel, prompting you to open it on desktop. You can still tap **Manage**, or long-press its icon, to access management actions allowed for your account.
 
 ## Access installed apps
 
