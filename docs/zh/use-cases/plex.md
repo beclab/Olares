@@ -16,7 +16,7 @@ doc_updated: "2026-11-03"
 
 # 使用 Plex 整理并播放你的个人视频
 
-Plex Media Server 是一款媒体服务器，可将你的视频和音乐文件整理为媒体库，并串流到 Plex 播放器。在 Olares 上，你可以把媒体收藏集中存放在自己的设备中，再通过浏览器或 Plex 客户端播放。
+Plex Media Server 是一款用于管理和串流播放视频、音乐的应用。在 Olares 上，你可以把媒体收藏存放在自己的设备中，再通过浏览器或 Plex 客户端播放。
 
 ## 学习目标
 
@@ -58,7 +58,7 @@ Plex Media Server 是一款媒体服务器，可将你的视频和音乐文件�
 4. 返回 Plex Account Setup，将令牌粘贴到 **Claim token**，点击 **Connect account**。
 
    :::tip 绑定失败
-   绑定失败时，重新打开 claim 页面获取新令牌，再返回设置页连接。
+   绑定失败时，从 claim 页面复制一个新令牌，再返回设置页重试。
    :::
 
 5. 请求完成后，点击 **Open Plex Web**。
@@ -67,7 +67,7 @@ Plex Media Server 是一款媒体服务器，可将你的视频和音乐文件�
 
 ## 添加视频媒体库
 
-Plex 媒体库会汇集所选文件夹中的媒体，方便你浏览和播放。下面先用一段旅行录像创建个人视频媒体库，再介绍如何添加电影或音乐收藏。
+Plex 媒体库让你可以浏览和播放所选文件夹中的媒体。下面以一段旅行录像为例，创建个人视频媒体库。你也可以按相同的步骤添加电影和音乐媒体库。
 
 ### 上传自己的视频
 
@@ -91,7 +91,7 @@ Home/
 
 ### 在 Plex 中选择媒体目录
 
-Plex 使用应用内路径读取媒体文件。选择文件夹时，使用下表右侧的路径。
+Olares 文件管理器中的文件夹，在 Plex 中使用不同的路径。添加媒体库时，请选择下表中对应的 Plex 路径。
 
 | Olares 中的目录 | Plex 中的路径 |
 | --- | --- |
@@ -102,7 +102,7 @@ Plex 使用应用内路径读取媒体文件。选择文件夹时，使用下表
 2. 在 **Manage** 下打开 **Libraries**，点击 **Add Library**。
 3. 对于旅行录像等个人视频，选择 **Other Videos**，将媒体库命名为 `Family videos`。
 4. 选择媒体库语言，点击 **Next**。
-5. 进入添加文件夹的步骤，点击 **Browse for Media Folders**，选择 `/media/Movies/Family`。
+5. 点击 **Browse for Media Folders**，选择 `/media/Movies/Family`。
 6. 点击 **Add**，再点击 **Add Library**，等待 Plex 扫描文件。
 7. 打开 `Family videos`，找到刚刚上传的视频。
 
@@ -118,18 +118,18 @@ Plex 对 `Home/Movies` 和 `Home/Music` 的访问为只读。需要整理、重�
 | 电影收藏 | **Movies** | `/media/Movies/Films` |
 | 音乐收藏 | **Music** | `/media/Music` |
 
-选择 **Movies** 时，清楚的片名和年份有助于 Plex 匹配海报及简介，媒体库语言决定这些信息的语言。
+创建 **Movies** 媒体库时，在文件名中写明片名和上映年份，有助于 Plex 匹配海报和简介。Plex 会按你选择的媒体库语言获取简介。
 
-以后向这些目录上传新文件后，可以在对应媒体库的菜单中选择 **Scan Library Files**，让 Plex 重新扫描。
+以后上传新文件后，打开对应媒体库的菜单，选择 **Scan Library Files**，将新文件加入 Plex。
 
 ## 播放视频并调整播放方式
 
 ### 先播放原始视频
 
-本地视频播放[免费](https://support.plex.tv/articles/202526943-plex-free-vs-paid/)。如果 Plex 将浏览器连接判定为远程连接，则适用[远程播放的订阅要求](#从手机和电脑连接-plex)。
+本地视频播放[免费](https://support.plex.tv/articles/202526943-plex-free-vs-paid/)。[远程播放需要订阅](#从手机和电脑连接-plex)，通过浏览器播放也一样。
 
 1. 打开 `Family videos`，选择刚才添加的旅行录像。
-2. 点击播放，先保持原始质量。
+2. 以原始质量播放视频。
 
 Plex 会根据文件格式、播放器能力和质量设置决定是否转码。先以原始质量观看，可以避免不必要的画质损失。
 
@@ -140,14 +140,14 @@ Plex 可能采用以下几种播放方式：
 | 播放方式 | 含义 |
 | --- | --- |
 | Direct Play | 播放器直接播放原文件，服务器不转换视频 |
-| Direct Stream | 服务器调整封装，视频通常不重新编码 |
+| Direct Stream | 服务器调整文件封装，不重新编码视频 |
 | Transcode | 服务器转换视频或音频，以适应播放器或质量设置 |
 
-网络和播放器允许时，优先保持原始质量。播放频繁缓冲时，可以在播放器的质量菜单中降低分辨率或码率，例如将 1080p 内容改为 720p。降低视频质量通常会增加服务器的转码工作。
+播放频繁缓冲时，可以在播放器的质量菜单中降低分辨率或码率，例如将 1080p 内容改为 720p。Plex 随后可通过转码，让视频符合所选的播放质量。
 
 ### 添加并选择字幕
 
-已有字幕可以与视频一起放入媒体目录。以旅行录像的英文字幕为例：
+将字幕文件放在视频所在的文件夹中。以英文字幕为例，文件可以这样命名：
 
 ```text
 Home/Movies/Family/
@@ -168,7 +168,7 @@ Home/Movies/Family/
 在手机或电脑上开启 LarePass VPN 后，可以连接 Olares 上的 Plex 服务器。播放期间保持专用网络连接开启。
 
 :::info 远程视频播放需要订阅
-Plex 判定为远程的视频播放，需要本教程使用的账号有有效的 Plex Pass 或 Remote Watch Pass。这也适用于被判定为远程的 VPN 连接。详见 [Plex 远程播放要求](https://support.plex.tv/articles/requirements-for-remote-playback-of-personal-media/)。
+远程视频播放需要你使用的账号有有效的 Plex Pass 或 Remote Watch Pass。Plex 也可能将 VPN 连接判定为远程连接。详见 [Plex 远程播放要求](https://support.plex.tv/articles/requirements-for-remote-playback-of-personal-media/)。
 :::
 
 ### 开启 LarePass VPN
@@ -186,13 +186,13 @@ Plex 判定为远程的视频播放，需要本教程使用的账号有有效的
 3. 在媒体来源或服务器列表中，选择你在 Plex 中设置的服务器名称，例如 `Home media`。
 4. 打开 `Family videos` 媒体库，选择旅行录像并播放。
 
-电脑也可以在开启 LarePass VPN 后，通过浏览器打开 Olares 中的 Plex Media Server 入口，继续使用 Plex Web。
+在电脑上使用浏览器观看时，保持 LarePass VPN 开启，然后从 Launchpad 打开 **Plex Media Server**。
 
 ## 使用硬件加速转码
 
-硬件转码把部分视频转换工作交给 GPU，适用于播放器不支持原始格式，或需要降低分辨率和码率的场景。
+硬件加速转码使用 GPU 解码或编码视频。播放器不支持源文件格式，或你选择了较低的分辨率或码率时，Plex 会进行转码。
 
-以下步骤使用安装时选择的 NVIDIA 模式，以及服务器所属的 Plex Pass 账号。
+以下步骤要求安装时已选择 NVIDIA 模式，且服务器所属账号有有效的 Plex Pass。
 
 ### 开启硬件加速
 
@@ -207,10 +207,8 @@ Plex 判定为远程的视频播放，需要本教程使用的账号有有效的
 
 1. 播放视频，打开播放器的质量设置，选择低于源视频的分辨率或码率。例如，对 1080p 视频选择 720p 转换选项。
 2. 在 Plex Web 的 **Activity** 中打开 **Dashboard**，展开当前播放的详细信息。
-3. 查看视频状态。显示转换时，视频格式旁的 `(hw)` 表示对应环节正在使用硬件加速。
+3. 查看视频格式旁是否有 `(hw)` 标记。该标记表示正在使用硬件加速解码或编码。
 4. 查看完毕后，可以将播放质量恢复为原始质量。
-
-Direct Play 或 Direct Stream 表示视频正在播放，且未重新编码。
 
 ## 常见问题
 
@@ -218,13 +216,19 @@ Direct Play 或 Direct Stream 表示视频正在播放，且未重新编码。
 
 先确认文件已经上传完成，再检查媒体库目录。例如，`Home/Movies/Family` 在 Plex 中对应 `/media/Movies/Family`。确认路径后，运行 **Scan Library Files**。
 
-### 看不到硬件转码选项，或播放时没有 `(hw)`
+### 为什么看不到硬件转码选项？
 
-先确认服务器所属账号有有效的 Plex Pass，再检查这台 Plex 实例使用的是 NVIDIA 模式。最后查看当前播放是否真的在转换视频。如果显示 Direct Play 或 Direct Stream，没有 `(hw)` 通常不需要处理。
+确认服务器绑定的账号有有效的 Plex Pass。在服务器的 **Transcoder** 设置中展开高级选项，即可找到硬件加速选项。
+
+### 为什么播放时没有 `(hw)` 标记？
+
+Direct Play 和 Direct Stream 不会重新编码视频，因此不会使用硬件转码。要查看 GPU 是否参与转码，可以[降低播放质量，再打开 Dashboard](#查看当前播放是否使用-gpu)。
+
+如果视频正在转码，但没有 `(hw)` 标记，请检查安装时是否选择了 NVIDIA 模式，以及 **Transcoder** 下的两个硬件加速选项是否已开启。
 
 ### 字幕没有出现或显示乱码
 
-确认字幕与视频位于同一目录，文件名主体一致，扩展名是支持的字幕格式。重新扫描媒体库，并刷新视频元数据。出现乱码时，先将字幕保存为 UTF-8，再重新上传。字幕识别的更多设置见 [Plex 本地字幕指南](https://support.plex.tv/articles/200471133-adding-local-subtitles-to-your-media/)。
+将字幕和视频放在同一文件夹中，检查文件名是否对应，例如 `Family-trip.mp4` 和 `Family-trip.en.srt`，然后重新扫描媒体库并刷新视频元数据。出现乱码时，将字幕保存为 UTF-8，再重新上传。支持的格式和命名规则见 [Plex 本地字幕指南](https://support.plex.tv/articles/200471133-adding-local-subtitles-to-your-media/)。
 
 ### 需要重新启动 Plex 时怎么操作
 
@@ -235,7 +239,7 @@ Direct Play 或 Direct Stream 表示视频正在播放，且未重新编码。
 
 ### 开启 VPN 后，Plex 客户端仍找不到服务器
 
-先确认 LarePass 已连接到运行 Plex 的 Olares，且 Plex 应用处于运行状态。然后核对客户端登录的 Plex 账号是否与服务器所属账号一致。你可以回到 Plex Web 的服务器 **General** 设置中查看归属，再重新打开客户端。
+确认 Plex 正在运行，且 LarePass 已连接到运行 Plex 的 Olares 设备。在 Plex Web 中打开服务器的 **General** 设置，查看服务器所属账号。使用该账号登录客户端，再重新打开服务器列表。
 
 ## 了解更多
 
