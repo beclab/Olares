@@ -13,6 +13,10 @@ SMB (Server Message Block) is a protocol used to share files, printers, and othe
 
 ## Before you begin
 
+:::warning Account requirements
+Log in to Olares as the Super Admin or an admin to connect an SMB share. Members cannot connect servers.
+:::
+
 - Ensure Olares and the SMB server are on the same local network.
 - You have obtained the following details:
   - The SMB share path, which is typically in the format of `//<IP-address>/<Shared-folder-name>`.
@@ -33,7 +37,7 @@ To keep SMB credentials in one place, save them in **Settings** > **Integration*
 
 ## Mount an SMB share
 
-1. Open the Files app, and then go to **Drive** > **External**.
+1. Log in to Olares as the Super Admin or an admin, open **Files**, and go to **Drive** > **External**.
 2. Click **Connect to server** in the upper-right corner.
 3. In the popup window, click the **Protocol** list, and then select **SMB**.
 
@@ -48,13 +52,19 @@ To keep SMB credentials in one place, save them in **Settings** > **Integration*
 6. Click **Confirm**.
 7. Enter the username and password, and then click **Confirm**.
 
-    Once connected, the SMB share appears in the **External** directory, and you can access your shared files and folders seamlessly.
+    Once connected, the SMB share appears under **External**. Open it to check that you can browse the shared files.
+
+## Give members access
+
+In Olares 1.12.8, members have no access to mounted directories by default. To let a member view or edit the files, use **Access settings** on the mounted directory. See [Manage access to Common and External](manage-common-external-access.md) for the steps.
 
 ## Unmount an SMB share
 
-When you no longer need access to the network files, you can safely disconnect the share.
+Log in to Olares as the Super Admin or an admin with management access to the mounted directory. Members cannot unmount storage, even if they have edit access.
+
+Unmounting disconnects the share from Olares for everyone using that mount. It does not delete files on the NAS.
 
 1. Open the Files app, and then go to **Drive** > **External**.
-2. Right-click the mounted folder, and then select **Unmount**. 
+2. Right-click the mounted folder, and then select **Unmount**.
 
     The SMB share is disconnected from Olares immediately, and is removed from the **External** directory.
