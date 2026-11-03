@@ -10,6 +10,8 @@ head:
 # Basic file operations
 Operations in Files are essentially the same as in other file managers. This page will introduce some common tasks in Files to get you started.
 
+For Common folders and External mounts, members need **Can view** to browse and download files, or **Can edit** to upload, edit, and delete content inside the folder. Ask the Super Admin or an admin with management access to grant the required permission. See [Manage access to Common and External](manage-common-external-access.md).
+
 ## Upload files
 
 ### Upload via the Files app
@@ -159,6 +161,8 @@ Deleted files cannot be recovered.
    - Right-click and select **Delete** from the context menu.
    - Click <i class="material-symbols-outlined">more_horiz</i> in the top right corner and select **Delete**.
 3. Confirm the deletion in the popup window.
+
+   If the folder is shared or contains shared folders, Files also asks you to confirm that the affected shares will be canceled. Continue only if you want to cancel those shares and delete the folder. See [What happens to shares when I rename, move, or delete a folder?](share-files.md#what-happens-to-shares-when-i-rename-move-or-delete-a-folder).
 
 ## Shortcuts
 
