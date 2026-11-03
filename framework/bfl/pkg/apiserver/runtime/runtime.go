@@ -53,7 +53,7 @@ func ParseToken(tokenStr string) (*Claims, error) {
 
 	token, err := jwt.ParseWithClaims(tokenStr, &Claims{}, func(t *jwt.Token) (interface{}, error) {
 		return constants.KubeSphereJwtKey, nil
-	}, jwt.WithValidMethods([]string{jwt.SigningMethodHS512.Alg(), jwt.SigningMethodHS256.Alg()}))
+	}, jwt.WithValidMethods([]string{jwt.SigningMethodHS512.Alg(), jwt.SigningMethodHS256.Alg()}), jwt.WithExpirationRequired())
 
 	if err != nil {
 		return nil, err
