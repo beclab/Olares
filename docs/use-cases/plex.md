@@ -1,26 +1,24 @@
 ---
 outline: [2, 3]
-description: Organize personal videos with Plex on Olares, play them in a browser or on your phone and computer, and enable NVIDIA hardware transcoding when needed.
+description: Organize personal videos with Plex on Olares, play them in a browser or on your phone and computer, and enable hardware-accelerated transcoding.
 head:
   - - meta
     - name: keywords
       content: Olares, Plex Media Server, personal media library, video streaming, NVIDIA, hardware transcoding, Plex Pass
-app_version: "0.0.9"
-doc_version: "1.0"
-doc_updated: "2026-11-02"
+app_version: "0.0.10"
+doc_version: "1.1"
+doc_updated: "2026-11-03"
 ---
 
 # Organize and play your personal videos with Plex
 
-Plex Media Server organizes your video and music files into libraries and streams them through Plex players. On Olares, you can keep those files on your own device, then browse and play them in a browser.
-
-This guide uses a travel recording as an example. Connect your account, add the file to a library, and play it in a browser. You can then add subtitles, organize movie or music collections, and enable NVIDIA hardware transcoding as needed.
+Plex Media Server is a media server that organizes your video and music files into libraries and streams them to Plex players. On Olares, you can keep your collection on your own device and play it in a browser or a Plex app.
 
 ## Learning objectives
 
 In this guide, you will learn how to:
 
-- Connect your Plex server to your Plex account.
+- Install Plex, choose an acceleration mode, and connect your Plex account.
 - Organize media folders on Olares and choose library types for personal videos, movies, and music.
 - Select playback quality and subtitles in a browser, and check whether hardware transcoding is active.
 - Connect a Plex client on your phone or computer through LarePass VPN.
@@ -28,35 +26,35 @@ In this guide, you will learn how to:
 ## Prerequisites
 
 - Olares 1.12.7 or later.
-- A Plex account you can sign in to.
-- A video file of your own, such as a travel recording.
+- A Plex account. A free account is enough to connect the server and create libraries.
+- Hardware-accelerated transcoding requires a compatible NVIDIA GPU and an active Plex Pass on the server owner's account.
 
-Additional requirements for NVIDIA hardware transcoding are covered later. You can set up your library before deciding whether to use that feature.
+## Install Plex Media Server
+
+1. Open Market and search for "Plex Media Server".
+2. Click **Get**, then **Install**.
+3. In the **Choose a hardware accelerator** dialog, select a mode:
+   - **CPU**: Use software transcoding.
+   - **NVIDIA GPU**: Use your NVIDIA GPU for [hardware-accelerated transcoding](#use-hardware-accelerated-transcoding).
+
+   The acceleration mode cannot be changed directly after installation.
+
+4. Click **Confirm**. If prompted for **PLEX_CLAIM**, leave it empty and confirm to continue. You will connect your account in the next section.
+5. Wait for installation to complete and the button to change to **Open**.
 
 ## Connect your Plex account
 
-Plex has two entrances for account setup and everyday playback:
-
-| Entrance | Purpose |
-| --- | --- |
-| Plex Account Setup | Connect this Plex server to your Plex account |
-| Plex Media Server | Open Plex Web to manage libraries and play media |
-
-The account avatar in Plex Web identifies the signed-in user. It does not, by itself, establish who owns the server. Connect the server first, then use the same account in Plex Web.
+You will see two entrances for Plex Media Server in Launchpad. Use **Plex Account Setup** to connect the server to your Plex account, then use **Plex Media Server** to manage libraries and play media.
 
 1. Open **Plex Account Setup** from Launchpad.
 2. In another browser tab, open the [Plex claim page](https://www.plex.tv/claim/) and sign in to the account you want to connect.
 3. Copy the temporary token that starts with `claim-`.
 4. Return to Plex Account Setup, paste the token into **Claim token**, and click **Connect account**.
-5. When **Account connected. Open Plex Web to continue.** appears, click **Open Plex Web**.
+5. Once the request finishes, click **Open Plex Web**.
 6. Sign in to Plex Web with the same account. On first launch, follow the prompts to give the server a recognizable name, such as `Home media`.
-7. Open your server settings and check the server owner on the **General** page. Make sure it is the account you just connected.
+7. Open Plex Web settings, select your server, and open **General**. Confirm that the server is signed in to the account you just connected.
 
-:::tip Already connected an account?
-If Plex Account Setup shows that the server is connected, open Plex Web directly. To use hardware transcoding, make sure the server owner is the account with Plex Pass.
-:::
-
-Claim tokens expire quickly. If the connection fails, obtain a fresh token from the claim page and try again.
+If the connection fails, obtain a fresh token from the claim page and try again.
 
 ## Add a video library
 
@@ -76,7 +74,7 @@ Home/
   Music/
 ```
 
-Separate videos by purpose so each library can use the folder it needs. For example, keep personal recordings in `Family` and movie collections in a separate `Films` folder. Pointing both libraries at their shared parent folder can cause them to scan the same files.
+Give each library its own folder. For example, keep personal recordings in `Family` and movie collections in `Films`.
 
 For large files, you can [upload with LarePass Desktop](../manual/olares/files/add-edit-download.md#upload-via-larepass-desktop).
 
@@ -92,9 +90,9 @@ Plex reads files through paths inside the app. Use the path in the right column 
 1. Open Plex Web settings and select the server you just connected.
 2. Under **Manage**, open **Libraries** and click **Add Library**.
 3. For travel recordings and other personal videos, choose **Other Videos** and name the library `Family videos`.
-4. Choose the language for information retrieved from the internet. This does not change the video's audio track.
+4. Choose the library language and click **Next**.
 5. Continue to the folder step, click **Browse for Media Folders**, and select `/media/Movies/Family`.
-6. Add the folder, finish creating the library, and wait for Plex to scan the files.
+6. Click **Add**, then **Add Library**, and wait for Plex to scan the files.
 7. Open `Family videos` and find the video you uploaded.
 
 Plex has read-only access to `Home/Movies` and `Home/Music`. Use Olares Files to organize, rename, or delete source files.
@@ -109,7 +107,7 @@ You can use the same process for movies and music. Choose the library type and f
 | Movie collection | **Movies** | `/media/Movies/Films` |
 | Music collection | **Music** | `/media/Music` |
 
-For **Movies**, clear titles and release years help Plex match posters and descriptions. Use **Other Videos** for personal recordings so Plex does not try to match them to commercial movies. Create a separate **Music** library for music files rather than adding them to a video library.
+For **Movies**, clear titles and release years help Plex match posters and descriptions. The library language determines the language of this information.
 
 After uploading new files, select **Scan Library Files** from the relevant library's menu to scan again.
 
@@ -117,13 +115,12 @@ After uploading new files, select **Scan Library Files** from the relevant libra
 
 ### Start with original quality
 
+Local video playback is [free](https://support.plex.tv/articles/202526943-plex-free-vs-paid/). If Plex treats your browser connection as remote, the [remote playback subscription requirements](#connect-from-your-phone-or-computer) apply.
+
 1. Open `Family videos` and select your travel recording.
 2. Start playback and keep the original quality initially.
-3. Pause, resume, and seek to the parts you want to watch.
 
-Quality settings affect whether the server needs to convert the video. Starting with original quality avoids unnecessary quality loss.
-
-Plex decides whether to transcode based on the file format, player capabilities, and quality setting. If the file can play directly, there is no need to reduce quality just to use the GPU.
+Plex decides whether to transcode based on the file format, player capabilities, and quality setting. Starting with original quality avoids unnecessary quality loss.
 
 ### Choose a playback quality
 
@@ -153,26 +150,27 @@ Home/Movies/Family/
 2. Scan the library in Plex. If the new subtitle is not detected, refresh the video's metadata.
 3. Open the video's subtitle options, select the subtitle, and start playback.
 
-Some subtitles must be burned into the picture by the server, so enabling them can change direct playback into transcoding. The subtitle language, timing, and video version should match. Plex does not automatically correct a subtitle timing mismatch.
+Some subtitles need to be burned into the picture, which triggers video transcoding.
 
 ## Connect from your phone or computer
 
 Enable LarePass VPN on your phone or computer to connect to the Plex server on Olares. Keep the private network connection enabled during playback.
 
+:::info Remote video playback requires a subscription
+Video playback that Plex classifies as remote requires an active Plex Pass or Remote Watch Pass on the account used in this guide. This also applies to VPN connections classified as remote. See [Plex remote playback requirements](https://support.plex.tv/articles/requirements-for-remote-playback-of-personal-media/).
+:::
+
 ### Enable LarePass VPN
 
-Open LarePass on the phone or computer you will use for playback. Make sure it is connected to the Olares device running Plex.
+On the phone or computer you will use for playback, [install LarePass](../manual/larepass/index.md) and sign in with your Olares ID. Make sure it is connected to the Olares device running Plex.
 
-| Device | Action |
-| --- | --- |
-| Phone | Open LarePass **Settings** and enable VPN in the **My Olares** card |
-| Computer | Click your avatar in the upper-left corner of LarePass and enable **VPN connection** |
+<!--@include: ../reusables/larepass-vpn.md#enable-larepass-vpn-->
 
-On first use, allow the VPN configuration when your operating system prompts you. Wait for the connection to finish before opening Plex. For details, see [Enable VPN on LarePass](../manual/larepass/private-network.md#enable-vpn-on-larepass).
+On iOS or macOS, allow the VPN configuration if prompted. Wait for the connection to finish before opening Plex. For details, see [LarePass connection status](../manual/larepass/private-network.md#understand-connection-status).
 
 ### Play media in a Plex client
 
-1. Open a Plex client on your phone or computer.
+1. Install and open the [Plex app](https://www.plex.tv/media-server-downloads/#plex-app) on your phone or computer.
 2. Sign in with the Plex account you used to connect the server.
 3. In the media sources or server list, select the name you assigned to the server, such as `Home media`.
 4. Open the `Family videos` library and play the travel recording.
@@ -180,14 +178,14 @@ On first use, allow the VPN configuration when your operating system prompts you
 On a computer, you can also enable LarePass VPN and open the Plex Media Server entrance through Olares to continue using Plex Web in your browser.
 
 :::info TV clients
-TV playback has not been tested. This guide does not provide steps for TV client connections, automatic discovery, or casting.
+TV playback and casting have not been tested.
 :::
 
-## Use NVIDIA hardware transcoding
+## Use hardware-accelerated transcoding
 
-Hardware transcoding moves part of video conversion to the GPU. It is useful when the player cannot handle the source format or when you need a lower resolution or bitrate. A video that plays directly does not need conversion just to use the GPU.
+Hardware transcoding moves part of video conversion to the GPU. It is useful when the player cannot handle the source format or when you need a lower resolution or bitrate.
 
-This section applies to a Plex instance using NVIDIA acceleration mode. The server owner's Plex account must have an active Plex Pass. A CPU-mode instance does not gain NVIDIA GPU access by changing a setting inside Plex.
+Use the NVIDIA mode selected during installation and the server owner's Plex Pass account for these steps.
 
 ### Enable hardware acceleration
 
@@ -196,7 +194,7 @@ This section applies to a Plex instance using NVIDIA acceleration mode. The serv
 3. Under **Hardware transcoding device**, select the NVIDIA GPU assigned to this instance.
 4. Click **Save Changes**.
 
-The settings take effect without restarting Plex. The server owner must have an active Plex Pass. Signing in to a different subscribed account in the player does not change the server's subscription status.
+The settings take effect without restarting Plex.
 
 ### Check whether playback uses the GPU
 
@@ -205,13 +203,13 @@ The settings take effect without restarting Plex. The server owner must have an 
 3. Check the video status. During conversion, `(hw)` next to the video format indicates hardware acceleration for that part of the process.
 4. Restore original quality when you have finished checking.
 
-If the status still shows Direct Play or Direct Stream, the video is not being transcoded. Plex might keep the original video for a low-bitrate source, so there is no need to keep changing GPU settings.
+Direct Play or Direct Stream means the video is playing without re-encoding.
 
 ## FAQs
 
 ### Why can't I see my uploaded video in Plex?
 
-Check that the upload has finished and that the library uses the correct folder. For example, `Home/Movies/Family` maps to `/media/Movies/Family` in Plex, not your computer's Downloads folder. Then run **Scan Library Files**. Add music files to a **Music** library.
+Check that the upload has finished and that the library uses the correct folder. For example, `Home/Movies/Family` maps to `/media/Movies/Family` in Plex. Then run **Scan Library Files**.
 
 ### Why are hardware transcoding settings missing, or why is there no `(hw)`?
 
@@ -223,7 +221,10 @@ Keep the subtitle and video in the same folder, match their filename stems, and 
 
 ### How do I restart Plex when needed?
 
-Stop Plex in Olares, wait until it has stopped, then start or resume it. Keep the same GPU selection.
+1. In Olares, navigate to **Settings** > **Applications** > **Plex Media Server** and click **Stop**.
+2. Wait until the app has stopped, then click **Resume** to start it again.
+
+See [Manage stopped applications](../manual/olares/market/market.md#how-to-resume-my-application) if Olares cannot resume the app because resources are in use.
 
 ### Why can't the Plex client find my server after I enable VPN?
 
@@ -231,6 +232,7 @@ Make sure LarePass is connected to the Olares device running Plex and that the P
 
 ## Learn more
 
+- [Jellyfin](jellyfin.md): Set up an open-source media server on Olares as an alternative to Plex.
 - [LarePass private network](../manual/larepass/private-network.md): Find the VPN controls and understand connection states on your phone or computer.
 - [Plex library creation guide](https://support.plex.tv/articles/200288926-creating-libraries/): Learn about media types and folder selection.
 - [Plex local subtitle guide](https://support.plex.tv/articles/200471133-adding-local-subtitles-to-your-media/): Learn about subtitle naming, language codes, and formats.
