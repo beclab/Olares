@@ -103,8 +103,6 @@ func (h *Handler) createUser(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	klog.Infof("userReq: %#v", userReq)
-
 	//// Basic field validation
 	if userReq.Name == "" || userReq.Password == "" {
 		api.HandleBadRequest(resp, req, errors.New("user create: no username or password provided"))
