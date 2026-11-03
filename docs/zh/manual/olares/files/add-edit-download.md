@@ -33,19 +33,25 @@ head:
 LarePass 桌面端的文件上传操作与 Files 应用类似，上传的文件会自动与你的 Olares ID 同步。
 
 ### 通过 LarePass 移动端上传
-你也可以通过 LarePass 移动应用在手机上上传文件或文件夹。
+你可以通过 LarePass 移动端上传手机中的文件。
 <Tabs>
 <template #直接上传>
 
-1. 打开 LarePass 应用并进入**文件**标签页。
-2. 选择要上传文件的目录。
-3. 点击右下角的 <i class="material-symbols-outlined">add_circle</i> 图标，选择以下上传方式之一：
-   - **文件**：从手机存储中选择文件。
-   - **图片/视频**：从手机相册中选择图片或视频。
-  :::tip
-  如果需要整理上传的文件，可以先新建文件夹。
-  :::
-4. 按照屏幕提示完成上传。
+1. 打开 LarePass，进入**文件**。
+2. 如需上传到新文件夹：
+
+   a. 点击右下角的 <i class="material-symbols-outlined">add</i>，选择**添加文件夹**。
+
+   b. 在位置选择页面选择保存位置，例如 **Drive**。
+
+   c. 点击**新建文件夹**，按提示创建文件夹。创建后，LarePass 会自动进入新文件夹。
+
+3. 点击 <i class="material-symbols-outlined">add</i>，然后选择**上传文件**。
+4. 选择文件，按提示完成上传。
+
+   从文件首页上传时，需要选择保存位置。在文件夹内上传时，文件会保存到当前文件夹。
+
+5. 如需查看上传进度，返回文件首页，点击右上角的 <i class="material-symbols-outlined">mobiledata_arrows</i>，进入**传输**页面。
 </template>
 
 <template #分享上传>
@@ -61,10 +67,9 @@ LarePass 支持通过手机的分享选项快速上传文件或媒体内容。
     - **drive**：将文件上传到存储盘，用于个人存储。
     - **sync**：将文件上传到同步盘，用于同步或共享。
 4. 根据所选的上传目标位置，按照屏幕提示完成上传。
+5. 如需查看上传进度，返回文件首页，点击右上角的 <i class="material-symbols-outlined">mobiledata_arrows</i>，进入**传输**页面。
 </template>
 </Tabs>
-
-通过 LarePass 移动应用上传的文件也会自动与你的 Olares ID 同步。
 
 ## 下载文件
 下载多个文件时，文件管理器网页版和 LarePass 桌面端的行为有所不同：
