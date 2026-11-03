@@ -40,7 +40,7 @@ For more about Olares roles, see [Manage your team](../settings/manage-team.md).
 2. Go to **Application** > **Common** or **Drive** > **External**.
 3. Right-click the top-level folder or mounted directory, and select **Access settings**.
 
-   ![Access settings in the Common folder context menu](/images/manual/olares/files-access-settings.png#bordered)
+   ![Access settings in an External SMB folder context menu](/images/manual/olares/files-access-settings.png#bordered)
 
 4. Find the member and choose a permission:
 
@@ -89,5 +89,5 @@ Members cannot change these settings themselves. If a member reports a problem, 
 | --- | --- |
 | A folder is missing, or the member sees “No folders you can access.” | Check the member's permission on the top-level folder or mount. |
 | The member can read but cannot upload or edit. | Check whether the permission is **Can view**. For NAS storage, also check that the NAS share allows writing. |
-| **Access settings** is missing or unavailable. | Make sure you selected a Common top-level folder or an External mount, and that your account can manage that folder. |
+| **Access settings** is missing or<br> unavailable. | Make sure you selected a Common top-level folder or an External mount, and that your account can manage that folder. |
 | Access stopped after an upgrade or a storage change. | Check that the expected storage is mounted. Check the member’s access settings and grant access again if needed. |

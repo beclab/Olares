@@ -26,9 +26,9 @@ description: 在 Olares 文件管理器中设置公共目录和外部存储的�
 
 公共目录中的一级文件夹和外部设备的挂载目录采用以下默认规则。
 
-| Olares 角色 | 默认权限 | 可以为谁设置权限 |
+| <nobr>Olares 角色</nobr> | 默认权限 | 可以为谁设置权限 |
 | --- | --- | --- |
-| 超级管理员（Owner） | 完整管理权限 | 管理员和成员 |
+| 超级管理员 <br>(所有者) | 完整管理权限 | 管理员和成员 |
 | 管理员 | 完整管理权限，但超级管理员可以限制其访问 | 成员，但该管理员须仍有此文件夹的管理权限 |
 | 成员 | 无权限 | 不能修改文件夹访问权限 |
 
@@ -40,11 +40,11 @@ description: 在 Olares 文件管理器中设置公共目录和外部存储的�
 2. 进入**应用** > **公共**，或**存储** > **外部设备**。
 3. 右键点击一级文件夹或挂载目录，选择**权限设置**。
 
-   ![公共目录文件夹右键菜单中的权限设置](/images/manual/olares/files-access-settings.png#bordered)
+   ![权限设置菜单](/images/zh/manual/olares/files-access-settings-dialog.png#bordered)
 
 4. 找到需要授权的成员，选择权限：
 
-   ![权限设置对话框](/images/manual/olares/files-access-settings-dialog.png#bordered)
+   ![权限设置对话框](/images/zh/manual/olares/files-access-settings.png#bordered)
 
    | 权限 | 成员可以执行的操作 |
    | --- | --- |
