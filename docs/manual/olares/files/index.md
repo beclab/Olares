@@ -27,6 +27,8 @@ It mainly consists of the following components:
 * **Cloud drive**: Connected through [Integrations](mount-cloud-storage.md), including Google Drive, AWS S3, and Tencent Cloud Object Storage (COS). These allow you to link, access, and manage remote files directly from Olares.
 * **Share**: The centralized hub for managing all shared folders, including Internal shares, SMB shares, and Public shares, allowing you to monitor sharing status, adjust permissions, or cancel shares in one place.
 
+In Olares 1.12.8, members need permission to access Common folders and External mounts through Files. See [Manage access to Common and External](manage-common-external-access.md).
+
 ---
 <div>
 <h4><a href="./add-edit-download">Basic file operations</a></h4>
