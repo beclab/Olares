@@ -58,8 +58,10 @@ You will see two entrances for Plex Media Server in Launchpad. Use **Plex Accoun
    :::
 
 5. Once the request finishes, click **Open Plex Web**.
-6. Sign in to Plex Web with the same account. On first launch, follow the prompts to give the server a recognizable name, such as `Home media`.
-7. Open Plex Web settings, select your server, and open **General**. Confirm that the server is signed in to the account you just connected.
+6. Sign in to Plex Web with the same account. On first launch, click **Got It!** on the welcome screen to open **Server Setup**.
+7. Give the server a recognizable name, such as `Home media`. Clear **Allow me to access my media outside my home**, then click **Next**. This guide uses LarePass VPN to access the server.
+8. On **Media Library**, click **Next** to add your library later, then click **Done** to finish setup.
+9. Open Plex Web settings, select your server, and open **General**. Check that **Server claimed by** shows the account you just connected.
 
 ## Add a video library
 
@@ -98,7 +100,7 @@ Folders in Olares Files appear under different paths in Plex. When adding a libr
 2. Under **Manage**, open **Libraries** and click **Add Library**.
 3. For travel recordings and other personal videos, choose **Other Videos** and name the library `Family videos`.
 4. Choose the library language and click **Next**.
-5. Click **Browse for Media Folders** and select `/media/Movies/Family`.
+5. Click **Browse For Media Folder** and select `/media/Movies/Family`.
 6. Click **Add**, then **Add Library**, and wait for Plex to scan the files.
 7. Open `Family videos` and find the video you uploaded.
 
@@ -139,7 +141,13 @@ Plex can use the following playback methods:
 | Direct Stream | The server changes the file container without re-encoding the video |
 | Transcode | The server converts video or audio for the player or quality setting |
 
-If playback buffers frequently, lower the resolution or bitrate in the player's quality menu. For example, choose 720p for a 1080p source. Plex can then transcode the video to match the selected quality.
+If playback buffers frequently, lower the resolution or bitrate:
+
+1. In the player, open **Settings** > **Quality**.
+2. Click **Show all** to see the available conversion options.
+3. Select a quality below the source, such as **Convert to 720p HD (High)** for a 1080p video.
+
+Plex transcodes the video to match the selected quality. To switch back, open the quality menu and select **Play Original Quality**.
 
 ### Add and select subtitles
 
@@ -201,7 +209,7 @@ The settings take effect without restarting Plex.
 
 ### Check whether playback uses the GPU
 
-1. Play a video and choose a resolution or bitrate below the source in the player's quality settings. For example, select a 720p conversion option for a 1080p video.
+1. Play a video and [choose a quality below the source](#choose-a-playback-quality), such as 720p for a 1080p video.
 2. In Plex Web, open **Dashboard** from **Activity** and expand the current playback details.
 3. Look for `(hw)` next to the video format. This marks hardware-accelerated decoding or encoding.
 4. Restore original quality when you have finished checking.
