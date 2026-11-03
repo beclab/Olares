@@ -169,6 +169,38 @@ func (h *Handler) handleBindingUserZone(req *restful.Request, resp *restful.Resp
 	response.SuccessNoData(resp)
 }
 
+func requireActivationToken(req *restful.Request, resp *restful.Response, chain *restful.FilterChain) {
+	claims, err := runtime.ParseToken(req.HeaderParameter(constants.UserAuthorizationTokenKey))
+	if err != nil {
+		response.HandleUnauthorized(resp, response.NewTokenValidationError("activate system: invalid access token", err))
+		return
+	}
+	if claims.ExpiresAt == nil {
+		response.HandleUnauthorized(resp, response.NewTokenValidationError("activate system: access token is missing an expiration time"))
+		return
+	}
+	if claims.Username != constants.Username {
+		response.HandleUnauthorized(resp, response.NewTokenValidationError("activate system: access token does not belong to the current user"))
+		return
+	}
+
+	req.SetAttribute(constants.UserContextAttribute, claims.Username)
+	chain.ProcessFilter(req, resp)
+}
+
+func validateActivationState(status constants.WizardStatus, zone string) error {
+	if zone != "" {
+		return fmt.Errorf("activate system: Olares is already activated")
+	}
+
+	switch status {
+	case constants.WaitActivateSystem, constants.NetworkActivateFailed, constants.NetworkActivating:
+		return nil
+	default:
+		return fmt.Errorf("activate system: activation is not allowed in wizard status %q", status)
+	}
+}
+
 func (h *Handler) handleActivate(req *restful.Request, resp *restful.Response) {
 	ctx := req.Request.Context()
 
@@ -193,13 +225,18 @@ func (h *Handler) handleActivate(req *restful.Request, resp *restful.Response) {
 		response.HandleError(resp, errors.New("activate system: no olares name, please ensure olares name is bound first"))
 		return
 	}
-	if userOp.GetUserAnnotation(user, constants.UserAnnotationZoneKey) != "" || userOp.GetUserAnnotation(user, constants.UserTerminusWizardStatus) == string(constants.NetworkActivating) {
-		// already activated, or already in the process of activating, return success idempotently
+	status := constants.WizardStatus(userOp.GetTerminusStatus(user))
+	if err := validateActivationState(status, userOp.GetUserAnnotation(user, constants.UserAnnotationZoneKey)); err != nil {
+		response.HandleConflict(resp, err)
+		return
+	}
+	if status == constants.NetworkActivating {
+		// Activation is already in progress; do not apply settings or restart it.
 		response.SuccessNoData(resp)
 		return
 	}
 
-	if userOp.GetUserAnnotation(user, constants.UserTerminusWizardStatus) == string(constants.NetworkActivateFailed) {
+	if status == constants.NetworkActivateFailed {
 		// all the settings already persisted, just retry without reading payload
 		if e := userOp.UpdateUser(user, []func(*iamV1alpha2.User){
 			func(u *iamV1alpha2.User) {

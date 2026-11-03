@@ -43,6 +43,7 @@ func AddContainer(c *restful.Container) error {
 
 	ws.Route(ws.POST("/activate").
 		To(handler.handleActivate).
+		Filter(requireActivationToken).
 		Doc("Activate system.").
 		Returns(http.StatusOK, "", response.Response{}))
 
