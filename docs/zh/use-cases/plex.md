@@ -41,7 +41,9 @@ Plex Media Server 是一款媒体服务器，可将你的视频和音乐文件�
    - **CPU**：使用软件转码。
    - **NVIDIA GPU**：使用 NVIDIA GPU 进行[硬件加速转码](#使用硬件加速转码)。
 
+   :::info 加速模式
    安装后无法直接切换加速模式。
+   :::
 
 4. 点击 **Confirm**。如果提示填写 **PLEX_CLAIM**，保持为空并确认继续，下一节再绑定账号。
 5. 等待安装完成，按钮变为 **Open**。
@@ -54,13 +56,18 @@ Plex Media Server 是一款媒体服务器，可将你的视频和音乐文件�
 2. 在另一个浏览器标签页打开 [Plex claim 页面](https://www.plex.tv/claim/)，登录准备绑定的 Plex 账号。
 3. 复制以 `claim-` 开头的临时令牌。
 4. 返回 Plex Account Setup，将令牌粘贴到 **Claim token**，点击 **Connect account**。
+
+   :::tip 绑定失败
+   绑定失败时，重新打开 claim 页面获取新令牌，再返回设置页连接。
+   :::
+
 5. 请求完成后，点击 **Open Plex Web**。
 6. 在 Plex Web 中登录同一个账号。首次打开时，按页面提示设置一个方便识别的服务器名称，例如 `Home media`。
 7. 打开 Plex Web 设置，选中自己的服务器，再进入 **General**，确认服务器登录的是刚才绑定的账号。
 
-绑定失败时，重新打开 claim 页面获取新令牌，再返回设置页连接。
-
 ## 添加视频媒体库
+
+Plex 媒体库会汇集所选文件夹中的媒体，方便你浏览和播放。下面先用一段旅行录像创建个人视频媒体库，再介绍如何添加电影或音乐收藏。
 
 ### 上传自己的视频
 
@@ -140,15 +147,15 @@ Plex 可能采用以下几种播放方式：
 
 ### 添加并选择字幕
 
-已有字幕可以与视频一起放入媒体目录。以旅行录像的中文字幕为例：
+已有字幕可以与视频一起放入媒体目录。以旅行录像的英文字幕为例：
 
 ```text
 Home/Movies/Family/
   Family-trip.mp4
-  Family-trip.zh.srt
+  Family-trip.en.srt
 ```
 
-`Family-trip` 与视频文件名对应，`zh` 是中文字幕的语言代码。Plex 也支持 ASS 外部字幕。文本字幕建议保存为 UTF-8，减少中文乱码。
+`Family-trip` 与视频文件名对应，`en` 是英文字幕的语言代码。Plex 也支持 ASS 外部字幕。文本字幕建议保存为 UTF-8，减少乱码。
 
 1. 通过 Olares 文件管理器，将字幕上传到视频所在的文件夹。
 2. 在 Plex 中扫描该媒体库。未识别新字幕时，刷新对应视频的元数据。
@@ -180,10 +187,6 @@ Plex 判定为远程的视频播放，需要本教程使用的账号有有效的
 4. 打开 `Family videos` 媒体库，选择旅行录像并播放。
 
 电脑也可以在开启 LarePass VPN 后，通过浏览器打开 Olares 中的 Plex Media Server 入口，继续使用 Plex Web。
-
-:::info 电视端
-电视端播放和投屏尚未测试。
-:::
 
 ## 使用硬件加速转码
 
@@ -221,7 +224,7 @@ Direct Play 或 Direct Stream 表示视频正在播放，且未重新编码。
 
 ### 字幕没有出现或显示乱码
 
-确认字幕与视频位于同一目录，文件名主体一致，扩展名是支持的字幕格式。重新扫描媒体库，并刷新视频元数据。中文乱码时，先将字幕保存为 UTF-8，再重新上传。字幕识别的更多设置见 [Plex 本地字幕指南](https://support.plex.tv/articles/200471133-adding-local-subtitles-to-your-media/)。
+确认字幕与视频位于同一目录，文件名主体一致，扩展名是支持的字幕格式。重新扫描媒体库，并刷新视频元数据。出现乱码时，先将字幕保存为 UTF-8，再重新上传。字幕识别的更多设置见 [Plex 本地字幕指南](https://support.plex.tv/articles/200471133-adding-local-subtitles-to-your-media/)。
 
 ### 需要重新启动 Plex 时怎么操作
 

@@ -37,7 +37,9 @@ In this guide, you will learn how to:
    - **CPU**: Use software transcoding.
    - **NVIDIA GPU**: Use your NVIDIA GPU for [hardware-accelerated transcoding](#use-hardware-accelerated-transcoding).
 
+   :::info Acceleration mode
    The acceleration mode cannot be changed directly after installation.
+   :::
 
 4. Click **Confirm**. If prompted for **PLEX_CLAIM**, leave it empty and confirm to continue. You will connect your account in the next section.
 5. Wait for installation to complete and the button to change to **Open**.
@@ -50,13 +52,18 @@ You will see two entrances for Plex Media Server in Launchpad. Use **Plex Accoun
 2. In another browser tab, open the [Plex claim page](https://www.plex.tv/claim/) and sign in to the account you want to connect.
 3. Copy the temporary token that starts with `claim-`.
 4. Return to Plex Account Setup, paste the token into **Claim token**, and click **Connect account**.
+
+   :::tip Connection failed
+   If the connection fails, obtain a fresh token from the claim page and try again.
+   :::
+
 5. Once the request finishes, click **Open Plex Web**.
 6. Sign in to Plex Web with the same account. On first launch, follow the prompts to give the server a recognizable name, such as `Home media`.
 7. Open Plex Web settings, select your server, and open **General**. Confirm that the server is signed in to the account you just connected.
 
-If the connection fails, obtain a fresh token from the claim page and try again.
-
 ## Add a video library
+
+A Plex library brings together media from the folders you choose so you can browse and play it. Start with a travel recording in a personal video library, then add movie or music libraries as your collection grows.
 
 ### Upload your video
 
@@ -136,15 +143,15 @@ Keep original quality when your network and player support it. If playback buffe
 
 ### Add and select subtitles
 
-Place external subtitles alongside the video. For example, a Chinese subtitle file for the travel recording can use this structure:
+Place external subtitles alongside the video. For example, an English subtitle file for the travel recording can use this structure:
 
 ```text
 Home/Movies/Family/
   Family-trip.mp4
-  Family-trip.zh.srt
+  Family-trip.en.srt
 ```
 
-`Family-trip` matches the video filename, and `zh` identifies Chinese subtitles. Plex also supports external ASS subtitles. Save text subtitles as UTF-8 to reduce the risk of garbled characters.
+`Family-trip` matches the video filename, and `en` identifies English subtitles. Plex also supports external ASS subtitles. Save text subtitles as UTF-8 to reduce the risk of garbled characters.
 
 1. Upload the subtitle file to the video's folder through Olares Files.
 2. Scan the library in Plex. If the new subtitle is not detected, refresh the video's metadata.
@@ -176,10 +183,6 @@ On iOS or macOS, allow the VPN configuration if prompted. Wait for the connectio
 4. Open the `Family videos` library and play the travel recording.
 
 On a computer, you can also enable LarePass VPN and open the Plex Media Server entrance through Olares to continue using Plex Web in your browser.
-
-:::info TV clients
-TV playback and casting have not been tested.
-:::
 
 ## Use hardware-accelerated transcoding
 
@@ -217,7 +220,7 @@ Check that the server owner has an active Plex Pass and that the Plex instance u
 
 ### Why are subtitles missing or garbled?
 
-Keep the subtitle and video in the same folder, match their filename stems, and use a supported subtitle extension. Scan the library again and refresh the video's metadata. For garbled Chinese text, save the subtitle as UTF-8 and upload it again. See the [Plex local subtitle guide](https://support.plex.tv/articles/200471133-adding-local-subtitles-to-your-media/) for further detection settings.
+Keep the subtitle and video in the same folder, match their filename stems, and use a supported subtitle extension. Scan the library again and refresh the video's metadata. For garbled text, save the subtitle as UTF-8 and upload it again. See the [Plex local subtitle guide](https://support.plex.tv/articles/200471133-adding-local-subtitles-to-your-media/) for further detection settings.
 
 ### How do I restart Plex when needed?
 
