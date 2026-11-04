@@ -215,9 +215,16 @@ Flowise builds AI chatflows from connected nodes. This example stores project no
 
 #### Prepare Flowise and Router
 
-1. In Router, open the **Default models** page, and assign **Qwen3.8-27B (llama.cpp)** as the chat default and **Jina CLIP v2** as the embedding default. The `default-chat` and `default-embedding` route names then point to these models.
-2. Copy the OpenAI-compatible **Base URL** for **Apps in Olares** from Router's connection example, including `/v1`. For other connection locations and key requirements, see [Connect AI apps](https://www.olares.com/docs/manual/best-practices/connect-ai-apps).
-3. In Control Hub, go to **Browse** > **flowise-{user-name}** > **Deployments** > **flowise**, open the flowise container's **Terminal**, and run the following script:
+The chatflow needs two models that Flowise can call through Router: a chat model to answer questions and an embedding model to vectorize notes. In this part, you install both models, point Router's default routes at them, copy the endpoint that Flowise connects to, and make the route names appear in Flowise's model dropdowns.
+
+1. Install **Qwen3.8-27B (llama.cpp)** and the **Jina CLIP v2** embedding model from Market, and wait for both to finish downloading.
+
+   :::info
+   Jina CLIP v2 outputs 1024-dimensional vectors. Keep the same embedding model for document ingestion and retrieval. A different dimension requires a different vector column and a fresh index.
+   :::
+2. In Router, open the **Default models** page, and assign **Qwen3.8-27B (llama.cpp)** as the chat default and **Jina CLIP v2** as the embedding default. The `default-chat` and `default-embedding` route names then point to these models.
+3. Note down the OpenAI-compatible base URL for **Apps in Olares** from Router's connection example, including `/v1`. For other connection locations and key requirements, see [Connect AI apps](https://www.olares.com/docs/manual/best-practices/connect-ai-apps).
+4. Flowise's OpenAI nodes pick models from a bundled catalog, which does not include the two Router routes. In Control Hub, go to **Browse** > **flowise-{user-name}** > **Deployments** > **flowise**, open the flowise container's **Terminal**, and run the following script to copy the catalog and add `default-chat` and `default-embedding` to it:
 
    ```bash
    node <<'NODE'
@@ -240,41 +247,43 @@ Flowise builds AI chatflows from connected nodes. This example stores project no
    fs.writeFileSync('/home/node/.flowise/olares-models.json', JSON.stringify(catalog, null, 2));
    NODE
    ```
-
-   This keeps the bundled model options and adds the two routes. If you already maintain a custom catalog, add the routes to that file instead.
-4. In **ConfigMaps > flowise-config**, add the following entry under `data`, and restart Flowise:
+   
+5. In Control Hub, open **ConfigMaps > flowise-config**, click the **Edit** icon in the top-right corner, and add the following entry under `data` in the YAML editor.
 
    ```yaml
    MODEL_LIST_CONFIG_JSON: "/home/node/.flowise/olares-models.json"
    ```
 
-   A direct ConfigMap edit can be replaced during an app upgrade.
+6. Save the change and restart Flowise.
 
-:::info
-Jina CLIP v2 outputs 1024-dimensional vectors. Keep the same embedding model for document ingestion and retrieval. A different dimension requires a different vector column and a fresh index.
-:::
+    :::info
+    A direct ConfigMap edit can be replaced during an app upgrade. Reapply the entry after upgrading Flowise if the model dropdowns lose the two routes.
+    :::
 
-:::details WebSocket compatibility for Flowise image 3.1.4
-This image reports Flowise 3.1.2 and uses Node.js 20. Its Supabase dependency can fail with `Node.js 20 detected without native WebSocket support`. Apply this workaround to that version before continuing:
+#### (Optional) Apply a WebSocket fix for Flowise image 3.1.4
 
-1. On your computer, create `supabase-websocket.cjs` containing:
+The Market's Flowise 3.1.4 image runs Flowise 3.1.2 on Node.js 20, and its Supabase dependency can fail with `Node.js 20 detected without native WebSocket support`. Apply the following steps if your installation uses this image.
+
+1. On your computer, create a file named `supabase-websocket.cjs` with the following content:
 
    ```js
    globalThis.WebSocket ||= require('/usr/local/lib/node_modules/flowise/node_modules/ws');
    ```
 
 2. Upload it with Files to `Data/flowise/`. The file is mounted in Flowise at `/home/node/.flowise/supabase-websocket.cjs`.
-3. In Control Hub, open the Flowise namespace, select **ConfigMaps > flowise-config**, and add the following entry under `data`:
+3. In Control Hub, open **ConfigMaps > flowise-config**, click the **Edit** icon in the top-right corner, and add the following entry under `data` in the YAML editor:
 
    ```yaml
    NODE_OPTIONS: "--require=/home/node/.flowise/supabase-websocket.cjs"
    ```
 
    Append the option if `NODE_OPTIONS` already has a value.
-4. Restart the Flowise workload. See [Configure variables in Control Hub](https://www.olares.com/docs/manual/olares/settings/manage-app-env#configure-variables-in-control-hub).
 
-Direct Control Hub edits can be replaced during an app upgrade. Keep the file and reapply the setting, or use an app package that includes the compatibility fix.
-:::
+4. Save the change and restart Flowise.
+
+    :::info
+    A direct ConfigMap edit can be replaced during an app upgrade. Keep the uploaded file, and reapply the `NODE_OPTIONS` entry if the Supabase node reports the WebSocket error again.
+    :::
 
 #### Create a document store
 
@@ -316,26 +325,24 @@ Direct Control Hub edits can be replaced during an app upgrade. Keep the file an
 
    | Node | Configuration |
    | --- | --- |
-   | Plain Text | A project note in **Text**. Set **Additional Metadata** to `{"project":"Lakeview"}` |
-   | OpenAI Embeddings | **Model Name** `default-embedding`, Router **Base Path**, **Batch Size** `1`, **Encoding Format** `float` |
-   | Supabase | The Supabase API URL in **Supabase Project URL**, a credential containing `service_role`, **Table Name** `project_documents`, **Query Name** `match_project_documents` |
-   | ChatOpenAI | **Model Name** `default-chat`, Router **Base Path** |
-   | Retrieval QA Chain | Connect the chat model and the Supabase retriever |
+   | Plain Text | <ul><li>**Text**: Enter this project note as an example `Lakeview cabinet delivery is on 10 November 2026. Confirmation reference: LAKEVIEW-6728.`</li><li>**Additional Metadata**: `{"project":"Lakeview"}`</li></ul> |
+   | OpenAI Embeddings | <ul><li>**Connect Credential**: Create a credential with any value such as `olares`, Router does not verify the key for apps inside Olares</li><li>**Model Name**: `default-embedding`</li><li>**Batch Size**: `1`, the Jina CLIP v2 service only accepts one text per request</li><li>**Base Path**: Router base URL</li><li>**Encoding Format**: `float`</li></ul> |
+   | Supabase | <ul><li>**Supabase Project URL**: The Supabase API URL</li><li>**Connect Credential**: `service_role` key</li><li>**Table Name**: `project_documents`</li><li>**Query Name**: `match_project_documents`</li></ul> |
+   | OpenAI | <ul><li>**Connect Credential**: Create a credential with any value such as `olares`, Router does not verify the key for apps inside Olares</li><li>**Model Name**: `default-chat`</li><li>**Base Path**: Router base URL</li></ul> |
+   | Conversational Retrieval QA Chain | Answers the question with the chat model using the retrieved notes. No field configuration is needed |
 
-   For the first note, use:
+2. Connect the nodes by dragging from each node's output dot to the target node's input dot:
 
-   ```text
-   Lakeview cabinet delivery is on 10 November 2026.
-   Confirmation reference: LAKEVIEW-6728.
-   ```
-2. Connect Plain Text's **Document** and OpenAI Embeddings to the Supabase node. Connect **Supabase Retriever** and ChatOpenAI to Retrieval QA Chain.
-3. Save the flow, and run the vector upsert action before asking a question.
-4. Ask “What is the Lakeview cabinet delivery date and confirmation reference?”, and compare the answer with the source note.
-5. Add another Plain Text node for Riverside with its own note and `{"project":"Riverside"}` metadata. Set **Supabase Metadata Filter** to that JSON object to limit retrieval to Riverside.
+    a. Drag Plain Text's **Document** output to the Supabase node's Document input.
 
-For model credential fields, apps inside Olares do not need a Router API key. Use `olares` as a placeholder when the field requires a value.
+    b. Drag OpenAI Embeddings' output to the Supabase node's Embeddings input.
 
-The single-item embedding batch is required by the Jina CLIP v2 service used here. Change batch size only when the selected embedding service supports it.
+    c. Drag the Supabase node's **Supabase Retriever** output to Conversational Retrieval QA Chain's **Vector Store Retriever** input.
+
+    d. Drag the OpenAI chat model's output to Conversational Retrieval QA Chain's **Chat Model** input.
+
+3. Save the flow, and click **Upsert Vector Database** on the canvas. This embeds the note and writes it to the `project_documents` table.
+4. Ask `What is the Lakeview cabinet delivery date and confirmation reference?`, and compare the answer with the source note.
 
 ### Build a small application in Code Server
 
@@ -425,14 +432,6 @@ Code Server runs a code editor in the browser. This example builds a small Node.
    ```
    :::
 7. Run `node --env-file=.env notes.mjs`. The terminal displays the user's notes and the response from the included `hello` Edge Function. A different signed-in user cannot read these notes under the policy above. Do not replace the `anon` key with `service_role` to bypass a policy error.
-
-## Extend your application
-
-Use **Storage** in Studio to create a private bucket for receipts or project files. Define storage policies for the intended users before accessing it with the SDK. Uploading, downloading, and short-lived signed URLs use the same API address. See [Storage access control](https://supabase.com/docs/guides/storage/security/access-control).
-
-For live updates, add the intended table to the `supabase_realtime` publication and subscribe with the SDK. Keep RLS policies in place. Wait for the database subscription to be ready before relying on the first event, especially just after adding a table. See [Postgres Changes](https://supabase.com/docs/guides/realtime/postgres-changes).
-
-Authentication, storage, realtime updates, and functions let your application grow beyond a shared database. External sign-in providers and email delivery need their own configuration. A local, auto-confirmed user does not configure those services.
 
 ## Troubleshooting
 
