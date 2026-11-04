@@ -62,8 +62,10 @@ Plex Media Server 是一款用于管理和串流播放视频、音乐的应用�
    :::
 
 5. 请求完成后，点击 **Open Plex Web**。
-6. 在 Plex Web 中登录同一个账号。首次打开时，按页面提示设置一个方便识别的服务器名称，例如 `Home media`。
-7. 打开 Plex Web 设置，选中自己的服务器，再进入 **General**，确认服务器登录的是刚才绑定的账号。
+6. 在 Plex Web 中登录同一个账号。首次打开时，在欢迎页点击 **Got It!**，进入 **Server Setup**。
+7. 设置一个方便识别的服务器名称，例如 `Home media`。取消勾选 **Allow me to access my media outside my home**，然后点击 **Next**。本教程通过 LarePass VPN 访问服务器。
+8. 在 **Media Library** 页面点击 **Next**，稍后再添加媒体库，然后点击 **Done** 完成设置。
+9. 打开 Plex Web 设置，选中自己的服务器，再进入 **General**，确认 **Server claimed by** 显示的是刚才绑定的账号。
 
 ## 添加视频媒体库
 
@@ -102,7 +104,7 @@ Olares 文件管理器中的文件夹，在 Plex 中使用不同的路径。添�
 2. 在 **Manage** 下打开 **Libraries**，点击 **Add Library**。
 3. 对于旅行录像等个人视频，选择 **Other Videos**，将媒体库命名为 `Family videos`。
 4. 选择媒体库语言，点击 **Next**。
-5. 点击 **Browse for Media Folders**，选择 `/media/Movies/Family`。
+5. 点击 **Browse For Media Folder**，选择 `/media/Movies/Family`。
 6. 点击 **Add**，再点击 **Add Library**，等待 Plex 扫描文件。
 7. 打开 `Family videos`，找到刚刚上传的视频。
 
@@ -143,7 +145,13 @@ Plex 可能采用以下几种播放方式：
 | Direct Stream | 服务器调整文件封装，不重新编码视频 |
 | Transcode | 服务器转换视频或音频，以适应播放器或质量设置 |
 
-播放频繁缓冲时，可以在播放器的质量菜单中降低分辨率或码率，例如将 1080p 内容改为 720p。Plex 随后可通过转码，让视频符合所选的播放质量。
+播放频繁缓冲时，可以降低分辨率或码率：
+
+1. 在播放器中打开 **Settings** > **Quality**。
+2. 点击 **Show all**，展开可用的转换选项。
+3. 选择低于源视频的质量。例如，播放 1080p 视频时，选择 **Convert to 720p HD (High)**。
+
+Plex 会将视频转码为所选质量。要恢复原始质量，打开质量菜单，选择 **Play Original Quality**。
 
 ### 添加并选择字幕
 
@@ -205,7 +213,7 @@ Home/Movies/Family/
 
 ### 查看当前播放是否使用 GPU
 
-1. 播放视频，打开播放器的质量设置，选择低于源视频的分辨率或码率。例如，对 1080p 视频选择 720p 转换选项。
+1. 播放视频，并[选择低于源视频的质量](#选择合适的播放质量)，例如将 1080p 视频转换为 720p。
 2. 在 Plex Web 的 **Activity** 中打开 **Dashboard**，展开当前播放的详细信息。
 3. 查看视频格式旁是否有 `(hw)` 标记。该标记表示正在使用硬件加速解码或编码。
 4. 查看完毕后，可以将播放质量恢复为原始质量。
