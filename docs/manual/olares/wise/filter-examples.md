@@ -1,5 +1,5 @@
 ---
-description: Use Wise advanced filters to organize and rediscover saved content, with examples for unread items, older entries, tags, and custom views.
+description: Use Wise filter examples to find matching feed entries and saved items by status, date, author, and tag.
 head:
   - - meta
     - name: keywords
@@ -7,13 +7,15 @@ head:
 ---
 
 # Filtered view examples
-This guide provides examples of filter queries for Wise. Each example addresses a specific use case, making it easy to organize, sort, and rediscover content in your library.
+This guide provides example queries for finding matching feed entries and items you chose to keep.
 
 ## Focus on unread entries from a specific feed
 Want to catch up on just one feed? Use this query to display all unread entries from a particular source.
 ```
 feed_id:12345 AND seen:false
 ```
+
+Replace `12345` with the feed's ID. To find it, open **Settings** > **RSS feeds** and edit the feed.
 
 ## See everything by your favorite author
 Easily pull up all entries written by a specific author you love.
@@ -32,7 +34,7 @@ This query displays entries published after April 1, 2025. It's a great way to f
 ## Review saved content with notes
 Use this query to find tagged entries that include your own notes:
 ```
-tag:AI AND has:note
+tag:AI AND has:note AND islibrary:true
 ```
 This is useful for revisiting saved content where you've added personal insights or comments.
 
@@ -43,7 +45,7 @@ tag:Work AND location:readlater
 ```
 This pulls up all entries tagged with "Work" that are saved to your "Read Later" list. It's perfect for tackling important projects or topics you've set aside.
 
-## Clean up your inbox with unread videos
+## Find unwatched videos from your feeds
 Want to catch up on videos from your RSS feeds? This filter focuses on unwatched content.
 
 ```
@@ -55,6 +57,6 @@ This shows all unread video entries from your subscribed feeds. It's ideal for b
 Got old productivity-related entries that you haven't touched in a while? This filter helps you rediscover them.
 
 ```
-last_opened__lt:2023-12-31 AND tag:Productivity
+last_opened__lt:2023-12-31 AND tag:Productivity AND islibrary:true
 ```
 This shows all entries that you last opened before December 31, 2023. You can revisit useful content you've saved for productivity but might have forgotten about—or decide if it's time to delete it.

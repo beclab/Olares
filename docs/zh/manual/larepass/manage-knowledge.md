@@ -41,7 +41,7 @@ LarePass 让你轻松收集并管理来自网络的各种信息——无论是�
 
    ![Collect web content](/images/manual/tutorials/wise-collect-web-content.png#bordered)
 
-收集完成的内容将出现在 Wise 的**库** > **文章**中，相关媒体文件（图片、视频、音频）保存至 `/download/Wise/Article`。
+收集完成的内容将出现在 Wise 的**库** > **文章**中。可用媒体文件取决于来源和所选下载方式。
 
 ## 通过 LarePass 应用收集内容
 
