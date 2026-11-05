@@ -36,7 +36,7 @@ To control member access to a Common folder or an External mount in Files, use [
 
 | Permission | Allowed actions |
 | :--- | :--- |
-| **Admin** | View, download, upload, edit, and delete files. For Internal shares, also manage share members with lower permissions.<br><br>**Note:** This permission does not grant an Olares admin role or allow changes to Common or External access settings. |
+| **Manage**<br><nobr>(Internal share only)</nobr> | View, download, upload, edit, and delete files, and manage share members with lower permissions.<br><br>**Note:** This permission does not grant an Olares admin role or allow changes to Common or External access settings. |
 | **Edit** | View, download, upload, edit, and delete files. |
 | **View** | View and download files. Uploading, editing, and deleting are not allowed. |
 
