@@ -1,34 +1,34 @@
 ---
 outline: [2, 3]
-description: Draft an event checklist, keep planning notes in workspace files, and resume past conversations with Hermes Workspace, then connect Hermes Agent for tool tasks.
+description: Draft an event checklist, keep planning notes in workspace files, and resume past conversations with Hermes Workspace, then connect Hermes Agent so chats can take actions.
 head:
   - - meta
     - name: keywords
       content: "Olares, Hermes Workspace, Router, AI chat, workspace files"
-app_version: "0.0.9"
-doc_version: "1.2"
+app_version: "0.0.10"
+doc_version: "1.0"
 doc_updated: "2026-11-05"
 ---
 
-# Chat, save files, and run agent tasks with Hermes Workspace
+# Chat, save files, and take actions with Hermes Workspace
 
-Hermes Workspace pairs AI chat sessions with file storage on your Olares. Conversations and files remain available after the application restarts.
+Hermes Workspace is an AI workspace on your Olares. You chat with your model in it and keep related files in the same place. Conversations and files remain available after the application restarts.
 
-This guide uses a small library event to show three everyday moves: drafting a checklist with your model, keeping related notes in a workspace file, and reopening a past conversation. An optional final section connects Hermes Agent for tool tasks.
+This guide uses a small library event as the running example. An optional final section connects Hermes Agent, so your chats can take actions like creating files and running commands.
 
 ## Learning objectives
 
 In this guide, you will learn how to:
 
-- Draft a short event checklist with Router.
+- Draft an event checklist in Hermes Workspace.
 - Keep planning notes in a workspace file.
 - Resume a saved conversation with a follow-up.
-- Connect Hermes Agent for tool tasks.
+- Connect Hermes Agent so chats can take actions.
 
 ## Prerequisites
 
 - Olares 1.12.7 or later.
-- A working `default-chat` route in [Router](olares-router.md).
+- A working `default-chat` route in [Router](olares-router.md). Hermes Workspace chats through this route, so plain chat needs no extra backend setup.
 
 ## Install Hermes Workspace
 
@@ -37,27 +37,28 @@ Only one setting is required during installation: the password you will use to s
 1. Open Market and search for "Hermes Workspace".
 2. Click **Get**, then **Install**, and wait for installation to complete. Set **WORKSPACE_PASSWORD** to a password of at least 12 characters when prompted.
 
-## Draft an event checklist
+## Chat with your model
 
-Send one chat request to see how the workspace talks to your model, then use the reply as a starting draft for your own event.
+Send one chat request to see how Hermes Workspace talks to your model, then use the reply as a starting draft for your own event.
 
 1. Open Hermes Workspace from Launchpad and sign in with the password you set during installation.
-2. Click **New Hermes chat**. Keep **Default Chat** selected.
-3. Enter this example request and send it:
+2. On the welcome screen, click **Skip setup** to start with plain chat.
+3. Click **New Hermes chat**. Keep **Default Chat** selected.
+4. Enter this example request and send it:
 
    ```text
    Create a concise checklist for organizing a small community library event.
    Use three bullet points. Do not call tools or modify files.
    ```
 
-4. Read the reply. It is a generic checklist that reads like a finished plan, so go through each item and adjust whatever does not match your event, such as the venue, helpers, or promotion plan.
+5. Read the reply. In this example, the result is a three-bullet checklist that covers the venue and date, the program, and promotion. It reads like a finished plan, so go through each item and adjust whatever does not match your event.
 
-## Keep related notes
+## Store files in the workspace
 
-Store planning notes in a workspace file so they sit next to the conversation that produced them.
+You adjusted the checklist with your own event details in the previous step. Save those details as a workspace file, so they are there when you come back to this workspace.
 
-1. Go to **Workspace** > **Files**, and create a new file named `library-event.md`.
-2. Open the file, add your planning notes, and save your changes. You can also use **Upload** to add an existing file.
+1. Go to **Workspace** > **Files** and create a new file named `library-event.md`.
+2. Double-click the file, click **Edit** in the upper-right corner, add your planning notes, and then click **Save**. You can also use **Upload** to add an existing file.
 
    ```text
    # Library event plan
@@ -69,18 +70,18 @@ Store planning notes in a workspace file so they sit next to the conversation th
    - To confirm: guest speaker reply due March 1
    ```
 
-Files stay in this application's workspace. They are not visible to the model until you attach them in a chat.
+Saving a file here does not share it with the model. To let the model read a file, attach it in a chat.
 
-## Return to a conversation
+## Continue past conversations
 
 Every chat is saved as a session. Reopen one to pick up a past conversation where you left off.
 
 1. Go to **Chat** > **Hermes**, and then select the conversation under **SESSIONS** to reopen its history.
 2. Send a follow-up request to continue where you left off, such as asking for a schedule for the event day based on the checklist.
 
-## Connect Hermes Agent for tool tasks
+## Connect Hermes Agent
 
-By default, the workspace sends plain chat requests to your model. This section connects a Hermes Agent backend so chats can also run tool tasks.
+By default, Hermes Workspace sends plain chat requests to the model behind your `default-chat` route. This section connects a Hermes Agent backend so chats can also take actions. Sidebar features such as **Jobs**, **Skills**, and **MCP** stay locked until this backend is connected.
 
 ### Configure Hermes Agent
 
@@ -90,6 +91,8 @@ By default, the workspace sends plain chat requests to your model. This section 
    a. Enable **API_SERVER_ENABLED**.
    
    b. Set **HERMES_API_SERVER_KEY** to a strong key of at least 16 characters. Keep this key private.
+
+   c. Click **Apply** and wait for Hermes Agent to restart.
 
 3. For Hermes Agent 0.22.2, keep the API settings in its persistent profile as well:
 
@@ -106,36 +109,35 @@ By default, the workspace sends plain chat requests to your model. This section 
 
    If the chat interface opens instead of a terminal, type `/quit` to return to the terminal, then run the commands.
 
-   Wait for the gateway to restart before connecting Workspace. This prevents the API from remaining disabled after an Agent restart.
+   Wait for the gateway to restart before connecting Hermes Workspace. This prevents the API from remaining disabled after a Hermes Agent restart.
 
-### Connect the workspace
+### Connect Hermes Workspace
 
 1. Open Olares Settings, go to **Applications** > **Hermes Agent** > **Entrances**.
-2. Obtain the endpoint URLs for **Hermes Gateway API** and **Dashboard**.
+2. Click **Hermes Gateway API** and copy its URL from **Endpoint**. Repeat this for **Dashboard** to obtain its URL.
 3. Open **Applications** > **Hermes Workspace** > **Manage environment variables**, then set these fields:
 
    | Field | Value |
    | :--- | :--- |
-   | **HERMES_GATEWAY_URL** | The Hermes Gateway API endpoint URL |
-   | **HERMES_DASHBOARD_URL** | The Dashboard endpoint URL |
-   | **HERMES_API_TOKEN** | The same value as Hermes Agent's `HERMES_API_SERVER_KEY` |
+   | **HERMES_GATEWAY_URL** | The **Hermes Gateway API** URL you copied in step 2 |
+   | **HERMES_DASHBOARD_URL** | The **Dashboard** URL you copied in step 2 |
+   | **HERMES_API_TOKEN** | The same key you set for Hermes Agent's `HERMES_API_SERVER_KEY` |
 
 4. Click **Apply** and wait for the app restart to finish.
-5. Reopen Hermes Workspace. Agent skills and scheduled jobs become available through the connected backend.
-6. Start a new conversation and ask the agent to create a small event checklist in its own working directory, read the file back, and report the result. Review the tool results along with the reply.
+5. Reopen Hermes Workspace. The Hermes Agent backend is now connected.
+6. Start a new conversation and ask Hermes Agent to create a small event checklist in its own working directory, read the file back, and report the result. Review the tool results along with the reply.
 
    ```text
    Create a small event checklist in your working directory for a community library event.
    Save it as library-event-checklist.md, then read the file back and report what you wrote.
    ```
 
-Hermes Agent executes tools in its own container. Its files and persistent memory are separate from the browser workspace files and the Workspace **Memory** notes. Use the Hermes Agent storage and Dashboard to inspect agent-created files and memory.
+7. Optional: To locate a file after the conversation, check the store that owns it.
 
-The connected backend supports tool tasks, skill management, persistent memory, and scheduled jobs. A job can execute model requests while unattended. Pause a trial job after checking its output.
-
-A delegated child can finish and return a result even when the parent conversation has already ended its turn. Ask the parent to continue if its final report has not appeared. Full Workspace multi-agent orchestration and MCP management depend on backend capabilities beyond this walkthrough.
+   - **Workspace files**: Files you create or upload in Hermes Workspace are stored under **Data** > **hermesworkspace** > **data** > **files** in Files, and appear under **Workspace** > **Files** in the app.
+   - **Agent files**: Files Hermes Agent created are under **Data** > **hermesagent** > **home** in Files.
 
 ## Learn more
 
-- [Hermes Agent](hermes.md): The CLI-based agent that provides tool tasks, skills, and scheduled jobs for the connected workspace.
+- [Hermes Agent](hermes.md): The CLI-based agent backend for the connected workspace.
 - [Router](olares-router.md): The model routes behind `default-chat`, including how to configure the route used in this guide.
