@@ -12,6 +12,7 @@
 {{- end -}}
 
 
+{{- $namespace := printf "%s" "os-framework" -}}
 {{- $backup_secret := (lookup "v1" "Secret" $namespace "backup-secrets") -}}
 {{- $backup_secret_key := "" -}}
 {{ if $backup_secret -}}
