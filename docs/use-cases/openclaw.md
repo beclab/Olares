@@ -8,9 +8,9 @@ head:
   - - meta
     - name: keywords
       content: Olares, OpenClaw, self-hosted ai agent, personal ai agent, local ai agent, openclaw on olares
-app_version: "1.0.44"
-doc_version: "3.0"
-doc_updated: "2026-09-24"
+app_version: "1.0.57"
+doc_version: "4.0"
+doc_updated: "2026-11-05"
 ---
 
 # Run OpenClaw as your self-hosted personal AI agent
@@ -86,146 +86,72 @@ OpenClaw requires a large "context window" (that is the AI's short-term memory) 
 
 <!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
-### Step 2: Run onboarding wizard
+### Step 2: Configure the model
 
-Set up OpenClaw using the step-by-step interactive wizard.
+Olares starts and manages the Gateway when you install OpenClaw. Use the model configuration wizard to connect it to Router.
 
 1. Open the OpenClaw CLI app from the Launchpad.
-2. Enter the following command to start the interactive onboarding wizard:
+2. Run the following command:
 
     ```bash
-    openclaw onboard --classic
+    openclaw configure --section model
     ```
 
-    :::tip Do not run `openclaw onboard`
-    Do not run `openclaw onboard` on its own. It launches a conversational TUI that requires an API key configured in the environment variables. Since no API key is configured there, this path is unusable. For the interactive wizard, use `openclaw onboard --classic` instead.
+3. Use the arrow keys to navigate and press **Enter** to confirm. Configure the connection as follows:
 
-    If you accidentally entered the TUI, type `/quit` and press **Enter** to exit.
-    :::
-
-3. The wizard guides you through a series of steps. Use the arrow keys to navigate and press **Enter** to confirm.
-
-    :::tip Note on configurations
-    To get you started quickly, this tutorial skips several advanced settings in the wizard. You can configure or modify them later.
-    :::
-
-    | Settings   | Option   |
-    |:-----------|:---------|
-    | Personal-by-default acknowledgment | Select **Yes**.  |
-    | Help make OpenClaw better   | Select as needed.   |
-    | <nobr>Setup mode</nobr>   | Select **QuickStart**.   |
-    | Model/auth provider | Select **Custom Provider**. |
+    | Setting | Value |
+    |:--------|:------|
+    | Model/auth provider | Select **More…**, then **Custom Provider**. |
     | API Base URL | Paste the Router Base URL from Step 1, including `/v1`. |
-    | How do you want to provide this API key? | Select **Paste API key now** if this prompt appears. |
-    | API Key (leave blank if not required) | Leave blank for this app in Olares. |
+    | How do you want to provide this API key? | Select **Paste API key now** if prompted. |
+    | API Key (leave blank if not required) | Enter `olares`. |
     | Endpoint compatibility | Select **OpenAI-compatible**. |
-    | Model ID | Enter `default-chat`. The wizard may verify the endpoint before continuing. |
+    | Model ID | Enter `default-chat`. Wait for `Verification successful` before continuing. |
     | Endpoint ID | Enter `router`. The model reference is `router/default-chat`. |
     | Model alias (optional) | Leave blank. |
-    | Does this model support image input? | If prompted, select **Yes** for Qwen3.8-27B (llama.cpp). For another model, check its capabilities in Router. |
-    | Test AI access now with a live completion | Select **Yes**.<br>The message `AI access works` indicates that OpenClaw can successfully connect to the model. |
-    | Remaining settings (channels, search provider,<br>and skill dependencies) | Select **Skip for now**.<br>You can configure them later. |
+    | Does this model support image input? | Select **Yes** for Qwen3.8-27B (llama.cpp). For another model, check its capabilities in Router. |
 
-    Once you complete the onboarding wizard, OpenClaw opens the Terminal User Interface (TUI) automatically.
+    Use `olares` as a placeholder because OpenClaw's model client requires a key value. Router authenticates this Olares app using its application identity.
 
-    :::tip If the TUI opened by onboarding reports HTTP 403
-    In OpenClaw 2026.9.6, the wizard can open the TUI using the container's LAN address. With the Olares proxy configuration, this connection can fail with `proxy_attribution_required` even though the model is configured correctly.
+4. When `Configuration updated` appears, open the Terminal User Interface (TUI):
 
-    Enter `/quit` to leave that TUI, then run `openclaw tui` in the same OpenClaw CLI terminal. Check that the heading shows `ws://127.0.0.1:18789`. This local connection uses the existing configuration and credentials. For this specific error on the onboarding path, you do not need to add `gateway.remote.edgeAuth` or change the mobile Gateway URL.
-    :::
+    ```bash
+    openclaw tui
+    ```
 
-    ![OpenClaw TUI after setup](/images/manual/use-cases/router-client-connect-openclaw.png#bordered)
+    Check that the heading shows `ws://127.0.0.1:18789`. Send a message and wait for a reply.
 
-4. Type `/quit` and press **Enter** to exit.
+    ![OpenClaw TUI connected to Router](/images/manual/use-cases/router-client-connect-openclaw.png#bordered)
 
-    <!--![OpenClaw TUI first chat](/images/manual/use-cases/openclaw-tui-firstchat.png#bordered)-->
-
-5. Keep the OpenClaw CLI window open. You need it in the next step.
+5. Type `/quit` and press **Enter** to exit the TUI. Keep the OpenClaw CLI window open for device pairing in the next step.
 
 ### Step 3: Pair device
 
-Connect the Control UI to the OpenClaw CLI to use the graphical dashboard.
+Pair your browser with the Gateway to use the Control UI.
 
-<Tabs>
-<template #(Recommended)-Pair-device-automatically>
+1. Open the Control UI app from the Launchpad. On first connection, it asks for a Gateway token.
+2. In the OpenClaw CLI window, run:
 
-1. Open the Control UI app from the Launchpad. The **OpenClaw Gateway Dashboard** opens.
-
-    The `Auth required` error appears. This is expected and means you have not provided your access token yet.
-
-    ![Gateway dashboard](/images/manual/use-cases/gateway-dashboard5.png#bordered)
-
-2. Locate the **Paste the token from** line, and then copy the provided command `openclaw gateway auth-token --show`.
-3. Return to the OpenClaw CLI window, run the copied command, and then copy the access token displayed.
-4. Go to the OpenClaw Gateway Dashboard, locate the **Gateway Token** field, paste the copied access token, and then click **Connect**.
-
-    The `Device pairing required` error appears. This is expected and means the device connection is waiting for approval.
-
-    ![Device pairing required](/images/manual/use-cases/gateway-device-pairing-required2.png#bordered)
-
-5. In the `Device pairing required` error message, locate the `Approve this request:` line, and then copy the command shown under it.
-6. Return to the OpenClaw CLI window, and then run the copied command to authorize the Control UI.
-
-    :::tip Note on timeout errors
-    The approval command has a short time limit. If you receive an `unknown requestId` error, the request has expired. Refresh the Control UI, copy the newly generated command, and then run it in OpenClaw CLI again.
-
-    ```text
-    [openclaw] The CLI command failed.
-    [openclaw] Reason: unknown requestId
+    ```bash
+    openclaw gateway auth-token --show
     ```
+
+3. Copy the displayed token into the Gateway secret field in the Control UI, then connect.
+4. The Control UI asks you to approve this browser. Copy the `openclaw devices approve` command shown on that page and run it in the OpenClaw CLI window.
+
+    :::tip Expired pairing request
+    If the command returns `unknown requestId`, refresh the Control UI and run the newly displayed approval command.
     :::
 
-7. When the terminal displays the approval message, return to the Control UI. You will be logged in and directed to the **Home** page automatically. For example,
+5. After approval, the Control UI connects automatically and opens the main chat. Send a message and wait for a reply.
 
-    ```text
-    Approved 005748253152b66dc0f5f6a801f35617db043f107972f259630a6bd098d5f790 (82e0f4ac-ed44-477e-8c6c-c3d2f4eeedaf)
-    ```
+:::details Select a pending request manually
+If you have multiple pending browser requests, run `openclaw devices list` in the OpenClaw CLI. Match the request to your browser before approving it:
 
-    ![Health OK](/images/manual/use-cases/openclaw-connected5.png#bordered)
-</template>
-<template #(Optional)-Pair-device-manually>
-
-:::tip When to use manual pairing
-The quick setup in the automatic device pairing section approves the most recent pairing request. If you have multiple pending requests and need to manually select which device to approve, follow the steps in this section instead.
+```bash
+openclaw devices approve <request-id>
+```
 :::
-
-1. Open the Control UI app from the Launchpad. The **OpenClaw Gateway Dashboard** opens.
-
-    The `Auth required` error appears. This is expected and means you have not provided your access token yet.
-
-    ![Gateway dashboard](/images/manual/use-cases/gateway-dashboard5.png#bordered)
-
-2. Locate the **Paste the token from** line, and then copy the provided command `openclaw gateway auth-token --show`.
-3. Return to the OpenClaw CLI window, run the copied command, and then copy the access token displayed.
-4. Go to the OpenClaw Gateway Dashboard, locate the **Gateway Token** field, paste the copied access token, and then click **Connect**.
-
-    The `Device pairing required` error appears. This is expected and means the device connection is waiting for approval.
-
-    ![Device pairing required](/images/manual/use-cases/gateway-device-pairing-required2.png#bordered)
-
-5. Return to the OpenClaw CLI window and run the following command:
-    ```bash
-    openclaw devices list
-    ```
-6. In the **Pending** table, find the **Request** ID associated with your current device.
-
-    :::info
-    The Request ID has a time limit. If the authorization fails, re-run `openclaw devices list` to obtain a new valid ID.
-    :::
-
-    ![View pending device request](/images/manual/use-cases/pending-request.png#bordered)
-    
-7. Authorize the device by entering the following command:
-
-    ```bash
-    openclaw devices approve {RequestID}
-    ```
-
-8. When the terminal displays the approval message, return to the Control UI. You will be logged in and directed to the **Home** page by default.
-
-    ![Health OK](/images/manual/use-cases/openclaw-connected5.png#bordered)
-</template>
-</Tabs>
 
 ### Step 4: Personalize OpenClaw
 
