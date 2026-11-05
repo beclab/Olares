@@ -1,0 +1,89 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: ragglobalsettings.sys.bytetrade.search3
+spec:
+  group: sys.bytetrade.search3
+  names:
+    categories: []
+    kind: RagGlobalSetting
+    plural: ragglobalsettings
+    shortNames: []
+    singular: ragglobalsetting
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns: []
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Auto-generated derived type for RagGlobalSettingSpec via `CustomResource`
+        properties:
+          spec:
+            description: |-
+              The one system-wide RAG policy selected from Search3's controlled catalog.
+
+              Every field is required on the wire. Values are stable catalog keys, not free-form endpoints or tuning parameters. Search3 owns the corresponding model service address and the complete policy parameters.
+            properties:
+              chunkPolicy:
+                enum:
+                - structured-512-50-v1
+                type: string
+              embeddingModel:
+                description: Embedding models implemented and tested by this Search3 release.
+                enum:
+                - embedding-gemma-2-v1
+                type: string
+              ocrModel:
+                description: OCR models implemented by Search3. Disabled remains an explicit choice.
+                enum:
+                - ocr-disabled-v1
+                - paddle-ocr-hybrid-v1
+                - surya-ocr-2-v1
+                - dots-ocr-v1
+                type: string
+              parserProfile:
+                enum:
+                - text-family-v1
+                type: string
+              rerankModel:
+                description: Rerank models implemented by Search3. Disabled remains an explicit choice.
+                enum:
+                - rerank-disabled-v1
+                - bge-reranker-v2-m3-v1
+                type: string
+              retrievalProfile:
+                enum:
+                - vector-default-v1
+                type: string
+            required:
+            - chunkPolicy
+            - embeddingModel
+            - ocrModel
+            - parserProfile
+            - rerankModel
+            - retrievalProfile
+            type: object
+          status:
+            description: Controller-owned application status. `Unavailable` means the desired catalog choice is valid but a selected model service is not currently ready; it is deliberately different from an invalid specification.
+            nullable: true
+            properties:
+              message:
+                nullable: true
+                type: string
+              observedGeneration:
+                format: int64
+                nullable: true
+                type: integer
+              phase:
+                description: '`Valid`, `Invalid`, or `Unavailable`. No worker lifecycle is stored here.'
+                nullable: true
+                type: string
+            type: object
+        required:
+        - spec
+        title: RagGlobalSetting
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
