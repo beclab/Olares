@@ -43,6 +43,7 @@ export const categoryLabelsZh: Record<string, string> = {
 };
 
 export const useCases: UseCase[] = [
+  { title: "wger", link: "/use-cases/wger", category: "Productivity", description: "Plan workouts and keep weight and nutrition journals", descriptionZh: "制定训练计划，记录体重与营养摄入" },
   { title: "OpenClaw", link: "/use-cases/openclaw", category: "AI agent", description: "Personal AI assistant that integrates with Discord and runs tasks", descriptionZh: "可集成 Discord 并执行任务的个人 AI 助手" },
   { title: "NemoClaw", link: "/use-cases/nemoclaw", category: "AI agent", description: "Always-on AI agent backed by a local LLM", descriptionZh: "由本地 LLM 驱动的常驻 AI 智能体" },
   { title: "Hermes Agent", link: "/use-cases/hermes", category: "AI agent", description: "Self-directed agent with Olares skills and a Gateway API", descriptionZh: "具备 Olares 技能和 Gateway API 的自主智能体" },
