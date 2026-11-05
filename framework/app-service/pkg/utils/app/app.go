@@ -70,6 +70,10 @@ var protectedNamespace = []string{
 	"os-platform",
 	"os-framework",
 	"os-network",
+	"os-protected",
+	"os-gpu",
+	"os-mesh",
+	"os-frontend",
 }
 
 var forbidNamespace = []string{
@@ -493,7 +497,8 @@ func GetPendingOrRunningTask(ctx context.Context) (ams []v1alpha1.ApplicationMan
 	}
 	for _, am := range list.Items {
 		if am.Status.State == v1alpha1.Pending || am.Status.State == v1alpha1.Installing ||
-			am.Status.State == v1alpha1.Uninstalling || am.Status.State == v1alpha1.Upgrading {
+			am.Status.State == v1alpha1.Uninstalling || am.Status.State == v1alpha1.Upgrading ||
+			am.Status.State == v1alpha1.UpgradePending || am.Status.State == v1alpha1.UpgradeDownloading {
 			ams = append(ams, am)
 		}
 	}

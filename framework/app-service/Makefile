@@ -61,11 +61,42 @@ test: manifests generate fmt vet envtest ## Run tests.
 # Packages with reliable, cluster-independent tests. Other packages
 # (pkg/kubesphere, pkg/task) require a live cluster and pkg/utils carries a
 # pre-existing environment-dependent test, so they are excluded from CI.
-TEST_UNIT_PKGS ?= ./controllers/... ./pkg/apiserver/... ./pkg/appcfg/... ./pkg/appinstaller/... ./pkg/appstate/... ./pkg/compute/... ./pkg/tapr/... ./pkg/utils/app/...
+TEST_UNIT_PKGS ?= ./controllers/... ./pkg/apiserver/... ./pkg/appcfg/... ./pkg/appinstaller/... ./pkg/compute/... ./pkg/tapr/... ./pkg/utils/app/...
 
 .PHONY: test-unit
-test-unit: envtest ## Run the curated unit + integration suite with the race detector (skips manifests/generate/fmt/vet regeneration).
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test -race $(TEST_UNIT_PKGS) -coverprofile cover.out
+test-unit: envtest handler-contract-check ## Run the curated unit + integration suite with the race detector (skips manifests/generate/fmt/vet regeneration).
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test -race $(TEST_UNIT_PKGS) ./pkg/applifecycle/... -coverprofile cover.out
+
+##@ Handler contract enforcement (see pkg/applifecycle/CONTRACT.md)
+
+# Rules 1-3 are enforced two ways:
+#   1. `go test ./pkg/applifecycle/handlers/...` triggers
+#      pkg/applifecycle/handlers/purity_test.go, which calls
+#      handlerpurity.CheckDir(".") — no extra tooling required.
+#   2. The standalone binary built below runs the same analyzer
+#      through go/analysis's singlechecker, so CI can gate on it
+#      without spinning up the full `go test` matrix.
+# Rule 4 is enforced at runtime by domain.Engine.Step
+# (ErrUndeclaredTransition). Rule 5 by code review + the compile-time
+# closedness of the Action sum type.
+HANDLERPURITY_BIN ?= $(LOCALBIN)/handlerpurity
+
+.PHONY: handlerpurity-bin
+handlerpurity-bin: $(HANDLERPURITY_BIN) ## Build the handlerpurity standalone analyzer binary.
+$(HANDLERPURITY_BIN): $(LOCALBIN)
+	go build -o $(HANDLERPURITY_BIN) ./cmd/handlerpurity
+
+.PHONY: handler-contract-check
+handler-contract-check: handlerpurity-bin ## Enforce CONTRACT.md rules 1-3 on pkg/applifecycle/handlers/... (no golangci-lint required).
+	$(HANDLERPURITY_BIN) ./pkg/applifecycle/handlers/...
+
+.PHONY: lint
+lint: handler-contract-check ## Full lint pass. Delegates to golangci-lint when it is installed, and always runs handler-contract-check.
+	@if command -v golangci-lint >/dev/null 2>&1; then \
+		golangci-lint run ./pkg/applifecycle/... ; \
+	else \
+		echo "golangci-lint not installed; skipping .golangci.yml pass (handler-contract-check already enforced by the go/analysis binary)"; \
+	fi
 
 ##@ Build app-service
 

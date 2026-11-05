@@ -1,0 +1,6 @@
+apiVersion: v2
+name: gcont
+description: Restart continuation install app
+type: application
+version: 0.3.0
+appVersion: "0.3.0"

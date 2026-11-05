@@ -1,0 +1,49 @@
+olaresManifest.version: '0.12.0'
+olaresManifest.type: app
+apiVersion: 'v3'
+workloadReplicas:
+  faultgpu: 1
+metadata:
+  name: faultgpu
+  description: Pod requests more GPUs than are bound so HAMi records InsufficientGPU
+  icon: https://app.cdn.olares.com/appstore/adguard/icon.png
+  appid: faultgpu
+  version: '0.1.0'
+  title: faultgpu
+  categories:
+    - Utilities_v112
+permission:
+  appData: true
+  appCache: true
+spec:
+  versionName: '0.1.0'
+  fullDescription: Manifest GPU quota is 1Gi so install preflight can pass on a machine that has a GPU. The pod requests 64 nvidia.com/gpu and sets gpu.bytetrade.io/app-pod-consume-policy to single, so HAMi records InsufficientGPU when fewer GPUs are bound than requested. gpu-inject is false so the webhook does not rewrite that request down to one card.
+  developer: test
+  website: https://example.com
+  submitter: test
+  locale:
+    - en-US
+  requiredMemory: 64Mi
+  limitedMemory: 512Mi
+  requiredDisk: 64Mi
+  limitedDisk: 256Mi
+  requiredCpu: 50m
+  limitedCpu: 1
+  requiredGpu: 1Gi
+  limitedGpu: 1Gi
+  supportArch:
+    - amd64
+    - arm64
+options:
+  dependencies:
+    - name: olares
+      type: system
+      version: '>=1.12.6-0'
+entrances:
+  - authLevel: internal
+    host: faultgpu-svc
+    icon: https://app.cdn.olares.com/appstore/adguard/icon.png
+    name: faultgpu
+    openMethod: window
+    port: 80
+    title: faultgpu

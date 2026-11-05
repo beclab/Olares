@@ -29,15 +29,27 @@ type resourceNotificationPayload struct {
 	Timestamp time.Time `json:"timestamp"`
 }
 
-func PublishComputeInsufficientNotification(appConfig *appcfg.ApplicationConfig, reason error) {
+// BuildInsufficientPayload constructs the (subject, payload) pair
+// sent when compute allocation for an app fails. Extracted from
+// PublishComputeInsufficientNotification so
+// pkg/applifecycle/adapters/computevalidator can produce the exact
+// same NATS wire shape without depending on the AppEventQueue
+// global — publishing is done by the caller (either
+// PublishComputeInsufficientNotification below, or the adapter via
+// its injected notifier seam).
+//
+// Returns the notificationSubject constant and a payload built from
+// appConfig; a nil appConfig yields an empty payload so the caller
+// can decide whether to publish anything at all.
+func BuildInsufficientPayload(appConfig *appcfg.ApplicationConfig, reason error) (subject string, payload any) {
 	if appConfig == nil {
-		return
+		return notificationSubject, nil
 	}
 	message := fmt.Sprintf("No available compute resource for %s mode.", appConfig.SelectedGpuType)
 	if reason != nil {
 		message = reason.Error()
 	}
-	data := resourceNotification{
+	return notificationSubject, resourceNotification{
 		Topic: notificationTopicComputeInsufficient,
 		Payload: resourceNotificationPayload{
 			User:      appConfig.OwnerName,
@@ -50,5 +62,12 @@ func PublishComputeInsufficientNotification(appConfig *appcfg.ApplicationConfig,
 			Timestamp: time.Now(),
 		},
 	}
-	appevent.PublishToQueue(notificationSubject, data)
+}
+
+func PublishComputeInsufficientNotification(appConfig *appcfg.ApplicationConfig, reason error) {
+	if appConfig == nil {
+		return
+	}
+	subject, data := BuildInsufficientPayload(appConfig, reason)
+	appevent.PublishToQueue(subject, data)
 }

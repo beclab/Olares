@@ -640,12 +640,13 @@ func (h *HelmOps) WaitForStartUp() (bool, error) {
 		case <-timer.C:
 			startedUp, err := h.isStartUp()
 			klog.Infof("wait for app %s start up", h.app.AppName)
+			// Deliberately does NOT write AM.Status here. The Runner is the
+			// sole writer; it lands Initializing from the handler that owns
+			// the WorkloadReady this return produces. Writing it in-line
+			// flips the AM out of Installing before that WorkloadReady is
+			// routed, so the engine dispatches it against Initializing with
+			// an unset initializing.phase and wedges on a hard error.
 			if startedUp {
-				name, _ := apputils.FmtAppMgrName(h.app.AppName, h.app.OwnerName, h.app.Namespace)
-				err := apputils.UpdateAppMgrState(h.ctx, name, appv1alpha1.Initializing)
-				if err != nil {
-					klog.Errorf("update appmgr state failed %v", err)
-				}
 				return true, nil
 			}
 			if errors.Is(err, errcode.ErrPodPending) || errors.Is(err, errcode.ErrServerSidePodPending) {
@@ -664,8 +665,12 @@ func (h *HelmOps) WaitForStartUp() (bool, error) {
 			}
 
 		case <-h.ctx.Done():
-			klog.Infof("Waiting for app startup canceled appName=%s", h.app.AppName)
-			return false, nil
+			// A nil error here is a successful startup. The installing
+			// deadline cancels this poll, and the runner would then
+			// land Initializing. Return the context error so a
+			// deadline becomes TimeoutFired.
+			klog.Infof("Waiting for app startup canceled appName=%s err=%v", h.app.AppName, h.ctx.Err())
+			return false, h.ctx.Err()
 		}
 	}
 }
@@ -782,14 +787,40 @@ func (h *HelmOps) checkIfStartup(pods []corev1.Pod, isServerSide bool) (bool, er
 			return false, errors.Join(errcode.ErrPodPending, errcode.ErrHamiUnschedulable)
 		}
 
-		if pod.Status.Phase == corev1.PodPending && pendingDuration > time.Minute*10 {
-			if isServerSide {
-				return false, errcode.ErrServerSidePodPending
-			}
-			return false, errcode.ErrPodPending
+		if err := startupPendingErr(&pod, pendingDuration, isServerSide); err != nil {
+			return false, err
 		}
 	}
 	return podhealth.AllPodsStarted(pods), nil
+}
+
+// startupPendingErr reports a pod that will not leave Pending.
+//
+// A scheduler rejection (PodScheduled=False, Reason=Unschedulable)
+// returns immediately. A pod that is already scheduled stays Pending
+// while its image pulls, and fails only after it has been Pending
+// for more than 1 minute.
+func startupPendingErr(pod *corev1.Pod, pendingFor time.Duration, isServerSide bool) error {
+	if pod.Status.Phase != corev1.PodPending {
+		return nil
+	}
+	if podUnschedulable(pod) || pendingFor > time.Minute {
+		if isServerSide {
+			return errcode.ErrServerSidePodPending
+		}
+		return errcode.ErrPodPending
+	}
+	return nil
+}
+
+func podUnschedulable(pod *corev1.Pod) bool {
+	for _, cond := range pod.Status.Conditions {
+		if cond.Type == corev1.PodScheduled && cond.Status == corev1.ConditionFalse &&
+			cond.Reason == corev1.PodReasonUnschedulable {
+			return true
+		}
+	}
+	return false
 }
 
 func (h *HelmOps) getPendingKind(pod *corev1.Pod) (string, error) {

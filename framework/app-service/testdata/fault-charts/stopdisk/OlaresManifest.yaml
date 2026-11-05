@@ -1,0 +1,47 @@
+olaresManifest.version: '0.12.0'
+olaresManifest.type: app
+apiVersion: 'v3'
+workloadReplicas:
+  stopdisk: 1
+metadata:
+  name: stopdisk
+  description: cluster disk requirement above capacity
+  icon: https://app.cdn.olares.com/appstore/adguard/icon.png
+  appid: stopdisk
+  version: '0.1.1'
+  title: stopdisk
+  categories:
+    - Utilities_v112
+permission:
+  appData: true
+  appCache: true
+spec:
+  versionName: '0.1.1'
+  fullDescription: cluster disk requirement above capacity
+  developer: test
+  website: https://example.com
+  submitter: test
+  locale:
+    - en-US
+  requiredMemory: 64Mi
+  limitedMemory: 512Mi
+  requiredDisk: 200Gi
+  limitedDisk: 200Gi
+  requiredCpu: 50m
+  limitedCpu: 1
+  supportArch:
+    - amd64
+    - arm64
+options:
+  dependencies:
+    - name: olares
+      type: system
+      version: '>=1.12.6-0'
+entrances:
+  - authLevel: internal
+    host: stopdisk-svc
+    icon: https://app.cdn.olares.com/appstore/adguard/icon.png
+    name: stopdisk
+    openMethod: window
+    port: 80
+    title: stopdisk

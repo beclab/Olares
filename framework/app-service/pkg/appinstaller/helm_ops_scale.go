@@ -12,12 +12,10 @@ import (
 // can run against a quiescent release, and Scale then drives the
 // workloads to their final size.
 //
-// The implementation only sends the .workloads sub-tree and relies on
-// helm UpgradeCharts(ReuseValues) to merge it over the previous release's
-// values — every other input (admin / userspace / domain / service) is
-// preserved. ReuseValues (not ResetThenReuseValues) is intentional: Scale
-// must not pick up new chart defaults (e.g. image) just because the chart
-// on disk changed. Behavior by argument:
+// The implementation only sends the .workloads sub-tree and uses the chart
+// stored on the current Helm release. It never loads ChartsName from disk, so
+// replica changes cannot accidentally pick up templates from a newer package.
+// Behavior by argument:
 //
 //   - replicas >= 0: every workload is forced to this exact value. Used
 //     by suspending_app to scale to 0, and by upgrading_app to land an
@@ -42,13 +40,16 @@ func (h *HelmOps) Scale(replicas int32) error {
 		klog.V(4).Infof("Scale no-op for app=%s (no workloadReplicas declared)", h.app.AppName)
 		return nil
 	}
+	release, err := h.status()
+	if err != nil {
+		return err
+	}
 	values := make(map[string]interface{})
 	effectiveReplicas := h.app.EffectiveWorkloadReplicas()
 	values["workloads"] = buildWorkloadsValues(&effectiveReplicas, replicas)
 
-	if err := helm.UpgradeCharts(h.ctx, h.actionConfig, h.settings,
-		h.app.AppName, h.app.ChartsName, h.app.RepoURL, h.app.Namespace,
-		values, helm.ReuseValues); err != nil {
+	if err := helm.UpgradeReleaseCharts(h.ctx, h.actionConfig,
+		h.app.AppName, h.app.Namespace, release.Chart, values); err != nil {
 		klog.Errorf("Failed to scale chart appName=%s replicas=%d err=%v", h.app.AppName, replicas, err)
 		return err
 	}

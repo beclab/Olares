@@ -1,0 +1,47 @@
+olaresManifest.version: '0.12.0'
+olaresManifest.type: middleware
+apiVersion: 'v3'
+workloadReplicas:
+  faultmw: 1
+metadata:
+  name: faultmw
+  description: Middleware chart whose launch completion skips initializing
+  icon: https://app.cdn.olares.com/appstore/adguard/icon.png
+  appid: faultmw
+  version: '0.1.0'
+  title: faultmw
+  categories:
+    - Utilities_v112
+permission:
+  appData: true
+  appCache: true
+spec:
+  versionName: '0.1.0'
+  fullDescription: Declared as middleware. When the ApplicationManager type is middleware, a successful wait-launch goes straight to running.
+  developer: test
+  website: https://example.com
+  submitter: test
+  locale:
+    - en-US
+  requiredMemory: 64Mi
+  limitedMemory: 512Mi
+  requiredDisk: 64Mi
+  limitedDisk: 256Mi
+  requiredCpu: 50m
+  limitedCpu: 1
+  supportArch:
+    - amd64
+    - arm64
+options:
+  dependencies:
+    - name: olares
+      type: system
+      version: '>=1.12.6-0'
+entrances:
+  - authLevel: internal
+    host: faultmw-svc
+    icon: https://app.cdn.olares.com/appstore/adguard/icon.png
+    name: faultmw
+    openMethod: window
+    port: 80
+    title: faultmw

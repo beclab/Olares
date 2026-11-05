@@ -1,0 +1,5 @@
+userspace:
+  appData: ""
+workloads:
+  stopinit:
+    replicaCount: 1
