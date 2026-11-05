@@ -33,14 +33,6 @@ spec:
                 enum:
                 - embedding-gemma-2-v1
                 type: string
-              ocrModel:
-                description: OCR models implemented by Search3. Disabled remains an explicit choice.
-                enum:
-                - ocr-disabled-v1
-                - paddle-ocr-hybrid-v1
-                - surya-ocr-2-v1
-                - dots-ocr-v1
-                type: string
               parserProfile:
                 enum:
                 - text-family-v1
@@ -58,7 +50,6 @@ spec:
             required:
             - chunkPolicy
             - embeddingModel
-            - ocrModel
             - parserProfile
             - rerankModel
             - retrievalProfile
