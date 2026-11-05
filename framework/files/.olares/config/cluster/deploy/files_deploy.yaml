@@ -242,7 +242,7 @@ spec:
           command:
             - /samba_share
         - name: files
-          image: beclab/files-server:v0.2.219
+          image: beclab/files-server:v0.2.220
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: true
