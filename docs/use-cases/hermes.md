@@ -254,7 +254,7 @@ For security, the bot does not talk to unauthorized users. You must pair your Di
 
 ### Delegate a task to a subagent
 
-A subagent can work on a separate task and return its result to the main conversation. Chart 1.3.51 includes the official advanced-delegation plugin, which adds the `/delegation` command. If you previously disabled this plugin, run `hermes plugins enable advanced-delegation` in the Hermes CLI shell before starting a new conversation.
+A subagent can work on a separate task and return its result to the main conversation. Chart 1.3.51 automatically installs a fixed official revision of the advanced-delegation plugin when it is missing. This first-time installation requires access to GitHub. The plugin adds the `/delegation` command. If you previously disabled this plugin, run `hermes plugins enable advanced-delegation` in the Hermes CLI shell before starting a new conversation.
 
 1. Start a conversation in Hermes CLI or open **Chat** in Hermes Dashboard.
 2. Enter the following command to use the default delegation mode for new sessions:
