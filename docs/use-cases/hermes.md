@@ -2,19 +2,23 @@
 connectionVersion: "1.12.7"
 connectionLatestPath: /use-cases/hermes
 outline: [2,3]
-description: Install Hermes Agent on Olares, connect it to a local model and Discord, use Olares skills, and integrate it with other applications through the Gateway API.
+description: Connect Hermes Agent to a local model on Olares, chat in its browser workspace, delegate tasks, and manage files and applications with Olares skills.
 head:
   - - meta
     - name: keywords
-      content: Olares, Hermes, Hermes Agent, autonomous AI, self-improving AI, Discord bot, self-hosted
-app_version: "1.3.49"
-doc_version: "3.2"
-doc_updated: "2026-10-21"
+      content: Olares, Hermes, Hermes Agent, Webapp, delegation, local models, Discord bot, self-hosted
+app_version: "1.3.51"
+doc_version: "3.3"
+doc_updated: "2026-11-05"
 ---
 
 # Set up a self-directed AI agent with Hermes
 
 <VersionRouteSelect />
+
+:::info App version
+The Hermes Webapp entrance and bundled delegation plugin described below require Chart 1.3.51 (Hermes Agent 0.22.7). Check **Chart version** on the app's detail page in Market. Older releases have two shortcuts, Hermes CLI and Dashboard.
+:::
 
 Hermes Agent is a self-directed AI assistant that connects to your local models to execute system tasks, generate code, and manage workflows. It retains memory across sessions and creates reusable skills based on your interactions.
 
@@ -25,7 +29,8 @@ In Olares, you can use the built-in skills that allow your agent to manage your 
 In this guide, you will learn how to:
 - Install Hermes Agent on Olares.
 - Configure Hermes Agent to connect to a local model.
-- Interact with your agent directly via the terminal.
+- Chat with your agent through Hermes CLI or Hermes Webapp.
+- Delegate a task to a subagent and read its result.
 - Integrate with Discord for remote chat.
 - Use Olares skills to manage files and applications via the agent.
 - Enable the Gateway API to connect Hermes Agent with other applications like Open WebUI.
@@ -55,12 +60,17 @@ Before you begin, you need:
 
    ![Install Hermes Agent](/images/manual/use-cases/hermes-agent.png#bordered)
 
-2. Click **Get**, and then click **Install**. When the installation finishes, two shortcuts appear in the Launchpad:
+2. Click **Get**, then **Install**, and wait for installation to complete.
 
-    - Hermes CLI: The command line interface
-    - Dashboard: The graphical dashboard
+Chart 1.3.51 provides three shortcuts in Launchpad:
 
-    ![Hermes entry points](/images/manual/use-cases/hermes-entry-points.png#bordered){width=50%}
+| Shortcut | Use it to |
+| --- | --- |
+| Hermes CLI | Run initial setup, enter commands, and troubleshoot. |
+| Hermes Dashboard | Manage models, skills, messaging channels, and gateway settings. |
+| Hermes Webapp | Chat in the browser, continue saved sessions, and follow delegated tasks. |
+
+Complete the model setup below before starting your first conversation in Hermes Webapp.
 
 :::tip Run multiple Hermes agents
 Olares supports app cloning. If you want to run multiple independent AI agents for different tasks, you can clone the Hermes Agent app. For more information, see [Clone applications](../manual/olares/market/clone-apps.md).
@@ -109,7 +119,8 @@ Run a quick setup to connect Hermes Agent to your local model.
     | Choose a provider | Select **Skip - keep defaults / configure later**. |
     | Select Search Provider | Select **Skip - keep defaults / configure later**. |
 
-4. Keep the Hermes CLI window open for the next step.
+4. Continue through any remaining optional service prompts. Skip services you have not configured. At the usage statistics prompt, select **No thanks** to continue without sharing statistics.
+5. Wait until the wizard shows `Ready to go`. Keep the Hermes CLI window open for the next step.
 
 ## Interact with Hermes Agent
 
@@ -135,7 +146,29 @@ The Terminal User Interface (TUI) runs directly in the Hermes CLI with no extra 
 
 4. To close the TUI and return to the standard CLI, type `/exit`, and then press **Enter**.
 
-### Option 2: Remote chat via Discord
+### Option 2: Browser chat with Hermes Webapp
+
+Hermes Webapp provides a browser workspace for the same Hermes Agent installation. It shares the model configuration and saved sessions with the other interfaces.
+
+1. Open **Hermes CLI** from Launchpad. If a chat is running, enter `/exit` to return to the shell.
+2. Run the following command to view the Webapp login information generated for this installation:
+
+   ```bash
+   cat /opt/data/webapp/olares-login.txt
+   ```
+
+   If you already configured Hermes username/password authentication before upgrading, continue using those credentials. The upgrade preserves them and does not generate a new login file for that account.
+
+3. Open **Hermes Webapp** from Launchpad. Enter the username and password, then click **Sign in**. This is a separate login from your Olares account.
+4. Click **New session**, enter a message, and send it. For example, ask the agent to help plan a weekly file cleanup. Review its proposed actions before asking it to make changes.
+
+   With the Router setup above, the model selector shows **Default Chat**. The agent uses the model selected for `default-chat` in Router.
+
+5. To continue a conversation later, select it under **Sessions** in the sidebar.
+
+The generated login information and conversations are retained when the app restarts. If **Hermes Webapp** is missing from Launchpad, check that your installation has Chart 1.3.51. If you previously disabled Webapp explicitly, the upgrade keeps that setting. To enable it, run `hermes config set webapp.enabled true` followed by `hermes gateway restart` in Hermes CLI.
+
+### Option 3: Remote chat via Discord
 
 To chat with your agent remotely, connect it to a Discord bot.
 
@@ -218,6 +251,34 @@ For security, the bot does not talk to unauthorized users. You must pair your Di
     ```
 
 3. Once approved, you can start chatting with your agent in Discord. If you are talking to it in a channel, mention it first.
+
+### Delegate a task to a subagent
+
+A subagent can work on a separate task and return its result to the main conversation. Chart 1.3.51 includes the official advanced-delegation plugin, which adds the `/delegation` command. If you previously disabled this plugin, run `hermes plugins enable advanced-delegation` in the Hermes CLI shell before starting a new conversation.
+
+1. Start a conversation in Hermes CLI or open **Chat** in Hermes Dashboard.
+2. Enter the following command to use the default delegation mode for new sessions:
+
+   ```text
+   /delegation default
+   ```
+
+3. Enter `/new` to start a session with that setting. In the default mode, a subagent uses your main model unless you configured a separate delegation model.
+4. Ask the agent to delegate a small task. For example:
+
+   ```text
+   Ask a subagent to check an order total: 137 items at 283 each. Report the total when it finishes.
+   ```
+
+   The agent starts the subagent and returns its result to the conversation when the task finishes. You can also follow delegated tasks in Hermes Webapp.
+
+:::details Choose a named model route
+To configure separate model routes, run `hermes delegation config` in the Hermes CLI shell. Configure at least one route before switching to `model_map`. For a route through Router, use the **Apps in Olares** Base URL obtained earlier and `default-chat` as the model name. Use `olares` if a key is required.
+
+In a conversation, `/delegation model_map` saves the mode for the next session. `/delegation model_map --now` also applies it to the current conversation and rebuilds its tool definitions at the next turn. Switch back with `/delegation default`, or add `--now` to apply the change to the current conversation.
+
+For the route editor and additional options, see the [official advanced-delegation guide](https://hermes-agent.nousresearch.com/marketplace/advanced-delegation).
+:::
 
 ## Manage Olares with your Hermes Agent
 
