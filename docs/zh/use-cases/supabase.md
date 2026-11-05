@@ -124,6 +124,18 @@ with check (auth.uid() = owner_id);
 
 ## 在 Code Server 中连接应用
 
+可以先让 Lares 帮你准备示例：
+
+```text
+帮我将私有笔记应用接入 Supabase。使用 supabase_official 检查 user_notes
+及其 RLS 策略，获取 API URL 和 anon key。
+按照下面的 SDK 示例准备 notes.mjs 和 .env 模板。
+不要在对话或源码中填写密码。说明如何创建 Auth 用户和运行应用，
+再帮我检查两个用户的数据隔离。
+```
+
+Lares 可以准备数据库和文件内容。将文件复制到 Code Server，再按下文创建用户并运行。直接写入文件或执行命令需要另外授权的工作区工具。
+
 ### 获取 API 连接信息并创建用户
 
 1. 向 Lares 获取应用连接信息：
@@ -227,6 +239,8 @@ with check (auth.uid() = owner_id);
 
 以下集成使用虚构的家庭装修项目数据。开始对应章节前，先从应用市场安装相应应用。Lares 可以准备数据库对象，各应用内的连接配置仍需单独完成。
 
+每个示例都提供了可以先发给 Lares 的请求。Supabase MCP 负责数据库侧操作，直接配置 n8n、Metabase 或 Flowise 还需要对应应用已授权的工具或 API 连接。没有这些连接时，让 Lares 准备配置，再自行填写下文中的字段。服务端凭据保存在目标应用的凭据管理中。
+
 ### 收集连接信息
 
 根据连接用途选择地址和凭据：
@@ -310,6 +324,18 @@ insert into public.project_costs values
 
 n8n 在应用之间运行自动化工作流。此示例通过手动触发器和 Supabase 节点向 `project_tasks` 插入交付任务。
 
+向 Lares 发送：
+
+```text
+帮我完成下面的 n8n 示例。使用 supabase_official 检查 project_tasks，
+获取 API URL，准备手动触发的工作流和 Supabase Create a row 节点配置，
+用于添加 Lakeview 交付任务。优先使用 n8n 中已有的 Supabase 凭据，
+不要让我把 service_role key 粘贴到对话中。说明还需要完成哪些设置，
+再帮我验证插入结果，避免重复创建任务。
+```
+
+按以下步骤完成连接，或核对生成的配置：
+
 1. 打开 n8n，创建带手动触发器的工作流。
 2. 点击触发器旁的 **+**，搜索 **Supabase**，选择 **Create a row** 添加节点。
 3. 在 **Credential** 下点击 **Connect to Supabase**。
@@ -337,6 +363,17 @@ n8n 在应用之间运行自动化工作流。此示例通过手动触发器和 
 ### 用 Metabase 汇总项目费用
 
 Metabase 根据数据库创建报表和仪表盘。此示例连接 Supabase 并汇总项目费用。
+
+向 Lares 发送：
+
+```text
+使用 supabase_official 检查 project_costs 示例数据，准备三行费用明细
+及总额查询的 SQL，帮我配置下面的 Metabase PostgreSQL 连接。
+列出无法通过 Supabase MCP 获取的主机、端口或凭据，
+让我直接在 Metabase 中填写敏感信息，再帮我检查是否为 3 条记录、总额 600。
+```
+
+使用以下设置完成 Metabase 连接：
 
 1. 打开 Metabase，进入 **Admin** > **Databases** > **Add database**。
 2. 选择 PostgreSQL 并填写：
@@ -379,6 +416,19 @@ Metabase 根据数据库创建报表和仪表盘。此示例连接 Supabase 并�
 ### 用 Flowise 查询项目笔记
 
 Flowise 通过连接节点构建 AI 对话流程。此示例将项目资料存入 Supabase，并使用 Router 中的对话模型和嵌入模型回答问题。Flowise 保留自己的应用数据库，此流程不需要直接连接 Supabase 的 PostgreSQL。
+
+向 Lares 发送：
+
+```text
+帮我准备下面的 Flowise 示例。使用 supabase_official 检查数据库，
+为 1024 维嵌入准备 project_documents 表和匹配函数的迁移方案。
+保留现有数据，执行前先展示修改。准备使用 default-chat 和
+default-embedding 的流程配置，嵌入 batch size 为 1，encoding 为 float。
+列出我仍需完成的 Router、Flowise 凭据及特定版本兼容设置，
+再帮我将回答与原始资料核对。
+```
+
+运行流程前，先完成以下模型和应用设置：
 
 #### 准备 Flowise 和 Router
 

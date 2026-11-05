@@ -121,6 +121,18 @@ For another application, give Lares its required schema or migration files and d
 
 ## Connect an application in Code Server
 
+Start by asking Lares to prepare the example for you:
+
+```text
+Help me connect a private notes app to Supabase. Use supabase_official
+to inspect user_notes and its RLS policy, and get the API URL and anon key.
+Prepare notes.mjs and a .env template for the SDK example below.
+Keep passwords out of the conversation and source code. Explain how to
+create the Auth user and run the app, then help me check two-user isolation.
+```
+
+Lares can prepare the database and file contents. Copy the files into Code Server and complete the user creation and run steps below. Writing files or running commands directly requires a separate authorized workspace tool.
+
 ### Get the API connection and create a user
 
 1. Ask Lares for the application connection details:
@@ -224,6 +236,8 @@ Do not replace `anon` with `service_role` to resolve an RLS error. That key bypa
 
 The following integrations use fictional home renovation projects. Install the corresponding app from Market before following its section. Lares can prepare the database objects, while you configure the connection inside each app.
 
+Each example includes a request you can send to Lares first. Supabase MCP covers the database side. Configuring n8n, Metabase, or Flowise directly also requires an authorized tool or API connection to that app. Without one, ask Lares to prepare the configuration and complete the fields below yourself. Keep server credentials in the target app's credential store.
+
 ### Collect connection details
 
 Choose the address and credential for the connection:
@@ -307,6 +321,19 @@ insert into public.project_costs values
 
 n8n runs automated workflows between apps. This example uses a manual trigger to insert a delivery task into `project_tasks` through the Supabase node.
 
+Ask Lares:
+
+```text
+Help me build the n8n example below. Use supabase_official to check
+project_tasks and get the API URL. Prepare the manual-trigger workflow
+and Supabase Create a row settings for the Lakeview delivery task.
+Use an existing n8n Supabase credential if available. Do not ask me to
+paste its service_role key into chat. Tell me which setup steps remain,
+then help me verify the inserted row without creating duplicate tasks.
+```
+
+Use the following steps to complete the connection or check the generated configuration:
+
 1. Open n8n and create a workflow with a manual trigger.
 2. Click the **+** next to the trigger, search for **Supabase**, and select **Create a row** to add the node.
 3. Click **Connect to Supabase** under **Credential**.
@@ -333,6 +360,18 @@ n8n runs automated workflows between apps. This example uses a manual trigger to
 ### Summarize project costs with Metabase
 
 Metabase builds reports and dashboards from a database. This example connects it to Supabase and summarizes the sample project costs.
+
+Ask Lares:
+
+```text
+Use supabase_official to check the project_costs example data and prepare
+SQL for the three-row report and total. Help me configure the Metabase
+PostgreSQL connection below. List any host, port, or credentials that
+cannot be obtained through Supabase MCP, and have me enter secrets
+directly in Metabase. Help me check that the total is 600 across 3 records.
+```
+
+Complete the Metabase connection with the following settings:
 
 1. Open Metabase, and go to **Admin** > **Databases** > **Add database**.
 2. Choose PostgreSQL, and enter:
@@ -375,6 +414,20 @@ This example uses the installation administrator's database login in a Metabase 
 ### Ask Flowise about project notes
 
 Flowise builds AI chatflows from connected nodes. This example stores project notes in Supabase and answers questions about them, using chat and embedding models from Router. Flowise keeps its own application database and does not need a direct PostgreSQL connection to Supabase for this workflow.
+
+Ask Lares:
+
+```text
+Help me prepare the Flowise example below. Use supabase_official to inspect
+the database and propose the project_documents table and match function
+for 1024-dimensional embeddings. Preserve existing data and show changes
+before applying them. Prepare the chatflow settings for default-chat and
+default-embedding, with embedding batch size 1 and encoding float.
+List the Router, Flowise credential, and version-specific setup I still
+need to complete, then help me verify the answer against the source note.
+```
+
+Complete the model and application setup below before running the chatflow:
 
 #### Prepare Flowise and Router
 
