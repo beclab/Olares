@@ -9,8 +9,8 @@ import (
 )
 
 // CheckHostNetwork rejects rendered workloads whose pod spec shares the
-// host network or the host PID namespace. The check runs on the helm
-// dry-run, so a template that sets hostNetwork from a value is judged by
+// host network, PID, or IPC namespace. The check runs on the helm
+// dry-run, so a template that sets one of these from a value is judged by
 // the boolean that would actually be installed, not by the source text.
 func CheckHostNetwork(list kube.ResourceList) error {
 	var errs []error
@@ -20,6 +20,9 @@ func CheckHostNetwork(list kube.ResourceList) error {
 		}
 		if spec.HostPID {
 			errs = append(errs, fmt.Errorf("%s %q must not set hostPID: true", kind, name))
+		}
+		if spec.HostIPC {
+			errs = append(errs, fmt.Errorf("%s %q must not set hostIPC: true", kind, name))
 		}
 	})
 	return errors.Join(errs...)

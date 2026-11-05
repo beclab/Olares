@@ -25,10 +25,20 @@ func TestCheckHostNetwork_RejectsTrue(t *testing.T) {
 	}
 }
 
+func TestCheckHostNetwork_RejectsHostIPC(t *testing.T) {
+	list := kube.ResourceList{
+		deploymentWithPodSpec("web", corev1.PodSpec{HostIPC: true}),
+	}
+	err := CheckHostNetwork(list)
+	if err == nil || !strings.Contains(err.Error(), "hostIPC") || !strings.Contains(err.Error(), "web") {
+		t.Fatalf("expected hostIPC rejection for web, got: %v", err)
+	}
+}
+
 func TestCheckHostNetwork_AllowsFalseAndUnset(t *testing.T) {
 	list := kube.ResourceList{
 		deploymentWithPodSpec("web", corev1.PodSpec{}),
-		deploymentWithPodSpec("api", corev1.PodSpec{HostNetwork: false, HostPID: false}),
+		deploymentWithPodSpec("api", corev1.PodSpec{HostNetwork: false, HostPID: false, HostIPC: false}),
 	}
 	if err := CheckHostNetwork(list); err != nil {
 		t.Fatalf("false and unset must pass: %v", err)

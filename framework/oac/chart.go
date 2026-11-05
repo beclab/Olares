@@ -30,8 +30,8 @@ import (
 //     path, `type=app` workload naming, workloadReplicas <-> rendered
 //     workload exact match plus values.yaml replicaCount coverage,
 //     rendered spec.replicas actually tracking workloads.<name>.replicaCount
-//     so the platform can scale the app to zero, hostNetwork/hostPID must
-//     not be true, and overlayGateway entrance workload existence) - ALWAYS
+//     so the platform can scale the app to zero, hostNetwork/hostPID/hostIPC
+//     must not be true, and overlayGateway entrance workload existence) - ALWAYS
 //     run; not governed by any Skip* option
 //  6. HostPath + rolling-update incompatibility check - ON by default,
 //     turn off with SkipHostPathCheck()
