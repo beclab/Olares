@@ -1,6 +1,6 @@
 
 
-{{ $backupVersion := "0.3.71" }}
+{{ $backupVersion := "0.3.75" }}
 {{ $backup_server_rootpath := printf "%s%s" .Values.rootPath "/rootfs/backup-server" }}
 
 {{- $backup_nats_secret := (lookup "v1" "Secret" .Release.Namespace "backup-nats-secret") -}}
@@ -9,6 +9,16 @@
 {{ $nats_password = (index $backup_nats_secret "data" "nats_password") }}
 {{ else -}}
 {{ $nats_password = randAlphaNum 16 | b64enc }}
+{{- end -}}
+
+
+{{- $backup_secret := (lookup "v1" "Secret" $namespace "backup-secrets") -}}
+{{- $backup_secret_key := "" -}}
+{{ if $backup_secret -}}
+{{ $backup_secret_key = (index $backup_secret "data" "backup_secret_key") | default "" }}
+{{- end -}}
+{{ if not $backup_secret_key -}}
+{{ $backup_secret_key = randAlphaNum 32 | b64enc }}
 {{- end -}}
 
 ---
@@ -20,6 +30,16 @@ metadata:
 type: Opaque
 data:
   nats_password: {{ $nats_password }}
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: backup-secrets
+  namespace: {{ .Release.Namespace }}
+type: Opaque
+data:
+  backup_secret_key: {{ $backup_secret_key }}
 
 ---
 apiVersion: v1
@@ -190,6 +210,11 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: spec.nodeName
+        - name: BACKUP_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: backup-secrets
+              key: backup_secret_key
         ports:
         - containerPort: 8082
           protocol: TCP
@@ -239,6 +264,11 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: spec.nodeName
+        - name: BACKUP_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: backup-secrets
+              key: backup_secret_key
         ports:
         - containerPort: 8080
           protocol: TCP
