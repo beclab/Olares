@@ -167,6 +167,55 @@ func TestInjectBluetoothHidesHostBusFromApplication(t *testing.T) {
 	}
 }
 
+func TestRemoveBluetoothAffinityDropsEmptyRequiredSelector(t *testing.T) {
+	tpl := &corev1.PodTemplateSpec{Spec: corev1.PodSpec{Affinity: &corev1.Affinity{
+		NodeAffinity: &corev1.NodeAffinity{
+			RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
+				NodeSelectorTerms: []corev1.NodeSelectorTerm{{
+					MatchExpressions: []corev1.NodeSelectorRequirement{{
+						Key: bluetoothNodeLabel, Operator: corev1.NodeSelectorOpIn, Values: []string{"true"},
+					}},
+				}},
+			},
+		},
+	}}}
+
+	removeBluetoothAffinity(tpl)
+
+	if tpl.Spec.Affinity != nil {
+		t.Fatalf("empty bluetooth-only affinity was retained: %#v", tpl.Spec.Affinity)
+	}
+}
+
+func TestRemoveBluetoothAffinityPreservesUnmanagedRequirements(t *testing.T) {
+	tpl := &corev1.PodTemplateSpec{Spec: corev1.PodSpec{Affinity: &corev1.Affinity{
+		NodeAffinity: &corev1.NodeAffinity{
+			RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
+				NodeSelectorTerms: []corev1.NodeSelectorTerm{
+					{MatchExpressions: []corev1.NodeSelectorRequirement{{
+						Key: bluetoothNodeLabel, Operator: corev1.NodeSelectorOpIn, Values: []string{"true"},
+					}}},
+					{MatchExpressions: []corev1.NodeSelectorRequirement{
+						{Key: "topology.kubernetes.io/zone", Operator: corev1.NodeSelectorOpIn, Values: []string{"zone-a"}},
+						{Key: bluetoothNodeLabel, Operator: corev1.NodeSelectorOpIn, Values: []string{"true"}},
+					}},
+				},
+			},
+		},
+	}}}
+
+	removeBluetoothAffinity(tpl)
+
+	required := tpl.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution
+	if required == nil || len(required.NodeSelectorTerms) != 1 {
+		t.Fatalf("unmanaged node affinity was not preserved: %#v", tpl.Spec.Affinity)
+	}
+	expressions := required.NodeSelectorTerms[0].MatchExpressions
+	if len(expressions) != 1 || expressions[0].Key != "topology.kubernetes.io/zone" {
+		t.Fatalf("unexpected remaining node affinity expressions: %#v", expressions)
+	}
+}
+
 func TestRequiredAffinityAllowsHostname(t *testing.T) {
 	affinity := &corev1.Affinity{NodeAffinity: &corev1.NodeAffinity{RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{NodeSelectorTerms: []corev1.NodeSelectorTerm{
 		{MatchExpressions: []corev1.NodeSelectorRequirement{{Key: corev1.LabelHostname, Operator: corev1.NodeSelectorOpIn, Values: []string{"node-a"}}}},

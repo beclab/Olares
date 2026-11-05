@@ -487,6 +487,18 @@ func removeBluetoothAffinity(tpl *corev1.PodTemplateSpec) {
 		}
 	}
 	required.NodeSelectorTerms = terms
+	if len(terms) != 0 {
+		return
+	}
+
+	nodeAffinity := tpl.Spec.Affinity.NodeAffinity
+	nodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution = nil
+	if len(nodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution) == 0 {
+		tpl.Spec.Affinity.NodeAffinity = nil
+	}
+	if tpl.Spec.Affinity.NodeAffinity == nil && tpl.Spec.Affinity.PodAffinity == nil && tpl.Spec.Affinity.PodAntiAffinity == nil {
+		tpl.Spec.Affinity = nil
+	}
 }
 
 func combineJSONPatches(first, second []byte) []byte {
