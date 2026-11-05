@@ -5,7 +5,7 @@ head:
   - - meta
     - name: keywords
       content: Olares, Supabase, Lares, MCP, PostgreSQL, RLS, n8n, Metabase, Flowise, Code Server
-app_version: "0.0.15"
+app_version: "0.0.14"
 doc_version: "2.0"
 doc_updated: "2026-11-05"
 ---
