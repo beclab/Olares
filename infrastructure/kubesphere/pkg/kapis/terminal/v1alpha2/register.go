@@ -51,14 +51,6 @@ func AddToContainer(c *restful.Container, client kubernetes.Interface, authorize
 		Metadata(restfulspec.KeyOpenAPITags, []string{constants.TerminalTag}).
 		Writes(models.PodInfo{}))
 
-	//Add new Route to support shell access to the node
-	webservice.Route(webservice.GET("/nodes/{nodename}/exec").
-		To(handler.handleShellAccessToNode).
-		Param(webservice.PathParameter("nodename", "name of cluster node")).
-		Doc("create shell access to node session").
-		Metadata(restfulspec.KeyOpenAPITags, []string{constants.TerminalTag}).
-		Writes(models.PodInfo{}))
-
 	c.Add(webservice)
 
 	return nil
