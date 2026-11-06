@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/fs"
 	"os"
@@ -428,6 +429,51 @@ func (t *DeleteTerminusData) Execute(runtime connector.Runtime) error {
 		runtime.GetRunner().SudoCmd(fmt.Sprintf("umount %s", StorageDataDir), false, true)
 		if err := util.RemoveDir(StorageDataDir); err != nil {
 			logger.Errorf("remove %s failed %v", StorageDataDir, err)
+		}
+	}
+
+	return nil
+}
+
+type UmountNetworkDrives struct {
+	common.KubeAction
+}
+
+func (t *UmountNetworkDrives) Execute(runtime connector.Runtime) error {
+	data, err := os.ReadFile(MountRecordsFile)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return errors.Wrapf(err, "read %s failed", MountRecordsFile)
+	}
+
+	var records []struct {
+		Type       string `json:"type"`
+		MountPoint string `json:"mountPoint"`
+	}
+	if len(strings.TrimSpace(string(data))) > 0 {
+		if err := json.Unmarshal(data, &records); err != nil {
+			logger.Errorf("parse %s failed: %v", MountRecordsFile, err)
+		}
+	}
+
+	// remove the records first, so olaresd will not remount them while uninstalling
+	if err := os.Remove(MountRecordsFile); err != nil && !os.IsNotExist(err) {
+		logger.Errorf("remove %s failed: %v", MountRecordsFile, err)
+	}
+
+	for _, r := range records {
+		if (r.Type != "smb" && r.Type != "nfs") || r.MountPoint == "" {
+			continue
+		}
+
+		logger.Infof("umount %s %s", r.Type, r.MountPoint)
+		if out, err := exec.Command("umount", r.MountPoint).CombinedOutput(); err != nil {
+			logger.Warnf("umount %s failed: %v, %s, retry with lazy umount", r.MountPoint, err, strings.TrimSpace(string(out)))
+			if out, err := exec.Command("umount", "-l", r.MountPoint).CombinedOutput(); err != nil {
+				logger.Errorf("lazy umount %s failed: %v, %s", r.MountPoint, err, strings.TrimSpace(string(out)))
+			}
 		}
 	}
 

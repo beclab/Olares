@@ -16,6 +16,9 @@ var (
 	OlaresSharedLibDir   = path.Join(OlaresRootDir, "share")
 	OlaresUserDataDir    = path.Join(OlaresRootDir, "userdata")
 
+	// MountRecordsFile is maintained by olaresd and records the smb/nfs shares it mounted.
+	MountRecordsFile = path.Join(Root, "etc", "mounttab")
+
 	RedisRootDir             = path.Join(OlaresRootDir, "data", "redis")
 	RedisConfigDir           = path.Join(RedisRootDir, "etc")
 	RedisDataDir             = path.Join(RedisRootDir, "data")
