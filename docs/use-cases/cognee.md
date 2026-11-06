@@ -8,8 +8,8 @@ head:
     - name: keywords
       content: "Olares, Cognee, self-hosted, knowledge graph, documents, search"
 app_version: "0.0.16"
-doc_version: "2.0"
-doc_updated: "2026-11-05"
+doc_version: "2.1"
+doc_updated: "2026-11-06"
 ---
 
 # Connect project knowledge with Cognee
@@ -169,7 +169,9 @@ Enable client authentication to require a key or connect assistants to a differe
        X-Api-Key: "<your-Cognee-key>"
      ```
 
-4. Start a new conversation and repeat the recall prompt. HTTP `401` means the header is missing. HTTP `403` means its key differs from **MCP_API_KEY**.
+4. Start a new conversation and repeat the recall prompt. If Lares reports `server is disconnected`, return to its MCP settings, check **Headers** against **MCP_API_KEY**, and save the connection again.
+
+When client authentication is enabled, the MCP proxy returns HTTP `401` for an empty or missing `X-Api-Key` header and HTTP `403` for a value that differs from **MCP_API_KEY**. These are server-side HTTP responses and may not be displayed in Lares. A disconnected message alone does not distinguish the two cases or establish that authentication caused the failure. To confirm the status code, check the `mcp-proxy` container's access logs for the corresponding request.
 
 To rotate the key, create another one and update both **MCP_API_KEY** and the assistant connections. To return to the default initial account without client authentication, set **MCP_AUTH_ENABLED** to `false`, apply the change, and remove the client headers. **MCP_API_KEY** is ignored in this mode.
 

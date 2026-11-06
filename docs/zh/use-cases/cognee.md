@@ -10,8 +10,8 @@ head:
   - name: keywords
     content: Olares, Cognee, 自托管, 知识图谱, 文档, 搜索
 app_version: "0.0.16"
-doc_version: "2.0"
-doc_updated: "2026-11-05"
+doc_version: "2.1"
+doc_updated: "2026-11-06"
 ---
 
 :::warning
@@ -175,7 +175,9 @@ MCP 入口用于 Olares 内部访问。从 Olares 外部电脑连接时，先连
        X-Api-Key: "<你的-Cognee-密钥>"
      ```
 
-4. 新建对话并再次使用检索提示词。HTTP `401` 表示缺少请求头，HTTP `403` 表示请求头中的密钥与 **MCP_API_KEY** 不一致。
+4. 新建对话并再次使用检索提示词。如果 Lares 提示 `server is disconnected`，返回其 MCP 设置，检查 **Headers** 中的密钥是否与 **MCP_API_KEY** 一致，然后重新保存连接。
+
+开启客户端鉴权后，MCP 代理会对缺失或值为空的 `X-Api-Key` 请求头返回 HTTP `401`，对值与 **MCP_API_KEY** 不一致的请求头返回 HTTP `403`。这些是服务端 HTTP 响应，Lares 界面不一定显示。仅凭连接断开提示，无法区分这两种情况，也无法确认故障由鉴权引起。需要确认状态码时，请查看 `mcp-proxy` 容器访问日志中的对应请求。
 
 轮换密钥时，创建新密钥并同时更新 **MCP_API_KEY** 和助手连接。要恢复使用初始账号且无需客户端鉴权的默认模式，将 **MCP_AUTH_ENABLED** 设为 `false`，应用更改，并移除客户端请求头。此模式会忽略 **MCP_API_KEY**。
 
