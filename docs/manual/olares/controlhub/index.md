@@ -4,7 +4,7 @@ description: Understand Control Hub UI to manage applications, monitor resources
 head:
   - - meta
     - name: keywords
-      content: Olares, Control Hub, Kubernetes, workloads, resources, terminal
+      content: Olares, Control Hub, Kubernetes, workloads, resources
 ---
 
 # Manage Olares with Control Hub
@@ -13,11 +13,9 @@ head:
 
 Use the modular entries in the side navigation bar to access the appropriate management page for your needs.
 
-![Control Hub UI](/images/manual/olares/controlhub-ui.jpeg#bordered)
-
 ## Module overview
 
-Control Hub modules give you clear entry points to monitor workloads, manage resources, and access the terminal for advanced maintenance operations in Olares.
+Control Hub modules give you clear entry points to monitor workloads, manage resources, and maintain applications in Olares.
 
 ### Olares
 
@@ -36,6 +34,4 @@ Control Hub modules give you clear entry points to monitor workloads, manage res
 
 Quickly view a list of integrated database and caching components (such as **Postgres**, **MongoDB**, **Redis**), including their instance information, connection details, and runtime metrics.
 
-### Terminal
-
-Gain one-click access to the Olares host terminal to perform debugging, view logs, and modify configurations. 
+To run commands on the host, [access the Olares terminal via SSH](../../access-olares-terminal.md). Container terminals remain available from the workload view.

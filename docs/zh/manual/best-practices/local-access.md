@@ -72,9 +72,6 @@ http://<entrance_id>-<username>-olares.local
 
 ### 查找 Olares 的局域网 IP
 
-<tabs>
-<template #使用-LarePass-手机端>
-
 1. 确保手机与 Olares 位于同一网络。
 2. 打开 LarePass，前往**设置** > **系统**。
 
@@ -85,18 +82,6 @@ http://<entrance_id>-<username>-olares.local
 4. 在**网络**中找到**内网 IP**。
 
    ![查找内网 IP](/images/zh/manual/get-started/larepass-network.png#bordered)
-
-</template>
-<template #使用控制面板>
-
-1. 在控制面板中打开**终端**，然后选择 **Olares**。
-
-   ![在控制面板中打开 Olares 终端](/images/zh/manual/get-started/find-internal-ip-from-controlhub.png#bordered)
-2. 运行 `ifconfig`。
-3. 找到当前有线或 Wi-Fi 接口的 `inet` 地址。该地址通常属于 `192.168.x.x` 等私有地址范围。
-
-</template>
-</tabs>
 
 ### 配置 DNS 服务器
 

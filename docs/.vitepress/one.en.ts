@@ -60,10 +60,6 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           items:
             [
               {
-                text: "Access via Control Hub",
-                link: "/one/access-terminal-control-hub",
-              },
-              {
                 text: "Access via SSH",
                 link: "/one/access-terminal-ssh",
               },
