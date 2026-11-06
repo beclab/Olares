@@ -355,10 +355,6 @@ const side = {
               link: "/zh/manual/olares/files/share-files",
             },
             {
-              text: "管理公共目录和外部存储的访问权限",
-              link: "/zh/manual/olares/files/manage-common-external-access",
-            },
-            {
               text: "与电脑同步文件",
               link: "/zh/manual/olares/files/sync-files",
             },

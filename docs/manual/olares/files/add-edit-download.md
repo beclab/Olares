@@ -10,20 +10,15 @@ head:
 # Basic file operations
 Operations in Files are essentially the same as in other file managers. This page will introduce some common tasks in Files to get you started.
 
-For Common folders and External mounts, members need **Can view** to browse and download files, or **Can edit** to upload, edit, and delete content inside the folder. Ask the Super Admin or an admin with management access to grant the required permission. See [Manage access to Common and External](manage-common-external-access.md).
-
 ## Upload files
 
 ### Upload via the Files app
 1. Open the Files app from the Dock or Launchpad on Olares.
 2. In the left sidebar, select the directory where you want to upload files. For example, **Documents**.
 3. Upload multiple files or folders using one of these methods:
-
-   a. Drag and drop files from your local file manager into the Files window.
-
-   b. Click <i class="material-symbols-outlined">drive_folder_upload</i> in the top right corner.
-
-   c. Right-click in an empty space and select from the context menu.
+   - Drag and drop files from your local file manager into the Files window.
+   - Click <i class="material-symbols-outlined">drive_folder_upload</i> in the top right corner.
+   - Right-click in an empty space and select from the context menu.
 
 :::info
 Files supports resumable uploads. If an upload is interrupted, it will automatically resume from the last checkpoint.
@@ -36,24 +31,19 @@ To start using LarePass desktop, you must import your Olares ID by pasting your 
 LarePass desktop offers the same upload experience as the Files app, with automatic syncing to your Olares ID.
 
 ### Upload via LarePass mobile
-You can upload files from your phone through the LarePass app.
+You can also upload files or folders on your phone via the LarePass app.
 <Tabs>
 <template #Direct-upload>
 
-1. Open LarePass and go to **Files**.
-2. To upload to a new folder:
-
-   a. Tap <i class="material-symbols-outlined">add</i> in the bottom-right corner and select **Add folder**.
-
-   b. On the **Select the folder to upload** screen, choose a location, such as **Drive**.
-
-   c. Tap **New folder** and follow the prompts to create the folder. LarePass opens the new folder automatically.
-3. Tap <i class="material-symbols-outlined">add</i>, then select **Upload files**.
-4. Select the files and follow the prompts to upload them.
-
-   If you start from the Files home page, you will be asked to choose where to save the files. If you start inside a folder, the files upload to that folder.
-
-5. To check upload progress, go to the Files home page and tap <i class="material-symbols-outlined">mobiledata_arrows</i> in the top-right corner to open **Transfer**.
+1. Open the LarePass app and navigate to the **Files** tab.
+2. Select the directory where you want to upload files.
+3. Tap <i class="material-symbols-outlined">add_circle</i> in the bottom-right corner, and select one of the following upload options:
+   - **File**: Select from your phone's storage.
+   - **Image/Video**: Select from your phone's gallery.
+   :::tip
+   If you want to organize your uploads, you can create a **Create folder** first.
+   :::
+4. Follow the on-screen instructions to complete the upload.
 </template>
 
 <template #Share-to-upload>
@@ -69,9 +59,10 @@ This method allows you to quickly upload files or media via your phone's sharing
    - **drive**: Upload files to your Drive storage for personal use.
    - **sync**: Upload files to your Sync storage for sharing or synchronization.
 4. Follow the on-screen instructions to complete the process based on your selected target location.
-5. To check upload progress, go to the Files home page and tap <i class="material-symbols-outlined">mobiledata_arrows</i> in the top-right corner to open **Transfer**.
 </template>
 </Tabs>
+
+Files uploaded via the LarePass mobile app will also sync automatically with your Olares ID.
 
 ## Download files
 When downloading multiple files, the behavior differs between the Files app in Olares and LarePass desktop application.
@@ -168,8 +159,6 @@ Deleted files cannot be recovered.
    - Right-click and select **Delete** from the context menu.
    - Click <i class="material-symbols-outlined">more_horiz</i> in the top right corner and select **Delete**.
 3. Confirm the deletion in the popup window.
-
-   If the folder is shared or contains shared folders, Files also asks you to confirm that the affected shares will be canceled. Continue only if you want to cancel those shares and delete the folder. See [What happens to shares when I rename, move, or delete a folder?](share-files.md#what-happens-to-shares-when-i-rename-move-or-delete-a-folder).
 
 ## Shortcuts
 

@@ -1,5 +1,4 @@
 ---
-outline: [2, 3]
 description: 在 Olares 宿主系统上将 HDD 或 SSD 手动挂载到 /olares/share 下，作为独立的外部存储，适合存放大型文件和 AI 模型。
 head:
   - - meta
@@ -16,9 +15,9 @@ head:
 
 请确保：
 
+- 你拥有当前 Linux 系统的**管理员权限（sudo 权限）**。
 - **Olares** 已正确安装并运行。
 - 目标硬盘已**格式化**（推荐使用 `ext4` 或 `XFS` 文件系统格式）。
-- 你拥有 Linux 宿主系统的管理员（`sudo`）权限。挂载后，如需让 Olares 成员访问磁盘，还需在文件管理器中为他们授权。
 
 :::tip 挂载路径限制
 
@@ -75,7 +74,7 @@ Linux 或 Olares 重启后，挂载配置将失效。
 
 3. 验证挂载结果：
 
-    使用超级管理员或有权访问该挂载目录的管理员账号登录 Olares。打开**文件管理器** > **外部设备**，确认能浏览该分区中的文件。
+    挂载成功后，可在 Olares **文件管理器** > **外部设备**目录下访问该分区内容。
 
     ![验证挂载结果](/images/zh/manual/tutorials/expand-storage-mount-result-cn.png#bordered)
 
@@ -137,10 +136,6 @@ Linux 或 Olares 重启后，挂载配置将失效。
     错误的`/etc/fstab`配置可能导致系统无法启动。
     建议先执行`mount -a`，验证无误后再重启。
     :::
-
-## 允许成员访问
-
-在 Olares 1.12.8 中，成员默认无权访问挂载目录。超级管理员或对挂载目录有管理权限的管理员，可以通过**权限设置**授予成员**可查看**或**可编辑**权限。详见[管理公共目录和外部存储的访问权限](olares/files/manage-common-external-access.md)。
 
 ## 卸载已挂载的分区
 

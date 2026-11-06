@@ -1,5 +1,4 @@
 ---
-outline: [2, 3]
 description: Manually mount an HDD or SSD under /olares/share on the Olares host to use it as independent external storage for large files and AI models.
 head:
   - - meta
@@ -14,11 +13,11 @@ This approach is recommended for **large data storage** (e.g., AI models) or **l
 
 ## Prerequisites
 
-Before you begin:
+Please ensure the following:
 
+- You have **administrator (sudo) privileges** on your Linux system.
 - **Olares** is properly installed and running.
 - The target drive is **already formatted** (recommended file systems: `ext4` or `XFS`).
-- You have administrator (`sudo`) privileges on the Linux host. To let Olares members access the disk after mounting, grant them access in Files.
 
 :::tip Mount path restriction
 
@@ -75,7 +74,7 @@ The mount configuration will be lost after a Linux or Olares reboot.
 
 3. Verify the mount result:
 
-    Log in to Olares as the Super Admin or an admin with access to the mounted directory. Open **Files** > **External** and check that you can browse the partition.
+    After successful mounting, you can access the partition from **Files** > **External**.
 
     ![Check mount result](/images/manual/tutorials/expand-storage-mount-result-en.png#bordered)
 
@@ -137,10 +136,6 @@ If you want the mount configuration to remain after reboot, configure **automati
     An incorrect /etc/fstab configuration may prevent your system from booting.
     It is strongly recommended to run `mount -a` first to validate the configuration before rebooting.
     :::
-
-## Give members access
-
-In Olares 1.12.8, members have no access to mounted directories by default. The Super Admin or an admin with management access to the mounted directory can grant **Can view** or **Can edit** through **Access settings**. See [Manage access to Common and External](olares/files/manage-common-external-access.md).
 
 ## Unmount a partition
 
