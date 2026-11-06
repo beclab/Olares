@@ -103,7 +103,7 @@ If you can sign in to Olares Desktop but do not know the system password, reset 
 3. Under **Node settings**, select **Reset SSH login password**.
 4. Enter a new password that meets the strength requirements, then click **OK**.
 5. Open LarePass and scan the QR code shown on the screen.
-6. Tap **Confirm** in LarePass. The new password is saved to Vault.```
+6. Tap **Confirm** in LarePass. The new password is saved to Vault.
 
 #### Find the current system password in LarePass
 
