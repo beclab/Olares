@@ -75,6 +75,7 @@ export const useCases: UseCase[] = [
   { title: "Whisper-WebUI", link: "/use-cases/whisper-webui", category: "Creative media", description: "Speech-to-text, subtitles, and translation", descriptionZh: "语音转文字、字幕生成与翻译" },
   { title: "Speaches", link: "/use-cases/speaches", category: "Creative media", description: "Speech-to-text, text-to-speech, and voice chat", descriptionZh: "语音转文字、文字转语音与语音对话" },
   { title: "IndexTTS2", link: "/use-cases/indextts2", category: "Creative media", description: "Text-to-speech with zero-shot voice cloning", descriptionZh: "支持零样本声音克隆的文字转语音" },
+  { title: "YuE2 Studio", link: "/use-cases/yue2-studio", category: "Creative media", description: "Generate, edit, and restyle songs locally", descriptionZh: "在本地生成、编辑歌曲并改变曲风" },
   { title: "Bifrost", link: "/use-cases/bifrost", category: "Model services", description: "AI gateway that aggregates models behind one endpoint", descriptionZh: "将多个模型聚合到单一端点的 AI 网关" },
   { title: "LiteLLM", link: "/use-cases/litellm", category: "Model services", description: "Unify model providers behind one OpenAI-compatible API", descriptionZh: "用统一的 OpenAI 兼容 API 整合多家模型提供商" },
   { title: "TensorZero", link: "/use-cases/tensorzero", category: "Model services", description: "AI model gateway and observability platform", descriptionZh: "AI 模型网关与可观测性平台" },

@@ -322,6 +322,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   text: "IndexTTS2",
                   link: "/zh/use-cases/indextts2",
                 },
+                {
+                  text: "YuE2 Studio",
+                  link: "/zh/use-cases/yue2-studio",
+                },
               ],
             },
             {
