@@ -4,7 +4,7 @@ description: 熟悉 Olares 中控制面板应用的操作界面，了解如何�
 head:
   - - meta
     - name: keywords
-      content: Olares, 控制面板, Control Hub, Kubernetes, 工作负载, 资源管理
+      content: Olares, 控制面板, Control Hub, Kubernetes, 工作负载, 资源管理, 终端
 ---
 
 # 通过控制面板管理 Olares
@@ -13,9 +13,11 @@ head:
 
 通过侧边导航栏的模块化入口，你可以按所需功能功能进入相应管理页面。
 
+![Control Hub 界面示例](/images/manual/olares/controlhub-ui.jpeg#bordered)
+
 ## 模块介绍
 
-控制面板的不同模块为你提供清晰的入口，用于监控工作负载、管理资源和维护应用。
+控制面板的不同模块为你提供清晰的入口，用于监控工作负载、管理资源，以及访问终端以执行高级维护操作。
 
 ### Olares
 
@@ -41,4 +43,5 @@ head:
 
 快速查看集成的数据库与缓存组件（如 **Postgres**、**MongoDB**、**Redis**）实例列表、连接信息、运行指标。
 
-如需在主机上运行命令，请[通过 SSH 访问 Olares 主机终端](../../access-olares-terminal.md)。容器终端仍可从工作负载视图中打开。
+### 终端
+一键进入 Olares 宿主机终端，执行调试、日志查看与配置修改。适合高级运维操作。

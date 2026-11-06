@@ -36,16 +36,16 @@ Before connecting, obtain MariaDB connection details from Control Hub.
 
 You can use the Olares terminal to access the MariaDB container for debugging or data operations.
 
-1. [Connect to the Olares host via SSH](../../manual/access-olares-terminal.md) with an account that has `sudo` permission.
+1. In Control Hub, open the Olares terminal at the bottom of the left navigation pane.
 2. Retrieve the Pod name for the middleware:
 
     ```bash
-    sudo kubectl get pods -n mariadb-middleware
+    kubectl get pods -n mariadb-middleware
     ```
 3. Record the Pod name, then enter the container:
 
     ```bash
-    sudo kubectl exec -it -n mariadb-middleware <mariadb-pod> -- sh
+    kubectl exec -it -n mariadb-middleware <mariadb-pod> -- sh
     ```
 4. Connect to MariaDB:
 

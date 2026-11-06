@@ -34,7 +34,7 @@ head:
 #### 查找网卡名称和地址
 
 1. 确保 Olares One 已通过网线连接到路由器。
-2. 打开 Olares One 主机终端。Olares OS 用户可以[通过 SSH 连接](access-terminal-ssh.md)。Ubuntu 用户可以在设备上打开终端，或通过 SSH 连接。
+2. 打开 Olares One 主机终端。Olares OS 用户可以使用 [Control Hub 中的 Olares 终端](access-terminal-control-hub.md)；Ubuntu 用户可以在设备上打开终端，或通过 SSH 连接。
 3. 运行以下命令：
 
    ```bash

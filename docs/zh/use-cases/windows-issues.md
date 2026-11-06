@@ -25,16 +25,18 @@ head:
 
 要恢复远程访问，请更新访问控制设置并重启所需的服务。
 
-1. 使用具有 `sudo` 权限的账号[通过 SSH 连接到 Olares 主机](../manual/access-olares-terminal.md)。
+1. 打开 Control Hub。
+2. 在左侧边栏中，在 **Terminal** 下点击 **Olares**。
+   ![Olares terminal](/images/developer/develop/controlhub-terminal.png#bordered){width=90%}
 
-2. 逐个运行以下命令。将 `<username>` 替换为您的 Olares ID 中 `@` 之前的部分。例如，如果您的 Olares ID 是 `alice123@olares.com`，则 `<username>` 为 `alice123`。
+3. 逐个运行以下命令。将 `<username>` 替换为您的 Olares ID 中 `@` 之前的部分。例如，如果您的 Olares ID 是 `alice123@olares.com`，则 `<username>` 为 `alice123`。
 
    ```bash
-   sudo kubectl annotate configmap tailscale-acl -n user-space-<username> tailscale-acl-md5-
+   kubectl annotate configmap tailscale-acl -n user-space-<username> tailscale-acl-md5-
 
-   sudo kubectl patch deployment headscale -n user-space-<username> --type=json -p='[{"op":"remove","path":"/spec/template/metadata/annotations/tailscale-acl-md5"}]'
+   kubectl patch deployment headscale -n user-space-<username> --type=json -p='[{"op":"remove","path":"/spec/template/metadata/annotations/tailscale-acl-md5"}]'
 
-   sudo kubectl rollout restart sts app-service -n os-framework
+   kubectl rollout restart sts app-service -n os-framework
    ```
 
-3. 重启完成后，等待几分钟，然后再次尝试远程连接 Windows。
+4. 重启完成后，等待几分钟，然后再次尝试远程连接 Windows。

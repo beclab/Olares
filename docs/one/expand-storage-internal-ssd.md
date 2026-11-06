@@ -39,7 +39,7 @@ You can use the PCIe 4.0 slot to expand your current system storage.
 
 ## Step 1: Identify the unmounted disk
 
-1. [Connect to your Olares One via SSH](access-terminal-ssh.md).
+1. Connect to your Olares One terminal via SSH or from the Control Hub.
 
 2. List block devices on the host:
 

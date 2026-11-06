@@ -21,16 +21,18 @@ This happens because of an outdated Tailscale Access Control List (ACL) setting,
 
 To restore remote access, update the access control settings and restart the required service.
 
-1. [Connect to the Olares host via SSH](../manual/access-olares-terminal.md) with an account that has `sudo` permission.
+1. Open Control Hub.
+2. In the left sidebar, under **Terminal**, click **Olares**.
+    ![Olares terminal](/images/developer/develop/controlhub-terminal.png#bordered){width=90%}
 
-2. Run the following commands one at a time. Replace `<username>` with the part before `@` in your Olares ID. For example, if your Olares ID is `alice123@olares.com`, then `<username>` is `alice123`.
+3. Run the following commands one at a time. Replace `<username>` with the part before `@` in your Olares ID. For example, if your Olares ID is `alice123@olares.com`, then `<username>` is `alice123`.
 
     ```bash
-    sudo kubectl annotate configmap tailscale-acl -n user-space-<username> tailscale-acl-md5-
+    kubectl annotate configmap tailscale-acl -n user-space-<username> tailscale-acl-md5-
 
-    sudo kubectl patch deployment headscale -n user-space-<username> --type=json -p='[{"op":"remove","path":"/spec/template/metadata/annotations/tailscale-acl-md5"}]'
+    kubectl patch deployment headscale -n user-space-<username> --type=json -p='[{"op":"remove","path":"/spec/template/metadata/annotations/tailscale-acl-md5"}]'
 
-    sudo kubectl rollout restart sts app-service -n os-framework
+    kubectl rollout restart sts app-service -n os-framework
     ```
 
-3. After the restart is complete, wait a few minutes, and then try remotely connecting to Windows again.
+4. After the restart is complete, wait a few minutes, and then try remotely connecting to Windows again.

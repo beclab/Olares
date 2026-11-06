@@ -6,8 +6,8 @@ head:
     - name: keywords
       content: Olares, Jellyfin, jellyfin vs plex, plex alternative, self-hosted media server, jellyfin remote access, DLNA, jellyfin on olares
 app_version: "1.0.35"
-doc_version: "1.4"
-doc_updated: "2026-11-06"
+doc_version: "1.3"
+doc_updated: "2026-09-22"
 ---
 # 使用 Jellyfin 构建你的私人媒体服务器
 
@@ -143,7 +143,7 @@ Jellyfin 仍会优先使用 Direct Play 或 Remux，仅在需要转码时使用�
 3. 将 `ENABLE_HW_ACCEL` 设置为 `true`。
 4. 将 `VIDEO_GID` 和 `RENDER_GID` 设置为主机上相应用户组的 ID。Olares One 的默认值分别为 `44` 和 `994`。
 
-   在其他设备上，[通过 SSH 连接到主机](../manual/access-olares-terminal.md)，然后运行：
+   在其他设备上，从控制面板打开 Olares 终端并运行：
 
    ```bash
    getent group video

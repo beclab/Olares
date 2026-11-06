@@ -26,11 +26,11 @@ Redis 服务在 Olares 中默认可用。本文将介绍如何在 Olares 中访�
 
 你可以使用 Olares 提供的终端直接访问数据库容器。
 
-1. 使用具有 `sudo` 权限的账号[通过 SSH 连接到 Olares 主机](../../manual/access-olares-terminal.md)。
+1. 在控制面板左侧导航栏底部，打开 **Olares 终端**。
 2. 进入 Redis 容器。容器名称是固定的。
 
     ```bash
-    sudo kubectl exec -it -n os-platform kvrocks-0 -- sh
+    kubectl exec -it -n os-platform kvrocks-0 -- sh 
     ```
 3. 连接 Redis 数据库：
 

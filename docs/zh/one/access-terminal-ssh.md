@@ -40,6 +40,11 @@ head:
 2. 点击 Olares One 设备卡片。
 3. 向下滚动到 **Network** 部分，然后记下 **Intranet IP**。
 
+   :::tip 通过 Control Hub 查看
+   你可以在 Control Hub 终端中使用 `ifconfig` 命令查看 IP。
+
+   查找你的活动接口，通常是 `enp3s0`（有线）或 `wlo1`（无线）。IP 地址显示在 `inet` 之后。
+   :::
 
 ### 步骤 2：从 Vault 获取登录密码
 
