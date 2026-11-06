@@ -5,13 +5,13 @@ description: Control which Olares members can view or edit Common folders and ex
 
 # Manage access to Common and External
 
-In Olares 1.12.7 and earlier, External and Common folders were accessible to all members. Starting with Olares 1.12.8, only the Super Admin and admins have access by default. Members need permission to view or edit these folders.
+In Olares 1.12.7 and earlier, External and Common folders were accessible to all members. Starting with Olares 1.12.8, only the Super admin and Admins have access by default. Members need permission to view or edit these folders.
 
 Use Access settings to grant members access to specific External mounts or Common folders.
 
 ## Before you start
 
-- Log in to Olares as the Super Admin or an admin who can manage the target folder.
+- Log in to Olares as the Super admin or an admin who can manage the target folder.
 - For External storage, mount the storage before assigning permissions.
 
 ## Supported folders
@@ -29,28 +29,28 @@ The following defaults apply to Common folders and External mounts.
 
 | <nobr>Olares role</nobr> | <nobr>Default access</nobr> | <nobr>Whose access they can change</nobr> |
 | --- | --- | --- |
-| Super Admin (Owner) | Full management access | Admins and members |
-| Admin | Full management access, unless restricted by the Super Admin | Members |
+| Super admin (Owner) | Full management access | Admins and members |
+| Admin | Full management access, unless restricted by the Super admin | Members |
 | Member | No access | Cannot change folder access settings |
 
 For more about Olares roles, see [Roles and permissions](../settings/roles-permissions.md).
 
 ## Set folder permissions
 
-1. Log in to Olares as the Super Admin or an admin who can manage the folder, then open **Files**.
+1. Log in to Olares as the Super admin or an admin who can manage the folder, then open **Files**.
 2. Go to **Application** > **Common** or **Drive** > **External**.
 3. Right-click the top-level folder or mounted directory, and select **Access settings**.
 
    ![Access settings in an External SMB folder context menu](/images/manual/olares/files-access-settings.png#bordered)
 
-4. Find the person whose access you want to change and choose a permission. Only the Super Admin can change an admin's folder permissions.
+4. Find the person whose access you want to change and choose a permission. Only the Super admin can change an admin's folder permissions.
 
    | <nobr>Permission</nobr> | <nobr>What this permission allows</nobr> | <nobr>Member role</nobr> | <nobr>Admin role</nobr> |
    | --- | --- | --- | --- |
    | **No access** | Cannot see the folder or access its contents through Files. | Available | Available |
    | **Can view** | Browse, preview, and download files. | Available | Available |
    | **Can edit** | View files and create, upload, modify, rename, or delete content inside the folder. | Available | Available |
-   | **Admin** | Edit content and manage the folder, including access settings. For External mounts, this also allows SMB sharing and unmounting. | Not available | Available<br><br>Only the Super Admin can assign it. |
+   | **Admin** | Edit content and manage the folder, including access settings. For External mounts, this also allows SMB sharing and unmounting. | Not available | Available<br><br>Only the Super admin can assign it. |
 
 5. Click **Confirm**.
 6. Ask the person to refresh Files and check that the selected permission applies.
@@ -76,7 +76,7 @@ Choose based on where the folder is and how people will access it:
 
 ### Why can’t a member access or edit a folder?
 
-Members cannot change these settings themselves. If a member reports a problem, sign in as the Super Admin or an admin and check the following:
+Members cannot change these settings themselves. If a member reports a problem, sign in as the Super admin or an admin and check the following:
 
 | Problem | What to check |
 | --- | --- |
