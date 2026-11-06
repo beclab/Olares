@@ -98,11 +98,12 @@ The system username for an activated Olares One is `olares`. The system password
 
 If you can sign in to Olares Desktop but do not know the system password, reset it in Settings.
 
-1. Open **Settings**. On the **My Olares** page, select **My hardware**.
-2. Select **Reset SSH login password**.
-3. Enter a new password that meets the strength requirements, then click **OK**.
-4. Open LarePass and scan the QR code shown on the screen.
-5. Tap **Confirm** in LarePass. The new password is saved to Vault.
+1. Open **Settings**. On the **My Olares** page, select **Cluster overview**.
+2. Under **Nodes**, select **olares**.
+3. Under **Node settings**, select **Reset SSH login password**.
+4. Enter a new password that meets the strength requirements, then click **OK**.
+5. Open LarePass and scan the QR code shown on the screen.
+6. Tap **Confirm** in LarePass. The new password is saved to Vault.```
 
 #### Find the current system password in LarePass
 
