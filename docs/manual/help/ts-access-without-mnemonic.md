@@ -44,24 +44,12 @@ To use the device again, uninstall Olares, reinstall it, and activate it with a 
 The uninstall command removes Olares components and data from the device. Back up any files you can still access before continuing.
 :::
 
-1. Open the Olares device terminal:
+1. Connect to the Olares device through SSH or log in locally with a monitor and keyboard. See [Access the Olares terminal](../access-olares-terminal.md).
+2. Uninstall Olares using an account with `sudo` permission:
 
-   - If you can sign in to Olares Desktop, open **Control Hub**, then select **Terminal** > **Olares**.
-   - Otherwise, connect through SSH or log in locally with a monitor and keyboard.
-
-2. Uninstall Olares:
-
-   - In the Control Hub terminal, run:
-
-     ```bash
-     olares-cli uninstall
-     ```
-
-   - In an SSH or local terminal, run:
-
-     ```bash
-     sudo olares-cli uninstall
-     ```
+   ```bash
+   sudo olares-cli uninstall
+   ```
 
 3. Wait for the uninstall process to finish.
 4. Install or open LarePass, create a new Olares ID, and follow [Install Olares](../get-started/install-olares.md) to reinstall and activate the device.
@@ -108,26 +96,13 @@ The system username for an activated Olares One is `olares`. The system password
 
 #### Reset the system password from Olares Desktop
 
-If you can sign in to Olares Desktop but do not know the system password, reset it using either method.
+If you can sign in to Olares Desktop but do not know the system password, reset it in Settings.
 
-- **Control Hub**:
-
-  1. Open **Control Hub**, then select **Terminal** > **Olares**.
-  2. Run:
-
-     ```bash
-     passwd olares
-     ```
-
-  3. Enter the new password twice as prompted.
-
-- **Settings**:
-
-  1. Open **Settings**. On the **My Olares** page, select **My hardware**.
-  2. Select **Reset SSH login password**.
-  3. Enter a new password that meets the strength requirements, then click **OK**.
-  4. Open LarePass and scan the QR code shown on the screen.
-  5. Tap **Confirm** in LarePass. The new password is saved to Vault.
+1. Open **Settings**. On the **My Olares** page, select **My hardware**.
+2. Select **Reset SSH login password**.
+3. Enter a new password that meets the strength requirements, then click **OK**.
+4. Open LarePass and scan the QR code shown on the screen.
+5. Tap **Confirm** in LarePass. The new password is saved to Vault.
 
 #### Find the current system password in LarePass
 

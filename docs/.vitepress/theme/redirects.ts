@@ -1,4 +1,10 @@
 export const redirects = {
+    // Retired Control Hub host terminal pages.
+    '/manual/olares/controlhub/terminal': '/manual/access-olares-terminal',
+    '/zh/manual/olares/controlhub/terminal': '/zh/manual/access-olares-terminal',
+    '/one/access-terminal-control-hub': '/one/access-terminal-ssh',
+    '/zh/one/access-terminal-control-hub': '/zh/one/access-terminal-ssh',
+
     // Move the Hindsight app tutorial to Use cases.
     '/manual/tutorial/hindsight': '/use-cases/hindsight',
     '/zh/manual/tutorial/hindsight': '/zh/use-cases/hindsight',
