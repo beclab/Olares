@@ -11,7 +11,7 @@ head:
 
 本文档介绍如何安装、更新和卸载应用，以及如何安装自定义应用。
 
-如需在移动设备上安装和管理应用，请参阅[使用 LarePass 管理应用](../../larepass/manage-apps-with-larepass.md)。
+如需在移动设备上安装和管理应用，请参阅[在手机上管理 Olares 应用](../../larepass/manage-apps-with-larepass.md)。
 
 ## 查找应用
 

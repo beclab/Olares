@@ -13,7 +13,7 @@ head:
 
 This guide helps users understand how to install, update, and uninstall applications through the Market. We'll also cover how to install custom applications.
 
-To install and manage apps from your mobile device, see [Manage apps with LarePass](../../larepass/manage-apps-with-larepass.md).
+To install and manage apps from your mobile device, see [Manage Olares apps from your phone](../../larepass/manage-apps-with-larepass.md).
 
 ## Find applications
 
