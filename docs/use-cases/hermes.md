@@ -150,8 +150,8 @@ The Terminal User Interface (TUI) runs directly in the Hermes CLI with no extra 
 
 Hermes Webapp provides a browser workspace for the same Hermes Agent installation. It shares the model configuration and saved sessions with the other interfaces.
 
-1. Open **Hermes CLI** from Launchpad. If a chat is running, enter `/exit` to return to the shell.
-2. Run the following command to view the Webapp login information generated for this installation:
+1. Open the Hermes CLI from the Launchpad. If a chat is running, enter `/exit` to return to the shell.
+2. Run the following command to show the generated Webapp login credentials:
 
    ```bash
    cat /opt/data/webapp/olares-login.txt
@@ -159,14 +159,18 @@ Hermes Webapp provides a browser workspace for the same Hermes Agent installatio
 
    If you already configured Hermes username/password authentication before upgrading, continue using those credentials. The upgrade preserves them and does not generate a new login file for that account.
 
-3. Open **Hermes Webapp** from Launchpad. Enter the username and password, then click **Sign in**. This is a separate login from your Olares account.
+3. Open Hermes Webapp from the Launchpad. Enter the username and password, then click **Sign in**. This is a separate login from your Olares account.
 4. Click **New session**, enter a message, and send it. For example, ask the agent to help plan a weekly file cleanup. Review its proposed actions before asking it to make changes.
 
    With the Router setup above, the model selector shows **Default Chat**. The agent uses the model selected for `default-chat` in Router.
 
 5. To continue a conversation later, select it under **Sessions** in the sidebar.
 
-The generated login information and conversations are retained when the app restarts. If **Hermes Webapp** is missing from Launchpad, check that your installation has Chart 1.3.51. If you previously disabled Webapp explicitly, the upgrade keeps that setting. To enable it, run `hermes config set webapp.enabled true` followed by `hermes gateway restart` in Hermes CLI.
+The generated login information and conversations are retained when the app restarts.
+
+:::tip Hermes Webapp is missing from Launchpad
+Check that your installation has Chart 1.3.51. If you previously disabled Webapp explicitly, the upgrade keeps that setting. To enable it, run `hermes config set webapp.enabled true` followed by `hermes gateway restart` in the Hermes CLI.
+:::
 
 ### Option 3: Remote chat via Discord
 
@@ -252,9 +256,13 @@ For security, the bot does not talk to unauthorized users. You must pair your Di
 
 3. Once approved, you can start chatting with your agent in Discord. If you are talking to it in a channel, mention it first.
 
-### Delegate a task to a subagent
+## Delegate a task to a subagent
 
-A subagent can work on a separate task and return its result to the main conversation. Chart 1.3.51 automatically installs a fixed official revision of the advanced-delegation plugin when it is missing. This first-time installation requires access to GitHub. The plugin adds the `/delegation` command. If you previously disabled this plugin, run `hermes plugins enable advanced-delegation` in the Hermes CLI shell before starting a new conversation.
+A subagent can work on a separate task and return its result to the main conversation. The advanced-delegation plugin adds the `/delegation` command used below.
+
+:::info First-time plugin installation
+Chart 1.3.51 automatically installs the advanced-delegation plugin when it is missing. This installation requires access to GitHub. If you previously disabled this plugin, run `hermes plugins enable advanced-delegation` in the Hermes CLI before starting a new conversation.
+:::
 
 1. Start a conversation in Hermes CLI or open **Chat** in Hermes Dashboard.
 2. Enter the following command to use the default delegation mode for new sessions:
@@ -273,9 +281,9 @@ A subagent can work on a separate task and return its result to the main convers
    The agent starts the subagent and returns its result to the conversation when the task finishes. You can also follow delegated tasks in Hermes Webapp.
 
 :::details Choose a named model route
-To configure separate model routes, run `hermes delegation config` in the Hermes CLI shell. Configure at least one route before switching to `model_map`. For a route through Router, use the **Apps in Olares** Base URL obtained earlier and `default-chat` as the model name. Use `olares` if a key is required.
+To configure separate model routes, run `hermes delegation config` in the Hermes CLI. Configure at least one route before switching to `model_map`. For a route through Router, use the **Apps in Olares** Base URL obtained earlier and `default-chat` as the model name. Use `olares` if a key is required.
 
-In a conversation, `/delegation model_map` saves the mode for the next session. `/delegation model_map --now` also applies it to the current conversation and rebuilds its tool definitions at the next turn. Switch back with `/delegation default`, or add `--now` to apply the change to the current conversation.
+In a conversation, `/delegation model_map` saves the mode for the next session. `/delegation model_map --now` also applies it to the current conversation. Switch back with `/delegation default`.
 
 For the route editor and additional options, see the [official advanced-delegation guide](https://hermes-agent.nousresearch.com/marketplace/advanced-delegation).
 :::
