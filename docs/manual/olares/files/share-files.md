@@ -9,42 +9,42 @@ head:
 
 # Share files
 
-Share folders with Olares members, send password-protected links, or provide access over SMB. Choose a sharing method based on the folder location and who needs access.
+This feature supports sharing folders with internal members or external users through different methods. You can flexibly set access permissions, passwords, and expiration dates, and manage or cancel these shares at any time.
 
 ## Share types and support scope
 
-Sharing is available for folders only. In Olares 1.12.8, each location supports the following sharing methods:
+Currently, file sharing is only supported at the **folder** level. Supported sharing types vary depending on the directory location of the folder. Refer to the following table for details:
 
 | Directory type | Public share | Internal share | SMB share |
 | :--- | :---: | :---: | :---: |
 | **Home** | Supported | Supported | Supported |
-| **External** | - | - | Supported |
+| **External** | - | Supported | Supported |
 | **Sync** | - | Supported | - |
-| **Data**, **Common**, **Cache**, **Cloud drive** | - | - | - |
+| **Data** | Supported | Supported | Supported |
+| **Cache** | - | Supported | Supported |
 
+Where,
 - **Public share**: Generates an access link with password protection supported, suitable for external sharing.
 - **Internal share**: Restricted to members within the same Olares cluster, suitable for internal team collaboration. For more information, see [Manage your team](../settings/manage-team.md).
 - **SMB share**: Shared via the SMB protocol within the Local Area Network (LAN).
 
 ![Share file type](/images/manual/olares/share-files.png#bordered)
 
-## Permissions for Internal and SMB shares
+## User permissions
 
-Internal shares grant access to Olares members. SMB shares use separate SMB accounts. Permissions assigned to a share apply to access through that share.
+You can assign specific permissions to members in **Internal share** and **SMB share** to control their level of access and allowed operations.
 
-To control member access to a Common folder or an External mount in Files, use [Access settings](manage-common-external-access.md). These locations do not support Internal share.
-
-| Permission | Allowed actions |
+| Permission | Description |
 | :--- | :--- |
-| **Manage**<br><nobr>(Internal share only)</nobr> | View, download, upload, edit, and delete files, and manage share members with lower permissions.<br><br>**Note:** This permission does not grant an Olares admin role or allow changes to Common or External access settings. |
-| **Edit** | View, download, upload, edit, and delete files. |
-| **View** | View and download files. Uploading, editing, and deleting are not allowed. |
+| **Admin** | The user has the full access, including:<ul><li>Add, view, edit, and delete files.</li><li>Invite and remove members.</li> <li>Modify share settings.</li></ul> |
+| **Edit** | The user can add, view, modify, and delete files. |
+| **View** | The user can only open, view, and download files. They cannot upload, modify, or <br>delete any content. |
 
 ## Create share
 
 ### Create Internal share
 
-1. Right-click a folder in **Home** or **Sync**, and then click **Share to** > **Internal**.
+1. Right-click the target folder，and then click **Internal share**.
 2. In the **Invite users** section, click <i class="material-symbols-outlined">add</i>, search for and select the target user or group, and then click **Invite**.
 
 ![Invite users for Internal Share](/images/manual/olares/internal-share-invite.png#bordered){width=60%}
@@ -54,16 +54,12 @@ To control member access to a Common folder or an External mount in Files, use [
 
 ### Create SMB share
 
-SMB sharing lets computers access folders through Windows File Explorer or macOS Finder over the local network. It uses dedicated SMB accounts that are separate from Olares member accounts.
+SMB sharing utilizes a dedicated local Linux account system. The SMB accounts generated within this system are independent of Olares members, strictly for LAN file access.
 
-You can create SMB shares for folders in **Home** or **External**. For External, log in as the Super Admin or an admin with management access to the mounted directory. Select the mounted directory or a folder inside it, not the External root.
-
-To connect a folder from a NAS or server to Olares instead, see [Mount SMB shares](mount-SMB.md).
-
-1. Right-click the target folder in **Home** or **External**, and then click **Share to** > **SMB**.
+1. Right-click the target folder, and then click **SMB share**.
 2. Select whether to make it **Public**.
     - If you selected **Yes**, click **Confirm**, and then it will be accessible to anyone on the LAN.
-    - If you selected **No**, authentication is required. You must select or create a dedicated SMB account by using Step 3 or Step 4.
+    - If you selected **No**, authentication is required. You must select or create a dedicated SMB account by using Step3 or Step4.
 3. Select an existing SMB account to authorize.
     
     a. In the **Invite users** field, click <i class="material-symbols-outlined">add</i>.
@@ -78,7 +74,7 @@ To connect a folder from a NAS or server to Olares instead, see [Mount SMB share
 
 4. Create a new SMB account to authorize.
     
-    a. To the right of **Invite users**, click **Add user account**.
+    a. To the right of **Invite users**, click **Add user accounts**.
 
     ![Create new users for SMB Share](/images/manual/olares/smb-share-new-usr.png#bordered){width=60%}
     
@@ -96,11 +92,9 @@ To connect a folder from a NAS or server to Olares instead, see [Mount SMB share
 
     h. Click **Confirm**.
 
-5. In the **SMB share** dialog, click **Copy link** to copy the access link.
-
 ### Create Public share
 
-1. Right-click a folder in **Home**, and then click **Share to** > **Public**.
+1. Right-click the target folder, and then click **Public share**.
 
 ![Public share settings](/images/manual/olares/public-share-settings.png#bordered){width=56%}
 
@@ -121,24 +115,24 @@ You can view and manage all shared folders in the **Share** list.
 1. Open the Files application from the Dock or Launchpad on Olares.
 2. Click **Share** in the left sidebar.
 3. You can view the list of all currently shared folders on the right.
-4. If you want to view the details of a specific folder, right-click the target folder and click **Properties**. 
+4. If you want to view the details of a specific folder, right-click the target folder and click **Attributes**. 
 
     You will see the sharer, current path, original path, share scope, owner, current permissions, expiration date, and link details.
 
 ### Modify password or permissions
 
-As the share creator, you can reset a Public share password or change who can access an Internal or SMB share.
+For shared folders, you can change their password and permission settings at any time.
 
 1. Open the Files application from the Dock or Launchpad on Olares.
 2. Click **Share** in the left sidebar to view the **Share** list on the right.
-3. To reset password (**Public** only):
+3. To reset password (**Public share** only):
     
     a. Right-click the folder and select **Reset Password**.
     
     b. Enter a new password or click **Regenerate**.
     
     c. Click **Confirm**.
-4. To edit permissions (**Internal** and **SMB** only):
+4. To edit permissions (**Internal share** and **SMB share** only):
     
     a. Right-click the folder and select **Edit permissions**.
 
@@ -151,26 +145,6 @@ As the share creator, you can reset a Public share password or change who can ac
 If you no longer need to share a folder, you can cancel the share at any time.
 
 1. Open the Files application from the Dock or Launchpad on Olares.
-2. Click **Share** in the left sidebar to open the share list.
+2. Click **Share** in the left sidebar, and then to the **Share** list is displayed on the right.
 3. Right-click the target folder and click **Revoke sharing**.
 4. Click **Confirm**.
-
-## FAQs
-
-### Why is a share unavailable?
-
-A share can remain in the list even when it no longer provides access. Check these possible causes:
-
-| Cause | What to do |
-| --- | --- |
-| The creator of an External SMB share lost management access to the mounted directory. | Ask the Super Admin to check the creator's access to that directory. Restoring the required access allows the share to become available again. |
-| A share created before upgrading uses a sharing method that is no longer supported, such as an Internal share from External or a share from Common. | Cancel the unsupported share and use a supported method. Granting permissions cannot restore an unsupported share. To give Olares members access to Common or External, use [Access settings](manage-common-external-access.md). |
-
-### What happens to shares when I rename, move, or delete a folder?
-
-If you rename, move, or delete a folder that is shared, or contains shared folders, Files asks you to confirm that the affected shares will be canceled.
-
-- Continue to perform the operation and cancel the affected shares.
-- Cancel to keep the folder and its shares unchanged.
-
-After renaming or moving the folder, create new shares if needed. Existing shares do not follow the folder to its new name or location.
