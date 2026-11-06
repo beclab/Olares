@@ -3,7 +3,7 @@ outline: [2, 3]
 description: Open and manage Olares apps from your mobile device with LarePass. Install, update, clone, stop, resume, and uninstall apps.
 ---
 
-# Manage apps with LarePass
+# Manage Olares apps from your phone
 
 Use the **Apps** tab in LarePass to open, install, and manage Olares apps from your mobile device. The apps are installed and run on your Olares.
 

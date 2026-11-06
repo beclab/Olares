@@ -3,7 +3,7 @@ outline: [2, 3]
 description: 通过 LarePass 在移动设备上打开和管理 Olares 应用，了解安装、更新、克隆、停止、恢复及卸载应用的方法。
 ---
 
-# 使用 LarePass 管理应用
+# 在手机上管理 Olares 应用
 
 通过 LarePass 的 **Apps** 标签页，你可以在移动设备上打开、安装和管理 Olares 应用。这些应用安装并运行在 Olares 上。
 
