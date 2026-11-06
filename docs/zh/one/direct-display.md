@@ -53,7 +53,7 @@ head:
 3. 输入上面准备好的主机登录密码，然后按 **Enter**。出于安全考虑，输入密码时屏幕上不会显示字符。
 
 :::tip
-如果希望远程准备 Olares One，可以在连接显示器之前通过 SSH 下载并安装软件包。具体可用方式请参阅[访问 Olares One 终端](./access-overview.md)。
+如果希望远程准备 Olares One，可以在连接显示器之前通过 SSH 或 Control Hub 下载并安装软件包。具体可用方式请参阅[访问 Olares One 终端](./access-overview.md)。
 :::
 
 ## 步骤 2：下载并安装 Olares Desktop 预览版软件包

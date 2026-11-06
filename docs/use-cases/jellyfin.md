@@ -6,8 +6,8 @@ head:
     - name: keywords
       content: Olares, Jellyfin, jellyfin vs plex, plex alternative, self-hosted media server, jellyfin remote access, DLNA, jellyfin on olares
 app_version: "1.0.35"
-doc_version: "1.4"
-doc_updated: "2026-11-06"
+doc_version: "1.3"
+doc_updated: "2026-09-22"
 ---
 
 # Build your private media server with Jellyfin
@@ -144,7 +144,7 @@ The following steps use Intel Quick Sync Video (QSV) on Olares One as an example
 3. Set `ENABLE_HW_ACCEL` to `true`.
 4. Set `VIDEO_GID` and `RENDER_GID` to the IDs of the corresponding groups on the host. The default values for Olares One are `44` and `994`.
 
-   On other devices, [connect to the host via SSH](../manual/access-olares-terminal.md) and run:
+   On other devices, open the Olares terminal from Control Hub and run:
 
    ```bash
    getent group video

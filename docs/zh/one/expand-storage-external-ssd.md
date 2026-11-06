@@ -39,7 +39,7 @@ head:
 
 ## 步骤 1：识别硬盘
 
-1. [通过 SSH 连接到 Olares One](access-terminal-ssh.md)。
+1. 通过 SSH 或 Control Hub 连接到 Olares One 终端。
 
 2. 运行以下命令查看已检测到的硬盘：
 

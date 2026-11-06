@@ -35,7 +35,7 @@ Mounting flexibility will be improved in future versions.
 
 ## Step 1: Identify the drive
 
-1. [Connect to your Olares One via SSH](access-terminal-ssh.md).
+1. Connect to your Olares One terminal via SSH or from the Control Hub.
 
 2. Run the following command to view detected drives:
 

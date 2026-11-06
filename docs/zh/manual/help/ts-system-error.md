@@ -45,13 +45,25 @@ Olares 1.12.7 及以上版本可通过 Ticket 应用提交支持工单。在**�
 本文以 Olares One 为例。如果你在自己的设备上安装 Olares，排查步骤基本相同，只是访问终端的方式可能存在差异。
 :::
 
-#### 步骤 1：准备终端访问 {#步骤-1-尝试访问-olares-桌面}
+#### 步骤 1：尝试访问 Olares 桌面
 
-通过 SSH 或显示器和键盘登录 Olares 主机。以下诊断需要具有 `sudo` 权限的账号。如果已经登录主机终端，跳转至[步骤 4](#步骤-4-检查系统-pod-状态)。
+如果你仍然可以访问 Olares 桌面，打开控制面板并使用 Olares 内置终端。
+
+1. 打开浏览器，登录你的 Olares 桌面：
+
+    ```text
+    https://desktop.<username>.olares.cn
+    ```
+
+2. 打开控制面板。
+3. 在左侧边栏的**终端**部分，点击 **Olares**。
+    ![打开终端](/images/zh/manual/help/ts-sys-err-terminal.png#bordered){width=90%}
+
+如果你可以成功访问终端，跳转至[步骤 4](#步骤-4-检查系统-pod-状态)。
 
 #### 步骤 2: 尝试 SSH 连接
 
-使用 SSH 从电脑连接到主机。
+如果你无法访问 Olares 桌面，可以尝试 SSH 连接。
 
 :::info 需处于同一网络
 你的电脑和 Olares  One 必须连接到同一个本地网络。
@@ -103,7 +115,7 @@ Olares 1.12.7 及以上版本可通过 Ticket 应用提交支持工单。在**�
 
 1. 运行以下命令，查看所有命名空间下的 Pod 状态：
     ```bash
-    sudo kubectl get pods -A
+    kubectl get pods -A
     ```
 2. 查看 **STATUS** 和 **RESTARTS**。重点检查 `CrashLoopBackOff`、`Error`、`ImagePullBackOff` 等错误状态，或长时间处于 `Pending` 的 Pod。任务 Pod 显示 `Completed` 表示已成功完成。
 3. 记录显示错误或重启次数持续增加的 Pod 对应的 **NAMESPACE** 和 **NAME**。如果没有，直接跳到[步骤 6](#步骤-6-记录结果并收集日志)。
@@ -114,13 +126,13 @@ Olares 1.12.7 及以上版本可通过 Ticket 应用提交支持工单。在**�
 1. 运行以下命令，并将 `<namespace>` 和 `<pod-name>` 替换为上一步记录的值：
 
     ```bash
-    sudo kubectl describe pod <pod-name> -n <namespace>
+    kubectl describe pod <pod-name> -n <namespace>
     ```
 
     本例中，完整命令如下：
 
     ```bash
-    sudo kubectl describe pod backup-66f8c76996-d7vnq -n os-framework
+    kubectl describe pod backup-66f8c76996-d7vnq -n os-framework
     ```
 2. 在输出结果中向下滚动到 **Events** 部分，查看失败相关的错误信息。
     ![Pod 错误详情](/images/zh/manual/help/ts-sys-err-pod-event-detail.png#bordered){width=90%}

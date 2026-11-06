@@ -470,6 +470,10 @@ const side = {
               link: "/manual/olares/controlhub/manage-middleware",
             },
             {
+              text: "Run commands in the Control Hub terminal",
+              link: "/manual/olares/controlhub/terminal",
+            },
+            {
               text: "Configure host name resolution in Olares",
               link: "/manual/olares/settings/set-up-hosts",
             },

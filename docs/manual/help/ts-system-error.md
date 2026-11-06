@@ -46,13 +46,25 @@ Use the device terminal to check system pod status and inspect error events. The
 This guide uses Olares One as an example. If you installed Olares on your own hardware, the diagnostic steps are the same, but the way you access the terminal might differ.
 :::
 
-#### Step 1: Prepare terminal access {#step-1-try-to-access-olares-desktop}
+#### Step 1: Try to access Olares desktop
 
-Connect to the Olares host through SSH or log in locally with a monitor and keyboard. The following diagnostics require an account with `sudo` permission. If you are already in the host terminal, skip to [Step 4](#step-4-check-system-pod-status).
+If you can still access the Olares desktop, open Control Hub and use its built-in terminal.
+
+1. Open a browser and access your Olares Desktop:
+
+    ```text
+    https://desktop.<username>.olares.com
+    ```
+
+2. Open Control Hub.
+3. In the left sidebar, under the **Terminal** section, click **Olares**.
+    ![Open terminal](/images/manual/help/ts-sys-err-terminal.png#bordered){width=90%}
+
+If you can access the terminal successfully, skip to [Step 4](#step-4-check-system-pod-status).
 
 #### Step 2: Connect via SSH
 
-Connect to the host from your computer using SSH.
+If you cannot access the Olares desktop, try connecting via SSH.
 
 :::info Same network required
 Your computer and Olares One should be on the same local network.
@@ -105,7 +117,7 @@ If SSH is also unavailable, log in directly on the device using a monitor and ke
 1. Run the following command to get the status of all pods across all namespaces:
 
     ```bash
-    sudo kubectl get pods -A
+    kubectl get pods -A
     ```
 
 2. Check **STATUS** and **RESTARTS**. Look for states such as `CrashLoopBackOff`, `Error`, `ImagePullBackOff`, or a pod that remains `Pending`. A job in `Completed` state has finished successfully.
@@ -117,13 +129,13 @@ If SSH is also unavailable, log in directly on the device using a monitor and ke
 1. Run the following command, replacing `<namespace>` and `<pod-name>` with the values you noted in the previous step:
 
     ```bash
-    sudo kubectl describe pod <pod-name> -n <namespace>
+    kubectl describe pod <pod-name> -n <namespace>
     ```
 
     For example:
 
     ```bash
-    sudo kubectl describe pod backup-66f8c76996-d7vnq -n os-framework
+    kubectl describe pod backup-66f8c76996-d7vnq -n os-framework
     ```
 
 2. Scroll down to the **Events** section to find the detailed error message.

@@ -470,6 +470,10 @@ const side = {
               link: "/zh/manual/olares/controlhub/manage-middleware",
             },
             {
+              text: "在控制面板终端中执行命令",
+              link: "/zh/manual/olares/controlhub/terminal",
+            },
+            {
               text: "配置 Olares 内主机名解析",
               link: "/zh/manual/olares/settings/set-up-hosts",
             },
