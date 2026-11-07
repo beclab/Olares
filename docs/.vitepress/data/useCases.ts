@@ -107,6 +107,7 @@ export const useCases: UseCase[] = [
   { title: "RNA Sequencing", link: "/use-cases/rna-sequencing", category: "Productivity", description: "GPU-accelerated single-cell RNA analysis", descriptionZh: "GPU 加速的单细胞 RNA 测序分析" },
   { title: "OnlyOffice", link: "/use-cases/onlyoffice", category: "Productivity", description: "Edit documents in your browser", descriptionZh: "在浏览器中编辑文档" },
   { title: "JupyterHub", link: "/use-cases/jupyterhub", category: "Developer tools", description: "Multi-user Jupyter notebook environment", descriptionZh: "多用户 Jupyter Notebook 环境" },
+  { title: "Supabase", link: "/use-cases/supabase", category: "Developer tools", description: "Prepare a private app backend with Lares and MCP", descriptionZh: "通过 Lares 和 MCP 配置应用的私有后端" },
   { title: "PDFMathTranslate", link: "/use-cases/pdfmathtranslate", category: "Utilities", description: "Translate scientific PDFs while preserving layout", descriptionZh: "翻译科学 PDF 并保留排版" },
   { title: "Context7", link: "/use-cases/context7", category: "Utilities", description: "Give AI coding assistants up-to-date docs via MCP", descriptionZh: "通过 MCP 为 AI 编程助手提供最新文档" },
   { title: "Hindsight", link: "/use-cases/hindsight", category: "Utilities", description: "Store and recall agent memories across conversations", descriptionZh: "让智能体跨对话保存和检索记忆" },
