@@ -8,9 +8,9 @@ head:
   - - meta
     - name: keywords
       content: Olares, OpenClaw, self-hosted ai agent, personal ai agent, local ai agent, openclaw on olares
-app_version: "1.0.44"
-doc_version: "3.0"
-doc_updated: "2026-09-24"
+app_version: "1.0.57"
+doc_version: "4.0"
+doc_updated: "2026-11-05"
 ---
 
 :::warning
@@ -90,146 +90,72 @@ OpenClaw 需要较大的"上下文窗口"（即 AI 的短期记忆）来处理�
 
 <!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
-### 步骤 2：运行安装向导
+### 步骤 2：配置模型
 
-使用交互式向导逐步配置 OpenClaw。
+安装 OpenClaw 后，Olares 会启动并管理 Gateway。使用模型配置向导将 OpenClaw 连接到 Router。
 
 1. 从启动台打开 OpenClaw CLI 应用。
-2. 输入以下命令启动交互式安装向导：
+2. 运行以下命令：
 
     ```bash
-    openclaw onboard --classic
+    openclaw configure --section model
     ```
 
-    :::tip 不要单独运行 `openclaw onboard`
-    不要单独运行 `openclaw onboard`。该命令会启动一个对话式 TUI，需要在环境变量中配置 API 密钥。由于当前没有配置 API 密钥，这条路走不通。对于交互式向导，请改用 `openclaw onboard --classic`。
+3. 使用方向键移动，按 **Enter** 确认。按下表配置连接：
 
-    如果不小心进入了 TUI，输入 `/quit` 并按 **Enter** 退出。
-    :::
-
-3. 向导会引导你完成一系列步骤。使用方向键移动，按 **Enter** 确认。
-
-    :::tip 关于配置的说明
-    为便于快速上手，本教程会跳过向导中的部分高级设置。你可以稍后配置或修改它们。
-    :::
-
-    | 配置   | 选项   |
-    |:-----------|:---------|
-    | Personal-by-default acknowledgment | 选择 **Yes**。  |
-    | Help make OpenClaw better | 按需选择。  |
-    | Setup mode   | 选择 **QuickStart**。   |
-    | Model/auth provider | 选择 **Custom Provider**。 |
+    | 配置 | 选项 |
+    |:-----|:-----|
+    | Model/auth provider | 选择 **More…**，然后选择 **Custom Provider**。 |
     | API Base URL | 粘贴步骤 1 中从 Router 复制的 Base URL，保留 `/v1`。 |
     | How do you want to provide this API key? | 如果出现此提示，选择 **Paste API key now**。 |
-    | API Key (leave blank if not required) | Olares 内的这个应用无需 Router API 密钥，留空。 |
+    | API Key (leave blank if not required) | 填写 `olares`。 |
     | Endpoint compatibility | 选择 **OpenAI-compatible**。 |
-    | Model ID | 填写 `default-chat`。向导可能先验证端点，再进入下一项。 |
+    | Model ID | 填写 `default-chat`。等待出现 `Verification successful`，再继续下一步。 |
     | Endpoint ID | 填写 `router`。模型引用为 `router/default-chat`。 |
     | Model alias (optional) | 留空。 |
-    | Does this model support image input? | 如果出现此提示，Qwen3.8-27B (llama.cpp) 选择 **Yes**。使用其他模型时，以 Router 显示的能力为准。 |
-    | Test AI access now with a live completion | 选择 **Yes**。<br>出现 `AI access works` 消息表示 OpenClaw 已成功连接到模型。 |
-    | Remaining settings (channels, search provider,<br>and skill dependencies) | 选择 **Skip for now**。<br>你可以稍后配置它们。 |
+    | Does this model support image input? | Qwen3.8-27B (llama.cpp) 选择 **Yes**。使用其他模型时，以 Router 显示的能力为准。 |
 
-    完成安装向导后，OpenClaw 会自动打开终端用户界面（TUI）。
+    OpenClaw 的模型客户端要求密钥字段有值，因此填写占位值 `olares`。Router 会使用这个 Olares 应用的身份进行认证。
 
-    :::tip 向导自动打开的 TUI 提示 HTTP 403
-    OpenClaw 2026.9.6 的向导可能使用容器的 LAN 地址打开 TUI。在 Olares 的代理配置下，这条连接会触发 `proxy_attribution_required`，即使模型配置正确也会出现此错误。
+4. 出现 `Configuration updated` 后，打开终端用户界面（TUI）：
 
-    输入 `/quit` 退出该 TUI，然后在同一个 OpenClaw CLI 终端运行 `openclaw tui`。确认顶部显示 `ws://127.0.0.1:18789`。本地连接会使用现有配置和凭据。对于向导路径上的这一特定错误，无需添加 `gateway.remote.edgeAuth`，也无需修改手机使用的 Gateway URL。
-    :::
+    ```bash
+    openclaw tui
+    ```
 
-    ![OpenClaw TUI after setup](/images/manual/use-cases/router-client-connect-openclaw.png#bordered)
+    确认顶部显示 `ws://127.0.0.1:18789`。发送一条消息，等待助手回复。
 
-4. 输入 `/quit` 并按 **Enter** 退出。
+    ![OpenClaw TUI 已连接到 Router](/images/manual/use-cases/router-client-connect-openclaw.png#bordered)
 
-    <!--![OpenClaw TUI first chat](/images/manual/use-cases/openclaw-tui-firstchat.png#bordered)-->
-
-5. 保持 OpenClaw CLI 窗口打开。下一步还需要使用它。
+5. 输入 `/quit` 并按 **Enter** 退出 TUI。保持 OpenClaw CLI 窗口打开，下一步还需要使用它配对设备。
 
 ### 步骤 3：配对设备
 
-将 Control UI 与 OpenClaw CLI 配对，以使用图形化管理面板。
+将浏览器与 Gateway 配对，以使用 Control UI。
 
-<Tabs>
-<template #(推荐)-自动配对设备>
+1. 从启动台打开 Control UI 应用。首次连接时，页面会要求提供 Gateway 令牌。
+2. 在 OpenClaw CLI 窗口中运行：
 
-1. 从启动台打开 Control UI 应用。**OpenClaw Gateway Dashboard** 将打开。
-
-    会出现 `Auth required` 错误。这是正常现象，表示你尚未提供访问 token。
-
-    ![Gateway dashboard](/images/manual/use-cases/gateway-dashboard5.png#bordered)
-
-2. 找到 **Paste the token from** 这一行，然后复制其中提供的命令 `openclaw gateway auth-token --show`。
-3. 返回 OpenClaw CLI 窗口，运行复制的命令，然后复制显示的访问 token。
-4. 返回 OpenClaw Gateway Dashboard，找到 **Gateway Token** 字段，粘贴复制的访问 token，然后点击 **Connect**。
-
-    会出现 `Device pairing required` 错误。这是正常现象，表示设备连接正在等待批准。
-
-    ![Device pairing required](/images/manual/use-cases/gateway-device-pairing-required2.png#bordered)
-
-5. 在 `Device pairing required` 错误信息中，找到 `Approve this request:` 这一行，然后复制其下方显示的命令。
-6. 返回 OpenClaw CLI 窗口，然后运行复制的命令以授权 Control UI。
-
-    :::tip 关于超时错误的说明
-    批准命令有时效限制。如果收到 `unknown requestId` 错误，表示请求已过期。请刷新 Control UI，复制新生成的命令，然后在 OpenClaw CLI 中重新运行。
-
-    ```text
-    [openclaw] The CLI command failed.
-    [openclaw] Reason: unknown requestId
+    ```bash
+    openclaw gateway auth-token --show
     ```
+
+3. 将显示的令牌复制到 Control UI 的 Gateway 密钥字段中，然后连接。
+4. Control UI 会提示批准此浏览器。复制页面上显示的 `openclaw devices approve` 命令，在 OpenClaw CLI 窗口中运行。
+
+    :::tip 配对请求过期
+    如果命令返回 `unknown requestId`，请刷新 Control UI，再运行页面上新显示的批准命令。
     :::
 
-7. 当终端显示批准消息时，返回 Control UI。系统将自动登录并跳转到 **Home** 页面。例如：
+5. 批准后，Control UI 会自动连接并打开主聊天页面。发送一条消息，等待助手回复。
 
-    ```text
-    Approved 005748253152b66dc0f5f6a801f35617db043f107972f259630a6bd098d5f790 (82e0f4ac-ed44-477e-8c6c-c3d2f4eeedaf)
-    ```
+:::details 手动选择待处理请求
+如果有多个待处理的浏览器请求，请在 OpenClaw CLI 中运行 `openclaw devices list`。确认请求与你的浏览器对应后，再批准该请求：
 
-    ![Health OK](/images/manual/use-cases/openclaw-connected5.png#bordered)
-</template>
-<template #(可选)-手动配对设备>
-
-:::tip 何时使用手动配对
-自动配对将批准最近的配对请求。如果你有多个待处理请求，需要手动选择要批准的设备，请按本节步骤操作。
+```bash
+openclaw devices approve <request-id>
+```
 :::
-
-1. 从启动台打开 Control UI 应用。**OpenClaw Gateway Dashboard** 将打开。
-
-    会出现 `Auth required` 错误。这是正常现象，表示你尚未提供访问 token。
-
-    ![Gateway dashboard](/images/manual/use-cases/gateway-dashboard5.png#bordered)
-
-2. 找到 **Paste the token from** 这一行，然后复制其中提供的命令 `openclaw gateway auth-token --show`。
-3. 返回 OpenClaw CLI 窗口，运行复制的命令，然后复制显示的访问 token。
-4. 返回 OpenClaw Gateway Dashboard，找到 **Gateway Token** 字段，粘贴复制的访问 token，然后点击 **Connect**。
-
-    会出现 `Device pairing required` 错误。这是正常现象，表示设备连接正在等待批准。
-
-    ![Device pairing required](/images/manual/use-cases/gateway-device-pairing-required2.png#bordered)
-
-5. 返回 OpenClaw CLI 窗口并输入以下命令：
-    ```bash
-    openclaw devices list
-    ```
-6. 在 **Pending** 表格中，找到与你当前设备关联的 **Request** ID。
-
-    :::info
-    Request ID 有时效限制。如授权失败，请重新运行 `openclaw devices list` 以获取新的有效 ID。
-    :::
-
-    ![View pending device request](/images/manual/use-cases/pending-request.png#bordered)
-
-7. 输入以下命令授权设备：
-
-    ```bash
-    openclaw devices approve {RequestID}
-    ```
-
-8. 当终端显示批准消息时，返回 Control UI。系统将自动登录，并默认跳转到 **Home** 页面。
-
-    ![Health OK](/images/manual/use-cases/openclaw-connected5.png#bordered)
-</template>
-</Tabs>
 
 ### 步骤 4：个性化 OpenClaw
 
