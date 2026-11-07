@@ -1,13 +1,13 @@
 ---
 outline: [2, 3]
-description: Choose a YuE2 Studio model set on Olares, create and edit a song, change its lyrics or style, continue a melody, make a cover from a recording, and generate music through Lares.
+description: Choose a YuE2 Studio model set on Olares, create and edit a song, change its lyrics or style, continue a melody, and make a cover from a recording.
 head:
   - - meta
     - name: keywords
-      content: Olares, YuE2 Studio, AI music, Q8, BF16, quantization, piano roll, ABC, MIDI, covers, instrumental music, Lares, MCP, HTTP API
+      content: Olares, YuE2 Studio, AI music, Q8, BF16, quantization, piano roll, ABC, MIDI, covers, instrumental music
 app_version: "0.0.7"
-doc_version: "2.2"
-doc_updated: "2026-11-06"
+doc_version: "2.6"
+doc_updated: "2026-11-07"
 ---
 
 # Create and edit a song with YuE2 Studio
@@ -20,25 +20,35 @@ This guide uses a short English acoustic pop song called "Morning Light". You wi
 
 In this guide, you will learn how to:
 
+- Install YuE2 Studio and prepare model downloads.
 - Choose a model set and GPU allocation for your music workflow.
 - Compose and preview a score before generating audio.
 - Edit notes, chords, sections, key and tempo.
 - Reuse a composition with new lyrics, another style or instrumental parts.
 - Continue a short melody and create a cover from a recording.
 - Choose generation settings and exchange scores with a music editor.
-- Connect Lares through MCP and create a song from a conversation.
 
 ## Prerequisites
 
-- YuE2 Studio installed on an amd64 Olares device. This guide targets the test-market preview of Studio 3.8.5.
-- An NVIDIA GeForce RTX 50 series GPU with compute capability sm_120 and a CUDA 13 compatible driver. The example was prepared on an RTX 5090 Laptop GPU.
-- A Hugging Face service address and token configured in the Olares system environment for model downloads.
+- Olares 1.12.7 or later on an amd64 device with an NVIDIA GPU and at least 5 GiB of available GPU memory.
+- A Hugging Face account.
 
-The app reads `OLARES_SYSTEM_HUGGINGFACE_SERVICE` and `OLARES_SYSTEM_HUGGINGFACE_TOKEN`. To check these values, open Olares **Settings** > **Advanced** > **System environment variables**. For changes, follow [Set system environment variables](../manual/manage-system-env.md). These settings also affect other apps that use them.
+## Install YuE2 Studio
 
-Olares assigns GPU resources when you launch the app. If launch is blocked by an allocation message, follow [Resume an app and assign resources](../manual/olares/settings/gpu-resource.md#resume-an-app-and-assign-resources).
+YuE2 Studio downloads its model sets from Hugging Face. Add a read token to Olares before installing the app.
 
-## Prepare the music engine
+1. Sign in to Hugging Face, or create an account.
+2. Open [Access Tokens](https://huggingface.co/settings/tokens) and click **New token**.
+3. Give the token a name, select the **Read** role, create the token, and copy it.
+4. In Olares, go to **Settings** > **Advanced** > **System environment variables**.
+5. Find `OLARES_SYSTEM_HUGGINGFACE_TOKEN`, click its edit icon, and paste the token into **Value**.
+6. Click **Confirm**, then click **Apply** at the bottom of the page. Olares already provides the Hugging Face service address in `OLARES_SYSTEM_HUGGINGFACE_SERVICE`.
+7. Open Market and search for `YuE2 Studio`.
+8. Click **Get**, then **Install**, and wait for installation to complete.
+
+The token is stored as a system environment variable and is shared with apps that use the Olares Hugging Face settings. See [Set system environment variables](../manual/manage-system-env.md) to update it later.
+
+## Download a model set
 
 The four ready-made sets use the same YuE2 backbone. Their main difference is the precision used to store its weights. Lower precision reduces the size of the model and can introduce more quantization error.
 
@@ -47,25 +57,19 @@ The four ready-made sets use the same YuE2 backbone. Their main difference is th
 | Light | `Q5_K_M` | 4.0 GB | You need the smallest set and accept stronger weight compression. |
 | Balanced | `Q6_K` | 4.3 GB | You want a middle option between Light and Quality. |
 | Quality | `Q8_0` | 5.1 GB | Start here for everyday generation and editing. This is the recommended baseline for this Olares package. |
-| Full native | `BF16` | 9.9 GB | You want to compare against the original backbone weights and can allocate more memory. |
+| Full native | `BF16` | 9.9 GB | You prefer the original backbone weights and can allocate more memory. |
 
-All four sets keep the audio VAE in `F32`. Light, Balanced and Quality use `Q8_0` versions of SheetSage2 and MERT for recording transcription. Full native uses their `F32` versions. Each set also includes the decoder companion. The set size therefore includes more than the backbone file.
-
-For the RTX 5090 Laptop GPU used in this guide, start with Quality Q8. Full native is an optional comparison, with larger downloads and memory needs. Its higher weight precision does not guarantee a better result for every prompt, and a smaller file does not guarantee faster generation on every GPU.
+Start with Quality Q8 for everyday generation and editing. Full native keeps the original backbone precision and uses more storage and GPU memory.
 
 1. Open YuE2 Studio from Launchpad.
-2. Click your account name in the lower-left corner to open **Settings**, then select **Models**.
+2. The first time you open the app, YuE2 Studio prompts you to download a model set. If you have already opened the app, click your account name in the lower-left corner, then go to **Settings** > **Models**.
 3. Choose one music-engine model set. **Quality - Q8_0 backbone, near lossless** is a starting option. **Full native - BF16 backbone, original weights** downloads the original backbone weights and uses more storage.
-4. Download the selected set and wait for it to show **installed**. You only need one set.
+4. Download the selected set and wait for it to show **installed**.
 5. Click **Done**, return to **Create**, and wait for **Engine ready** before starting a song.
 
 ![Music-engine model sets in YuE2 Studio Settings](/images/manual/use-cases/yue2-studio-model-sets.png#bordered)
 
-Model weights are downloaded separately from the application and remain on disk across app restarts. The model-set sizes shown in Settings are file sizes, not a measurement of peak GPU memory during generation.
-
-The Olares package declares a 5 GiB minimum GPU memory request for a single-song Q8 workflow. Time slicing does not enforce this as a fixed VRAM cap. In one 130-second Q8 generation at 32 steps, the observed whole-GPU memory peak was about 4.48 GiB. A BF16 run reached about 5.72 GiB. These samples help choose an allocation, but longer material, more variations and transcription can change memory use. Q5 and Q6 were not profiled in this setup.
-
-Allocate more VRAM before moving to BF16 or increasing concurrency. In Memory slicing mode, follow [Resume an app and assign resources](../manual/olares/settings/gpu-resource.md#resume-an-app-and-assign-resources) to change the quota. Switching an installed model set restarts the music engine, so finish the current job first.
+Downloaded model sets remain available after app restarts. The app starts with a 5 GiB GPU allocation. Increase it for Full native, longer songs, transcription, or multiple outputs. In Memory slicing mode, follow [Resume an app and assign resources](../manual/olares/settings/gpu-resource.md#resume-an-app-and-assign-resources) to change the allocation. Switching model sets restarts the music engine, so finish the current song first.
 
 ## Create the original song
 
@@ -103,7 +107,7 @@ Allocate more VRAM before moving to BF16 or increasing concurrency. In Memory sl
 
     | Setting | Example value | Purpose |
     |:---|:---|:---|
-    | **Max duration** | `2:00` | Gives the short song room to finish. This is a ceiling, not a target length. |
+    | **Max duration** | `2:00` | Allows the song to run for up to two minutes. |
     | **Flow-matching steps** | `32` | Sets the number of audio synthesis steps. |
     | **Solver** | **Midpoint (reference)** | Uses the reference rendering method. |
     | **Songs per request** | `1` | Creates one composition. |
@@ -122,7 +126,7 @@ There are three planning modes:
 |:---|:---|:---|
 | **Melody + chords** | A melody with chord symbols | Writing a song whose melody and harmony you want to edit. |
 | **Melody** | A melody-only plan | Covers where the new style should supply the harmony. |
-| **No score** | Audio generation without a symbolic plan | Exploring a freer result when score editing is not your goal. |
+| **No score** | Audio generation without a symbolic plan | Exploring audio before choosing a score-based workflow. |
 
 ## Edit and perform the score
 
@@ -139,7 +143,7 @@ There are three planning modes:
 To make a smaller change, drag an individual note up or down to change its pitch, move it horizontally to change its start time, or drag its right edge to change its length. Click a chord or section label in the lanes above the notes to edit it.
 
 :::warning Save the score before refreshing
-The creation form does not preserve an unsaved ABC score when you refresh the page. Use **Save the score as .abc**, or generate a track to store the score in Library.
+Before refreshing the page, click **Save the score as .abc**. You can also generate a track to save its score in Library.
 :::
 
 ### Generate the edited version
@@ -176,7 +180,7 @@ Horizontal position represents time, vertical position represents pitch, and not
 3. Use the **Sections** lane to edit section names or add a section marker such as `Interlude`.
 4. Preview the score, then click **Apply** and generate a new version.
 
-Keep section names and lyrics tags consistent. If you add an instrumental break, use a corresponding tag such as `[Instrumental Break]` in the lyrics. Listen to the transition after generation, because a section marker alone does not determine how the arrangement will sound.
+Keep section names and lyrics tags consistent. If you add an instrumental break, use a corresponding tag such as `[Instrumental Break]` in the lyrics. Generate the new version and play the transition, then adjust the score or style if needed.
 
 ### Change the key or the vocal register
 
@@ -210,7 +214,7 @@ For an octave adjustment to the voice alone, use **Voice −8va** or **Voice +8v
 5. Enable **Keep the edited score for new words** under the score, then click **Create**.
 6. Listen for words that arrive too early, stretch too far or lose clarity. Shorten or rephrase those lines and make another version.
 
-If you load the score through **Use this score** instead, fill in the lyrics and style yourself before generating. The keep option is needed when a marked score belongs to different words or a different style. If the app reports that the edited score belongs to other words or style, review the form and enable that option to continue with the intended score.
+If you load the score through **Use this score**, enter the lyrics and style, then enable **Keep the edited score for new words** to retain the loaded composition.
 
 ### Change the voice or musical style
 
@@ -224,7 +228,7 @@ If you load the score through **Use this score** instead, fill in the lyrics and
 3. Enable **Keep the edited score for new words** when it is shown.
 4. Use a title such as `Morning Light Jazz Version`, then click **Create**.
 
-Keeping the score preserves the written composition while the model generates another performance. Listen to the result before deciding whether the voice and arrangement match your description. A style prompt does not clone a particular singer.
+Keeping the score preserves the written composition while the model generates another performance. Listen to the result and refine the style description until the voice and arrangement fit the song.
 
 ### Turn the melody into instrumental music
 
@@ -250,7 +254,7 @@ Use this when you have an opening phrase and want YuE2 to write the rest of the 
 4. Click **Continue the score** to compose the remainder before generating audio.
 5. Preview the completed score and adjust it in **Score editor**. Give the result a new title and click **Create**.
 
-To use a saved song as the starting point, export its ABC first. In a copy of that file, keep its header and the opening verse and remove later sections before importing it. Keep both voice declarations and the complete bars belonging to the remaining sections. An opening made only of rests or an instrumental introduction needs a sung or written vocal phrase before it can guide this continuation workflow.
+To use a saved song as the starting point, export its ABC first. In a copy of that file, keep its header, both voice declarations, the opening verse, and the complete bars for that verse. Remove the later sections before importing it. Include at least one vocal phrase to guide the continuation.
 
 ### Cover a recording in a new style
 
@@ -267,7 +271,7 @@ The Cover workflow first transcribes a recording into a melody with SheetSage2, 
 
 ![A source recording transcribed into a score for an English jazz cover](/images/manual/use-cases/yue2-studio-cover-score.png#bordered)
 
-If the app reports that no SheetSage2 transcriber is available, add it through **Settings** > **Models**. The ready-made sets in this guide include it. Review the transcription when the source has a dense arrangement or unclear melody. A cover generated from a transcription can differ from the recording.
+If the app reports that no SheetSage2 transcriber is available, add it through **Settings** > **Models**. The model sets in this guide include it. For a dense arrangement or unclear melody, review and correct the transcription before generating the cover.
 
 ## Choose generation settings
 
@@ -290,7 +294,7 @@ Writing a chord bed replaces the current score in the form. Export a score you w
 
 For the first version, keep **32** flow-matching steps and **Midpoint (reference)**. To audition an idea more quickly, try **16** steps and compare the result. Fewer synthesis steps can change the sound, and their effect depends on the song.
 
-The other solver, **AB2 (about twice as fast)**, uses fewer network evaluations in the sound stage. Try it on the same composition and listen for changes in vocals, attacks and transitions. Score composition, model loading and other stages still take time, so the label does not mean that the entire request finishes in half the time.
+The other solver, **AB2 (about twice as fast)**, speeds up the sound stage. Score composition and model loading take the same time with either solver. Try AB2 on the same composition and listen for changes in vocals, attacks and transitions.
 
 ![Flow-matching steps, solver and song count in the generation settings](/images/manual/use-cases/yue2-studio-quality-settings.png#bordered)
 
@@ -303,7 +307,7 @@ The other solver, **AB2 (about twice as fast)**, uses fewer network evaluations 
 | **Songs per request** | Separate compositions | Each song writes its own music and uses more working memory. |
 | **Variations** | Performances of the same composed song | Start with `1` when using the minimum Q8 allocation. |
 
-If **Songs per request** is disabled, the local engine's current song limit is one. Finish a job before changing engine limits in **Settings** > **Local engine**, and increase the GPU allocation before trying more concurrent work. Keep one song and one variation for the 5 GiB Q8 baseline.
+The local engine starts with a one-song limit. Finish the current song before changing engine limits in **Settings** > **Local engine**. Increase the GPU allocation before generating multiple songs or variations at once.
 
 ### Re-render an existing performance
 
@@ -311,7 +315,7 @@ If **Songs per request** is disabled, the local engine's current song limit is o
 2. Adjust the step count, sound seed, number of variations or output format in the dialog.
 3. Submit the new render and compare it with the saved track.
 
-Re-render reuses the saved performance plan and skips writing a new composition. Use the score-editing workflows when you want different notes, lyrics or style. Repeating the same settings is useful for comparison, but it is not a promise of a byte-for-byte identical audio file.
+Re-render reuses the saved performance plan. Adjust the sound seed, synthesis steps, variations, or output format to create another performance. Use the score-editing workflows when you want different notes, lyrics, or style.
 
 ![Re-render controls for steps, variations, sound seed and output format](/images/manual/use-cases/yue2-studio-rerender.png#bordered)
 
@@ -333,129 +337,22 @@ To bring a MIDI file into the song workflow:
 
 1. Select **Cover**, click **Choose a recording…**, and select the MIDI file.
 2. In **Load MIDI**, choose **Melody only** or **With chords** for the score you want.
-3. Check the track table and explicitly select the **Voice** and **Instrument** tracks. For the example export, choose **1. Vocal Melody** for **Voice** and **2. Ins Melody** for **Instrument**. Automatic selection can pick a different melodic track.
+3. Select the **Voice** and **Instrument** tracks. For the example export, choose **1. Vocal Melody** for **Voice** and **2. Ins Melody** for **Instrument**.
 4. Choose whether to keep the file's section markers. Review the timing grid, octave adjustments and conversion notices before accepting them.
 5. Wait for conversion to finish and **Use as the score** to become available. Click it and preview the imported notation. A MIDI track can contain chords or tempo changes that need to be simplified into the song score.
 6. Supply the lyrics and style, then use a new title and **Create** to generate a performance.
 
 ![Explicit vocal and instrument track assignments in the MIDI import dialog](/images/manual/use-cases/yue2-studio-import-midi.png#bordered)
 
-Converting MIDI back to ABC can infer chord names again. Review those names before treating the imported score as a copy of the original harmony.
+After converting MIDI to ABC, review the inferred chord names and adjust them in the score editor when needed.
 
-### Review a PDF before sharing
+### Export printable notation
 
-The score's **PDF** button exports printable notation. Check the generated page before sharing it. Some flat chord symbols displayed incorrectly in this preview version, so use ABC or MIDI when you need to preserve an accurate editable score.
+Click **PDF** beside the score to export printable notation. Export ABC or MIDI when you want to continue editing notes and chord symbols.
 
 ### Find and compare saved versions
 
-Use Library search to filter by a shared title such as `Morning Light`. Give each version a descriptive suffix, then open **Song Details** to review its lyrics and saved generation settings before comparing audio. The duration beside a track is the recording's length, and the relative timestamp shows when it was added. Neither is the time spent generating it.
-
-## Create a song with Lares
-
-You can ask Lares to generate a song through YuE2 Studio's MCP server, then open the result in Studio to listen or edit its score. This workflow requires YuE2 Studio package 0.0.5 or later on Olares, with the **YuE2 Studio MCP & API** entrance available.
-
-Have [Lares](lares.md) installed on the same Olares device and select a chat model that supports tool calls. This example uses Qwen3.8. Start its model app and wait for it to become available in Lares. The chat model handles your request, while YuE2 generates the music. Keep YuE2 Studio running with **Engine ready** and a model set installed.
-
-When both models use the same GPU, leave enough memory for both and run one music request at a time. Time slicing shares GPU processing time but does not automatically release the memory held by a loaded model.
-
-### Connect the MCP server
-
-Token authentication is off by default. The entrance keeps Olares's internal access policy. Any client that can reach this entrance can call its tools. To require an application token, follow [Enable token authentication](#enable-token-authentication).
-
-1. Open Olares **Settings** > **Applications** > **YuE2 Studio** > **Entrances**.
-2. Select **YuE2 Studio MCP & API** and copy its **Endpoint** URL. Append `/mcp` if the URL does not already end with it. This internal entrance is accessible to Lares on the same Olares device.
-3. Open Lares and go to **Settings** > **MCP**. Click **Add server** and enter:
-
-    | Setting | Value |
-    |:---|:---|
-    | **Server name** | `yue2studio` |
-    | **Transport** | `Streamable HTTP` |
-    | **MCP URL** | The endpoint ending in `/mcp` from step 2 |
-    | **Headers** | `{}` |
-
-4. Click **Save**. Lares connects and loads the server's tools.
-
-### Enable token authentication
-
-The `MCP_AUTH_ENABLED` application environment variable controls token authentication for both MCP and the HTTP API. Its default is `false`.
-
-1. In Olares **Settings** > **Applications** > **YuE2 Studio**, find **Environment variables** and click **Manage environment variables**.
-2. Edit `MCP_AUTH_ENABLED`, set it to `true`, and click **Confirm**, then **Apply**. The application restarts to apply the change. Wait for it to become available again. See [Manage application environment variables](../manual/olares/settings/manage-app-env.md) for the Settings workflow.
-3. Open Files and find **Application** > **Data** > **yue2studio** > **config**. Open `mcp-token` as text and copy the complete line. If text preview is unavailable, download it and open it in a text editor.
-4. In Lares **Settings** > **MCP**, edit `yue2studio` and replace **Headers** with the JSON below. Replace `<your-token>` with the copied line and keep one space after `Bearer`.
-
-    ```json
-    {
-      "Authorization": "Bearer <your-token>"
-    }
-    ```
-
-5. Click **Save**. Subsequent requests require the token.
-
-The token is generated automatically and retained across normal upgrades. Keep it out of chat prompts and shared screenshots. To turn token authentication off again, set `MCP_AUTH_ENABLED` to `false` and apply the change. Clients can then use empty **Headers** (`{}`).
-
-### Generate Morning Light from a conversation
-
-1. Start a new Lares conversation and select Qwen3.8 or another available chat model with tool support.
-2. Ask Lares to check Studio first:
-
-    ```text
-    Use the configured yue2studio MCP server to call studio_status. Report the actual result. Do not generate music or change settings.
-    ```
-
-    Check that Lares calls `studio_status` and returns the current Studio state. If it only describes what it would do, ask it to use the configured MCP tool.
-
-3. Send the following request. Change the title, style or lyrics to use your own song idea. The 30-second request, 16 steps and AB2 solver are example settings for a quick first song.
-
-::: details Example: generate Morning Light through Lares
-```text
-Use the configured yue2studio MCP server to generate one song.
-
-Title: Morning Light
-Style: English acoustic pop, warm female vocals, acoustic guitar, piano and soft drums, hopeful and calm, clean studio production, 100 BPM.
-
-Lyrics:
-[Verse 1]
-Morning light across the sea
-Brings a little hope to me
-Every road can lead us home
-We will never walk alone
-
-[Chorus]
-Let the music find its way
-Carry us into the day
-Raise your voice and hold on tight
-We are brighter than the night
-
-Call song_create with duration_seconds=30, steps=16, solver="ab2", lm_batch_size=1, synth_batch_size=1 and output_format="flac".
-
-Use studio_wait until the job finishes. Report the actual job ID and saved song ID. Only report success after completion.
-
-Do not use shell commands, download models, change settings or modify existing songs. If a tool fails, report its exact error and stop.
-```
-:::
-
-4. Let Lares wait for the job to finish. If it asks for permission to run a generation tool, review the request and approve it. A submitted job ID means the song is queued or running. Wait for completion and the saved song ID.
-5. Open YuE2 Studio and search the library for `Morning Light`. Play the new track. Open **Song Details** to check its lyrics and saved settings, then click **Download Audio** to save it.
-6. To change the composition, click **Use this score** and continue with [Edit and perform the score](#edit-and-perform-the-score). Use a new title when generating the edited version.
-
-If a call fails, read the error before trying again. When token authentication is enabled, an HTTP 401 response means the application token is missing or incorrect. If Lares cannot answer a plain chat message, check its selected chat model and connection before retrying the music request. For a generation failure, open YuE2 Studio and check the engine state and available GPU memory.
-
-### Use another client or the HTTP API
-
-Other compatible MCP clients can use the same Streamable HTTP URL. The same entrance also serves the app's HTTP API. Remove the final `/mcp` from the MCP URL to get the base address. When `MCP_AUTH_ENABLED=true`, send the Bearer token in the Authorization header with each request.
-
-| Task | HTTP request |
-|:---|:---|
-| Submit a generation job | `POST /v1/music/jobs` |
-| Read a job's state and saved songs | `GET /v1/music/jobs/{job_id}` |
-| Download a saved song's audio | `GET /v1/library/media/{song_id}` |
-
-Generation is asynchronous. Keep the returned job ID and wait for completion before downloading the audio. For tool descriptions and automation examples, see the [YuE2 Studio MCP reference](https://github.com/timoncool/YuE2-Studio/blob/main/docs/mcp-skill.md).
-
-## About additional Studio tools
-
-The core workflows above use the music engine and its included transcription models. Other visible tools, including assistant writing, LoRA training, stem separation, VST processing and all-instrument audio-to-MIDI transcription, can require additional providers, models or platform components. They are outside the validated scope of this Linux preview. The MIDI score export described here is part of the core workflow.
+Use Library search to filter by a shared title such as `Morning Light`. Give each version a descriptive suffix, then open **Song Details** to review its lyrics and saved generation settings before comparing audio.
 
 :::info Model terms
 YuE2 model weights use CC BY-NC 4.0. Check the [YuE2 model card](https://huggingface.co/m-a-p/YuE2-3B) before using the model for your project.
@@ -463,7 +360,8 @@ YuE2 model weights use CC BY-NC 4.0. Check the [YuE2 model card](https://hugging
 
 ## Learn more
 
-- [Lares](lares.md): Configure the assistant and its chat model.
-
+- [Create a song with YuE2 Studio through Lares](yue2-studio-lares.md): Connect the MCP server and generate music from a conversation.
+- [Protect YuE2 Studio MCP with token authentication](yue2-studio-mcp-auth.md): Require a Bearer token for Lares and other MCP clients.
+- [Get started with Lares](lares.md): Prepare the assistant and a tool-capable chat model.
 - [Manage accelerator resources](../manual/olares/settings/gpu-resource.md): Assign or release GPU resources for Olares apps.
 - [Set system environment variables](../manual/manage-system-env.md): Manage the shared Hugging Face download settings.

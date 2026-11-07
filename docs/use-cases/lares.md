@@ -1,114 +1,87 @@
 ---
 outline: [2, 3]
-description: Meet Lares, the official AI assistant for Olares. Manage apps, files, and your system, or dive into research, all through natural language.
+description: Get started with Lares on Olares. Connect a model through Router, choose an access level, run your first task, and find guides for web research and app automation.
 head:
   - - meta
     - name: keywords
-      content: Olares, Lares, Olares Router, Olares local AI, local AI agent, AI assistant, natural language, Olares 1.12.7
+      content: Olares, Lares, Olares Router, local AI agent, AI assistant, MCP, natural language, Olares 1.12.7
+app_version: "0.26.60"
+doc_version: "2.0"
+doc_updated: "2026-11-07"
 ---
 
-# Manage Olares and run research tasks with Lares
+# Get started with Lares
 
-Lares is the official AI assistant for Olares, introduced in v1.12.7. With Router and a connected model, you state a goal in plain language, and Lares plans and carries out the task on your device.
+Lares is the official AI assistant for Olares. It uses models connected through Router and can work with Olares apps, files, and system services through tools that you control.
 
-As a fully autonomous agent, Lares handles both quick, everyday tasks and complex automations. Instead of just executing single instructions, it breaks down high-level goals, dynamically chains tools, and carries out end-to-end plans directly on your device. From the first request to the final result, everything happens in the conversation.
+Start with a small read-only task to check the model and permissions. You can then add web research providers or connect apps such as Blender and YuE2 Studio for task-specific workflows.
 
 ## Learning objectives
 
-By the end of this page, you will learn how to:
+In this guide, you will learn how to:
 
-- Understand how Lares connects to Router and works under your assigned permissions.
-- Start with a simple question in Lares.
-- Configure web research tools to run complex research tasks.
+- Prepare a chat model for Lares through Router.
+- Choose an access level and run your first task.
+- Find the right setup guide for web research or an app connection.
 
 ## Prerequisites
 
-- **System**: Olares OS v1.12.7 or later
-- **Apps**: Lares, Router and Qwen3.8-27B (llama.cpp) installed from Market
+- Olares 1.12.7 or later.
+- Lares 0.26.60 and Router installed from Market.
+- A chat model that supports tool calls, installed and available in Router. This guide uses Qwen3.8-27B (llama.cpp).
 
-## Understand how Lares works
+## Understand how Lares connects to Olares
 
-To carry out tasks on your device securely, Lares operates based on two core mechanisms: built-in model routing and strict access control.
+Lares combines three types of capability. Configure each one where it belongs.
 
-- **Integration with Router**: Lares automatically accesses the AI models and tools configured in Router. Everything you connect in Router works in Lares right away, with no extra setup.
-- **Permission-aware execution**: Lares executes tasks on your behalf using Olares CLI Agent Skills, but you control the scope. You can assign specific permission levels, such as Read Only, Write, or Full Access, to define exactly what it is allowed to perform on your system.
+| Capability | Connection | Where to configure it |
+|:---|:---|:---|
+| Chat and planning | A chat model provided by Router | **Router** > **Default models** |
+| Olares tasks | Built-in Olares tools and skills | The access level selected in Lares |
+| App-specific actions | An app's MCP server or a built-in integration | **Lares** > **Settings** > **MCP**, or the app-specific guide |
 
-## Get started
+Router supplies the model, while Lares decides when to call an available tool. Your selected access level limits what Lares can do on your behalf. An MCP connection adds tools from one app without changing the permissions of unrelated apps.
 
-1. Open Lares, select the model, and confirm the permission level for it to work under.
+## Prepare the model
 
-    ![Lares chat interface](/images/manual/use-cases/lares1.png#bordered)
+1. Open Router from Launchpad and go to **Default models**.
+2. Select Qwen3.8-27B (llama.cpp), or another tool-capable model, as the default chat model.
+3. Confirm the model shows **Callable** before opening Lares.
 
-2. Start with a simple question:
+If you use another model, check that it supports tool calls. A chat-only model can answer questions but cannot reliably operate Olares or a connected MCP server.
+
+## Run your first task
+
+1. Open Lares from Launchpad.
+2. Select the chat model and review the access level for the conversation.
+
+   ![Lares chat interface](/images/manual/use-cases/lares1.png#bordered)
+
+3. Start with a read-only request:
 
    ```text
-   Check this device's configuration
+   Check this device's configuration. Summarize the operating system version,
+   processor, memory, storage, and accelerator resources. Do not change anything.
    ```
 
-    :::warning Important: Run one task at a time
-    When running Qwen3.8-27B (llama.cpp) on Olares One, we recommend running only one request at a time to ensure the best experience with the 102K context window and model precision.
-    :::
+4. Review any proposed tool call before allowing it. Check that the response describes your device without changing its settings.
 
-## Run a deep research task
-
-By default, Lares works with what is already on your Olares. To expand its capabilities and research a topic using public web content, you can configure a Web Research tool in Router, then select and use it in Lares.
-
-### 1. Choose a web research tool
-
-Web research uses two capabilities, and Router shows them as tags on each Web Research tool:
-
-| Tag | Tools | Capability |
-| --- | ----- | ---------- |
-| `search` | <nobr>SearXNG, Serper, Tavily</nobr> | Finds relevant pages and returns titles, snippets, and source links. |
-| `scrape` | <nobr>Firecrawl, Tavily, Jina Reader</nobr>  | Reads a provided URL and turns its content into material Lares can analyze, summarize, or save. |
-
-### 2. Get the connection details
-
-Connection requirements depend on the tool you choose:
-
-- **SearXNG and Firecrawl**: These run as apps on your Olares. Install the app from Market, and get its entrance URL from Olares **Settings** > **[App-Name]** > **Entrances** > **Endpoint**.
-- **Serper, Tavily, and Jina Reader**: Obtain an API key from its provider.
-
-### 3. Configure the web research tool in Router
-
-The following steps use SearXNG as an example.
-
-1. Open Router and go to **Tools** > **Manage providers**.
-2. Select **SearXNG**, and then specify the following settings:
-
-    - **Provider name**: `localsearxng`
-    - **SearXNG instance URL**: The entrance URL obtained in Step 2 
-
-3. Click **Add**. The tool appears in the **Available** list.
-4. Click <i class="material-symbols-outlined">add</i> to enable it.
-
-    ![Enable SearXNG in Router](/images/manual/use-cases/router-search-tool-enable.png#bordered)
-
-    The tool appears in the **Configured** list.
-
-    ![Enable SearXNG in Router](/images/manual/use-cases/router-search-tool-enabled.png#bordered)
-
-### 4. Select the search tool in Lares
-
-This step is required only for a tool with the `search` capability.
-
-:::info
-While all Web Research tools are configured in Router, tools with the `search` tag need one more step in Lares under **Settings** > **Web Search**. A `scrape` only tool does not require this step and is called automatically when you ask Lares to read a specific URL.
+:::warning Run one demanding task at a time
+When Qwen3.8-27B (llama.cpp) runs on Olares One, wait for the current request to finish before starting another model or media-generation task. Concurrent workloads can compete for memory and make a model unresponsive.
 :::
 
-1. Open Lares and go to **Settings** > **Web Search**.
-2. Click **Refresh**, then select the configured search tool from the **Default search service** list.
+## Add the capability you need
 
-### 5. Research a topic
+Keep the Lares setup focused on the task you want to complete. Each guide below covers the required app, connection, and first useful result.
 
-Start with a simple request to confirm the search tool is working correctly. For example:
+- [Research the web with Lares](lares-web-research.md): Find public sources and synthesize them in a conversation.
+- [Create a Blender scene with Lares](blender-lares.md): Build and render a 3D scene.
+- [Use FlowStudio through Lares](flowstudio-lares.md): Generate images and videos from prepared workflows.
+- [Create a song with YuE2 Studio through Lares](yue2-studio-lares.md): Generate a song through the YuE2 Studio MCP server.
 
-```text
-Use web search to find 3 relevant public sources about preserving personal 
-voice when using AI writing tools. For each source, return the title, URL, 
-and one-sentence summary.
-```
+An app-specific guide is the source of truth for its endpoint, authentication, readiness checks, and output location. Do not reuse an MCP URL or token from another app.
 
-Lares should return source links and summaries from the selected search service. 
+## Learn more
 
-Once you verify that the search works, you can ask Lares to complete complex research tasks that combine source discovery, page reading, and synthesis.
+- [Use Olares Router as your AI gateway](olares-router.md): Manage models and providers used by Lares.
+- [Run local LLMs on Olares](llm-base-apps.md): Install and manage a local chat model.

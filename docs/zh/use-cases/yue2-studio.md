@@ -1,13 +1,13 @@
 ---
 outline: [2, 3]
-description: 在 Olares 上选择 YuE2 Studio 模型套装，创作并编辑歌曲，更换歌词或风格，续写旋律，根据录音制作翻唱，并通过 Lares 生成音乐。
+description: 在 Olares 上选择 YuE2 Studio 模型套装，创作并编辑歌曲，更换歌词或风格，续写旋律，并根据录音制作翻唱。
 head:
   - - meta
     - name: keywords
-      content: Olares, YuE2 Studio, AI 音乐, Q8, BF16, 量化, 钢琴卷帘, ABC, MIDI, 翻唱, 纯音乐, Lares, MCP, HTTP API
+      content: Olares, YuE2 Studio, AI 音乐, Q8, BF16, 量化, 钢琴卷帘, ABC, MIDI, 翻唱, 纯音乐
 app_version: "0.0.7"
-doc_version: "2.2"
-doc_updated: "2026-11-06"
+doc_version: "2.6"
+doc_updated: "2026-11-07"
 ---
 
 :::warning
@@ -24,25 +24,35 @@ YuE2 Studio 是一款本地 AI 音乐应用，可根据音乐风格和歌词生�
 
 通过本教程，你将学会：
 
+- 安装 YuE2 Studio，并为模型下载做好准备。
 - 根据音乐创作任务选择模型套装和 GPU 配额。
 - 在生成音频前，先谱曲并试听乐谱。
 - 编辑音符、和弦、段落、调性和速度。
 - 保留曲谱，更换歌词、改变风格或制作器乐版本。
 - 续写一段短旋律，并根据录音制作翻唱。
 - 选择生成参数，并与音乐编辑器交换乐谱。
-- 通过 MCP 连接 Lares，在对话中生成歌曲。
 
 ## 前提条件
 
-- 已在 amd64 架构的 Olares 设备上安装 YuE2 Studio。本教程适用于测试市场中的 Studio 3.8.5 预览版。
-- 具有 sm_120 计算能力的 NVIDIA GeForce RTX 50 系列 GPU，以及兼容 CUDA 13 的驱动。示例使用 RTX 5090 Laptop GPU 完成。
-- 已在 Olares 系统环境中配置用于下载模型的 Hugging Face 服务地址和令牌。
+- 一台运行 Olares 1.12.7 或更高版本的 amd64 设备，配备 NVIDIA GPU，并有至少 5 GiB 可用显存。
+- 一个 Hugging Face 账号。
 
-应用会读取 `OLARES_SYSTEM_HUGGINGFACE_SERVICE` 和 `OLARES_SYSTEM_HUGGINGFACE_TOKEN`。在 Olares 中打开 **Settings** > **Advanced** > **System environment variables** 可查看这些值。如需修改，请参阅[设置系统环境变量](../manual/manage-system-env.md)。这些设置也会影响其他使用它们的应用。
+## 安装 YuE2 Studio
 
-Olares 会在启动应用时分配 GPU 资源。如果分配提示导致应用无法启动，请按照[恢复应用并分配资源](../manual/olares/settings/gpu-resource.md#恢复应用并分配资源)中的步骤操作。
+YuE2 Studio 从 Hugging Face 下载模型套装。安装应用前，先在 Olares 中添加一个只读令牌。
 
-## 准备音乐引擎
+1. 登录 Hugging Face，或注册一个账号。
+2. 打开 [Access Tokens](https://huggingface.co/settings/tokens)，点击 **New token**。
+3. 输入令牌名称，选择 **Read** 权限，创建并复制令牌。
+4. 在 Olares 中打开 **Settings** > **Advanced** > **System environment variables**。
+5. 找到 `OLARES_SYSTEM_HUGGINGFACE_TOKEN`，点击编辑图标，将令牌粘贴到 **Value**。
+6. 点击 **Confirm**，再点击页面底部的 **Apply**。Olares 已在 `OLARES_SYSTEM_HUGGINGFACE_SERVICE` 中提供 Hugging Face 服务地址。
+7. 打开 Market，搜索 `YuE2 Studio`。
+8. 点击 **Get**，再点击 **Install**，等待安装完成。
+
+令牌会保存为系统环境变量，并供使用 Olares Hugging Face 设置的应用共享。如需稍后更新，请参阅[设置系统环境变量](../manual/manage-system-env.md)。
+
+## 下载模型套装
 
 四套预设使用同一个 YuE2 主模型，主要区别是保存权重时采用的精度。较低精度可减小模型文件，也可能引入更多量化误差。
 
@@ -51,25 +61,19 @@ Olares 会在启动应用时分配 GPU 资源。如果分配提示导致应用�
 | Light | `Q5_K_M` | 4.0 GB | 需要最小的模型套装，并接受更强的权重压缩。 |
 | Balanced | `Q6_K` | 4.3 GB | 希望在 Light 与 Quality 之间折中。 |
 | Quality | `Q8_0` | 5.1 GB | 日常生成和编辑从这一档开始。本 Olares 应用包以此作为推荐基线。 |
-| Full native | `BF16` | 9.9 GB | 希望与原始主模型权重对比，并能分配更多内存和显存。 |
+| Full native | `BF16` | 9.9 GB | 希望使用原始主模型权重，并能分配更多内存和显存。 |
 
-四套模型的音频 VAE 都使用 `F32`。Light、Balanced 和 Quality 使用 `Q8_0` 版本的 SheetSage2 与 MERT 处理录音转谱，Full native 使用它们的 `F32` 版本。每套模型还包含解码器配套权重，因此套装大小不只是主模型文件的大小。
-
-对于本教程使用的 RTX 5090 Laptop GPU，建议从 Quality Q8 开始。Full native 可用于对比，但下载量和内存需求更大。更高的权重精度不保证每个提示词都得到更好的结果，较小的文件也不保证在每张 GPU 上都生成得更快。
+日常生成和编辑建议从 Quality Q8 开始。Full native 保留主模型的原始精度，会占用更多存储空间和显存。
 
 1. 从 Launchpad 打开 YuE2 Studio。
-2. 点击左下角的账户名打开 **Settings**，然后选择 **Models**。
+2. 首次打开时，YuE2 Studio 会直接提示下载模型套装。如果之前打开过应用，请点击左下角的账户名，然后进入 **Settings** > **Models**。
 3. 选择一套音乐引擎模型。可以先使用 **Quality - Q8_0 backbone, near lossless**。**Full native - BF16 backbone, original weights** 会下载原始主模型权重，占用更多存储空间。
-4. 下载所选模型，等待状态显示为 **installed**。只需准备一套模型。
+4. 下载所选模型，等待状态显示为 **installed**。
 5. 点击 **Done**，返回 **Create**，等待显示 **Engine ready** 后再开始创作。
 
 ![YuE2 Studio 设置中的音乐引擎模型套装](/images/manual/use-cases/yue2-studio-model-sets.png#bordered)
 
-模型权重与应用分开下载，重启应用后仍会保留。设置中显示的模型套装大小是文件大小，并非生成时的显存峰值。
-
-Olares 应用包为单首 Q8 歌曲声明了 5 GiB 最低显存请求。时间分片模式不会将它作为固定显存上限。在一次 32 步、约 130 秒的 Q8 生成中，观测到的整卡显存峰值约为 4.48 GiB。一次 BF16 生成达到约 5.72 GiB。这些样本可辅助选择配额，但更长的素材、更多变体和录音转谱都可能改变资源占用。本环境尚未测量 Q5、Q6 的资源占用。
-
-切换到 BF16 或增加并发前，先分配更多显存。在 Memory slicing 模式下，可按照[恢复应用并分配资源](../manual/olares/settings/gpu-resource.md#恢复应用并分配资源)中的步骤更改配额。切换已安装的模型套装会重启音乐引擎，请先完成当前任务。
+下载的模型套装会在应用重启后保留。应用初始分配 5 GiB 显存。使用 Full native、生成更长的歌曲、转写录音或一次生成多个结果时，需要增加显存配额。在 Memory slicing 模式下，可按照[恢复应用并分配资源](../manual/olares/settings/gpu-resource.md#恢复应用并分配资源)中的步骤更改配额。切换模型套装会重启音乐引擎，请先完成当前歌曲。
 
 ## 生成原曲
 
@@ -107,7 +111,7 @@ Olares 应用包为单首 Q8 歌曲声明了 5 GiB 最低显存请求。时间�
 
     | 设置 | 示例值 | 用途 |
     |:---|:---|:---|
-    | **Max duration** | `2:00` | 为短歌留出完整结束的时间。这是时长上限，并非目标时长。 |
+    | **Max duration** | `2:00` | 允许歌曲最长生成两分钟。 |
     | **Flow-matching steps** | `32` | 设置音频合成步数。 |
     | **Solver** | **Midpoint (reference)** | 使用参考渲染方法。 |
     | **Songs per request** | `1` | 创建一份曲谱。 |
@@ -126,7 +130,7 @@ Olares 应用包为单首 Q8 歌曲声明了 5 GiB 最低显存请求。时间�
 |:---|:---|:---|
 | **Melody + chords** | 带和弦符号的旋律 | 创作需要进一步编辑旋律与和声的歌曲。 |
 | **Melody** | 只有旋律的乐谱 | 翻唱时保留曲调，让新风格决定和声。 |
-| **No score** | 不使用符号乐谱，直接生成音频 | 不以乐谱编辑为目标，探索更自由的结果。 |
+| **No score** | 不使用符号乐谱，直接生成音频 | 在进入乐谱工作流前探索音频效果。 |
 
 ## 编辑乐谱并生成新版本
 
@@ -142,8 +146,8 @@ Olares 应用包为单首 Q8 歌曲声明了 5 GiB 最低显存请求。时间�
 
 如果只想做局部调整，可以上下拖动单个音符来改变音高，水平移动来改变起始时间，或拖动右边缘来改变音符长度。点击音符上方栏中的和弦或段落标签，即可编辑相应内容。
 
-:::warning 刷新前保存乐谱
-刷新页面会清空创作表单中尚未保存的 ABC 乐谱。请使用 **Save the score as .abc** 保存文件，或先生成歌曲，将乐谱存入 Library。
+:::warning 刷新页面前保存乐谱
+刷新页面前，点击 **Save the score as .abc**。也可以先生成歌曲，将乐谱保存到 Library。
 :::
 
 ### 生成编辑后的版本
@@ -180,7 +184,7 @@ Olares 应用包为单首 Q8 歌曲声明了 5 GiB 最低显存请求。时间�
 3. 在 **Sections** 栏中修改段落名，或添加 `Interlude` 等段落标记。
 4. 试听乐谱，然后点击 **Apply** 并生成新版本。
 
-让段落名与歌词标签保持一致。如果加入器乐间奏，可以在歌词中使用对应的 `[Instrumental Break]` 标签。生成后试听段落衔接，单靠段落标记不能决定编曲的具体听感。
+让段落名与歌词标签保持一致。如果加入器乐间奏，可以在歌词中使用对应的 `[Instrumental Break]` 标签。生成新版本后试听段落衔接，再按需要调整乐谱或风格描述。
 
 ### 改变调性或人声音区
 
@@ -214,7 +218,7 @@ Olares 应用包为单首 Q8 歌曲声明了 5 GiB 最低显存请求。时间�
 5. 启用乐谱下方的 **Keep the edited score for new words**，然后点击 **Create**。
 6. 试听是否有词语出现过早、拖得过长或发音不清。缩短或改写这些句子，再生成一个版本。
 
-如果通过 **Use this score** 载入乐谱，需要自行填写用于演唱的歌词和风格。带标记的乐谱原本对应其他歌词或风格时，需要启用保留选项。如果应用提示编辑后的乐谱属于其他歌词或风格，先核对表单，再启用该选项，继续使用预期的曲谱。
+如果通过 **Use this score** 载入乐谱，请填写歌词和风格，再启用 **Keep the edited score for new words** 以保留载入的曲谱。
 
 ### 改变声音或音乐风格
 
@@ -228,7 +232,7 @@ Olares 应用包为单首 Q8 歌曲声明了 5 GiB 最低显存请求。时间�
 3. 如果出现 **Keep the edited score for new words**，将其启用。
 4. 使用 `Morning Light Jazz Version` 等新标题，然后点击 **Create**。
 
-保留乐谱会保留写好的曲谱，由模型生成新的演唱或演奏。请试听后判断声音和编曲是否符合描述。风格提示词不能克隆某位歌手的声音。
+保留乐谱会保留写好的曲谱，由模型生成新的演唱或演奏。试听生成结果并继续调整风格描述，直到声音和编曲适合这首歌。
 
 ### 将旋律转为纯音乐
 
@@ -254,7 +258,7 @@ Olares 应用包为单首 Q8 歌曲声明了 5 GiB 最低显存请求。时间�
 4. 点击 **Continue the score**，先写出后续乐谱，再生成音频。
 5. 试听完整乐谱，并按需在 **Score editor** 中修改。设置新标题后点击 **Create**。
 
-如果想从已保存的歌曲开始，先导出它的 ABC。在文件副本中保留文件头和开头的主歌，删除后面的段落，再导入。保留两个声部的声明，以及剩余段落对应的完整小节。如果开头只有休止符或器乐前奏，需要先加入一段演唱或写好的人声旋律，才能引导这种续写流程。
+如果想从已保存的歌曲开始，先导出它的 ABC。在文件副本中保留文件头、两个声部的声明、开头的主歌和该主歌对应的完整小节，删除后面的段落，再导入。至少保留一段人声旋律来引导续写。
 
 ### 将录音翻唱为新风格
 
@@ -271,7 +275,7 @@ Cover 流程先用 SheetSage2 将录音转写为旋律，再根据这份乐谱�
 
 ![将来源录音转为乐谱，准备制作英文爵士翻唱](/images/manual/use-cases/yue2-studio-cover-score.png#bordered)
 
-如果应用提示缺少 SheetSage2 转录模型，请在 **Settings** > **Models** 中添加。本教程所用的预设套装已包含它。来源录音编曲较密或旋律不清楚时，应仔细检查转录结果。根据转录乐谱生成的翻唱可能与原录音有所不同。
+如果应用提示缺少 SheetSage2 转录模型，请在 **Settings** > **Models** 中添加。本教程使用的模型套装已包含它。来源录音编曲较密或旋律不清楚时，先检查并修正转录结果，再生成翻唱。
 
 ## 选择生成参数
 
@@ -294,7 +298,7 @@ Cover 流程先用 SheetSage2 将录音转写为旋律，再根据这份乐谱�
 
 第一个版本保持 **32** 步和 **Midpoint (reference)**。想更快试听一个想法时，可以尝试 **16** 步并比较结果。减少合成步数可能改变声音，具体影响取决于歌曲。
 
-另一种求解器 **AB2 (about twice as fast)** 在声音生成阶段使用较少的网络计算次数。可以在同一曲谱上尝试，并试听人声、起音和段落衔接的变化。谱曲、模型加载和其他阶段仍然需要时间，因此界面上的名称不代表整个请求的耗时都会减半。
+另一种求解器 **AB2 (about twice as fast)** 可以加快声音生成阶段。两种求解器的谱曲和模型加载时间相同。可以在同一曲谱上尝试 AB2，并试听人声、起音和段落衔接的变化。
 
 ![生成设置中的合成步数、求解器和歌曲数量](/images/manual/use-cases/yue2-studio-quality-settings.png#bordered)
 
@@ -307,7 +311,7 @@ Cover 流程先用 SheetSage2 将录音转写为旋律，再根据这份乐谱�
 | **Songs per request** | 不同的曲谱 | 每首歌都会单独谱曲，占用更多工作内存。 |
 | **Variations** | 同一首曲谱的不同演唱或演奏版本 | 使用最低 Q8 配额时从 `1` 开始。 |
 
-如果 **Songs per request** 不可用，表示本地引擎当前将歌曲数量限制为一首。修改 **Settings** > **Local engine** 中的引擎限制前，先完成当前任务。尝试更多并发任务前，先增加 GPU 配额。使用 5 GiB 的 Q8 基线时，保持一首歌曲、一个变体。
+本地引擎初始限制为一次生成一首歌曲。修改 **Settings** > **Local engine** 中的引擎限制前，先完成当前歌曲。一次生成多首歌曲或多个变体前，请增加 GPU 配额。
 
 ### 重新渲染已有演唱
 
@@ -315,7 +319,7 @@ Cover 流程先用 SheetSage2 将录音转写为旋律，再根据这份乐谱�
 2. 在对话框中调整步数、声音种子、变体数量或输出格式。
 3. 提交新的渲染任务，并与已保存的歌曲比较。
 
-重新渲染会复用已保存的演唱计划，跳过重新谱曲。需要改变音符、歌词或风格时，使用乐谱编辑流程。相同设置有助于比较，但不保证得到逐字节完全相同的音频文件。
+重新渲染会复用已保存的演唱计划。调整声音种子、合成步数、变体数量或输出格式，可以生成新的演唱或演奏。需要改变音符、歌词或风格时，请使用乐谱编辑流程。
 
 ![重渲染对话框中的步数、变体、声音种子和输出格式](/images/manual/use-cases/yue2-studio-rerender.png#bordered)
 
@@ -337,129 +341,22 @@ Cover 流程先用 SheetSage2 将录音转写为旋律，再根据这份乐谱�
 
 1. 选择 **Cover**，点击 **Choose a recording…**，选择 MIDI 文件。
 2. 在 **Load MIDI** 中，按需要选择 **Melody only** 或 **With chords**。
-3. 检查轨道表，并明确选择 **Voice** 和 **Instrument**。对于本例导出的文件，将 **Voice** 设为 **1. Vocal Melody**，**Instrument** 设为 **2. Ins Melody**。自动识别可能选中另一条旋律轨道。
+3. 选择 **Voice** 和 **Instrument** 轨道。对于本例导出的文件，将 **Voice** 设为 **1. Vocal Melody**，**Instrument** 设为 **2. Ins Melody**。
 4. 选择是否保留文件中的段落标记。接受结果前，检查时间网格、八度调整和转换提示。
 5. 等待转换完成，**Use as the score** 按钮可用后点击它，并试听导入的乐谱。MIDI 轨道中的和弦或速度变化，可能需要简化后才能写入歌曲乐谱。
 6. 填写歌词和风格，然后使用新标题并点击 **Create**，生成新的演唱或演奏。
 
 ![在 MIDI 导入对话框中明确指定人声和器乐轨道](/images/manual/use-cases/yue2-studio-import-midi.png#bordered)
 
-将 MIDI 转回 ABC 时，和弦名称可能会重新推断。在将导入结果视为原和声的副本前，请先检查这些名称。
+将 MIDI 转回 ABC 后，请检查推断出的和弦名称，并按需要在乐谱编辑器中进行调整。
 
-### 分享 PDF 前先检查谱面
+### 导出可打印乐谱
 
-乐谱旁的 **PDF** 按钮可导出适合打印的谱面。分享前请检查生成的页面。此预览版中发现部分降号和弦符号显示不正确，需要保留准确且可编辑的乐谱时，请使用 ABC 或 MIDI。
+点击乐谱旁的 **PDF**，导出适合打印的谱面。如果还要继续编辑音符和和弦符号，请导出 ABC 或 MIDI。
 
 ### 查找并比较已保存的版本
 
-使用曲库搜索，输入 `Morning Light` 等共同标题筛选版本。为不同版本添加清楚的标题后缀，比较音频前打开 **Song Details**，核对歌词和已保存的生成参数。歌曲旁的时长表示音频长度，相对时间表示它何时加入曲库，都不是生成耗时。
-
-## 通过 Lares 生成歌曲
-
-你可以通过 YuE2 Studio 的 MCP 服务，让 Lares 生成歌曲，再到 Studio 中试听或编辑乐谱。此流程需要 Olares 中的 YuE2 Studio 应用包为 0.0.5 或更新版本，并且提供 **YuE2 Studio MCP & API** 入口。
-
-在同一台 Olares 上安装 [Lares](lares.md)，并选择支持工具调用的对话模型。本例使用 Qwen3.8。启动对应的模型应用，等待它在 Lares 中可用。对话模型负责理解请求，YuE2 负责生成音乐。同时保持 YuE2 Studio 运行，安装好一套音乐模型，并等待显示 **Engine ready**。
-
-如果两个模型使用同一张 GPU，需要为它们留出足够显存，并且一次只提交一个音乐生成请求。时间分片可以共享 GPU 计算时间，但不会自动释放已加载模型占用的显存。
-
-### 连接 MCP 服务
-
-令牌认证默认关闭，入口仍遵循 Olares 的内部访问策略。所有能够访问此入口的客户端都可以调用工具。如需应用令牌认证，请按照[开启令牌认证](#开启令牌认证)操作。
-
-1. 在 Olares 中打开 **Settings** > **Applications** > **YuE2 Studio** > **Entrances**。
-2. 选择 **YuE2 Studio MCP & API**，复制其 **Endpoint** 地址。如果地址末尾没有 `/mcp`，请将其补上。此内部入口可供同一台 Olares 上的 Lares 访问。
-3. 在 Lares 中打开 **Settings** > **MCP**，点击 **Add server**，填写：
-
-    | 设置 | 值 |
-    |:---|:---|
-    | **Server name** | `yue2studio` |
-    | **Transport** | `Streamable HTTP` |
-    | **MCP URL** | 第 2 步获取的、以 `/mcp` 结尾的入口地址 |
-    | **Headers** | `{}` |
-
-4. 点击 **Save**。Lares 会连接服务并载入工具。
-
-### 开启令牌认证
-
-应用环境变量 `MCP_AUTH_ENABLED` 同时控制 MCP 和 HTTP API 的令牌认证，默认值为 `false`。
-
-1. 在 Olares **Settings** > **Applications** > **YuE2 Studio** 中找到 **Environment variables**，点击 **Manage environment variables**。
-2. 编辑 `MCP_AUTH_ENABLED`，设为 `true`，点击 **Confirm**，再点击 **Apply**。应用会重启以应用修改，请等待恢复可用。设置界面的操作说明请参阅[管理应用环境变量（英文）](../../manual/olares/settings/manage-app-env.md)。
-3. 打开 Files，找到 **Application** > **Data** > **yue2studio** > **config**。将 `mcp-token` 作为文本打开，复制完整的一行。如果无法预览文本，可以下载后用文本编辑器打开。
-4. 在 Lares **Settings** > **MCP** 中编辑 `yue2studio`，将 **Headers** 替换为下方的 JSON。把 `<your-token>` 替换为复制的完整一行，并在 `Bearer` 后保留一个空格。
-
-    ```json
-    {
-      "Authorization": "Bearer <your-token>"
-    }
-    ```
-
-5. 点击 **Save**，后续请求需要携带令牌。
-
-令牌由应用自动生成，正常升级后会保持不变。不要把它放进聊天提示词或分享的截图。如需再次关闭令牌认证，将 `MCP_AUTH_ENABLED` 设为 `false` 并应用修改，客户端即可将 **Headers** 留空（`{}`）。
-
-### 在对话中生成 Morning Light
-
-1. 在 Lares 中新建对话，选择 Qwen3.8 或另一个可用且支持工具调用的对话模型。
-2. 先让 Lares 检查 Studio：
-
-    ```text
-    Use the configured yue2studio MCP server to call studio_status. Report the actual result. Do not generate music or change settings.
-    ```
-
-    确认 Lares 调用了 `studio_status` 并返回 Studio 的当前状态。如果它只描述准备如何操作，请要求它实际使用已配置的 MCP 工具。
-
-3. 发送以下请求。你可以修改标题、风格或歌词，换成自己的歌曲构思。示例中的 30 秒、16 步和 AB2 求解器用于快速生成第一首歌。
-
-::: details 示例：通过 Lares 生成 Morning Light
-```text
-Use the configured yue2studio MCP server to generate one song.
-
-Title: Morning Light
-Style: English acoustic pop, warm female vocals, acoustic guitar, piano and soft drums, hopeful and calm, clean studio production, 100 BPM.
-
-Lyrics:
-[Verse 1]
-Morning light across the sea
-Brings a little hope to me
-Every road can lead us home
-We will never walk alone
-
-[Chorus]
-Let the music find its way
-Carry us into the day
-Raise your voice and hold on tight
-We are brighter than the night
-
-Call song_create with duration_seconds=30, steps=16, solver="ab2", lm_batch_size=1, synth_batch_size=1 and output_format="flac".
-
-Use studio_wait until the job finishes. Report the actual job ID and saved song ID. Only report success after completion.
-
-Do not use shell commands, download models, change settings or modify existing songs. If a tool fails, report its exact error and stop.
-```
-:::
-
-4. 等待 Lares 跟进任务直到完成。如果它请求运行生成工具的权限，请先审阅请求，再允许执行。提交后返回的任务 ID 表示歌曲已排队或正在生成，还需要等待完成并获得保存后的歌曲 ID。
-5. 打开 YuE2 Studio，在曲库中搜索 `Morning Light` 并试听新曲。打开 **Song Details** 查看歌词和已保存的设置，再点击 **Download Audio** 保存音频。
-6. 如需修改曲谱，点击 **Use this score**，按照[编辑乐谱并生成新版本](#编辑乐谱并生成新版本)继续操作。生成修改后的版本时，请使用新标题。
-
-调用失败时，先阅读错误信息再重试。开启令牌认证后，HTTP 401 表示缺少应用令牌或令牌不正确。如果 Lares 连普通聊天消息也无法回答，请先检查它选择的对话模型和连接，再重新提交音乐请求。生成失败时，打开 YuE2 Studio，检查音乐引擎状态和可用显存。
-
-### 使用其他客户端或 HTTP API
-
-其他兼容 MCP 的客户端可以使用同一个 Streamable HTTP 地址。同一入口也提供应用的 HTTP API。去掉 MCP 地址末尾的 `/mcp` 即可得到基础地址。当 `MCP_AUTH_ENABLED=true` 时，每次请求都要在 Authorization 请求头中携带 Bearer 令牌。
-
-| 任务 | HTTP 请求 |
-|:---|:---|
-| 提交生成任务 | `POST /v1/music/jobs` |
-| 查询任务状态和已保存的歌曲 | `GET /v1/music/jobs/{job_id}` |
-| 下载已保存歌曲的音频 | `GET /v1/library/media/{song_id}` |
-
-生成任务异步执行。请保留返回的任务 ID，等待任务完成后再下载音频。工具说明与自动化示例请参阅 [YuE2 Studio MCP 参考](https://github.com/timoncool/YuE2-Studio/blob/main/docs/mcp-skill.md)。
-
-## 关于其他 Studio 工具
-
-上面的核心流程使用音乐引擎及其附带的转录模型。界面中的其他工具，例如助手写作、LoRA 训练、分轨、VST 处理和全乐器音频转 MIDI，可能需要额外的服务商、模型或平台组件，未纳入此 Linux 预览版的已验证范围。本教程介绍的乐谱 MIDI 导出属于核心流程。
+使用曲库搜索，输入 `Morning Light` 等共同标题筛选版本。为不同版本添加清楚的标题后缀，比较音频前打开 **Song Details**，核对歌词和已保存的生成参数。
 
 :::info 模型使用条款
 YuE2 模型权重使用 CC BY-NC 4.0 许可。在项目中使用前，请查看 [YuE2 模型说明](https://huggingface.co/m-a-p/YuE2-3B)。
@@ -467,7 +364,8 @@ YuE2 模型权重使用 CC BY-NC 4.0 许可。在项目中使用前，请查看 
 
 ## 了解更多
 
-- [Lares](lares.md)：配置助手及其对话模型。
-
+- [通过 Lares 使用 YuE2 Studio 创作歌曲](yue2-studio-lares.md)：连接 MCP 服务，并在对话中生成音乐。
+- [使用令牌保护 YuE2 Studio MCP](yue2-studio-mcp-auth.md)：要求 Lares 和其他 MCP 客户端提供 Bearer 令牌。
+- [开始使用 Lares](lares.md)：准备助手和支持工具调用的对话模型。
 - [管理加速资源](../manual/olares/settings/gpu-resource.md)：为 Olares 应用分配或释放 GPU 资源。
 - [设置系统环境变量](../manual/manage-system-env.md)：管理共享的 Hugging Face 下载设置。
