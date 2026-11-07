@@ -333,6 +333,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   link: "/zh/use-cases/bifrost",
                 },
                 {
+                  text: "Colibri",
+                  link: "/zh/use-cases/colibri",
+                },
+                {
                   text: "LiteLLM",
                   link: "/zh/use-cases/litellm",
                 },
