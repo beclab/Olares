@@ -17,21 +17,29 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             {
               text: "Lares",
               link: "/zh/use-cases/lares",
+              collapsed: true,
+              items: [
+                {
+                  text: "开展联网研究",
+                  link: "/zh/use-cases/lares-web-research",
+                },
+                {
+                  text: "使用 Blender",
+                  link: "/zh/use-cases/blender-lares",
+                },
+                {
+                  text: "使用 FlowStudio",
+                  link: "/zh/use-cases/flowstudio-lares",
+                },
+                {
+                  text: "使用 YuE2 Studio",
+                  link: "/zh/use-cases/yue2-studio-lares",
+                },
+              ],
             },
             {
               text: "FlowStudio",
               link: "/zh/use-cases/flowstudio",
-              collapsed: false,
-              items: [
-                {
-                  text: "在 FlowStudio 中创作",
-                  link: "/zh/use-cases/flowstudio-create",
-                },
-                {
-                  text: "通过 Lares 使用",
-                  link: "/zh/use-cases/flowstudio-lares",
-                },
-              ],
             },
           ],
         },
@@ -321,6 +329,17 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                 {
                   text: "IndexTTS2",
                   link: "/zh/use-cases/indextts2",
+                },
+                {
+                  text: "YuE2 Studio",
+                  link: "/zh/use-cases/yue2-studio",
+                  collapsed: true,
+                  items: [
+                    {
+                      text: "启用 MCP 令牌认证",
+                      link: "/zh/use-cases/yue2-studio-mcp-auth",
+                    },
+                  ],
                 },
               ],
             },

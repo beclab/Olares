@@ -82,6 +82,10 @@ export const redirects = {
     '/use-cases/ace-step': '/use-cases/ace-step-1.5',
     '/zh/use-cases/ace-step': '/zh/use-cases/ace-step-1.5',
 
+    // Consolidated FlowStudio direct-creation guide into the main app page.
+    '/use-cases/flowstudio-create': '/use-cases/flowstudio',
+    '/zh/use-cases/flowstudio-create': '/zh/use-cases/flowstudio',
+
     // Refactor: openwebui-ollama → openwebui (merged: Ollama is now Option A in the unified quick start)
     '/use-cases/openwebui-ollama': '/use-cases/openwebui',
     '/zh/use-cases/openwebui-ollama': '/zh/use-cases/openwebui',
