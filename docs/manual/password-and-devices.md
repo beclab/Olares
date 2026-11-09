@@ -10,7 +10,7 @@ head:
 
 On the **My Olares** page in **Settings**, you can manage account security for your Olares. To access it, open **Settings** and click your avatar in the top-left corner.
 
-![My Olares](/images/manual/olares/my-olares-1.12.6.png#bordered)
+![My Olares](/images/manual/olares/my-olares-1.12.7.png#bordered)
 
 ## Change password
 

@@ -123,11 +123,7 @@ Olares One 激活后，系统用户名为 `olares`。系统密码用于通过 SS
 
 - **Settings**：
 
-  1. 打开 **Settings**，在 **My Olares** 页面选择 **My hardware**。
-  2. 选择 **Reset SSH login password**。
-  3. 输入符合强度要求的新密码，然后点击 **OK**。
-  4. 打开 LarePass，扫描屏幕上显示的二维码。
-  5. 在 LarePass 中点击 **Confirm**。新密码会保存到 Vault。
+  按照[重置 SSH 密码](/zh/one/hardware-settings#重置-ssh-密码)中的步骤，在节点详情页面设置新密码，并在 LarePass 中确认。新密码会保存到 Vault。
 
 #### 在 LarePass 中查找当前系统密码
 
