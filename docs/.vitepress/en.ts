@@ -355,6 +355,10 @@ const side = {
               link: "/manual/olares/files/share-files",
             },
             {
+              text: "Manage access to Common and External",
+              link: "/manual/olares/files/manage-common-external-access",
+            },
+            {
               text: "Sync files with a computer",
               link: "/manual/olares/files/sync-files",
             },
