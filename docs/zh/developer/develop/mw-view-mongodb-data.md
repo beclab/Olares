@@ -36,16 +36,16 @@ MongoDB 需要先在应用市场安装后才能使用。本文将介绍安装流
 
 你可以使用 Olares 提供的终端直接访问数据库容器。
 
-1. 在控制面板左侧导航栏底部，打开 **Olares 终端**。
+1. 使用具有 `sudo` 权限的账号[通过 SSH 连接到 Olares 主机](../../manual/access-olares-terminal.md)。
 2. 获取中间件容器名称：
 
     ```bash
-    kubectl get pods -n os-platform | grep tapr-middleware
+    sudo kubectl get pods -n os-platform | grep tapr-middleware
     ```
 3. 记录以 `tapr-middleware` 开头的 Pod 名称，并进入容器：
 
     ```bash
-    kubectl exec -it -n os-platform <tapr-middleware-pod> -- sh
+    sudo kubectl exec -it -n os-platform <tapr-middleware-pod> -- sh
     ```
 4. 使用 `mongosh` 连接 MongoDB：
 

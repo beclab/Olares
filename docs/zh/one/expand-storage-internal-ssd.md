@@ -43,7 +43,7 @@ Olares One 主板包含两个 PCIe SSD 插槽：
 
 ## 步骤 1：识别未挂载的硬盘
 
-1. 通过 SSH 或 Control Hub 连接到 Olares One 终端。
+1. [通过 SSH 连接到 Olares One](access-terminal-ssh.md)。
 
 2. 列出主机上的块设备：
 
