@@ -115,17 +115,18 @@ head:
 
 DGX Spark 采用统一内存架构，CPU 和 GPU 共享 128 GB 的 LPDDR5x 内存。与传统 GPU 拥有独立显存不同，DGX Spark 不区分系统内存和 GPU 显存。
 
-在 DGX Spark 上，Olares 默认使用**容量分片**模式进行 GPU 资源管理。当你安装 AI 应用时，Olares 会自动分配最低所需的内存，以确保应用能够正常启动和运行。
+在 DGX Spark 上，Olares 默认使用**容量切分**模式管理 GPU 资源。安装 AI 应用时，Olares 会自动分配启动应用所需的最低内存。
 
-如需调整某个应用的内存分配，可以手动修改：
+如果要调整已运行 AI 应用的内存配额，先移除其 GPU 资源分配，再在恢复应用时设置新配额。移除资源分配会停止应用。
 
-1. 从 Olares 打开**设置**，然后进入 **GPU** 页面。
-2. 在**分配显存**区域，找到目标应用。
+1. 前往**设置** > **AI 算力**，点击 DGX Spark GPU 资源卡片上的**管理**。
+2. 在**已分配的应用**中找到目标应用，点击**移除**并确认。应用将停止，已分配的 GPU 资源会释放。
+3. 前往**设置** > **应用**，找到已停止的应用，点击**恢复**。
+4. 在**选择 GPU**下选择 DGX Spark GPU。在**容量切分**模式下，于**当前应用配额**中输入所需的内存大小。配额不能超过可用容量。
 
-   ![显存切片](/images/zh/manual/get-started/install-spark-memory-slicing.png#bordered){width=70%}
+5. 点击**启动**。
 
-3. 点击显存值旁边的 <i class="material-symbols-outlined">edit_square</i>。
-4. 在**编辑显存分配**对话框中，输入所需的显存大小（GB），然后点击**确认**。
+如需了解资源分配和模式切换，参阅[管理 AI 算力资源](../olares/settings/gpu-resource.md)。
 
 <!--@include: ./reusables.md#protect-olares-id-->
 
