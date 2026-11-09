@@ -87,6 +87,10 @@ Once setup is complete, open your Olares desktop in a browser at its address, fo
 
 Follow the [AI onboarding guide](https://www.olares.com/docs/one/olares-onboarding) to set up Router, Lares, and a local model, then start your first conversation. Try asking Lares: "Check this device's configuration."
 
+## One-Click Deploy
+
+[![Deploy on RepoCloud](https://d16t0pc4846x52.cloudfront.net/deploylobe.svg)](https://repocloud.io/details/Olares/)
+
 ## Key use cases
 
 - **Use a personal AI agent.** Delegate research, file management, and routine automation to [Lares](https://www.olares.com/docs/use-cases/lares) through plain language, or use your preferred agent for coding and other tasks.
