@@ -94,7 +94,7 @@ Olares 可以展示以下加速器类型：
 1. 前往**设置** > **AI 算力**，点击资源卡片上的**管理**。
 2. 在**管理节点**页面找到目标加速器，打开模式下拉菜单，然后选择**分时共享**、**容量切分**或**独占分配**。
 
-   ![选择模式](/images/zh/manual/olares/settings-gpu-dropdown.png#bordered)
+   ![选择模式](/images/zh/manual/olares/settings-gpu-dropdown-1-12-8.png#bordered)
 
 ## 恢复应用并分配资源
 
@@ -135,7 +135,7 @@ Olares 可以展示以下加速器类型：
 1. 前往**设置** > **AI 算力**，点击资源卡片上的**管理**。
 2. 在**已分配的应用**中找到目标应用，然后点击**移除**。
 
-   ![移除应用](/images/zh/manual/olares/settings-gpu-remove-app.png#bordered)
+   ![移除应用](/images/zh/manual/olares/settings-gpu-remove-app-1-12-8.png#bordered)
 
 3. 在确认对话框中点击**移除**。
 
