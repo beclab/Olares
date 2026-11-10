@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/beclab/Olares/framework/app-service/pkg/appstate"
+	"github.com/beclab/Olares/framework/app-service/pkg/applifecycle/domain"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
@@ -42,13 +42,9 @@ import (
 //     and confirmed the app namespace is gone before transitioning into the
 //     state.
 //   - On top of that, before deleting we double-check the namespace really is
-//     IsNotFound. This protects against the rare "InstallFailed-cleanup-timeout"
-//     case (NS finalizer stuck past 5min): in that scenario the AM is still
-//     in InstallFailed and IsSafelyDeletable, but the namespace is technically
-//     still around. Deleting the AM there would orphan the NS from any
-//     state-machine retry, blocking future same-name installs until manual
-//     cleanup. We skip and requeue instead, letting InstallFailedApp.Exec
-//     keep retrying until the NS finalizer releases.
+//     IsNotFound. If some path ever lands a safely-deletable state while a
+//     namespace finalizer still holds the namespace, deleting the AM would
+//     orphan that namespace. We skip and requeue instead.
 type ApplicationManagerGCReconciler struct {
 	client.Client
 }
@@ -85,13 +81,13 @@ func (r *ApplicationManagerGCReconciler) SetupWithManager(mgr ctrl.Manager) erro
 			}),
 		predicate.TypedFuncs[*appv1alpha1.ApplicationManager]{
 			CreateFunc: func(e event.TypedCreateEvent[*appv1alpha1.ApplicationManager]) bool {
-				return appstate.IsSafelyDeletable(e.Object.Status.State)
+				return domain.DefaultTable.IsSafelyDeletable(e.Object.Status.State)
 			},
 			UpdateFunc: func(e event.TypedUpdateEvent[*appv1alpha1.ApplicationManager]) bool {
 				if e.ObjectOld.Status.State == e.ObjectNew.Status.State {
 					return false
 				}
-				return appstate.IsSafelyDeletable(e.ObjectNew.Status.State)
+				return domain.DefaultTable.IsSafelyDeletable(e.ObjectNew.Status.State)
 			},
 			DeleteFunc: func(e event.TypedDeleteEvent[*appv1alpha1.ApplicationManager]) bool {
 				return false
@@ -113,7 +109,7 @@ func (r *ApplicationManagerGCReconciler) Reconcile(ctx context.Context, req ctrl
 		return ctrl.Result{}, err
 	}
 
-	if !appstate.IsSafelyDeletable(am.Status.State) {
+	if !domain.DefaultTable.IsSafelyDeletable(am.Status.State) {
 		return ctrl.Result{}, nil
 	}
 
@@ -131,16 +127,14 @@ func (r *ApplicationManagerGCReconciler) Reconcile(ctx context.Context, req ctrl
 	}
 
 	// Double-check the namespace is gone before deleting the AM. The state
-	// machine guarantees this for the happy path, but the InstallFailed
-	// cleanup-timeout edge case can leave NS lingering while the AM is in
-	// InstallFailed and IsSafelyDeletable says "deletable". Deleting the AM
-	// while the NS is still around would orphan it from InstallFailedApp.Exec's
-	// retry loop — refuse and let Exec continue trying.
+	// machine confirms that before landing a safely-deletable state; this
+	// guards against any path that does not, since deleting the AM while
+	// the namespace survives would orphan that namespace.
 	if nsGone, err := isAppNamespaceGone(ctx, r.Client, &am); err != nil {
 		klog.Warningf("appmgr-gc: %s namespace check failed (will retry): %v", am.Name, err)
 		return ctrl.Result{RequeueAfter: time.Minute}, nil
 	} else if !nsGone {
-		klog.Infof("appmgr-gc: %s in %s eligible by age (%s) but namespace %q still present; deferring to InstallFailedApp.Exec",
+		klog.Infof("appmgr-gc: %s in %s eligible by age (%s) but namespace %q still present; deferring",
 			am.Name, am.Status.State, age, am.Spec.AppNamespace)
 		return ctrl.Result{RequeueAfter: time.Minute}, nil
 	}

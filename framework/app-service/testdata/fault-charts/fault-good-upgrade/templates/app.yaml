@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: faultgood
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: {{ .Values.workloads.faultgood.replicaCount }}
+  selector:
+    matchLabels:
+      app: fault-good
+  template:
+    metadata:
+      labels:
+        app: fault-good
+    spec:
+      containers:
+        - name: fault-good
+          image: docker.io/beclab/harveyff-adguardhome:v0.107.77
+          args: ["--web-addr", "0.0.0.0:80", "--no-check-update"]
+---
+apiVersion: example.com/v1
+kind: NoSuch
+metadata:
+  name: upgrade-boom
+  namespace: {{ .Release.Namespace }}
+spec:
+  reason: upgrade-boom

@@ -1,0 +1,68 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: faultdelhook-fail
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    "helm.sh/hook": pre-delete
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": hook-failed
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: fail
+          image: docker.io/library/redis:7.4
+          command: ["sh", "-c", "exit 1"]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: faultdelhook
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: {{ .Values.workloads.faultdelhook.replicaCount }}
+  selector:
+    matchLabels:
+      app: faultdelhook
+  template:
+    metadata:
+      labels:
+        app: faultdelhook
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/control-plane
+                operator: Exists
+      containers:
+        - name: faultdelhook
+          image: docker.io/library/redis:7.4
+          args: ["--bind", "0.0.0.0", "--port", "80", "--protected-mode", "no"]
+          ports:
+            - name: http
+              containerPort: 80
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: faultdelhook-svc
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    app: faultdelhook
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80

@@ -11,7 +11,6 @@ import (
 	"github.com/beclab/api/pkg/generated/informers/externalversions"
 	lister_v1alpha1 "github.com/beclab/api/pkg/generated/listers/app.bytetrade.io/v1alpha1"
 
-	// upgrade removed from direct usage in handlers
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace/v1"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	"github.com/beclab/Olares/framework/app-service/pkg/webhook"

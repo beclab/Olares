@@ -1,0 +1,6 @@
+apiVersion: v2
+name: stopk8scpu
+description: k8s CPU request window if cluster pressure passes
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

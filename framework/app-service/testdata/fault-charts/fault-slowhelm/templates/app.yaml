@@ -1,0 +1,75 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: faultslowhelm-hold
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/control-plane
+                operator: Exists
+      containers:
+        - name: hold
+          image: docker.io/library/redis:7.4
+          command: ["sleep", "2100"]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: faultslowhelm
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: {{ .Values.workloads.faultslowhelm.replicaCount }}
+  selector:
+    matchLabels:
+      app: faultslowhelm
+  template:
+    metadata:
+      labels:
+        app: faultslowhelm
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/control-plane
+                operator: Exists
+      containers:
+        - name: faultslowhelm
+          image: docker.io/library/redis:7.4
+          args: ["--bind", "0.0.0.0", "--port", "80", "--protected-mode", "no"]
+          ports:
+            - name: http
+              containerPort: 80
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: faultslowhelm-svc
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    app: faultslowhelm
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80

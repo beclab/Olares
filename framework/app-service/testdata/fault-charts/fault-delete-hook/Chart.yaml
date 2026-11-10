@@ -1,0 +1,6 @@
+apiVersion: v2
+name: faultdelhook
+description: pre-delete hook exits 1 so helm uninstall fails
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

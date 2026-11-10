@@ -7,14 +7,11 @@ import (
 	"fmt"
 	"net/http"
 	"slices"
-	"strconv"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/appinstaller"
-	"github.com/beclab/Olares/framework/app-service/pkg/appstate"
-	"github.com/beclab/Olares/framework/app-service/pkg/compute"
-	"github.com/beclab/Olares/framework/app-service/pkg/compute/validation"
+	"github.com/beclab/Olares/framework/app-service/pkg/applifecycle/domain"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
@@ -27,7 +24,6 @@ import (
 	"github.com/beclab/api/pkg/generated/clientset/versioned"
 
 	"github.com/emicklei/go-restful/v3"
-	"helm.sh/helm/v3/pkg/time"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -59,6 +55,18 @@ type installHelperIntf interface {
 	applyAppEnv(ctx context.Context) error
 	resolveAutoResources(ctx context.Context) error
 	applyApplicationManager(marketSource string) (opID string, err error)
+	// installV2Target derives the (deterministic AM object name,
+	// version-specific extra labels) pair the v2 install translator
+	// uses to Create-or-Patch the ApplicationManager. It replaces the
+	// name+labels derivation half of applyApplicationManager without
+	// touching the shared applyAppMgr body — the v2 path does its own
+	// Create-or-Patch via ctrlClient so the Runner (not this handler)
+	// owns Status.
+	//
+	// V1/V2 return (FmtAppMgrName(app, owner, ns), nil).
+	// V3 returns (FmtAppMgrName(app, owner, ns), {api-version=v3,
+	// shared=<bool>}).
+	installV2Target() (name string, extraLabels map[string]string, err error)
 	// checkAppNameConflict enforces cluster-wide exclusivity between shared
 	// and per-user installs of the same Spec.AppName.
 	checkAppNameConflict(ctx context.Context, newShared bool) error
@@ -101,319 +109,6 @@ type installHandlerHelperV2 struct {
 // v1 apps stay on installHandlerHelper.
 type installHandlerHelperV3 struct {
 	installHandlerHelper
-}
-
-func (h *Handler) install(req *restful.Request, resp *restful.Response) {
-	app := req.PathParameter(ParamAppName)
-	owner := req.Attribute(constants.UserContextAttribute).(string)
-	var err error
-	token, err := h.GetUserServiceAccountToken(req.Request.Context(), owner)
-	if err != nil {
-		klog.Error("Failed to get user service account token: ", err)
-		api.HandleError(resp, req, err)
-		return
-	}
-
-	marketSource := req.HeaderParameter(constants.MarketSource)
-	klog.Infof("install: user: %v, source: %v", owner, marketSource)
-
-	insReq := &api.InstallRequest{}
-	err = req.ReadEntity(insReq)
-	if err != nil {
-		api.HandleBadRequest(resp, req, err)
-		return
-	}
-	klog.Infof("insReq: %#v", insReq)
-	if insReq.Source != api.Market && insReq.Source != api.Custom && insReq.Source != api.DevBox {
-		api.HandleBadRequest(resp, req, fmt.Errorf("unsupported chart source: %s", insReq.Source))
-		return
-	}
-	rawAppName := app
-	if insReq.RawAppName != "" {
-		rawAppName = insReq.RawAppName
-	}
-	klog.Infof("rawAppName: %s", rawAppName)
-	chartVersion := ""
-	chartOwner := ""
-	if insReq.RawAppName != "" && !insReq.TemplateClone {
-		chartVersion, chartOwner, err = h.getOriginChartVersion(rawAppName, owner)
-		if err != nil {
-			api.HandleBadRequest(resp, req, err)
-			return
-		}
-	}
-
-	// Gate concurrent same-user / same-app-name installs before any chart
-	// download. GetAppConfigVersion → GetIndexAndDownloadChart removes
-	// ./charts/{rawAppName} and unpacks into that directory, so a second
-	// in-flight install of the same name would clobber the first request's
-	// chart. This must stay above GetAppConfigVersion.
-	err = checkSameAppInstallAllowed(req.Request.Context(), app, owner)
-	if err != nil {
-		api.HandleBadRequest(resp, req, err)
-		return
-	}
-
-	// For uploaded (non-market) apps record the uploading user as the chart
-	// owner so the chart source path survives even when the app owner is
-	// normalized to the cluster owner (shared apps). Market apps keep
-	// chartOwner empty and fall back to the installing user downstream.
-	if chartOwner == "" && insReq.Source != api.Market {
-		chartOwner = owner
-	}
-
-	apiVersion, err := apputils.GetAppConfigVersion(req.Request.Context(), &apputils.ConfigOptions{
-		App:          app,
-		RawAppName:   rawAppName,
-		Owner:        owner,
-		RepoURL:      insReq.RepoURL,
-		MarketSource: marketSource,
-		Version:      chartVersion,
-		SelectedGpu:  insReq.SelectedGpuType,
-		ChartOwner:   chartOwner,
-	})
-	klog.Infof("chartVersion: %s, originOwner: %s", chartVersion, chartOwner)
-
-	if err != nil {
-		klog.Errorf("Failed to get api version err=%v", err)
-		api.HandleBadRequest(resp, req, err)
-		return
-	}
-	klog.Infof("apiVersion: %s", apiVersion)
-
-	client, err := utils.GetClient()
-	if err != nil {
-		klog.Errorf("Failed to get client err=%v", err)
-		api.HandleError(resp, req, err)
-		return
-	}
-
-	var helper installHelperIntf
-	switch apiVersion {
-	case appcfg.V1:
-		klog.Info("Using install handler helper for V1")
-		h := &installHandlerHelper{
-			h:          h,
-			req:        req,
-			resp:       resp,
-			app:        app,
-			rawAppName: rawAppName,
-			owner:      owner,
-			chartOwner: chartOwner,
-			token:      token,
-			insReq:     insReq,
-			client:     client,
-		}
-
-		h.validateClusterScope = h._validateClusterScope
-
-		helper = h
-	case appcfg.V2:
-		klog.Info("Using install handler helper for V2")
-		h := &installHandlerHelperV2{
-			installHandlerHelper: installHandlerHelper{
-				h:          h,
-				req:        req,
-				resp:       resp,
-				app:        app,
-				rawAppName: rawAppName,
-				owner:      owner,
-				chartOwner: chartOwner,
-				token:      token,
-				insReq:     insReq,
-				client:     client,
-			},
-		}
-
-		h.validateClusterScope = h._validateClusterScope
-		helper = h
-	case appcfg.V3:
-		h := &installHandlerHelperV3{
-			installHandlerHelper: installHandlerHelper{
-				h:          h,
-				req:        req,
-				resp:       resp,
-				app:        app,
-				rawAppName: rawAppName,
-				owner:      owner,
-				chartOwner: chartOwner,
-				token:      token,
-				insReq:     insReq,
-				client:     client,
-			}}
-
-		// v3 reuses the v1 cluster-scope validation; the V3 helper's own
-		// overrides decide which methods diverge from the v1 base based
-		// on the shared flag.
-		h.validateClusterScope = h._validateClusterScope
-		helper = h
-	default:
-		klog.Errorf("Unsupported app config api version: %s", apiVersion)
-		api.HandleBadRequest(resp, req, fmt.Errorf("unsupported app config api version: %s", apiVersion))
-		return
-	}
-
-	adminUsers, isAdmin, err := helper.getAdminUsers()
-	if err != nil {
-		klog.Errorf("Failed to get admin user err=%v", err)
-		return
-	}
-
-	// V2: get current user role and check if the app is installed by admin
-	appInstalled, installedApps, err := helper.getInstalledApps()
-	if err != nil {
-		klog.Errorf("Failed to get installed app err=%v", err)
-		return
-	}
-
-	appCfg, err := helper.getAppConfig(adminUsers, marketSource, isAdmin, appInstalled, installedApps, chartVersion, insReq.SelectedGpuType, chartOwner)
-	if err != nil {
-		klog.Errorf("Failed to get app config err=%v", err)
-		return
-	}
-
-	if appCfg.APIVersion == appcfg.V2 {
-		err = errors.New("app with apiVersion v2 is incompatible and cannot be install")
-		api.HandleForbidden(resp, req, err)
-		return
-	}
-
-	if !isAdmin && appCfg.Shared {
-		err = errors.New("only admin users can install shared apps")
-		api.HandleForbidden(resp, req, err)
-		return
-	}
-
-	if err = helper.checkAppNameConflict(req.Request.Context(), appCfg.Shared); err != nil {
-		klog.Errorf("Failed to check app name conflict err=%v", err)
-		api.HandleBadRequest(resp, req, err)
-		return
-	}
-
-	err = helper.lintChart()
-	if err != nil {
-		klog.Errorf("Failed to lint chart err=%v", err)
-		return
-	}
-
-	if !appCfg.AllowMultipleInstall && insReq.RawAppName != "" ||
-		(appCfg.AllowMultipleInstall && apiVersion == appcfg.V2) {
-		klog.Errorf("app %s can not be clone", app)
-		api.HandleBadRequest(resp, req, fmt.Errorf("app %s can not be clone", app))
-		return
-	}
-
-	// When the caller didn't explicitly pick a compute mode, try to derive
-	// one from the cluster + manifest. An empty SelectedGpuType is treated
-	// as "no selection" (NOT as "cpu") — callers who genuinely want cpu
-	// must pass "cpu" explicitly. See compute.AutoSelectMode for the rules.
-	//
-	// If the caller did pass something explicitly we leave it alone here;
-	// the subsequent compute.AppInstallable check is what surfaces the
-	// "you picked a mode the cluster doesn't have" error.
-	if insReq.SelectedGpuType == "" {
-		var chosen string
-		chosen, err = compute.AutoSelectMode(req.Request.Context(), h.ctrlClient, appCfg)
-		// More than one declared mode is runnable on this cluster — let the
-		// caller pick by surfacing the full per-mode install plan with a
-		// dedicated code, instead of failing the install outright.
-		if errors.Is(err, compute.ErrAmbiguousComputeMode) {
-			plan, planErr := compute.BuildInstallComputePlan(req.Request.Context(), h.ctrlClient, appCfg)
-			if planErr != nil {
-				api.HandleError(resp, req, planErr)
-				return
-			}
-			api.HandleFailedCheck(resp, api.CheckTypeComputeModeSelect, plan)
-			return
-		}
-		if err != nil {
-			klog.Errorf("Failed to auto-select compute mode for app %s: %v", app, err)
-			api.HandleBadRequest(resp, req, err)
-			return
-		}
-		// Reload appCfg with the chosen mode so its Requirement reflects
-		// the GPU-mode resource needs we'll actually schedule against.
-		// Just patching SelectedGpuType in place isn't enough: for legacy
-		// apps the first GetAppConfig call (with empty selectedGpu) ran
-		// ResolveRequirement under cpu mode and dropped the GPU values
-		// from appCfg.Requirement, so we need to re-parse from the
-		// manifest with the chosen mode to recover them.
-		if chosen != appCfg.SelectedGpuType {
-			appCfg, err = helper.getAppConfig(adminUsers, marketSource, isAdmin, appInstalled, installedApps, chartVersion, chosen, chartOwner)
-			if err != nil {
-				klog.Errorf("Failed to reload appConfig with auto-selected gpu type %s: %v", chosen, err)
-				api.HandleError(resp, req, err)
-				return
-			}
-		}
-	}
-
-	decision, err := validation.Run(req.Request.Context(), validation.Input{
-		Client:    h.ctrlClient,
-		AppConfig: appCfg,
-		Op:        v1alpha1.InstallOp,
-		Token:     token,
-	}, validation.InstallabilityValidators()...)
-	if err != nil {
-		api.HandleError(resp, req, err)
-		return
-	}
-	if !decision.OK {
-		resp.WriteHeaderAndEntity(http.StatusBadRequest, api.RequirementResp{
-			Response: api.Response{Code: 400},
-			Resource: decision.Resource.String(),
-			Message:  decision.Message,
-			Reason:   decision.Reason.String(),
-		})
-		return
-	}
-
-	err = helper.setAppEnv(insReq.Envs)
-	if err != nil {
-		klog.Errorf("Failed to set app env err=%v", err)
-		return
-	}
-
-	err = helper.validate(isAdmin, installedApps)
-	if err != nil {
-		klog.Errorf("Failed to validate app install request err=%v", err)
-		return
-	}
-	if insReq.RawAppName != "" && insReq.Title != "" {
-		helper.setAppConfig(insReq, app)
-	}
-
-	err = helper.applyAppEnv(req.Request.Context())
-	if err != nil {
-		klog.Errorf("Failed to apply app env err=%v", err)
-		return
-	}
-
-	// For template apps that declare auto-compute ("-1") resource fields, the
-	// concrete demand is only known once the chosen mode + just-applied appenv
-	// are rendered into the chart. Resolve it now — before the
-	// ApplicationManager is created — so the persisted application config
-	// already carries concrete resource requirements and the entire downstream
-	// pipeline (state machine, compute allocation, HAMI binding, resume) runs
-	// the normal flow against real values.
-	err = helper.resolveAutoResources(req.Request.Context())
-	if err != nil {
-		klog.Errorf("Failed to resolve auto compute resources err=%v", err)
-		api.HandleError(resp, req, err)
-		return
-	}
-
-	// create ApplicationManager
-	opID, err := helper.applyApplicationManager(marketSource)
-	if err != nil {
-		klog.Errorf("Failed to apply application manager err=%v", err)
-		return
-	}
-
-	resp.WriteEntity(api.InstallationResponse{
-		Response: api.Response{Code: 200},
-		Data:     api.InstallationResponseData{UID: app, OpID: opID},
-	})
 }
 
 func (h *Handler) getOriginChartVersion(rawAppName, owner string) (string, string, error) {
@@ -699,6 +394,17 @@ func (h *installHandlerHelper) applyApplicationManager(marketSource string) (opI
 	return h.applyAppMgr(name, nil, marketSource)
 }
 
+// installV2Target — V1/V2 base: deterministic per-user AM name, no
+// version-specific labels. V3 overrides this to stamp the api-version
+// and shared markers.
+func (h *installHandlerHelper) installV2Target() (string, map[string]string, error) {
+	name, err := apputils.FmtAppMgrName(h.app, h.owner, h.appConfig.Namespace)
+	if err != nil {
+		return "", nil, err
+	}
+	return name, nil, nil
+}
+
 // checkAppNameConflict enforces cluster-wide exclusivity between shared and
 // per-user installs of the same app name:
 //   - if a shared AM with the same Spec.AppName exists (any owner) → no other
@@ -708,7 +414,7 @@ func (h *installHandlerHelper) applyApplicationManager(marketSource string) (opI
 //     install the shared variant before that per-user AM is removed.
 //
 // Same-owner same-type collisions are NOT handled here: their AM names are
-// deterministically identical, so applyAppMgr's Get(name) + IsOperationAllowed
+// deterministically identical, so applyAppMgr's Get(name) + AllowsOp
 // path already covers them (patch on reinstallable states, reject otherwise).
 // Per-user same-name across different owners is allowed by design.
 func (h *installHandlerHelper) checkAppNameConflict(ctx context.Context, newShared bool) error {
@@ -728,7 +434,7 @@ func (h *installHandlerHelper) checkAppNameConflict(ctx context.Context, newShar
 		if am.Spec.AppName != h.app {
 			continue
 		}
-		if appstate.IsTerminalReinstallable(am.Status.State) {
+		if domain.DefaultTable.IsReinstallable(am.Status.State) {
 			continue
 		}
 		existingShared := am.Labels[constants.AppSharedLabel] == constants.AppSharedTrue
@@ -841,6 +547,7 @@ func (h *installHandlerHelper) applyAppMgr(name string, extraLabels map[string]s
 		},
 	}
 	appMgr.Labels = labels
+	appMgr.Annotations, opID = stampDurableOperationRequest(appMgr.Annotations)
 
 	a, err := h.client.AppV1alpha1().ApplicationManagers().Get(h.req.Request.Context(), name, metav1.GetOptions{})
 	if err != nil {
@@ -854,19 +561,23 @@ func (h *installHandlerHelper) applyAppMgr(name string, extraLabels map[string]s
 			return
 		}
 	} else {
-		if !appstate.IsOperationAllowed(a.Status.State, v1alpha1.InstallOp) {
-			err = appstate.ExplainOperationNotAllowed(a.Status.State, v1alpha1.InstallOp)
+		if blockIfRequestPending(h.resp, h.req, a, v1alpha1.InstallOp) {
+			return
+		}
+		if !domain.DefaultTable.AllowsOp(a.Status.State, v1alpha1.InstallOp) {
+			err = explainOperationNotAllowed(a.Status.State, v1alpha1.InstallOp)
 			api.HandleBadRequest(h.resp, h.req, err)
 			return
 		}
 		metadataPatch := map[string]interface{}{
 			"annotations": map[string]interface{}{
-				api.AppTokenKey:                 h.token,
-				api.AppRepoURLKey:               h.insReq.RepoURL,
-				api.AppVersionKey:               h.appConfig.Version,
-				api.AppMarketSourceKey:          marketSource,
-				api.AppInstallSourceKey:         "app-service",
-				constants.ApplicationTitleLabel: h.appConfig.Title,
+				api.AppTokenKey:                     h.token,
+				api.AppRepoURLKey:                   h.insReq.RepoURL,
+				api.AppVersionKey:                   h.appConfig.Version,
+				api.AppMarketSourceKey:              marketSource,
+				api.AppInstallSourceKey:             "app-service",
+				constants.ApplicationTitleLabel:     h.appConfig.Title,
+				domain.AnnotationOperationRequestID: opID,
 			},
 		}
 		labelsPatch := make(map[string]interface{}, len(labels))
@@ -898,26 +609,6 @@ func (h *installHandlerHelper) applyAppMgr(name string, extraLabels map[string]s
 
 	}
 
-	opID = strconv.FormatInt(time.Now().Unix(), 10)
-
-	now := metav1.Now()
-	status := v1alpha1.ApplicationManagerStatus{
-		OpType:     v1alpha1.InstallOp,
-		State:      v1alpha1.Pending,
-		OpID:       opID,
-		Reason:     v1alpha1.Pending.String(),
-		Message:    "waiting for install",
-		Progress:   "0.00",
-		StatusTime: &now,
-		UpdateTime: &now,
-		OpTime:     &now,
-	}
-
-	_, err = apputils.UpdateAppMgrStatus(name, status)
-	if err != nil {
-		api.HandleError(h.resp, h.req, err)
-		return
-	}
 	return
 }
 
@@ -1172,7 +863,24 @@ func (h *installHandlerHelperV3) getAppConfig(adminUsers []string, marketSource 
 // schema label — they are NOT shared and must not trigger any
 // shared-app behavior downstream.
 func (h *installHandlerHelperV3) applyApplicationManager(marketSource string) (opID string, err error) {
-	name, _ := apputils.FmtAppMgrName(h.app, h.owner, h.appConfig.Namespace)
+	name, labels, err := h.installV2Target()
+	if err != nil {
+		return "", err
+	}
+	return h.applyAppMgr(name, labels, marketSource)
+}
+
+// installV2Target — V3 override. Stamps the api-version=v3 schema
+// label on every V3 install and the shared=<bool> marker so listers /
+// proxy / NetworkPolicy / NATS fan-out can identify shared apps.
+// Deliberately mirrors the label set the legacy
+// applyApplicationManager stamped, so the two coexisting flows
+// produce byte-identical AM metadata.
+func (h *installHandlerHelperV3) installV2Target() (string, map[string]string, error) {
+	name, err := apputils.FmtAppMgrName(h.app, h.owner, h.appConfig.Namespace)
+	if err != nil {
+		return "", nil, err
+	}
 	labels := map[string]string{
 		constants.AppApiVersionLabel: constants.AppVersionV3,
 		constants.AppSharedLabel: func() string {
@@ -1182,7 +890,7 @@ func (h *installHandlerHelperV3) applyApplicationManager(marketSource string) (o
 			return "false"
 		}(),
 	}
-	return h.applyAppMgr(name, labels, marketSource)
+	return name, labels, nil
 }
 
 func (h *Handler) isDeployAllowed(req *restful.Request, resp *restful.Response) {
@@ -1214,19 +922,18 @@ func (h *Handler) isDeployAllowed(req *restful.Request, resp *restful.Response) 
 		return
 	}
 	if am.Status.State == v1alpha1.Uninstalled {
+		_, pending := domain.UnconsumedOperation(&am)
 		resp.WriteEntity(api.CanDeployResponse{
 			Response: api.Response{Code: 200},
 			Data: api.CanDeployResponseData{
-				CanOp: true,
+				CanOp: !pending,
 			},
 		})
 		return
 	}
 
-	canOp := false
-	if appstate.IsOperationAllowed(am.Status.State, v1alpha1.UninstallOp) {
-		canOp = true
-	}
+	_, pending := domain.UnconsumedOperation(&am)
+	canOp := !pending && domain.DefaultTable.AllowsOp(am.Status.State, v1alpha1.UninstallOp)
 	resp.WriteEntity(api.CanDeployResponse{
 		Response: api.Response{Code: 200},
 		Data: api.CanDeployResponseData{
@@ -1266,8 +973,11 @@ func checkSameAppInstallAllowed(ctx context.Context, app, owner string) error {
 		if am.Spec.AppOwner != owner && !isShared {
 			continue
 		}
-		if !appstate.IsOperationAllowed(am.Status.State, v1alpha1.InstallOp) {
-			err = appstate.ExplainOperationNotAllowed(am.Status.State, v1alpha1.InstallOp)
+		if pending, ok := domain.UnconsumedOperation(&am); ok {
+			return explainRequestPending(pending, v1alpha1.InstallOp)
+		}
+		if !domain.DefaultTable.AllowsOp(am.Status.State, v1alpha1.InstallOp) {
+			err = explainOperationNotAllowed(am.Status.State, v1alpha1.InstallOp)
 			return err
 		}
 	}

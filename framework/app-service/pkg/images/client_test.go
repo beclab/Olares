@@ -81,6 +81,19 @@ func TestAggregateDownloadProgress_MissingTotalUsesImageSizeEstimate(t *testing.
 	}
 }
 
+func TestDownloadPercent_MatchesAggregate(t *testing.T) {
+	im := imWith(
+		[]string{"node1"},
+		[]string{"img-a"},
+		map[string]map[string]map[string]string{
+			"node1": {"img-a": {"offset": "50", "total": "100"}},
+		},
+	)
+	if got, want := DownloadPercent(im, nil), aggregateDownloadProgress(im, nil); got != want {
+		t.Fatalf("DownloadPercent = %v, aggregateDownloadProgress = %v", got, want)
+	}
+}
+
 func TestAggregateDownloadProgress_NoNodesReturnsZero(t *testing.T) {
 	im := imWith(nil, []string{"img-a"}, map[string]map[string]map[string]string{})
 	if got := aggregateDownloadProgress(im, nil); got != 0 {

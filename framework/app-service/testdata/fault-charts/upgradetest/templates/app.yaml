@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: upgradetest
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: {{ .Values.workloads.upgradetest.replicaCount }}
+  selector:
+    matchLabels:
+      app: upgradetest
+  template:
+    metadata:
+      labels:
+        app: upgradetest
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/control-plane
+                operator: Exists
+      containers:
+        - name: upgradetest
+          image: docker.io/beclab/harveyff-adguardhome:v0.107.77
+          args: ["--web-addr", "0.0.0.0:80", "--no-check-update"]
+          ports:
+            - name: http
+              containerPort: 80
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: upgradetest-svc
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    app: upgradetest
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
