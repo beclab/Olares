@@ -11,11 +11,9 @@ description: 通过 LarePass 在移动设备上打开和管理 Olares 应用，�
 
 在移动设备上访问应用前，请确认满足以下条件。
 
+- LarePass 已升级至最新版本。**Apps** 标签页仅在移动端提供。
 - Olares 已升级至 1.12.8 或更高版本。
-- LarePass 移动端已升级至最新版本，且包含 **Apps** 标签页。
-- 已在 LarePass 中登录 Olares 账户，且移动设备能够连接到 Olares。远程访问方式参见 [LarePass VPN](private-network.md)。
-
-<!-- 发布前检查：确认支持此功能的 LarePass 移动端最低版本。 -->
+- 手机和 Olares 在同一局域网内，或已开启 [LarePass VPN](private-network.md) 进行远程访问。
 
 ## 移动端支持
 

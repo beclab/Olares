@@ -11,11 +11,9 @@ Use the **Apps** tab in LarePass to open, install, and manage Olares apps from y
 
 Check the following requirements before accessing apps from your mobile device.
 
+- You have upgraded LarePass to the latest version. The **Apps** tab is available only in the mobile app.
 - Your Olares runs version 1.12.8 or later.
-- Your LarePass mobile app is upgraded to the latest version and includes the **Apps** tab.
-- Your Olares account is signed in to LarePass, and your mobile device can connect to Olares. For remote access, see [LarePass VPN](private-network.md).
-
-<!-- Release check: Confirm the minimum LarePass mobile version before publishing. -->
+- Your phone and Olares are on the same local network, or you have enabled [LarePass VPN](private-network.md) for remote access.
 
 ## Mobile support
 
