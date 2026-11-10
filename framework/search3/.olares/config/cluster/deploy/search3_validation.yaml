@@ -145,7 +145,7 @@ spec:
       targetPort: 8443
 
 ---
-# ValidatingWebhookConfiguration for SpecializedMonitorSetting and SharedMonitorSetting
+# ValidatingWebhookConfiguration for Search3 setting resources
 # Note: RBAC permissions (ServiceAccount, ClusterRole, ClusterRoleBinding) are defined in monitor_setting_rbac.yaml
 # Note: Kubernetes requires HTTPS for admission webhooks.
 # For local minikube development, you have two options:
@@ -182,6 +182,7 @@ webhooks:
         resources:
           - specializedmonitorsettings
           - sharedmonitorsettings
+          - ragglobalsettings
     admissionReviewVersions:
       - "v1"
       - "v1beta1"

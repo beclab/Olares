@@ -73,8 +73,36 @@ func (r *FileserverReconciler) SetupWithManager(ctx context.Context) error {
 		return fmt.Errorf("add fileserver pod event handler: %w", err)
 	}
 
-	klog.Info("fileserver-reconciler: event handler registered")
+	userInformer, err := r.cache.GetInformer(ctx, &iamv1alpha2.User{})
+	if err != nil {
+		return fmt.Errorf("get user informer: %w", err)
+	}
+	if _, err = userInformer.AddEventHandler(toolscache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			if isCreatedUser(obj) {
+				r.notifyChanged()
+			}
+		},
+		UpdateFunc: func(_, newObj interface{}) {
+			if isCreatedUser(newObj) {
+				r.notifyChanged()
+			}
+		},
+		DeleteFunc: func(_ interface{}) { r.notifyChanged() },
+	}); err != nil {
+		return fmt.Errorf("add user event handler: %w", err)
+	}
+
+	klog.Info("fileserver-reconciler: event handlers registered")
 	return nil
+}
+
+func isCreatedUser(obj interface{}) bool {
+	user, ok := obj.(*iamv1alpha2.User)
+	if !ok {
+		return false
+	}
+	return user.Status.State == "Created"
 }
 
 func (r *FileserverReconciler) Start(ctx context.Context) error {
@@ -166,6 +194,9 @@ func (r *FileserverReconciler) reconcile(ctx context.Context) error {
 	}
 
 	for _, user := range userList.Items {
+		if user.Status.State != "Created" {
+			continue
+		}
 		serviceNamespace := fmt.Sprintf("user-system-%s", user.Name)
 		var serviceList []string
 

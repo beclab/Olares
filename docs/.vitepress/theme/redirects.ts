@@ -1,4 +1,10 @@
 export const redirects = {
+    // Retired Control Hub host terminal pages.
+    '/manual/olares/controlhub/terminal': '/manual/access-olares-terminal',
+    '/zh/manual/olares/controlhub/terminal': '/zh/manual/access-olares-terminal',
+    '/one/access-terminal-control-hub': '/one/access-terminal-ssh',
+    '/zh/one/access-terminal-control-hub': '/zh/one/access-terminal-ssh',
+
     // Move the Hindsight app tutorial to Use cases.
     '/manual/tutorial/hindsight': '/use-cases/hindsight',
     '/zh/manual/tutorial/hindsight': '/zh/use-cases/hindsight',
@@ -81,6 +87,10 @@ export const redirects = {
     // Rename: ace-step → ace-step-1.5 (permanent: old name is retired)
     '/use-cases/ace-step': '/use-cases/ace-step-1.5',
     '/zh/use-cases/ace-step': '/zh/use-cases/ace-step-1.5',
+
+    // Consolidated FlowStudio direct-creation guide into the main app page.
+    '/use-cases/flowstudio-create': '/use-cases/flowstudio',
+    '/zh/use-cases/flowstudio-create': '/zh/use-cases/flowstudio',
 
     // Refactor: openwebui-ollama → openwebui (merged: Ollama is now Option A in the unified quick start)
     '/use-cases/openwebui-ollama': '/use-cases/openwebui',
@@ -251,6 +261,7 @@ export const redirects = {
     '/one/steam-stream': '/use-cases/steam-stream',
     '/one/steam-direct-play': '/use-cases/steam-direct-play',
     '/one/wise-download': '/manual/olares/wise/',
+    '/manual/olares/wise/recommend': '/manual/olares/wise/',
     '/one/open-webui': '/use-cases/openwebui',
     '/one/comfyui': '/use-cases/comfyui',
     '/one/deerflow': '/use-cases/deerflow2',
@@ -269,6 +280,7 @@ export const redirects = {
     '/zh/one/steam-stream': '/zh/use-cases/steam-stream',
     '/zh/one/steam-direct-play': '/zh/use-cases/steam-direct-play',
     '/zh/one/wise-download': '/zh/manual/olares/wise/',
+    '/zh/manual/olares/wise/recommend': '/zh/manual/olares/wise/',
     '/zh/one/open-webui': '/zh/use-cases/openwebui',
     '/zh/one/comfyui': '/zh/use-cases/comfyui',
     '/zh/one/deerflow': '/zh/use-cases/deerflow2',

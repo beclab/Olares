@@ -2,19 +2,27 @@
 connectionVersion: "1.12.7"
 connectionLatestPath: /zh/use-cases/hermes
 outline: [2,3]
-description: 在 Olares 上安装 Hermes Agent，接入本地模型和 Discord，使用 Olares 技能，并通过 Gateway API 与其他应用连接。
+description: 在 Olares 上将 Hermes Agent 连接到本地模型，在浏览器工作区中聊天、委派任务，并使用 Olares 技能管理文件和应用程序。
 head:
   - - meta
     - name: keywords
-      content: Olares, Hermes, Hermes Agent, 自主 AI, 自我进化 AI, Discord 机器人, 自托管
-app_version: "1.3.49"
-doc_version: "3.2"
-doc_updated: "2026-10-21"
+      content: Olares, Hermes, Hermes Agent, Webapp, 委派, 本地模型, Discord 机器人, 自托管
+app_version: "1.3.51"
+doc_version: "3.3"
+doc_updated: "2026-11-05"
 ---
+
+:::warning
+本文档由 AI 自动翻译，仅供参考。涉及关键操作或信息时，请以[英文原文](../../use-cases/hermes.md)为准。
+:::
 
 # 用 Hermes 搭建一个自主工作的 AI 助手
 
 <VersionRouteSelect />
+
+:::info 应用版本
+下文介绍的 Hermes Webapp 入口及内置的委派插件需要 Chart 1.3.51（Hermes Agent 0.22.7）。请在应用市场的应用详情页查看 **Chart version**。旧版本只有两个快捷方式：Hermes CLI 和仪表盘。
+:::
 
 Hermes Agent 是一个能够自主执行任务的 AI 助手。接入本地模型后，它可以执行系统任务、编写代码、管理工作流程。它能够在多次对话之间保持记忆，还能根据与你的互动，自动生成可复用的技能。
 
@@ -24,7 +32,8 @@ Hermes Agent 是一个能够自主执行任务的 AI 助手。接入本地模型
 
 - 在 Olares 上安装 Hermes Agent
 - 配置 Hermes Agent，连接本地模型
-- 直接在文本用户界面中与它对话
+- 通过 Hermes CLI 或 Hermes Webapp 与助手对话
+- 将任务委派给子代理并查看结果
 - 接入 Discord，实现远程聊天
 - 使用 Olares 技能，让助手帮你管理文件和应用程序
 - 开启 Gateway API，将 Hermes Agent 与 Open WebUI 等应用对接
@@ -52,12 +61,17 @@ Hermes Agent 是一个能够自主执行任务的 AI 助手。接入本地模型
 
    ![安装 Hermes Agent](/images/zh/manual/use-cases/hermes-agent.png#bordered)
 
-2. 点击**获取**，然后点击**安装**。安装完成后，桌面上会出现两个快捷方式：
+2. 点击**获取**，然后点击**安装**，等待安装完成。
 
-    - Hermes CLI：命令行界面
-    - 仪表盘：图形面板
+Chart 1.3.51 在启动台提供三个快捷方式：
 
-    ![Hermes 入口](/images/zh/manual/use-cases/hermes-entry-points.png#bordered){width=50%}
+| 快捷方式 | 用途 |
+| --- | --- |
+| Hermes CLI | 运行初始设置、输入命令和排查问题。 |
+| Hermes Dashboard | 管理模型、技能、消息渠道和网关设置。 |
+| Hermes Webapp | 在浏览器中聊天、继续已保存的会话、跟进委派的任务。 |
+
+先在下方完成模型配置，再开始你的第一次 Hermes Webapp 对话。
 
 :::tip 运行多个 Hermes 实例
 Olares 支持克隆应用。如果你想同时运行多个独立的 AI 助手，分别处理不同的任务，可以克隆 Hermes Agent 这个应用。具体步骤，见[克隆应用](/zh/manual/olares/market/clone-apps.md)。
@@ -106,7 +120,8 @@ Olares 支持克隆应用。如果你想同时运行多个独立的 AI 助手，
     | Choose a provider | 选择 **Skip - keep defaults / configure later**。 |
     | Select Search Provider | 选择 **Skip - keep defaults / configure later**。 |
 
-4. 保持 Hermes CLI 窗口开启，后续步骤仍需使用。
+4. 继续完成其余可选服务的提示。没有配置的服务可以直接跳过。在用量统计提示处，选择 **No thanks**，不共享统计信息。
+5. 等待向导显示 `Ready to go`。保持 Hermes CLI 窗口开启，后续步骤仍需使用。
 
 ## 与 Hermes Agent 对话
 
@@ -126,13 +141,39 @@ Olares 支持克隆应用。如果你想同时运行多个独立的 AI 助手，
    如果你退出了向导，也可以在 Hermes CLI 里手动输入 `hermes` 命令来启动聊天。
    :::
 
-2. 发一条消息，例如 `你当前使用的模型是哪个`，查看助手是否回复正常。
+3. 发一条消息，例如 `你当前使用的模型是哪个`，查看助手是否回复正常。
 
     ![Hermes TUI 聊天界面](/images/manual/use-cases/hermes-tui1.png#bordered)
 
-3. 如需退出 TUI 回到普通命令行，输入 `/exit` 并按**回车**键。
+4. 如需退出 TUI 回到普通命令行，输入 `/exit` 并按**回车**键。
 
-### 方式 B：通过 Discord 远程对话
+### 方式 B：通过 Hermes Webapp 在浏览器中对话
+
+Hermes Webapp 为同一个 Hermes Agent 安装实例提供浏览器工作区。它与其他入口共享模型配置和已保存的会话。
+
+1. 从启动台打开 Hermes CLI。如果有聊天正在运行，输入 `/exit` 回到命令行。
+2. 运行以下命令，查看本次安装生成的 Webapp 登录凭据：
+
+   ```bash
+   cat /opt/data/webapp/olares-login.txt
+   ```
+
+   如果你在升级前已经配置过 Hermes 的用户名和密码认证，请继续使用原凭据。升级会保留这些凭据，不会为该账号生成新的登录文件。
+
+3. 从启动台打开 Hermes Webapp。输入用户名和密码，点击 **Sign in**。这个登录与 Olares 账号相互独立。
+4. 点击 **New session**，输入并发送一条消息。例如，让助手帮你规划每周一次的文件清理。先检查它建议的操作，确认无误后再让它执行更改。
+
+   按照上述 Router 配置，模型选择器会显示 **Default Chat**。助手会使用 Router 中为 `default-chat` 选择的模型。
+
+5. 想继续之前的对话时，在侧边栏的 **Sessions** 中选择对应会话。
+
+生成的登录信息和对话记录在应用重启后仍会保留。
+
+:::tip 启动台中找不到 Hermes Webapp
+请检查你的安装是否为 Chart 1.3.51。如果你之前显式禁用过 Webapp，升级后会保留该设置。要重新启用，请在 Hermes CLI 中先运行 `hermes config set webapp.enabled true`，再运行 `hermes gateway restart`。
+:::
+
+### 方式 C：通过 Discord 远程对话
 
 如果你想在手机或其他设备上与助手聊天，可以将其接入 Discord 机器人。
 
@@ -214,6 +255,38 @@ Olares 支持克隆应用。如果你想同时运行多个独立的 AI 助手，
     ```
 
 3. 授权成功后，你就可以在 Discord 中与助手聊天了。如果在频道中发言，需要先 @ 提及机器人。
+
+## 将任务委派给子代理
+
+子代理可以独立处理一个任务，并把结果返回给主对话。advanced-delegation 插件提供了下文使用的 `/delegation` 命令。
+
+:::info 首次安装插件
+当插件缺失时，Chart 1.3.51 会自动安装 advanced-delegation 插件。这次安装需要访问 GitHub。如果你之前禁用过该插件，请在开始新对话前，在 Hermes CLI 中运行 `hermes plugins enable advanced-delegation`。
+:::
+
+1. 在 Hermes CLI 中开始一段对话，或在 Hermes Dashboard 中打开 **Chat**。
+2. 输入以下命令，让新会话使用默认的委派模式：
+
+   ```text
+   /delegation default
+   ```
+
+3. 输入 `/new` 以该设置开始新会话。在默认模式下，子代理使用你的主模型，除非你配置了单独的委派模型。
+4. 让助手委派一个小任务。例如：
+
+   ```text
+   让子代理核对一笔订单总额：137 件商品，每件 283。完成后报告总额。
+   ```
+
+   助手会启动子代理，任务完成后把结果返回到对话中。你也可以在 Hermes Webapp 中跟进委派的任务。
+
+:::details 选择命名模型路由
+要配置单独的模型路由，请在 Hermes CLI 中运行 `hermes delegation config`。切换到 `model_map` 之前，至少先配置一条路由。如需通过 Router 接入，使用前面获取的 **Apps in Olares** Base URL，模型名填 `default-chat`。如果需要密钥，填写 `olares`。
+
+在对话中，`/delegation model_map` 会保存该模式供下一个会话使用。`/delegation model_map --now` 还会将其应用到当前对话。用 `/delegation default` 可以切回默认模式。
+
+路由编辑器和更多选项，请参阅 [advanced-delegation 官方指南](https://hermes-agent.nousresearch.com/marketplace/advanced-delegation)。
+:::
 
 ## 用 Hermes Agent 管理 Olares
 

@@ -38,7 +38,7 @@ For release highlights and walkthroughs, see the [Olares 1.12.7 blog post](https
 - Added [Save resources to Olares](/manual/larepass/save-resources-to-olares), covering Fetch in LarePass Desktop for web links, torrents, Hugging Face repositories, and supported media.
 - Added [Create and manage support tickets in Olares Space](/manual/space/tickets) and expanded [Get support](/manual/help/request-technical-support) with the Ticket app, log collection, and follow-up replies.
 - Added [Recover access to LarePass, Olares Desktop, or your Olares device](/manual/help/ts-access-without-mnemonic), alongside updated [password reset instructions](/manual/help/ts-forget-login-password).
-- Added [Create a Blender scene with Lares](/use-cases/blender) and [Create videos with Concat and Lares](/use-cases/concat), covering MCP setup, creative workflows, and saving outputs in Files.
+- Added [Create a Blender scene with Lares](/use-cases/blender-lares) and [Create videos with Concat and Lares](/use-cases/concat), covering MCP setup, creative workflows, and saving outputs in Files.
 - Added [Open Design](/use-cases/open-design), [Codex CLI](/use-cases/codex-cli), and [Manage Olares from OpenCode](/use-cases/opencode-olares-cli) tutorials for design, coding, and device management.
 - Added [Minecraft](/use-cases/minecraft) and [Palworld](/use-cases/palworld) server guides with Overlay Gateway setup for local network access.
 

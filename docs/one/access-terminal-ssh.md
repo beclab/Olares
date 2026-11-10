@@ -36,11 +36,6 @@ Follow these steps if your device and your Olares One are on the same local netw
 2. Tap the Olares One device card.
 3. Scroll down to the **Network** section, and then note down the **Intranet IP**.
 
-   :::tip Check via Control Hub
-   You can check the IP using the `ifconfig` command in the Control Hub terminal.
-
-   Look for your active interface, typically `enp3s0` (wired) or `wlo1` (wireless). The IP address appears after `inet`.
-   :::
 
 ### Step 2: Get the login password from Vault
 

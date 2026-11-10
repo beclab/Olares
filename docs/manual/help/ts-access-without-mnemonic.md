@@ -44,24 +44,12 @@ To use the device again, uninstall Olares, reinstall it, and activate it with a 
 The uninstall command removes Olares components and data from the device. Back up any files you can still access before continuing.
 :::
 
-1. Open the Olares device terminal:
+1. Connect to the Olares device through SSH or log in locally with a monitor and keyboard. See [Access the Olares terminal](../access-olares-terminal.md).
+2. Uninstall Olares using an account with `sudo` permission:
 
-   - If you can sign in to Olares Desktop, open **Control Hub**, then select **Terminal** > **Olares**.
-   - Otherwise, connect through SSH or log in locally with a monitor and keyboard.
-
-2. Uninstall Olares:
-
-   - In the Control Hub terminal, run:
-
-     ```bash
-     olares-cli uninstall
-     ```
-
-   - In an SSH or local terminal, run:
-
-     ```bash
-     sudo olares-cli uninstall
-     ```
+   ```bash
+   sudo olares-cli uninstall
+   ```
 
 3. Wait for the uninstall process to finish.
 4. Install or open LarePass, create a new Olares ID, and follow [Install Olares](../get-started/install-olares.md) to reinstall and activate the device.

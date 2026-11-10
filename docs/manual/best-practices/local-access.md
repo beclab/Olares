@@ -72,9 +72,6 @@ Skip this method if you use `.local` URLs. They use local name resolution and do
 
 ### Find the Olares LAN IP
 
-<tabs>
-<template #Use-LarePass-mobile>
-
 1. Make sure your phone and Olares are on the same network.
 2. Open LarePass and go to **Settings** > **System**.
 
@@ -85,18 +82,6 @@ Skip this method if you use `.local` URLs. They use local name resolution and do
 4. In **Network**, find the **Intranet IP**.
 
    ![Find the Intranet IP](/images/manual/get-started/larepass-network.png#bordered)
-
-</template>
-<template #Use-Control-Hub>
-
-1. In Control Hub, open **Terminal** and select **Olares**.
-
-   ![Open the Olares terminal in Control Hub](/images/manual/get-started/find-internal-ip-from-controlhub.png#bordered)
-2. Run `ifconfig`.
-3. Find the `inet` address for the active wired or Wi-Fi interface. It is typically in a private range such as `192.168.x.x`.
-
-</template>
-</tabs>
 
 ### Configure the DNS server
 

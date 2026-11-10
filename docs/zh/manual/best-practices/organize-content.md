@@ -10,7 +10,7 @@ head:
 
 在不同来源和设备之间管理信息往往充满挑战。你可能正在使用多个工具来收藏文章、跟踪 RSS 订阅或管理文档，最终却导致工作流程碎片化。
 
-Wise 是 Olares 的内置应用，旨在集中管理和组织你的知识。它不仅能从网络和设备中收集信息，还能通过本地推荐算法，帮助你以私密方式发现有价值的内容，而不受第三方推荐算法影响。
+Wise 帮助你把网络和设备中的内容收集到 Olares，在一个内容库中阅读和整理。
 
 本教程将指导你如何利用 Wise 和 LarePass 在不同平台间收集、整理和访问内容。
 
@@ -78,7 +78,7 @@ LarePass 扩展目前仅支持 Chrome 浏览器。
 安装完成后，将 LarePass 扩展固定到 Chrome 扩展菜单中，方便后续快速访问。
 :::
 
-登录后，LarePass 浏览器扩展将与你的 Olares 设备同步。这意味着你通过 LarePass 扩展收集的所有内容都会自动添加到 Wise 库中。
+连接 Olares 后，你可以通过 LarePass 扩展选择内容并保存到 Wise。
 
 ## 收集在线内容
 
@@ -101,7 +101,7 @@ LarePass 扩展目前仅支持 Chrome 浏览器。
 
    ![收集在线内容](/images/zh/manual/tutorials/wise-collect-web-content.png#bordered)
 
-收集成功后，你可以在 Wise 的**库** > **文章**中找到对应内容。页面上音频、视频和图片等媒体文件也会被下载到 Olares 本地的 `/download/Wise/Article` 文件夹。
+收集成功后，你可以在 Wise 的**库** > **文章**中找到对应内容。可用媒体文件取决于来源和所选下载方式。
 
 ![查看文章](/images/zh/manual/tutorials/wise-view-article.png#bordered)
 
@@ -139,11 +139,11 @@ LarePass 扩展目前仅支持 Chrome 浏览器。
 ![查看 PDF](/images/zh/manual/tutorials/wise-pdf.png#bordered)
 
 ::: tip 
-你可以用标签高效地分类和关联相关内容，或者通过笔记直接在内容旁记录见解和想法。详细用法请参考[组织你的阅读](../olares/wise/basics.md#组织你的阅读)。
+你可以用标签整理内容，也可以用笔记记录想法。详细用法请参考[使用标签整理内容](../olares/wise/basics.md#使用标签整理内容)和[使用阅读器](../olares/wise/basics.md#使用阅读器)。
 :::
 
 ## 订阅 RSS 内容
-你可以在 Wise 中订阅播客、博客和喜爱的视频播放列表。系统会自动下载更新的剧集和内容，让你轻松追更，同时也无需担心原内容已被删除或无法访问。另外，对于那些往往不提供 RSS 订阅源的视频网站，Wise 也能自动下载你收藏的节目。
+你可以在 Wise 中订阅播客、博客等支持的订阅源。新内容会出现在订阅列表中。如需自动下载多媒体附件，可在 Wise 的 RSS 设置或单个订阅源中开启该选项。
 
 ### 通过浏览器扩展订阅
 
@@ -166,9 +166,9 @@ LarePass 扩展目前仅支持 Chrome 浏览器。
    ![手动添加 RSS](/images/zh/manual/tutorials/wise-add-rss.png#bordered){width=50%}
 4. 点击**添加**完成订阅。
 
-### 自动下载收藏视频 <Badge type="tip" text="^1.11.3" />
+### 订阅视频收藏夹
 
-除了常规的 RSS 订阅，你可以通过 LarePass 扩展和 Wise 自动下载收藏的视频。以 B 站为例：
+如果视频网站为收藏夹提供订阅源，你可以通过 LarePass 在 Wise 中订阅。以 B 站为例：
 
 1. 在浏览器里打开并登陆 B 站。
 2. 打开 LarePass 扩展，在 Cookie 页签下点击**上传**按钮以完成 Cookie 上传。Olares 需要使用视频网站的 Cookie 来访问你的收藏夹并下载视频。 
@@ -182,10 +182,10 @@ LarePass 扩展目前仅支持 Chrome 浏览器。
    ![订阅 B 站收藏夹](/images/zh/manual/tutorials/wise-bilibili-rss.png#bordered)
 5. 选择正确的订阅源。此处我们选择 **RSS** 页签下第二个源：“UP主非默认收藏夹”。点击 <i class="material-symbols-outlined">bookmark_add</i> 完成订阅。
 
-订阅完成后，任何添加到此收藏夹的视频都会被 Olares 自动下载至本地。
+订阅后，收藏夹中的新内容可能会出现在 Wise。若要下载支持的媒体，请检查订阅源的自动下载设置，并在 Wise 的**下载**中查看任务状态。
 
-::: tip 自动下载点赞投币视频
-你也可以通过 RSS 订阅方式自动下载 B 站点赞或投币的视频：
+::: tip 订阅点赞或投币视频
+你也可以尝试通过 RSS 订阅 B 站点赞或投币的视频：
 1. 在 B 站的**个人空间** > **个人资料**里获取你的 UID，通常是一串 8 位的数字。
 2. 手动添加以下 RSS 订阅源至 Wise：
    - 点赞视频：`rsshub://bilibili/user/like/你的uid/`
@@ -198,16 +198,11 @@ LarePass 扩展目前仅支持 Chrome 浏览器。
 1. 在左侧菜单栏中点击**订阅** > **订阅源**。
 2. 选择一个未读的 RSS 项目，进入即可观看视频、收听播客或阅读文章。
 
-::: tip 智能内容推荐
-除了常规的 RSS 订阅，Wise 还提供了完全本地运行、保护隐私的智能内容推荐系统，为你提供个性化内容推送。详情请参考[本地推荐算法](../olares/wise/recommend.md)。
-:::
-
 ## 搜索知识库内容
 
 <!--@include: ./wise.reusables.md#wise-aggregated-search-->
 
 ## 了解更多
 
-- [Wise 基本操作](../olares/wise/basics.md)
-- [本地推荐算法](../olares/wise/recommend.md)
+- [阅读和整理 Wise 内容](../olares/wise/basics.md)
 - [订阅和管理订阅源](../olares/wise/subscribe.md)

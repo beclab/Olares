@@ -234,6 +234,25 @@ func (m *DeleteUserDataModule) Init() {
 	}
 }
 
+type UmountNetworkDrivesModule struct {
+	common.KubeModule
+}
+
+func (m *UmountNetworkDrivesModule) Init() {
+	m.Name = "UmountNetworkDrives"
+
+	umountNetworkDrives := &task.RemoteTask{
+		Name:     "UmountNetworkDrives",
+		Hosts:    m.Runtime.GetHostsByRole(common.K8s),
+		Action:   new(UmountNetworkDrives),
+		Parallel: false,
+	}
+
+	m.Tasks = []task.Interface{
+		umountNetworkDrives,
+	}
+}
+
 type DeleteTerminusDataModule struct {
 	common.KubeModule
 }

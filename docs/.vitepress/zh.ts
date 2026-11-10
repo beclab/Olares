@@ -164,6 +164,10 @@ const side = {
           text: "使用 LarePass 私密翻译网页",
           link: "/zh/manual/tutorial/translate-webpages-with-larepass",
         },
+        {
+          text: "使用 Wise 打造知识中枢",
+          link: "/zh/manual/best-practices/organize-content",
+        },
       ],
     },
     {
@@ -355,6 +359,10 @@ const side = {
               link: "/zh/manual/olares/files/share-files",
             },
             {
+              text: "管理公共目录和外部存储的访问权限",
+              link: "/zh/manual/olares/files/manage-common-external-access",
+            },
+            {
               text: "与电脑同步文件",
               link: "/zh/manual/olares/files/sync-files",
             },
@@ -393,6 +401,29 @@ const side = {
               link: "/zh/manual/olares/files/mount-cloud-storage",
             },
           ],
+        },
+      ],
+    },
+    {
+      text: "阅读与知识管理",
+      link: "/zh/manual/olares/wise/",
+      collapsed: false,
+      items: [
+        {
+          text: "收藏网页和文件",
+          link: "/zh/manual/olares/wise/collect",
+        },
+        {
+          text: "订阅和管理订阅源",
+          link: "/zh/manual/olares/wise/subscribe",
+        },
+        {
+          text: "阅读和整理",
+          link: "/zh/manual/olares/wise/basics",
+        },
+        {
+          text: "管理 Cookie",
+          link: "/zh/manual/olares/wise/manage-cookies",
         },
       ],
     },
@@ -468,10 +499,6 @@ const side = {
             {
               text: "管理中间件",
               link: "/zh/manual/olares/controlhub/manage-middleware",
-            },
-            {
-              text: "在控制面板终端中执行命令",
-              link: "/zh/manual/olares/controlhub/terminal",
             },
             {
               text: "配置 Olares 内主机名解析",

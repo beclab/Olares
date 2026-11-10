@@ -44,24 +44,12 @@ head:
 卸载命令会移除设备中的 Olares 组件和数据。继续操作前，请备份仍可访问的文件。
 :::
 
-1. 打开 Olares 设备终端：
+1. 通过 SSH 连接到 Olares 设备，或使用显示器和键盘在设备上直接登录。请参考[访问 Olares 主机终端](../access-olares-terminal.md)。
+2. 使用具有 `sudo` 权限的账号卸载 Olares：
 
-   - 如果仍能登录 Olares 桌面，请打开 **Control Hub**，然后选择 **Terminal** > **Olares**。
-   - 否则，请通过 SSH 连接，或使用显示器和键盘在设备上直接登录。
-
-2. 卸载 Olares：
-
-   - 在 Control Hub 终端中运行：
-
-     ```bash
-     olares-cli uninstall
-     ```
-
-   - 在 SSH 或本地终端中运行：
-
-     ```bash
-     sudo olares-cli uninstall
-     ```
+   ```bash
+   sudo olares-cli uninstall
+   ```
 
 3. 等待卸载完成。
 4. 安装或打开 LarePass，创建新的 Olares ID，再按照[安装 Olares](../get-started/install-olares.md)重新安装并激活设备。

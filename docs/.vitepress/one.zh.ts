@@ -60,10 +60,6 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           items:
             [
               {
-                text: "通过 Control Hub 访问",
-                link: "/zh/one/access-terminal-control-hub",
-              },
-              {
                 text: "通过 SSH 访问",
                 link: "/zh/one/access-terminal-ssh",
               },
