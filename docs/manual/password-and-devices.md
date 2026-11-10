@@ -14,7 +14,7 @@ On the **My Olares** page in **Settings**, you can manage account security for y
 
 ## Change password
 
-To update your Olares login password, click **Change password** on the **My Olares** page.
+To update your Olares login password, click **Change password** on the **My Olares** page. Changing this password logs out all devices, including the current device. Log in again with your new password to continue.
 
 ## Set network access policy
 
@@ -25,7 +25,9 @@ Define system-level access and authentication policies to control how users conn
 
 ## Manage signed-in devices
 
-View devices that are authorized to access your Olares. Each device entry shows the device name and client type. Select a device to view more details or manage its access.
+Under **Devices**, view devices that are authorized to access your Olares. Each entry shows the device name and client type. Select a device to view its platform, activity, and login details.
+
+To log out a device, return to **My Olares** > **Change password** and change your Olares login password. This also logs out all your other devices.
 
 ## Log out
 
