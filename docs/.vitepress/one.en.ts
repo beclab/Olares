@@ -123,7 +123,7 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           ],
         },
         {
-          text: "Manage hardware settings",
+          text: "Check device status and manage hardware settings",
           link: "/one/hardware-settings",
         },
         {

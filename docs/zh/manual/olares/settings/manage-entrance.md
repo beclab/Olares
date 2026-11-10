@@ -34,7 +34,7 @@ head:
    * **私有**：需要用户登录才可访问。
    * **内部**：如果通过专用网络访问应用，则无需登录。
 
-* **认证模式**：验证用户身份的方法。
+* **认证方式**：验证用户身份的方法。
 
    * **跟随系统**：继承**我的 Olares**页面中设置的系统身份验证规则。
    * **单因素**：仅需要 Olares 登录密码。
@@ -47,11 +47,11 @@ head:
 2. 点击目标应用。
 3. 在**入口**下，点击目标入口。
 
-   ![应用入口](/images/zh/manual/olares/app-entrance1.png#bordered){width=90%}
+   ![应用入口](/images/zh/manual/olares/app-entrance-1.12.8.png#bordered){width=90%}
 
-4. 在**访问策略**面板中，设置**认证级别**和**认证模式**。
+4. 在**访问策略**面板中，设置**认证级别**和**认证方式**。
 
-   ![访问策略面板](/images/zh/manual/olares/app-entrance-access-policy-panel.png#bordered){width=70%}
+   ![访问策略面板](/images/zh/manual/olares/app-entrance-access-policy-panel-1.12.8.png#bordered){width=70%}
 
 5. 点击**提交**。
 
@@ -60,7 +60,7 @@ head:
 使用**正则表达式**可以为应用中的特定路径设置更细粒度的访问规则。
 
 1. 在**访问策略**面板中，点击 <i class="material-symbols-outlined">chevron_forward</i> 打开**管理子策略**页面。
-2. 点击**添加子策略**，然后在**受影响 URL** 中输入目标路径，并设置**认证模式**。
+2. 点击**添加子策略**，然后在 **URL** 中输入目标路径，并设置**认证方式**。
 3. 点击**提交**。
 
 ## 资源

@@ -10,7 +10,7 @@ head:
 
 在**设置**的**我的 Olares** 页面，你可以管理 Olares 账户安全。打开**设置**，点击左上角的头像即可进入。
 
-![我的 Olares](/images/zh/manual/olares/my-olares-1.12.6.png#bordered)
+![我的 Olares](/images/zh/manual/olares/my-olares-1.12.7.png#bordered)
 
 ## 更改密码
 

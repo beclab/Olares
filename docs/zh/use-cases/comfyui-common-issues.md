@@ -228,13 +228,9 @@ main.py: error: unrecognized arguments: --normalvram
 
 Olares One 配备的 CPU 默认最大频率为 5.4 GHz。使用**限制 CPU 频率**开关，可在工作负载期间将其降至 5.0 GHz。工作负载完成后，再关闭该开关。
 
-1. 打开**设置**。
-2. 点击左上角头像，打开**我的 Olares**。
-3. 在**硬件**下，开启**限制 CPU 频率**。
-4. 在 ComfyUI 中运行任务。
-5. 工作负载完成后，关闭**限制 CPU 频率**。
-
-更多信息请参阅[限制 CPU 频率](/zh/one/hardware-settings#限制-cpu-频率)。
+1. 按照[限制 CPU 频率](/zh/one/hardware-settings#限制-cpu-频率)中的步骤，在 Olares One 节点详情页面的**节点设置**中开启该开关。
+2. 在 ComfyUI 中运行任务。
+3. 工作负载完成后，关闭**限制 CPU 频率**。
 
 ### Olares OS 1.12.5 或更早版本
 

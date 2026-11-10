@@ -123,7 +123,7 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           ],
         },
         {
-          text: "管理硬件设置",
+          text: "查看设备状态与硬件设置",
           link: "/zh/one/hardware-settings",
         },
         {
