@@ -8,8 +8,8 @@ head:
     - name: keywords
       content: Olares, Claude Code, Anthropic, AI coding, Ollama, terminal, TUI, self-hosted
 app_version: "0.1.13"
-doc_version: "2.1"
-doc_updated: "2026-10-30"
+doc_version: "2.2"
+doc_updated: "2026-11-10"
 ---
 
 # Write code using Claude Code
@@ -88,8 +88,16 @@ Use this method to run Claude Code locally. This example uses the model app Qwen
 
 <!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-anthropic-->
 
-6. Open Olares Settings, and then go to **Applications** > **Claude Code** > **Manage environment variables**.
-7. Specify the following environment variables:
+6. Return to **LLM**, find Qwen3.8-27B (llama.cpp), and click **View model card**.
+7. Click **Edit**. Under **Context & Rate Limits**, set **Max output tokens** to `32000`, then click **Save**.
+8. Wait until Qwen3.8-27B (llama.cpp) shows **Callable**.
+
+   :::info Max output token limit
+   Claude Code sends local model requests with `max_tokens` set to `32000`, so Router must allow at least `32000` output tokens. You can set a higher limit only when the model backend and its configured context window support it. This limit does not reserve memory or force every response to use that many tokens.
+   :::
+
+9. Open Olares Settings, and then go to **Applications** > **Claude Code** > **Manage environment variables**.
+10. Specify the following environment variables:
 
    - **ANTHROPIC_AUTH_TOKEN**: Enter `olares`.
    - **ANTHROPIC_BASE_URL**: Enter the **Base URL** you copied from Router. For example, `https://router.<your-olares-domain>`.
@@ -101,8 +109,8 @@ Use this method to run Claude Code locally. This example uses the model app Qwen
    -->
 
 
-8. Click **Apply**. Wait about 10 seconds for the container to restart.
-9. Open the Claude Code CLI from the Launchpad, and then enter `claude` in the terminal to start your session.
+11. Click **Apply**. Wait about 10 seconds for the container to restart.
+12. Open the Claude Code CLI from the Launchpad, and then enter `claude` in the terminal to start your session.
 
 ## Use Claude Code
 
