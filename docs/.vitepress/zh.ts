@@ -164,6 +164,10 @@ const side = {
           text: "使用 LarePass 私密翻译网页",
           link: "/zh/manual/tutorial/translate-webpages-with-larepass",
         },
+        {
+          text: "使用 Wise 打造知识中枢",
+          link: "/zh/manual/best-practices/organize-content",
+        },
       ],
     },
     {
@@ -397,6 +401,29 @@ const side = {
               link: "/zh/manual/olares/files/mount-cloud-storage",
             },
           ],
+        },
+      ],
+    },
+    {
+      text: "阅读与知识管理",
+      link: "/zh/manual/olares/wise/",
+      collapsed: false,
+      items: [
+        {
+          text: "收藏网页和文件",
+          link: "/zh/manual/olares/wise/collect",
+        },
+        {
+          text: "订阅和管理订阅源",
+          link: "/zh/manual/olares/wise/subscribe",
+        },
+        {
+          text: "阅读和整理",
+          link: "/zh/manual/olares/wise/basics",
+        },
+        {
+          text: "管理 Cookie",
+          link: "/zh/manual/olares/wise/manage-cookies",
         },
       ],
     },

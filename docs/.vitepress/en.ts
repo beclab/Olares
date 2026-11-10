@@ -401,6 +401,29 @@ const side = {
       ],
     },
     {
+      text: "Reading and knowledge",
+      link: "/manual/olares/wise/",
+      collapsed: false,
+      items: [
+        {
+          text: "Save web pages and files",
+          link: "/manual/olares/wise/collect",
+        },
+        {
+          text: "Subscribe and manage feeds",
+          link: "/manual/olares/wise/subscribe",
+        },
+        {
+          text: "Read and organize",
+          link: "/manual/olares/wise/basics",
+        },
+        {
+          text: "Manage cookies",
+          link: "/manual/olares/wise/manage-cookies",
+        },
+      ],
+    },
+    {
       text: "System",
       collapsed: false,
       items: [
