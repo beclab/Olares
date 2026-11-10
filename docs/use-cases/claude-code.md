@@ -86,7 +86,7 @@ Use this method to run Claude Code locally. This example uses the model app Qwen
 
 <!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
 
-#### Configure Router
+#### Configure the local model in Router
 
 1. Open Router from Launchpad. On **Default models**, set Qwen3.8-27B (llama.cpp) as the default chat model.
 2. Go to **LLM**, find Qwen3.8-27B (llama.cpp), and click **View model card**.

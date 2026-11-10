@@ -90,7 +90,7 @@ Claude Code 是一个 AI 编码助手，帮助你使用自然语言编写、测�
 
 <!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
 
-#### 配置 Router
+#### 在 Router 中配置本地模型
 
 1. 从 Launchpad 打开 Router。在 **Default models** 页面将 Qwen3.8-27B (llama.cpp) 设为默认聊天模型。
 2. 进入 **LLM** 页面，找到 Qwen3.8-27B (llama.cpp)，然后点击 **View model card**。
