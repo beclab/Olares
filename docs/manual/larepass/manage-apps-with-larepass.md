@@ -19,7 +19,7 @@ Check the following requirements before accessing apps from your mobile device.
 
 All the Olares system apps support mobile use. Other apps installed on your Olares always appear in the Apps tab on your mobile device, though some of their entrances may not support mobile use. This only affects whether an entrance opens on mobile. The app itself is installed and runs on Olares as expected, even if you installed it from your phone.
 
-An unsupported entrance appears grayed out with a monitor badge. Tapping it displays an **Entrance unavailable** panel, prompting you to open it on desktop. You can still tap **Manage**, or long-press its icon, to access management actions allowed for your account.
+An unsupported entrance appears grayed out with a monitor badge. Tapping it displays a prompt saying this option is not available on mobile, and to open it on a computer. Tap **App options** to open the **Manage [app name]** panel, where you can stop, resume, or uninstall the app.
 
 ## Access installed apps
 
