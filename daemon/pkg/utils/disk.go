@@ -48,8 +48,7 @@ func deviceForPath(path string) (string, error) {
 		}
 		device := fields[0]
 		mount := fields[1]
-		// Handle escaped spaces (simple processing)
-		mount = strings.ReplaceAll(mount, "\\040", " ")
+		mount = unescapeMountField(mount)
 		// Choose the longest matching mount prefix (to prevent nested mounts)
 		if strings.HasPrefix(path, mount) {
 			if len(mount) > len(bestMount) {

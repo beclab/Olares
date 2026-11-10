@@ -160,7 +160,7 @@ Use this panel to quickly assess cooling performance and overall hardware health
 ![Fan panel](/images/manual/olares/dashboard-fans.png#bordered)
 
 ::: tip Change fan speed profile
-You can adjust the fan speed profile by toggling between silent mode or performance mode in **Settings** > **My Olares** > **My hardware** >  **Power mode**. 
+To adjust the fan speed profile, switch the power mode on the Olares One node details page. See [Switch power mode](/one/hardware-settings#switch-power-mode).
 :::
 
 #### Access detailed resource metrics 

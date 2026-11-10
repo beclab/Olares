@@ -6,8 +6,8 @@ head:
     - name: keywords
       content: Olares, FlowStudio, Lares, Olares Router, 对话生成图片, 视频生成
 app_version: "0.3.78"
-doc_version: "1.0"
-doc_updated: "2026-09-29"
+doc_version: "1.1"
+doc_updated: "2026-11-07"
 ---
 
 :::warning
@@ -18,12 +18,22 @@ doc_updated: "2026-09-29"
 
 你可以在 Lares 对话中请求生成图片和视频。Router 将请求连接到可用的 FlowStudio 能力，再由 FlowStudio 执行生成工作流。
 
+本指南使用已在 FlowStudio 中准备好的场景生成海报和短视频，无需重新打开每个工作流表单。
+
+## 学习目标
+
+通过本指南，你将学会：
+
+- 检查 Lares 可以使用哪些 FlowStudio 能力。
+- 通过指定的预设工作流生成图片。
+- 让 Lares 为视频请求选择可用工作流。
+
 ## 前提条件
 
 - Olares OS 1.12.7 或更高版本。
 - 已从 Market 安装 FlowStudio、Router 和 Lares。已安装的应用需更新至最新可用版本。
 - 已安装 Qwen3.8-27B (llama.cpp)，并完成模型下载。
-- 已创建所需的 FlowStudio 场景，并完成模型下载和初始化。具体操作请参阅[在 FlowStudio 中生成图片和视频](flowstudio-create.md)。
+- 已创建所需的 FlowStudio 场景，并完成模型下载和初始化。具体操作请参阅[在 FlowStudio 中生成图片和视频](flowstudio.md)。
 
 :::warning 重要：一次只运行一个任务
 在 Olares One 上运行 Qwen3.8-27B (llama.cpp) 时，建议一次只处理一个请求，以在 102K 上下文窗口和当前模型精度下获得最佳体验。
@@ -45,7 +55,7 @@ doc_updated: "2026-09-29"
    What image and video generation capabilities are currently available through FlowStudio?
    ```
 
-3. 查看可用能力，然后描述你想创作的内容。如果需要使用特定的生成模型，请在提示词中写明模型名称；否则，让 Lares 根据需求和可用模型进行选择。
+3. 查看可用能力，然后描述你想创作的内容。如果需要使用特定的生成模型，请在提示词中写明模型名称。否则，让 Lares 根据需求和可用模型进行选择。
 
 ## 生成图片
 
@@ -69,6 +79,5 @@ doc_updated: "2026-09-29"
 
 ## 了解更多
 
-- [FlowStudio](flowstudio.md#应用如何协作)：了解 FlowStudio、Router 和 Lares 如何协作。
-- [Lares](lares.md)：了解如何使用 Lares 管理 Olares 并开展研究。
-- [在 FlowStudio 中生成图片和视频](flowstudio-create.md)：直接使用场景并准备示例素材。
+- [在 FlowStudio 中生成图片和视频](flowstudio.md)：准备场景，并直接在 FlowStudio 中创作媒体。
+- [开始使用 Lares](lares.md)：准备助手并选择任务所需的能力。

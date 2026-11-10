@@ -34,7 +34,7 @@ Use the same steps whether Olares One runs the preinstalled Olares OS or an Ubun
 #### Find the network interface and addresses
 
 1. Make sure the Ethernet cable is connected to Olares One and your router.
-2. Open the host terminal on Olares One. On Olares OS, you can use the [Olares terminal in Control Hub](access-terminal-control-hub.md). On Ubuntu, open a terminal on the device or connect through SSH.
+2. Open the host terminal on Olares One. On Olares OS, [connect via SSH](access-terminal-ssh.md). On Ubuntu, open a terminal on the device or connect through SSH.
 3. Run the following command:
 
    ```bash

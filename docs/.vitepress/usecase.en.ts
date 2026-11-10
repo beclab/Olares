@@ -17,21 +17,29 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             {
               text: "Lares",
               link: "/use-cases/lares",
+              collapsed: true,
+              items: [
+                {
+                  text: "Research the web",
+                  link: "/use-cases/lares-web-research",
+                },
+                {
+                  text: "Use Blender",
+                  link: "/use-cases/blender-lares",
+                },
+                {
+                  text: "Use FlowStudio",
+                  link: "/use-cases/flowstudio-lares",
+                },
+                {
+                  text: "Use YuE2 Studio",
+                  link: "/use-cases/yue2-studio-lares",
+                },
+              ],
             },
             {
               text: "FlowStudio",
               link: "/use-cases/flowstudio",
-              collapsed: false,
-              items: [
-                {
-                  text: "Create in FlowStudio",
-                  link: "/use-cases/flowstudio-create",
-                },
-                {
-                  text: "Use through Lares",
-                  link: "/use-cases/flowstudio-lares",
-                },
-              ],
             },
           ],
         },
@@ -234,6 +242,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   link: "/use-cases/anythingllm",
                 },
                 {
+                  text: "Cognee",
+                  link: "/use-cases/cognee",
+                },
+                {
                   text: "Local Deep Research",
                   link: "/use-cases/local-deep-research",
                 },
@@ -321,6 +333,17 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                 {
                   text: "IndexTTS2",
                   link: "/use-cases/indextts2",
+                },
+                {
+                  text: "YuE2 Studio",
+                  link: "/use-cases/yue2-studio",
+                  collapsed: true,
+                  items: [
+                    {
+                      text: "Protect the MCP connection",
+                      link: "/use-cases/yue2-studio-mcp-auth",
+                    },
+                  ],
                 },
               ],
             },

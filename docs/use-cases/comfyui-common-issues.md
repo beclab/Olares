@@ -227,13 +227,9 @@ The long-term fix is to reduce the VRAM footprint of your workflow (for example,
 
 Olares One ships with a CPU whose default maximum frequency is 5.4 GHz. Use the **Limit CPU frequency** switch to lower it to 5.0 GHz during the workload, then turn the switch off when the workload completes.
 
-1. Open **Settings**.
-2. Select your avatar in the top-left corner to open **My Olares**.
-3. Under **My hardware**, turn on **Limit CPU frequency**.
-4. Run your task in ComfyUI.
-5. After the workload completes, turn off **Limit CPU frequency**.
-
-For more details, see [Limit CPU frequency](/one/hardware-settings#limit-cpu-frequency).
+1. Follow [Limit CPU frequency](/one/hardware-settings#limit-cpu-frequency) to turn on the switch under **Node settings** on the Olares One node details page.
+2. Run your task in ComfyUI.
+3. After the workload completes, turn off **Limit CPU frequency**.
 
 ### Olares OS 1.12.5 or earlier
 

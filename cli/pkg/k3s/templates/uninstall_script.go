@@ -66,7 +66,6 @@ rm -rf /var/lib/rancher/k3s
 rm -rf /var/lib/kubelet
 rm -f /usr/local/bin/k3s
 rm -f /usr/local/bin/k3s-killall.sh
-rm -f /etc/mounttab
 
 if type yum >/dev/null 2>&1; then
     yum remove -y k3s-selinux

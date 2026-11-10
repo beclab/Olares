@@ -42,7 +42,7 @@ head:
 - 新增[将资源保存到 Olares](/zh/manual/larepass/save-resources-to-olares)，介绍 LarePass 桌面端的 Fetch 功能，包括网页链接、种子、Hugging Face 仓库和支持的媒体资源。
 - 新增[在 Olares Space 中创建和管理工单](/zh/manual/space/tickets)，并在[获取支持](/zh/manual/help/request-technical-support)中补充 Ticket 应用、日志收集和工单跟进流程。
 - 新增[恢复 LarePass、Olares 桌面或设备访问权限](/zh/manual/help/ts-access-without-mnemonic)，并更新[登录密码重置说明](/zh/manual/help/ts-forget-login-password)。
-- 新增[使用 Lares 创建 Blender 场景](/zh/use-cases/blender)和[使用 Concat 和 Lares 制作视频](/zh/use-cases/concat)，涵盖 MCP 配置、创作流程，以及在文件管理器中保存和查看输出。
+- 新增[使用 Lares 创建 Blender 场景](/zh/use-cases/blender-lares)和[使用 Concat 和 Lares 制作视频](/zh/use-cases/concat)，涵盖 MCP 配置、创作流程，以及在文件管理器中保存和查看输出。
 - 新增 [Open Design](/zh/use-cases/open-design)、[Codex CLI](/zh/use-cases/codex-cli) 和[通过 OpenCode 管理 Olares](/zh/use-cases/opencode-olares-cli) 教程，覆盖设计、编程和设备管理。
 - 新增 [Minecraft](/zh/use-cases/minecraft) 和 [Palworld](/zh/use-cases/palworld) 服务器教程，介绍如何通过 Overlay Gateway 在局域网中连接。
 

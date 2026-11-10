@@ -288,6 +288,10 @@ const side = {
           link: "/manual/olares/market/market",
         },
         {
+          text: "Manage apps with LarePass",
+          link: "/manual/larepass/manage-apps-with-larepass",
+        },
+        {
           text: "Manually update an app image",
           link: "/manual/update-app-image",
         },
@@ -359,6 +363,10 @@ const side = {
               link: "/manual/olares/files/share-files",
             },
             {
+              text: "Manage access to Common and External",
+              link: "/manual/olares/files/manage-common-external-access",
+            },
+            {
               text: "Sync files with a computer",
               link: "/manual/olares/files/sync-files",
             },
@@ -397,6 +405,29 @@ const side = {
               link: "/manual/olares/files/mount-cloud-storage",
             },
           ],
+        },
+      ],
+    },
+    {
+      text: "Reading and knowledge",
+      link: "/manual/olares/wise/",
+      collapsed: false,
+      items: [
+        {
+          text: "Save web pages and files",
+          link: "/manual/olares/wise/collect",
+        },
+        {
+          text: "Subscribe and manage feeds",
+          link: "/manual/olares/wise/subscribe",
+        },
+        {
+          text: "Read and organize",
+          link: "/manual/olares/wise/basics",
+        },
+        {
+          text: "Manage cookies",
+          link: "/manual/olares/wise/manage-cookies",
         },
       ],
     },
@@ -472,10 +503,6 @@ const side = {
             {
               text: "Manage middleware",
               link: "/manual/olares/controlhub/manage-middleware",
-            },
-            {
-              text: "Run commands in the Control Hub terminal",
-              link: "/manual/olares/controlhub/terminal",
             },
             {
               text: "Configure host name resolution in Olares",

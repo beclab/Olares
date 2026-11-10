@@ -60,10 +60,6 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           items:
             [
               {
-                text: "Access via Control Hub",
-                link: "/one/access-terminal-control-hub",
-              },
-              {
                 text: "Access via SSH",
                 link: "/one/access-terminal-ssh",
               },
@@ -127,7 +123,7 @@ export const oneSidebar: DefaultTheme.Sidebar = {
           ],
         },
         {
-          text: "Manage hardware settings",
+          text: "Check device status and manage hardware settings",
           link: "/one/hardware-settings",
         },
         {

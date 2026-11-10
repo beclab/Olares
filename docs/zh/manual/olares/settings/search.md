@@ -28,7 +28,7 @@ head:
 - **排除文件**：搜索引擎的全局忽略列表，用于指定哪些文件不参与索引。
 - **全文搜索目录**：列出已启用内容搜索的文件夹，这些目录中的文件可以按文件名和文本内容进行搜索。
 
-![文件搜索](/images/zh/manual/olares/file-search.png#bordered)
+![文件搜索](/images/zh/manual/olares/file-search-1.12.8.png#bordered)
 
 ## 查看搜索索引状态
 
