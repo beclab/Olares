@@ -90,21 +90,26 @@ Claude Code 是一个 AI 编码助手，帮助你使用自然语言编写、测�
 
 <!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
 
-<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-anthropic-->
+#### 配置 Router
 
-6. 返回 **LLM** 页面，找到 Qwen3.8-27B (llama.cpp)，然后点击 **View model card**。
-7. 点击 **Edit**。在 **Context & Rate Limits** 区域将 **Max output tokens** 设为 `32000`，然后点击 **Save**。
-8. 等待 Qwen3.8-27B (llama.cpp) 显示 **Callable**。
+1. 从 Launchpad 打开 Router。在 **Default models** 页面将 Qwen3.8-27B (llama.cpp) 设为默认聊天模型。
+2. 进入 **LLM** 页面，找到 Qwen3.8-27B (llama.cpp)，然后点击 **View model card**。
+3. 点击 **Edit**。在 **Context & Rate Limits** 区域将 **Max output tokens** 设为 `32000`，然后点击 **Save**。
+4. 等待模型显示 **Callable**。
 
    :::info 最大输出 token 数
    Claude Code 调用本地模型时会将 `max_tokens` 设为 `32000`，因此 Router 允许的最大输出 token 数至少应为 `32000`。仅当模型后端及其配置的上下文窗口支持时，才可以设置更高的上限。此上限不会预留内存，也不会强制每次响应使用这么多 token。
    :::
 
-9. 打开 Olares Settings，前往 **Applications** > **Claude Code** > **Manage environment variables**。
-10. 设置以下环境变量：
+5. 在同一模型行中点击 **View connection example**。在 **How to call this model** 窗口中选择 **Apps in Olares**，并复制 **Base URL**。移除末尾的 `/v1`。例如，使用 `https://router.<你的 Olares 域名>`。
+
+#### 配置 Claude Code
+
+1. 打开 Olares Settings，前往 **Applications** > **Claude Code** > **Manage environment variables**。
+2. 设置以下环境变量：
 
    - **ANTHROPIC_AUTH_TOKEN**: 填写 `olares`。
-   - **ANTHROPIC_BASE_URL**: 输入从 Router 复制的 **Base URL**。例如，`https://router.<your-olares-domain>`。
+   - **ANTHROPIC_BASE_URL**: 输入从 Router 复制的 **Base URL**。
    - **ANTHROPIC_MODEL**: 填写 `default-chat`。
 
    <!--
@@ -113,8 +118,8 @@ Claude Code 是一个 AI 编码助手，帮助你使用自然语言编写、测�
    -->
 
 
-11. 点击 **Apply**。等待约 10 秒让容器重启。
-12. 从 Launchpad 打开 Claude Code CLI，然后在终端中输入 `claude` 以启动你的会话。
+3. 点击 **Apply**。等待约 10 秒让容器重启。
+4. 从 Launchpad 打开 Claude Code CLI，然后在终端中输入 `claude` 以启动你的会话。
 
 ## 使用 Claude Code
 
