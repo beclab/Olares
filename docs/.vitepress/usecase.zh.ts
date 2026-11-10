@@ -168,10 +168,6 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   text: "Codex CLI",
                   link: "/zh/use-cases/codex-cli",
                 },
-                  {
-                  text: "Hermes Workspace",
-                  link: "/zh/use-cases/hermes-workspace",
-                },
                 {
                   text: "Goose",
                   link: "/zh/use-cases/goose",
@@ -206,6 +202,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               text: "AI 工作台",
               collapsed: true,
               items: [
+                {
+                  text: "Hermes Workspace",
+                  link: "/zh/use-cases/hermes-workspace",
+                },
                 {
                   text: "Open WebUI",
                   collapsed: true,
