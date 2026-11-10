@@ -96,22 +96,14 @@ Olares One 激活后，系统用户名为 `olares`。系统密码用于通过 SS
 
 #### 从 Olares 桌面重置系统密码
 
-如果仍能登录 Olares 桌面，但不知道系统密码，可以使用以下任一方式重置。
+如果仍能登录 Olares 桌面，但不知道系统密码，可以在设置中重置。
 
-- **Control Hub**：
-
-  1. 打开 **Control Hub**，然后选择 **Terminal** > **Olares**。
-  2. 运行：
-
-     ```bash
-     passwd olares
-     ```
-
-  3. 根据提示输入两次新密码。
-
-- **Settings**：
-
-  按照[重置 SSH 密码](/zh/one/hardware-settings#重置-ssh-密码)中的步骤，在节点详情页面设置新密码，并在 LarePass 中确认。新密码会保存到 Vault。
+1. 打开**设置**，在 **My Olares** 页面选择**集群概览**。
+2. 在**节点**下，选择 **olares**。
+3. 在**节点设置**下，选择**重置 SSH 密码**。
+4. 输入符合强度要求的新密码，然后点击**重置**。
+5. 打开 LarePass，扫描屏幕上显示的二维码。
+6. 在 LarePass 中点击**确认**。新密码会保存到 Vault。
 
 #### 在 LarePass 中查找当前系统密码
 
