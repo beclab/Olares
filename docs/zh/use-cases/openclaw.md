@@ -121,7 +121,7 @@ OpenClaw 需要较大的"上下文窗口"（即 AI 的短期记忆）来处理�
     | Model/auth provider | 选择 **Custom Provider**。 |
     | API Base URL | 粘贴步骤 1 中从 Router 复制的 Base URL，保留 `/v1`。 |
     | How do you want to provide this API key? | 如果出现此提示，选择 **Paste API key now**。 |
-    | API Key (leave blank if not required) | 填写 `olares`。 |
+    | API Key (leave blank if not required) | 填写非空占位值，例如 `olares`。 |
     | Endpoint compatibility | 选择 **OpenAI-compatible**。 |
     | Model ID | 填写 `default-chat`。向导可能先验证端点，再进入下一项。 |
     | Endpoint ID | 填写 `router`。模型引用为 `router/default-chat`。 |
@@ -131,9 +131,9 @@ OpenClaw 需要较大的"上下文窗口"（即 AI 的短期记忆）来处理�
     | Remaining settings (channels, search provider,<br>and skill dependencies) | 选择 **Skip for now**。<br>你可以稍后配置它们。 |
 
     :::tip API 密钥占位值
-    OpenClaw 2026.11.3 要求此提供商的 API 密钥非空，即使向导提示可以留空。连接此 Olares Router 时，使用 `olares` 作为占位值。
+    OpenClaw 2026.11.3 要求此提供商的 API 密钥非空，即使向导提示可以留空。连接此 Olares Router 时，填写非空占位值即可，例如 `olares`。
 
-    如果实时对话测试提示 `No API key found for provider "router"`，选择 **Fix model/auth setup**，在 API 密钥字段填写 `olares`，然后重新测试。
+    如果实时对话测试提示 `No API key found for provider "router"`，选择 **Fix model/auth setup**，在 API 密钥字段填写非空占位值，然后重新测试。
     :::
 
     完成安装向导后，OpenClaw 会自动打开终端用户界面（TUI）。
