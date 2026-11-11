@@ -1,6 +1,6 @@
 ---
 outline: [2,3]
-description: Frequently asked questions regarding Olares One
+description: Find answers about Olares One hardware, local AI apps, subscriptions, model upgrades, mobile access, purchasing, and support.
 head:
   - - meta
     - name: keywords
@@ -32,6 +32,21 @@ A personal cloud is a private infrastructure that replicates the utility of publ
 * **Storage**: 2TB NVMe SSD
 
 For details, see [Olares One specifications](spec).
+
+### How does the RTX 5090 Mobile in Olares One compare with the desktop RTX 5090?
+
+Both GPUs use NVIDIA's Blackwell architecture and support CUDA. The desktop version has more compute resources and memory, while the mobile version operates within a smaller power and cooling budget.
+
+| Specification | RTX 5090 Mobile in Olares One | Desktop RTX 5090 reference design |
+| --- | --- | --- |
+| CUDA cores | 10,496 | 21,760 |
+| GPU memory | 24 GB GDDR7 | 32 GB GDDR7 |
+| Memory interface | 256-bit | 512-bit |
+| GPU power | Up to 175 W in Performance mode | 575 W total graphics power |
+
+For local AI, the desktop GPU's extra 8 GB of VRAM provides more room for model weights and conversation context. Its larger core count provides more parallel computing capacity. The mobile GPU's lower power budget reduces cooling requirements, allowing Olares One to provide local AI computing in a compact enclosure.
+
+GPU specifications are from NVIDIA's [laptop GPU comparison](https://www.nvidia.com/en-us/geforce/laptops/compare/) and [desktop RTX 5090 specifications](https://www.nvidia.com/en-us/geforce/graphics-cards/50-series/rtx-5090/). For Olares One power modes, see [What is the power consumption?](#what-is-the-power-consumption).
 
 ### How loud is the device?
 
@@ -71,6 +86,8 @@ Yes. You can modify the hardware through several internal slots and expansion po
 * **External graphics**: You can connect a compatible Thunderbolt external graphics device. See [Can I use an eGPU with Olares One?](#can-i-use-an-egpu-with-olares-one)
 * **External displays**: The Thunderbolt 5 port supports docking stations with up to two external monitors at up to 8K resolution. The built-in RTX 5090 Mobile handles video output.
 
+For storage upgrade instructions, see [Expand storage with an internal SSD](expand-storage-internal-ssd.md).
+
 ### Can I use an eGPU with Olares One?
 
 Yes. You can connect a Thunderbolt external graphics device with a GPU already installed, or install a compatible desktop NVIDIA GPU in a powered eGPU dock or enclosure. Hardware compatibility and setup differ between Olares OS and Windows 11.
@@ -106,7 +123,9 @@ Support for common out-of-band management capabilities on Olares One is as follo
 
 ### Are there additional fees to use Olares One?
 
-No. Olares OS and system updates are completely free.
+Olares OS, system updates, apps in Olares Market, and local AI inference are free to use.
+
+Your regular running costs are electricity and internet access. If you choose to connect a cloud model API, such as OpenAI or Anthropic, its usage is billed by that provider.
 
 ### Can I use the device without an internet connection?
 
@@ -126,6 +145,71 @@ Yes. Olares One supports both GPU MUX and Optimus modes. The system defaults to 
 
 ## AI & gaming
 
+### Can I use local AI instead of paid AI subscriptions?
+
+Yes. You can run local models for chat, writing, coding, research, and media creation. Choose a setup based on the tasks you use a subscription for:
+
+| Task | Local models or workflow | Example apps |
+| --- | --- | --- |
+| Chat and writing | A local LLM, such as Qwen, answers questions and drafts text | [LobeHub](../use-cases/lobechat.md) or [Open WebUI](../use-cases/openwebui.md) as the chat interface |
+| Document Q&A | A local LLM works with documents retrieved from your knowledge base | [LobeHub](../use-cases/lobechat.md) |
+| Research reports with citations | A local LLM analyzes sources retrieved through SearXNG | [Local Deep Research](../use-cases/local-deep-research.md) |
+| Writing and testing code | A local model works with an agent that edits files and runs tests | [OpenCode](../use-cases/opencode.md), [Claude Code](../use-cases/claude-code.md), or [Codex CLI](../use-cases/codex-cli.md) |
+| Image and video creation | A workflow calls local models to generate or edit images and videos | [FlowStudio](../use-cases/flowstudio.md) or [ComfyUI](../use-cases/comfyui.md) |
+| Music creation | Local music models generate songs from lyrics and style prompts | [YuE2 Studio](../use-cases/yue2-studio.md) or [ACE-Step](../use-cases/ace-step-1.5.md) |
+
+Browse [Olares Market](https://market.olares.com) for more apps and models.
+
+### Can I host always-on AI agents on Olares One?
+
+Yes. Agents hosted on Olares One can run around the clock, independently of your laptop or phone. Install an agent from Market and connect it to a local model. Available agents include:
+
+- **[Lares](../use-cases/lares.md)**: Olares' native agent for managing files, apps, and device settings, with integrations for research and creative tasks.
+- **[OpenClaw](../use-cases/openclaw.md)**: A personal agent you can interact with through messaging apps, with tools and skills for tasks such as document handling and web browsing.
+- **[Hermes Agent](../use-cases/hermes.md)**: An agent with memory across sessions and reusable skills for managing files, apps, and coding tasks.
+
+### Which local LLMs can I run?
+
+You can install local large language models (LLMs) from Market, including:
+
+- **Qwen3.8-27B**, served by llama.cpp.
+- **Qwen3.6-35B-A3B**, served by llama.cpp.
+- **Gemma 4 26B**, served by Ollama.
+
+These model apps include a configured inference engine and download the model files during setup. Browse [Olares Market](https://market.olares.com) for the current selection, or follow [Run local LLMs](../use-cases/llm-base-apps.md) to get started.
+
+### Can I install newer models or models that are not in Market?
+
+Yes. Install new model apps as they become available in Market. To run a model from Hugging Face or the Ollama library, create an instance from an Engine Base app. Olares provides llama.cpp, Ollama, vLLM, and SGLang Engine Base apps.
+
+Choose an engine that supports the model's architecture and file format, then set its memory and context limits for your device. The [local model guide](../use-cases/llm-base-apps.md) explains engine selection and configuration.
+
+### How do GPU memory and system memory affect model choice?
+
+Olares One has two separate memory pools: 24 GB of GPU memory (VRAM) and 96 GB of system memory (RAM). VRAM holds model weights and the context cache used during GPU inference. RAM runs the operating system and apps. With an engine that supports CPU and GPU inference, RAM can also hold the part of a larger model processed by the CPU.
+
+Quantization reduces the memory needed for model weights by storing them at lower precision. Leave room for the context cache as well, which grows with longer conversations and more concurrent requests. See [Run local LLMs](../use-cases/llm-base-apps.md) for model and memory settings.
+
+### Can I use coding agents with local models?
+
+Yes. Install [OpenCode](../use-cases/opencode.md), [Claude Code](../use-cases/claude-code.md), or [Codex CLI](../use-cases/codex-cli.md) from Market and connect it to a local model through Router. The model generates responses and tool calls. The agent edits files and runs commands and tests in its development environment.
+
+You can also run OpenCode CLI on your own computer and connect it to the model on Olares. In this setup, files and code execution stay on your computer, while model inference runs on Olares One. See [How AI apps connect to Olares models](../manual/best-practices/connect-ai-apps.md).
+
+### Which languages does Olares One support?
+
+Language support depends on what you are using:
+
+- **Olares and LarePass interfaces**: English, Simplified Chinese, German, Spanish, Italian, French, and Japanese. See [Olares language settings](../manual/olares/settings/language-appearance.md) and [LarePass language settings](../manual/larepass/index.md#change-the-language).
+- **Third-party apps**: Language options are provided by each app.
+- **AI models**: Chat, speech recognition, and speech generation models each have their own language support. Select a model that supports the language you want to use.
+
+### Can local AI models understand images?
+
+Yes. A vision-capable model can analyze an uploaded image and answer questions about its contents. For example, Gemma 4 26B (Ollama) supports image input.
+
+Connect the model to a chat app that accepts image attachments, then upload an image with your question. See [Run local LLMs](../use-cases/llm-base-apps.md) for model setup.
+
 ### Does Olares One support the Kimi K2 model?
 
 Kimi K2 has around 1 trillion parameters and requires approximately 1024 GB of VRAM, making it unavailable in the Olares Market.
@@ -134,9 +218,12 @@ We anticipate that a Kimi-K2-level model might run on Olares One in the future a
 
 ### Can local AI models access the internet for research?
 
-Yes. Olares supports several applications that enable internet access:
-* **Vane** (formerly Perplexica): An open‑source alternative to Perplexity. It retrieves the latest information using SearxNG and analyzes it with a local LLM.
-* **DeerFlow**: An open‑source alternative to OpenResearch. It uses RAGFlow to configure a local knowledge base, integrates Tavily for web search, and performs analysis using a local LLM.
+Yes. An agent can call search and page-reading tools, then use a local model to analyze the results. Olares Market provides both types of tool:
+
+- **[SearXNG](../use-cases/searxng.md)** searches the web and returns relevant links and snippets.
+- **[Firecrawl](../use-cases/firecrawl.md)** reads web pages and turns their content into text the model can process.
+
+Connect these tools to an agent to build a research workflow. For a setup using Lares and Router, see [Research the web with Lares](../use-cases/lares-web-research.md).
 
 ### Can I use a NAS for storage and use Olares for AI processing?
 
@@ -144,24 +231,16 @@ Yes, we highly recommend this workflow. You can mount your NAS to Olares One as 
 
 ### Can I use Olares AI features on my iPhone or Mac?
 
-Yes. Olares supports secure remote access. You can use your iPhone or Mac to query the AI models running on your Olares One from anywhere.
+Yes. Open an AI app hosted on Olares One from your phone or computer's browser. Local model inference runs on Olares One, so your phone or computer only needs to display the app and send your requests.
 
-### How does the 120B model perform on Olares One?
-
-We tested the `gpt-oss:120b` model. Since the model size exceeds the dedicated GPU memory, the system loads part of the model into the 96GB of system memory for CPU processing.
-
-In our testing, `gpt-oss:120b` achieves approximately 36.16 tokens/s.
-
-For better efficiency, we recommend `qwen3-30b-a3b`. It delivers superior results while remaining significantly smaller, reaching speeds of up to 157 tokens/s, or around 81 tokens/s with 8 concurrent requests.
-
-For the detailed testing methodology, see [Local AI Hardware Performance Benchmarking](https://blog.olares.com/local-ai-hardware-performance-benchmarking/).
+For access away from home, keep Olares One powered on and connected to the internet, then enable [LarePass VPN](access-olares-via-vpn.md) on your phone or computer.
 
 ### Can I use LM Studio to manage models on Olares?
 
 LM Studio functions as a client-side desktop application rather than a server-side service, so it cannot be installed directly on Olares One.
 
 However, you have two alternatives:
-* Use native apps, such as OpenWebUI or LobeHub (formerly LobeChat), which offer similar functionality.
+* Use [LobeHub](../use-cases/lobechat.md) to chat with models hosted on Olares.
 * Run a local instance of LM Studio on your computer and configure it to access the AI models hosted on Olares One via API.
 
 ### Does performance drop if I load multiple models simultaneously?
@@ -197,6 +276,8 @@ In direct play scenarios, testing shows Cyberpunk 2077 achieves approximately 90
 Yes. To run occasional Windows applications, install the Windows app from the Olares Market. This runs a virtual machine accessible via RDP, providing a seamless remote desktop experience when used with the built-in VPN.
 
 Alternatively, you can install a second internal drive for a dual-boot setup or replace Olares OS with a native Windows installation.
+
+See [Run Windows in a virtual machine](../use-cases/windows.md), [Set up dual boot with a second drive](dual-boot-dual-drive.md), or [Install Windows on Olares One](install-windows-primary-drive.md).
 
 ### Can the Windows VM use the GPU?
 
@@ -281,6 +362,20 @@ While the hardware easily handles these workloads, building a stable, production
 ### Why is the Ethernet port limited to 2.5Gbps if the device is meant for clustering?
 
 We understand that 10Gbps is preferred for clustering to maximize data transfer between nodes. However, the inclusion of a 2.5Gbps Ethernet port is a strict limitation imposed by the hardware platform vendor.
+
+## Purchasing & support
+
+### Where can I check the price, shipping costs, and taxes?
+
+See the [Olares One store page](https://shop.olares.com/products/olares-one) for current pricing, configurations, and promotions. Select your delivery destination and review the shipping and tax information at checkout. The [Shipping Policy](https://shop.olares.com/policies/shipping-policy) explains how duties and taxes are handled for different destinations.
+
+For multi-unit purchases or help with a destination not listed at checkout, contact hi@olares.com.
+
+### Where can I find warranty and return information?
+
+The [Warranty Policy](https://shop.olares.com/pages/warranty-policy) explains coverage, repairs, replacements, and shipping arrangements. The [Return & Refund Policy](https://shop.olares.com/policies/refund-policy) explains return eligibility and regional terms.
+
+For a hardware issue, contact hi@olares.com with your order number, device serial number, and a description of the problem. The support team can help diagnose the issue and provide return instructions if service is needed.
 
 ## Advanced usage and configuration
 
