@@ -8,9 +8,9 @@ head:
   - - meta
     - name: keywords
       content: Olares, OpenClaw, self-hosted ai agent, personal ai agent, local ai agent, openclaw on olares
-app_version: "1.0.44"
-doc_version: "3.0"
-doc_updated: "2026-09-24"
+app_version: "1.0.57"
+doc_version: "3.1"
+doc_updated: "2026-11-11"
 ---
 
 # Run OpenClaw as your self-hosted personal AI agent
@@ -117,7 +117,7 @@ Set up OpenClaw using the step-by-step interactive wizard.
     | Model/auth provider | Select **Custom Provider**. |
     | API Base URL | Paste the Router Base URL from Step 1, including `/v1`. |
     | How do you want to provide this API key? | Select **Paste API key now** if this prompt appears. |
-    | API Key (leave blank if not required) | Leave blank for this app in Olares. |
+    | API Key (leave blank if not required) | Enter `olares`. |
     | Endpoint compatibility | Select **OpenAI-compatible**. |
     | Model ID | Enter `default-chat`. The wizard may verify the endpoint before continuing. |
     | Endpoint ID | Enter `router`. The model reference is `router/default-chat`. |
@@ -125,6 +125,12 @@ Set up OpenClaw using the step-by-step interactive wizard.
     | Does this model support image input? | If prompted, select **Yes** for Qwen3.8-27B (llama.cpp). For another model, check its capabilities in Router. |
     | Test AI access now with a live completion | Select **Yes**.<br>The message `AI access works` indicates that OpenClaw can successfully connect to the model. |
     | Remaining settings (channels, search provider,<br>and skill dependencies) | Select **Skip for now**.<br>You can configure them later. |
+
+    :::tip API key placeholder
+    OpenClaw 2026.11.3 requires a non-empty API key for this provider, even though the prompt allows leaving it blank. Use `olares` as a placeholder for this Olares Router connection.
+
+    If the live completion test reports `No API key found for provider "router"`, select **Fix model/auth setup**, enter `olares` in the API key field, and retry the test.
+    :::
 
     Once you complete the onboarding wizard, OpenClaw opens the Terminal User Interface (TUI) automatically.
 

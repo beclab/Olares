@@ -8,9 +8,9 @@ head:
   - - meta
     - name: keywords
       content: Olares, OpenClaw, self-hosted ai agent, personal ai agent, local ai agent, openclaw on olares
-app_version: "1.0.44"
-doc_version: "3.0"
-doc_updated: "2026-09-24"
+app_version: "1.0.57"
+doc_version: "3.1"
+doc_updated: "2026-11-11"
 ---
 
 :::warning
@@ -121,7 +121,7 @@ OpenClaw 需要较大的"上下文窗口"（即 AI 的短期记忆）来处理�
     | Model/auth provider | 选择 **Custom Provider**。 |
     | API Base URL | 粘贴步骤 1 中从 Router 复制的 Base URL，保留 `/v1`。 |
     | How do you want to provide this API key? | 如果出现此提示，选择 **Paste API key now**。 |
-    | API Key (leave blank if not required) | Olares 内的这个应用无需 Router API 密钥，留空。 |
+    | API Key (leave blank if not required) | 填写 `olares`。 |
     | Endpoint compatibility | 选择 **OpenAI-compatible**。 |
     | Model ID | 填写 `default-chat`。向导可能先验证端点，再进入下一项。 |
     | Endpoint ID | 填写 `router`。模型引用为 `router/default-chat`。 |
@@ -129,6 +129,12 @@ OpenClaw 需要较大的"上下文窗口"（即 AI 的短期记忆）来处理�
     | Does this model support image input? | 如果出现此提示，Qwen3.8-27B (llama.cpp) 选择 **Yes**。使用其他模型时，以 Router 显示的能力为准。 |
     | Test AI access now with a live completion | 选择 **Yes**。<br>出现 `AI access works` 消息表示 OpenClaw 已成功连接到模型。 |
     | Remaining settings (channels, search provider,<br>and skill dependencies) | 选择 **Skip for now**。<br>你可以稍后配置它们。 |
+
+    :::tip API 密钥占位值
+    OpenClaw 2026.11.3 要求此提供商的 API 密钥非空，即使向导提示可以留空。连接此 Olares Router 时，使用 `olares` 作为占位值。
+
+    如果实时对话测试提示 `No API key found for provider "router"`，选择 **Fix model/auth setup**，在 API 密钥字段填写 `olares`，然后重新测试。
+    :::
 
     完成安装向导后，OpenClaw 会自动打开终端用户界面（TUI）。
 
