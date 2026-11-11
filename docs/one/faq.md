@@ -1,6 +1,6 @@
 ---
 outline: [2,3]
-description: Find answers about Olares One hardware, local AI apps, subscriptions, model upgrades, mobile access, purchasing, and support.
+description: Answers to common questions about Olares One.
 head:
   - - meta
     - name: keywords

@@ -1,6 +1,6 @@
 ---
 outline: [2,3]
-description: 了解 Olares One 的硬件、本地 AI 应用、订阅费用、模型升级、移动端访问、购买和售后支持。
+description: 关于 Olares One 的常见问题解答。
 head:
   - - meta
     - name: keywords
