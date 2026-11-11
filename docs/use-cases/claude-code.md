@@ -8,8 +8,8 @@ head:
     - name: keywords
       content: Olares, Claude Code, Anthropic, AI coding, Ollama, terminal, TUI, self-hosted
 app_version: "0.1.13"
-doc_version: "2.2"
-doc_updated: "2026-11-10"
+doc_version: "2.3"
+doc_updated: "2026-11-11"
 ---
 
 # Write code using Claude Code
@@ -36,13 +36,9 @@ Before you begin, you need:
   | Connection method | Requirements |
   | :--- | :--- |
   | Anthropic subscription | An active Claude Pro or Max subscription |
-  | Local model | Qwen3.8-27B (llama.cpp) installed from Market |
+  | Local model | A local chat model installed from Market. This guide uses Qwen3.8-27B (llama.cpp). |
 
 <!--@include: ../reusables/ai-service-connections.md#use-different-model-->
-
-:::warning Model compatibility
-Some local models, including Qwen3.5-9B-GGUF Q4_K_M (llama.cpp), use chat templates that are incompatible with Claude Code's system-message ordering. If you encounter a system-message error, switch to another model. See the [FAQ](#system-message-error) for details.
-:::
 
 ## Install Claude Code
 
@@ -239,10 +235,6 @@ The container preconfigures the environment variable `PIP_BREAK_SYSTEM_PACKAGES=
 :::
 
 ## FAQs
-
-### `System message must be at the beginning.` {#system-message-error}
-
-This error occurs when the model's chat template only accepts system messages at the beginning of a conversation. Claude Code can send additional system messages later in the conversation. A template with this restriction rejects those messages, causing HTTP 500 errors and repeated retries.
 
 ### `claude: command not found`
 
