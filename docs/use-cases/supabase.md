@@ -6,8 +6,8 @@ head:
     - name: keywords
       content: Olares, Supabase, Lares, MCP, PostgreSQL, RLS, n8n, Metabase, Flowise, Code Server
 app_version: "0.0.14"
-doc_version: "2.0"
-doc_updated: "2026-11-05"
+doc_version: "2.1"
+doc_updated: "2026-11-12"
 ---
 
 # Build an app backend with Supabase and Lares
@@ -127,22 +127,16 @@ Start by asking Lares to prepare the example for you:
 Help me connect a private notes app to Supabase. Use supabase_official
 to inspect user_notes and its RLS policy, and get the API URL and anon key.
 Prepare notes.mjs and a .env template for the SDK example below.
-Keep passwords out of the conversation and source code. Explain how to
-create the Auth user and run the app, then help me check two-user isolation.
+Keep passwords out of the conversation and source code. Stop after
+preparing the files and explaining the next steps. Do not create Auth
+users, run the app, or test two-user isolation; I will do those below.
 ```
 
-Lares can prepare the database and file contents. Copy the files into Code Server and complete the user creation and run steps below. Writing files or running commands directly requires a separate authorized workspace tool.
+Lares only checks the existing table and policy and prepares file contents at this stage. Copy the files into Code Server, then create users, run the app, and verify isolation yourself in the steps below. Writing files or running commands directly requires a separate authorized workspace tool.
 
 ### Get the API connection and create a user
 
-1. Ask Lares for the application connection details:
-
-   ```text
-   Use supabase_official to return this project's API URL and its legacy
-   anon key for my application. Do not use a service_role key.
-   ```
-
-   These come from `get_project_url` and `get_publishable_keys`. The SDK connects to the Supabase API URL, without `/rest/v1` or `/api/mcp`.
+1. Use the API URL and legacy `anon` key returned by Lares. They come from `get_project_url` and `get_publishable_keys`. The SDK connects to the Supabase API URL, without `/rest/v1` or `/api/mcp`. Do not use a `service_role` key.
 2. Open Supabase Studio and go to **Authentication** > **Users** > **Add user** > **Create new user**.
 3. Enter an email and password, keep **Auto confirm user?** enabled for this local example, and create the user.
 
@@ -202,11 +196,14 @@ In Supabase Studio, open **Project Settings** > **API Keys** > **Legacy anon, se
      });
    if (loginError) throw loginError;
 
-   const { error: insertError } = await client.from('user_notes').insert({
-     owner_id: session.user.id,
-     note: 'Ask the Lakeview contractor to confirm the delivery window.'
-   });
-   if (insertError) throw insertError;
+   if (process.env.NOTES_READ_ONLY !== '1') {
+     const { error: insertError } = await client.from('user_notes').insert({
+       owner_id: session.user.id,
+       note: process.env.NOTES_TEXT ||
+         'Ask the Lakeview contractor to confirm the delivery window.'
+     });
+     if (insertError) throw insertError;
+   }
 
    const { data: notes, error: readError } =
      await client.from('user_notes').select('id, note');
@@ -228,7 +225,24 @@ In Supabase Studio, open **Project Settings** > **API Keys** > **Legacy anon, se
    ```
 
    The terminal displays the signed-in user's notes and a response from the included `hello` Edge Function.
-6. To check isolation, create a second user in Studio. Sign in as that user and query `user_notes` before inserting a note. The first user's notes should not appear. After both users have added notes, each should see only their own rows.
+### Verify two-user isolation
+
+1. In Studio, create a second Auth user with a different email and password, keeping **Auto confirm user?** enabled.
+2. In `.env`, replace `SUPABASE_USER_EMAIL` and `SUPABASE_USER_PASSWORD` with the second user's credentials. Before inserting anything as this user, run:
+
+   ```bash
+   NOTES_READ_ONLY=1 node --env-file=.env notes.mjs
+   ```
+
+   The notes table should be empty if this user has no existing notes. In all cases, it must not contain the first user's Lakeview note.
+3. Insert a distinct note as the second user:
+
+   ```bash
+   NOTES_TEXT='Riverside user note' node --env-file=.env notes.mjs
+   ```
+
+   The output should include `Riverside user note` and exclude the first user's Lakeview note.
+4. Restore the first user's credentials in `.env` and run the read-only command from step 2 again. The output should include the Lakeview note and exclude `Riverside user note`. Together, these results confirm that each signed-in user reads only their own rows. The read-only runs do not add another note.
 
 Do not replace `anon` with `service_role` to resolve an RLS error. That key bypasses the policy the application relies on.
 
