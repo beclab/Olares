@@ -5,7 +5,7 @@ head:
   - - meta
     - name: keywords
       content: Olares, Supabase, Lares, MCP, PostgreSQL, RLS, n8n, Metabase, Flowise, Code Server
-app_version: "0.0.14"
+app_version: "0.0.15"
 doc_version: "2.1"
 doc_updated: "2026-11-12"
 ---
@@ -34,6 +34,8 @@ Lares can use Supabase's official Model Context Protocol (MCP) server to inspect
 2. Click **Get**, then **Install**, and wait for installation to complete. The app appears on the Launchpad as **Supabase Studio**.
 
 Each installation provides one self-hosted project. You do not need a Supabase Cloud account.
+
+If you reinstall Supabase while keeping its application data, version 0.0.15 synchronizes the database service accounts with the new installation's password at startup. The existing project data remains available.
 
 ## Connect the official MCP server in Lares
 
