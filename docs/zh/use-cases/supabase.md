@@ -6,8 +6,8 @@ head:
     - name: keywords
       content: Olares, Supabase, Lares, MCP, PostgreSQL, RLS, n8n, Metabase, Flowise, Code Server
 app_version: "0.0.14"
-doc_version: "2.0"
-doc_updated: "2026-11-05"
+doc_version: "2.1"
+doc_updated: "2026-11-12"
 ---
 
 :::warning
@@ -130,22 +130,15 @@ with check (auth.uid() = owner_id);
 帮我将私有笔记应用接入 Supabase。使用 supabase_official 检查 user_notes
 及其 RLS 策略，获取 API URL 和 anon key。
 按照下面的 SDK 示例准备 notes.mjs 和 .env 模板。
-不要在对话或源码中填写密码。说明如何创建 Auth 用户和运行应用，
-再帮我检查两个用户的数据隔离。
+不要在对话或源码中填写密码。准备好文件并说明后续步骤后就停止。
+不要创建 Auth 用户、运行应用或测试双用户隔离；这些操作由我按下文完成。
 ```
 
-Lares 可以准备数据库和文件内容。将文件复制到 Code Server，再按下文创建用户并运行。直接写入文件或执行命令需要另外授权的工作区工具。
+此阶段 Lares 只检查现有数据表和策略，并准备文件内容。将文件复制到 Code Server，然后按下文自行创建用户、运行应用并验证隔离。直接写入文件或执行命令需要另外授权的工作区工具。
 
 ### 获取 API 连接信息并创建用户
 
-1. 向 Lares 获取应用连接信息：
-
-   ```text
-   使用 supabase_official 返回这个项目的 API URL 和 legacy anon key，
-   用于我的应用。不要使用 service_role key。
-   ```
-
-   对应工具是 `get_project_url` 和 `get_publishable_keys`。SDK 使用 Supabase API URL，不添加 `/rest/v1` 或 `/api/mcp`。
+1. 使用 Lares 返回的 API URL 和 legacy `anon` key。对应工具是 `get_project_url` 和 `get_publishable_keys`。SDK 使用 Supabase API URL，不添加 `/rest/v1` 或 `/api/mcp`。不要使用 `service_role` key。
 2. 打开 Supabase Studio，进入 **Authentication** > **Users** > **Add user** > **Create new user**。
 3. 填写邮箱和自定密码，为本地示例保持 **Auto confirm user?** 开启，然后创建用户。
 
@@ -205,11 +198,14 @@ Lares 可以准备数据库和文件内容。将文件复制到 Code Server，�
      });
    if (loginError) throw loginError;
 
-   const { error: insertError } = await client.from('user_notes').insert({
-     owner_id: session.user.id,
-     note: 'Ask the Lakeview contractor to confirm the delivery window.'
-   });
-   if (insertError) throw insertError;
+   if (process.env.NOTES_READ_ONLY !== '1') {
+     const { error: insertError } = await client.from('user_notes').insert({
+       owner_id: session.user.id,
+       note: process.env.NOTES_TEXT ||
+         'Ask the Lakeview contractor to confirm the delivery window.'
+     });
+     if (insertError) throw insertError;
+   }
 
    const { data: notes, error: readError } =
      await client.from('user_notes').select('id, note');
@@ -231,7 +227,24 @@ Lares 可以准备数据库和文件内容。将文件复制到 Code Server，�
    ```
 
    终端会显示当前用户的笔记，以及内置 `hello` Edge Function 返回的结果。
-6. 在 Studio 创建第二个用户来检查隔离效果。以第二个用户登录，在插入笔记前查询 `user_notes`，不应看到第一个用户的笔记。两个用户都添加笔记后，各自应只能看到自己的记录。
+### 验证双用户数据隔离
+
+1. 在 Studio 中创建第二个 Auth 用户，使用不同的邮箱和密码，并保持 **Auto confirm user?** 开启。
+2. 将 `.env` 中的 `SUPABASE_USER_EMAIL` 和 `SUPABASE_USER_PASSWORD` 换成第二个用户的凭据。在该用户插入任何笔记之前运行：
+
+   ```bash
+   NOTES_READ_ONLY=1 node --env-file=.env notes.mjs
+   ```
+
+   如果第二个用户此前没有笔记，表格应为空；无论如何都不应出现第一个用户的 Lakeview 笔记。
+3. 以第二个用户插入一条可区分的笔记：
+
+   ```bash
+   NOTES_TEXT='Riverside user note' node --env-file=.env notes.mjs
+   ```
+
+   输出应包含 `Riverside user note`，且不包含第一个用户的 Lakeview 笔记。
+4. 在 `.env` 中恢复第一个用户的凭据，再次运行第 2 步的只读命令。输出应包含 Lakeview 笔记，且不包含 `Riverside user note`。这两次查询共同表明每个登录用户只能读取自己的记录；只读运行不会重复插入笔记。
 
 不要通过把 `anon` 换成 `service_role` 来解决 RLS 错误，后者会绕过应用依赖的访问策略。
 
