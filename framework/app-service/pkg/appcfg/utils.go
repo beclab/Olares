@@ -27,7 +27,8 @@ func GetAppInstallationConfig(app, owner string) (*ApplicationConfig, error) {
 		return nil, err
 	}
 
-	// TODO: app installation namespace
+	// Namespace on the reloaded ApplicationConfig is the resolved K8s
+	// namespace persisted at install time (not OlaresManifest spec.namespace).
 	var namespace string
 	if appcfg.Namespace != "" {
 		namespace, _ = utils.AppNamespace(app, owner, appcfg.Namespace)

@@ -14,26 +14,19 @@ import (
 	v1alpha1client "github.com/beclab/Olares/framework/app-service/pkg/client/clientset/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
-	"github.com/beclab/Olares/framework/app-service/pkg/middlewareinstaller"
 	"github.com/beclab/Olares/framework/app-service/pkg/prometheus"
-	"github.com/beclab/Olares/framework/app-service/pkg/tapr"
-	"github.com/beclab/Olares/framework/oac"
 	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/api/pkg/generated/clientset/versioned/scheme"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
-	"github.com/beclab/Olares/framework/app-service/pkg/workflowinstaller"
-
 	"github.com/emicklei/go-restful/v3"
 	"github.com/pkg/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
@@ -422,89 +415,6 @@ func getRequestResources() (map[string]resources, error) {
 		}
 	}
 	return allocatedResources, nil
-}
-
-func getWorkflowConfigFromRepo(ctx context.Context, options *apputils.ConfigOptions) (*workflowinstaller.WorkflowConfig, error) {
-	chartPath, err := apputils.GetIndexAndDownloadChart(ctx, options)
-	if err != nil {
-		return nil, err
-	}
-
-	cfg, err := oac.LoadAppConfiguration(
-		chartPath,
-		oac.WithOwner(options.Owner),
-		oac.WithAdmin(options.Admin),
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	namespace, _ := utils.AppNamespace(options.App, options.Owner, cfg.Spec.Namespace)
-
-	return &workflowinstaller.WorkflowConfig{
-		WorkflowName: options.App,
-		ChartsName:   chartPath,
-		RepoURL:      options.RepoURL,
-		Namespace:    namespace,
-		OwnerName:    options.Owner,
-		Cfg:          cfg}, nil
-}
-
-func getMiddlewareConfigFromRepo(ctx context.Context, options *apputils.ConfigOptions) (*middlewareinstaller.MiddlewareConfig, error) {
-	chartPath, err := apputils.GetIndexAndDownloadChart(ctx, options)
-	if err != nil {
-		return nil, err
-	}
-
-	cfg, err := oac.LoadAppConfiguration(
-		chartPath,
-		oac.WithOwner(options.Owner),
-		oac.WithAdmin(options.Admin),
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	namespace, _ := utils.AppNamespace(options.App, options.Owner, cfg.Spec.Namespace)
-
-	return &middlewareinstaller.MiddlewareConfig{
-		MiddlewareName: options.App,
-		Title:          cfg.Metadata.Title,
-		Version:        cfg.Metadata.Version,
-		ChartsName:     chartPath,
-		RepoURL:        options.RepoURL,
-		Namespace:      namespace,
-		OwnerName:      options.Owner,
-		Cfg:            cfg}, nil
-}
-
-func CheckMiddlewareRequirement(ctx context.Context, kubeConfig *rest.Config, middleware *tapr.Middleware) (bool, error) {
-	if middleware != nil && middleware.MongoDB != nil {
-		dConfig, err := dynamic.NewForConfig(kubeConfig)
-		if err != nil {
-			return false, err
-		}
-		dClient, err := middlewareinstaller.NewMiddlewareMongodb(dConfig)
-		if err != nil {
-			return false, err
-		}
-		u, err := dClient.Get(ctx, "os-platform", "mongo-cluster", metav1.GetOptions{})
-		if err != nil && !apierrors.IsNotFound(err) {
-			return false, err
-		}
-		if u == nil {
-			return false, nil
-		}
-		state, _, err := unstructured.NestedString(u.Object, "status", "state")
-		if err != nil {
-			return false, err
-		}
-		if state == "ready" {
-			return true, nil
-		}
-		return false, nil
-	}
-	return true, nil
 }
 
 func FormatDependencyError(deps []appcfg.Dependency) error {

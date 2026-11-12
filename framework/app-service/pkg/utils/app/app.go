@@ -836,23 +836,10 @@ func GetAppConfig(ctx context.Context, options *ConfigOptions) (*appcfg.Applicat
 		return nil, chartPath, err
 	}
 
-	// set appcfg.Namespace to specified namespace by OlaresManifests.Spec
-	var namespace string
-	if appcfg.Namespace != "" {
-		namespace, _ = utils.AppNamespace(options.App, options.Owner, appcfg.Namespace)
-	} else if appcfg.IsShared() {
-		namespace = SharedAppNamespace(options.App)
-	} else {
-		namespace = fmt.Sprintf("%s-%s", options.App, options.Owner)
-	}
-
+	appcfg.Namespace = ResolveInstallNamespace(options.App, options.Owner, appcfg)
 	if appcfg.IsMiddleware() {
-		namespace = fmt.Sprintf("%s-%s", appcfg.AppName, "middleware")
-		klog.Infof("appcfg.IsMiddlewarew, set namespace=%s", namespace)
-
+		klog.Infof("appcfg.IsMiddleware, set namespace=%s", appcfg.Namespace)
 	}
-
-	appcfg.Namespace = namespace
 	// Shared apps are addressed to the cluster owner (the olares "owner"
 	// role user) so OwnerName / Application.spec.owner stay stable across
 	// admins. This is the canonical write site referenced by the reload
@@ -1127,7 +1114,6 @@ func toApplicationConfig(opt *ConfigOptions, chart string, cfg *appcfg.AppConfig
 		WsConfig:             cfg.Options.WsConfig,
 		Upload:               cfg.Options.Upload,
 		OnlyAdmin:            cfg.Spec.OnlyAdmin,
-		Namespace:            cfg.Spec.Namespace,
 		MobileSupported:      cfg.Options.MobileSupported,
 		OIDC:                 cfg.Options.OIDC,
 		ApiTimeout:           cfg.Options.ApiTimeout,
@@ -1136,7 +1122,6 @@ func toApplicationConfig(opt *ConfigOptions, chart string, cfg *appcfg.AppConfig
 		AllowedOutboundPorts: cfg.Options.AllowedOutboundPorts,
 		RequiredGPU:          cfg.Spec.RequiredGPU,
 		PodGPUConsumePolicy:  cfg.Spec.PodGPUConsumePolicy,
-		Internal:             cfg.Spec.RunAsInternal,
 		SubCharts:            cfg.Spec.SubCharts,
 		ServiceAccountName:   cfg.Permission.ServiceAccount,
 		Provider:             cfg.Provider,
