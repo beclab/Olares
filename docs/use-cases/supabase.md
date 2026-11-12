@@ -35,7 +35,7 @@ Lares can use Supabase's official Model Context Protocol (MCP) server to inspect
 
 Each installation provides one self-hosted project. You do not need a Supabase Cloud account.
 
-If you reinstall Supabase while keeping its application data, version 0.0.15 synchronizes the database service accounts with the new installation's password at startup. The existing project data remains available.
+From version 0.0.15, Supabase keeps its installation credentials with its application data. Reinstalling with that data reuses the database password, API signing key, and encryption keys. If you have an earlier installation, upgrade it before uninstalling so its current credentials are saved. This does not recover credentials already lost during an earlier uninstall.
 
 ## Connect the official MCP server in Lares
 
@@ -283,7 +283,14 @@ Database TCP mappings require a reachable LAN or LarePass VPN connection. Use th
 
 1. In Studio, open **Project Settings** > **API Keys** > **Legacy anon, service_role API keys**.
 2. Click **Reveal** and copy the `service_role` key for n8n or Flowise.
-3. For Metabase, open Control Hub and go to **Browse** > **supabase-{user-name}** > **Secrets** > **supabase-secrets**. Reveal the decoded `POSTGRES_PASSWORD` in **Data**.
+3. For Metabase, open Control Hub and go to **Browse** > **supabase-{user-name}** > **Deployments** > **db**. Open its Pod, then open the **db** container's terminal. Run the following command and copy the displayed password into Metabase's password field:
+
+   ```sh
+   . /runtime/keys.env
+   printf '%s\n' "$POSTGRES_PASSWORD"
+   ```
+
+   This reads the password actually used by the running database. After a reinstall, the bootstrap value in the Kubernetes Secret can differ from the retained credential. Keep this password private.
 
 The `service_role` key bypasses RLS. Keep it in trusted server-side applications. Do not put it in browser code, screenshots, or a code repository. The official MCP connection exposes the publishable `anon` key, not a replacement for these server credentials.
 
