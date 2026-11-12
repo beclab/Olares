@@ -39,7 +39,7 @@ Lares 可以调用 Supabase 官方的模型上下文协议（MCP）服务器，�
 
 每次安装提供一个自托管项目，无需 Supabase Cloud 账户。
 
-如果卸载时保留了应用数据，Supabase 0.0.15 在重新安装后会自动将数据库服务账号密码与新安装配置同步，已有项目数据仍可使用。
+从 0.0.15 起，Supabase 将安装凭据与应用数据一起保存。保留数据重新安装时，会复用数据库密码、API 签名密钥和加密密钥。旧版实例应先升级，让当前凭据保存到数据目录后再卸载。此机制无法找回此前卸载时已经丢失的凭据。
 
 ## 在 Lares 中接入官方 MCP 服务器
 
@@ -285,7 +285,14 @@ with check (auth.uid() = owner_id);
 
 1. 在 Studio 中打开 **Project Settings** > **API Keys** > **Legacy anon, service_role API keys**。
 2. 点击 **Reveal**，复制 n8n 或 Flowise 所需的 `service_role` key。
-3. 为 Metabase 打开 Control Hub，进入 **Browse** > **supabase-{user-name}** > **Secrets** > **supabase-secrets**，在 **Data** 中查看解码后的 `POSTGRES_PASSWORD`。
+3. 为 Metabase 打开 Control Hub，进入 **Browse** > **supabase-{user-name}** > **Deployments** > **db**。打开对应 Pod，再打开 **db** 容器的终端。运行以下命令，将显示的密码复制到 Metabase 的密码字段：
+
+   ```sh
+   . /runtime/keys.env
+   printf '%s\n' "$POSTGRES_PASSWORD"
+   ```
+
+   此命令读取运行中的数据库实际使用的密码。重新安装后，Kubernetes Secret 中的初始化值可能与保留的凭据不同。请妥善保管此密码。
 
 `service_role` key 会绕过 RLS，只应保存在可信的服务端应用中。不要放入浏览器代码、截图或代码仓库。官方 MCP 提供的可公开使用的 `anon` key 无法替代这些服务端凭据。
 
