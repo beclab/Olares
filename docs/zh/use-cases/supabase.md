@@ -5,7 +5,7 @@ head:
   - - meta
     - name: keywords
       content: Olares, Supabase, Lares, MCP, PostgreSQL, RLS, n8n, Metabase, Flowise, Code Server
-app_version: "0.0.14"
+app_version: "0.0.15"
 doc_version: "2.1"
 doc_updated: "2026-11-12"
 ---
@@ -38,6 +38,8 @@ Lares 可以调用 Supabase 官方的模型上下文协议（MCP）服务器，�
 2. 点击**获取**，然后点击**安装**，等待安装完成。应用会以 **Supabase Studio** 的名称出现在启动台。
 
 每次安装提供一个自托管项目，无需 Supabase Cloud 账户。
+
+如果卸载时保留了应用数据，Supabase 0.0.15 在重新安装后会自动将数据库服务账号密码与新安装配置同步，已有项目数据仍可使用。
 
 ## 在 Lares 中接入官方 MCP 服务器
 
