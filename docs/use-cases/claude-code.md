@@ -36,7 +36,7 @@ Before you begin, you need:
   | Connection method | Requirements |
   | :--- | :--- |
   | Anthropic subscription | An active Claude Pro or Max subscription |
-  | Local model | A local chat model installed from Market. This guide uses Qwen3.8-27B (llama.cpp). |
+  | Local model | Qwen3.8-27B (llama.cpp) installed from Market |
 
 <!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 

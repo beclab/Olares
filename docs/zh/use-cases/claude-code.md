@@ -40,7 +40,7 @@ Claude Code 是一个 AI 编码助手，帮助你使用自然语言编写、测�
   | 连接方式 | 所需条件 |
   | :--- | :--- |
   | Anthropic 订阅 | 有效的 Claude Pro 或 Max 订阅 |
-  | 本地模型 | 已从 Market 安装本地聊天模型。本教程以 Qwen3.8-27B (llama.cpp) 为例。 |
+  | 本地模型 | 已从 Market 安装 Qwen3.8-27B (llama.cpp) |
 
 <!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
