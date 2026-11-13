@@ -17,7 +17,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/middlewareinstaller"
 	"github.com/beclab/Olares/framework/app-service/pkg/prometheus"
 	"github.com/beclab/Olares/framework/app-service/pkg/tapr"
-	"github.com/beclab/Olares/framework/oac"
+	"github.com/beclab/oac"
 	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/api/pkg/generated/clientset/versioned/scheme"
 

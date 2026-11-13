@@ -56,8 +56,17 @@ jobs:
       # that it exports whole, that a script arrives executable, that a symlink
       # is refused. It sits beside ./cmd, so `./cmd/ctl/...` never reached it
       # and those assertions ran nowhere.
+      # Prefer GIT_CONFIG_* over `git config --global` so the PAT is never
+      # written to ~/.gitconfig on the runner.
       - name: Probe skill-owned command paths and the embedded suite
         working-directory: cli
+        env:
+          GOPRIVATE: github.com/beclab/oac
+          GONOSUMDB: github.com/beclab/oac
+          GONOPROXY: github.com/beclab/oac
+          GIT_CONFIG_COUNT: "1"
+          GIT_CONFIG_KEY_0: "url.https://x-access-token:${{ secrets.GO_PRIVATE_TOKEN }}@github.com/.insteadof"
+          GIT_CONFIG_VALUE_0: "https://github.com/"
         run: |
           go build -o /tmp/olares-cli ./cmd
           go test ./cmd/ctl -run '^TestSkillCommandPathsExist$|^TestEveryCommandTheSkillsDocumentResolves$'
