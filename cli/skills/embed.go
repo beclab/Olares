@@ -162,7 +162,8 @@ func Files() ([]string, error) {
 // frontmatter returns the YAML block a SKILL.md opens with.
 func frontmatter(source []byte) ([]byte, error) {
 	const fence = "---"
-	text := string(source)
+	// Windows checkouts and installed copies may use CRLF line endings.
+	text := strings.ReplaceAll(string(source), "\r\n", "\n")
 	if !strings.HasPrefix(text, fence+"\n") {
 		return nil, fmt.Errorf("does not open with a %q frontmatter fence", fence)
 	}
