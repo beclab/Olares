@@ -11,6 +11,9 @@ rules:
   - "/document/search*"
   - "/task/*"
   - "/search/*"
+  # user-service is the browser-facing authorization boundary for RAG
+  # retrieval and forwards only its computed owner/root scope to Search3.
+  - "/v1/retrieval/*"
   - "/monitorsetting/*"
   - "/file/*"
   verbs: ["*"]
