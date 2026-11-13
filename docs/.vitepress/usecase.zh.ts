@@ -303,6 +303,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   link: "/zh/use-cases/concat",
                 },
                 {
+                  text: "Music Studio",
+                  link: "/zh/use-cases/music-studio",
+                },
+                {
                   text: "Open Design",
                   link: "/zh/use-cases/open-design",
                 },
