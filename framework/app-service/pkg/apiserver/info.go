@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
-	"github.com/beclab/Olares/framework/oac"
+	"github.com/beclab/oac"
 )
 
 /*

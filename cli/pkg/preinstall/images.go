@@ -12,7 +12,7 @@ import (
 	pkgchart "github.com/beclab/Olares/cli/pkg/chart"
 	"github.com/beclab/Olares/cli/pkg/manifest"
 	"github.com/beclab/Olares/cli/pkg/utils"
-	oac "github.com/beclab/Olares/framework/oac"
+	oac "github.com/beclab/oac"
 )
 
 // chartArchiveName is where a bundled chart lands inside the scratch directory

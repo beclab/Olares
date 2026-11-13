@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	oac "github.com/beclab/Olares/framework/oac"
+	oac "github.com/beclab/oac"
 )
 
 // TestFromComposeHoldsInvariantsAcrossComposeFeatures runs the compose features
