@@ -5,9 +5,9 @@ head:
   - - meta
     - name: keywords
       content: Olares, Music Studio, ACE-Step, AI 音乐, 歌词创作, 纯音乐, 本地音乐生成
-app_version: "0.1.76"
+app_version: "0.1.77"
 doc_version: "1.0"
-doc_updated: "2026-11-12"
+doc_updated: "2026-11-13"
 ---
 
 :::warning
@@ -16,35 +16,39 @@ doc_updated: "2026-11-12"
 
 # 使用 Music Studio 创作歌曲
 
-Music Studio 是基于 ACE-Step XL-SFT 的 AI 音乐创作应用。你可以输入歌词和音乐风格描述，生成带人声的歌曲，也可以创作纯音乐。完成的作品会保存在你的 Olares 曲库中，供你播放和下载。
+Music Studio 是一款基于 ACE-Step XL-SFT 的 AI 音乐创作应用。你可以用歌词和风格描述生成带人声的歌曲，也可以创作纯音乐。完成的歌曲会保存在 Olares 曲库中，供你播放和下载。
 
-本文以创作一首名为 *Morning Light* 的 30 秒歌曲为例。你可以将示例歌词和风格替换成适合自己视频或音乐项目的内容。为便于对照截图，下文保留英文界面中的按钮和字段名称。
-
-## 学习目标
-
-- 使用自己的歌词和风格描述创作短歌。
-- 使用 AI 起草歌词，并审阅和修改生成的建议。
-- 播放、整理和下载完成的作品。
+本文以创作一首名为 *Morning Light* 的 30 秒歌曲为例。你可以替换示例歌词和风格，创作适合自己项目的音乐。下文保留英文界面的按钮和字段名称，方便对照操作。
 
 ## 前提条件
 
 - Olares 1.12.7 或更高版本，且 Router 已安装并运行。
-- 配备 NVIDIA GPU 的 amd64 设备，GPU 显存为 24 GiB。这是当前应用安装包声明的要求。
-- 足够的磁盘空间，用于首次下载约 30 GB 模型文件，以及保存生成的音频。
+- 配备 NVIDIA GPU 和 24 GiB 显存的 amd64 (x86-64) 设备。
+- 至少 40 GiB 可用磁盘空间。
 
 ## 安装 Music Studio
 
-1. 打开应用市场，搜索“Music Studio”。
+1. 打开 Market，搜索“Music Studio”。
+
+   <!-- ![Music Studio 在 Market 中的页面](/images/manual/use-cases/music-studio.jpg#bordered) -->
+
 2. 点击 **Get**，再点击 **Install**，等待安装完成。
-3. 从启动台打开 Music Studio。首次启动时，模型准备页面会下载约 30 GB 的必要模型文件，并显示下载进度。等待下载和模型加载完成后，应用会自动进入创作页面。
 
-应用已包含所需的音乐模型，创作时不需要选择模型。首次下载需要保持网络可用，并预留足够的磁盘空间。下载和加载耗时取决于网络与设备情况。后续启动可以复用已有的模型缓存。
+:::info 首次启动
+首次打开 Music Studio 时，应用会下载约 30 GB 的模型文件。保持网络连接，等待准备完成并进入创作页面。
+:::
 
-## 创作歌曲
+## 创作音乐
 
-### 使用自己的歌词
+你可以从自己的歌词、歌曲想法或纯音乐描述开始创作。
 
-1. 打开 **Create**，在 **Lyrics** 中输入：
+:::tip 同一时间生成一首歌曲
+Music Studio 同一时间只能生成一首歌曲。任务运行时可以点击 **Cancel** 取消。生成时间取决于歌曲时长、质量设置和模型加载情况。
+:::
+
+### 使用自己的歌词创作歌曲
+
+1. 打开 **Create**，在 **Lyrics** 中输入以下歌词：
 
    ```text
    [Verse]
@@ -62,60 +66,97 @@ Music Studio 是基于 ACE-Step XL-SFT 的 AI 音乐创作应用。你可以输�
    clear English vocals, clean studio production
    ```
 
-   这段描述指定了充满希望的原声流行风格、温暖的钢琴、轻柔的吉他和鼓点，以及清晰的英语人声。
+   ![为 Morning Light 输入歌词和音乐风格](/images/manual/use-cases/music-studio-create-inputs.jpg#bordered)
 
 3. 将 **Title** 设为 `Morning Light`，将 **Language** 设为 **English**。
-4. 在 **Song duration** 中选择 **Fixed**，将 **Duration** 设为 30 秒。这个示例需要人声，因此不要勾选 **Instrumental**。
-5. 点击 **Create**。应用会先整理歌词，然后在 **In progress** 区域显示音频生成任务。等待完成的歌曲出现在 **Recent songs** 中。
+4. 在 **Song duration** 中选择 **Fixed**，将 **Duration** 设为 30 秒。此示例包含人声，请保持 **Instrumental** 关闭。
+5. 点击 **Create**。Music Studio 会先整理歌词，再在 **In progress** 中显示音频生成任务。等待完成的歌曲出现在 **Recent songs** 中。
 
-![在 Music Studio 中填写歌词和音乐风格](/images/manual/use-cases/music-studio-create.png#bordered)
+### 根据想法创作歌曲
 
-Music Studio 同一时间处理一个创作任务。如果要停止正在生成的歌曲，可以点击任务上的 **Cancel**。生成耗时会随歌曲时长、质量设置和模型加载情况变化。
+1. 打开 **Create**，在 **Song idea** 中输入简短的歌曲想法。例如：
 
-### 让 AI 起草歌词
+   ```text
+   A hopeful morning song with piano and a simple memorable chorus
+   ```
 
-在 **Song idea** 中简要描述创作想法，选择语言和时长，然后点击 **Write with AI**。例如：
+2. 保持 **Instrumental** 关闭，选择语言和时长，然后点击 **Write with AI**。
+3. 检查生成的 **Lyrics**、**Music style**、**Title**，以及表单下方的写作建议。如果歌词对所选时长来说过长或重复，请删减。如果音乐描述不符合你的想法，请直接修改。
 
-```text
-A hopeful morning song with piano and a simple memorable chorus
-```
+   ![检查并修改 AI 生成的歌词和音乐风格](/images/manual/use-cases/music-studio-ai-draft.jpg#bordered)
 
-这个想法描述了一首以钢琴伴奏、包含简洁易记副歌的清晨歌曲。你也可以换成自己的主题。
+4. 点击 **Create**，等待完成的歌曲出现在 **Recent songs** 中。
 
-点击 **Create** 前，先检查生成的 **Lyrics**、**Music style** 和 **Title**。AI 建议可能出现重复内容，或者包含与目标语言不一致的音乐描述。你可以直接编辑这些字段，保留需要的部分。
-
-如果应用提示歌词重复度过高，可以修改创作想法后重试，也可以手动输入歌词。一次写词失败不会阻止你使用自己的内容继续创作。
+如果应用提示歌词重复，可以修改歌曲想法后重试，也可以直接输入自己的歌词继续创作。
 
 ### 创作纯音乐
 
-如果需要没有人声的背景音乐，勾选 **Instrumental**，在 **Music style** 中描述乐器、情绪和编排方式。设置时长后点击 **Create**。完成后，可以在 **Library** 中使用 **Instrumental** 筛选找到作品。
+1. 打开 **Create**，开启 **Instrumental**。开启后，**Lyrics** 字段将不可用。
+2. 在 **Music style** 中描述乐器、氛围和编排。例如：
 
-### 调整音乐方向
+   ```text
+   Gentle piano and acoustic guitar, warm hopeful mood, light drums,
+   clean instrumental arrangement
+   ```
 
-需要更多控制时，展开 **Advanced options**。**Quality profile** 提供 XL-SFT 的 50 步和 64 步 ADG 两种设置。**Production profile** 可选择干净的录音室风格或带有环境质感的声音。**Style handling** 用于选择增强风格描述，或更严格地保留原有描述。
+3. 在 **Song duration** 中选择 **Fixed**，将 **Duration** 设为 30 秒。
 
-你还可以填写 BPM、调性、拍号、人声类型和段落结构。这些设置用于引导生成，并不保证结果完全符合每项要求。建议每次只调整少量设置，便于比较不同版本。
+   ![开启 Instrumental 并设置 30 秒时长](/images/manual/use-cases/music-studio-instrumental-options.jpg#bordered)
 
-## 试听和保存作品
+4. 点击 **Create**，等待完成的歌曲出现在 **Recent songs** 中。
 
-1. 点击已完成歌曲旁的播放按钮。使用底部播放器暂停、切换歌曲，或拖动播放进度。
-2. 点击歌曲打开详情，查看歌词和音乐风格。带人声的歌曲在有时间轴数据时可以显示同步歌词。纯音乐不需要歌词时间轴。
-3. 打开 **Library** 搜索已保存的作品。使用 **Liked** 或 **Instrumental** 缩小范围，也可以调整模型筛选和排序方式。
-4. 打开歌曲的 **More actions** 菜单，选择 **Like**、**Rename** 或 **Download**，分别用于收藏、重命名和下载。生成的音频以 WAV 文件下载。
+## 播放和管理歌曲
 
-![查看作品详情并使用播放器](/images/manual/use-cases/music-studio-playback.png#bordered)
+1. 歌曲出现在 **Recent songs** 后，点击封面上的播放按钮。歌曲会开始播放，同时打开详情。你可以使用底部播放器暂停或调整播放位置。
 
-在同一菜单中选择 **Reuse seed**，可以将作品的创作设置填回表单。修改歌词或风格后，再生成一个版本。更改其他设置后，即使复用 seed，也不保证得到完全相同的音频。
+   ![从 Recent songs 播放 Morning Light](/images/manual/use-cases/music-studio-playback.png#bordered)
 
-对于不再需要的歌曲，可以选择 **Delete**。如果还想保留音频，请先下载一份副本。
+2. 在歌曲详情中查看歌词和音乐风格。如果带人声的歌曲有歌词时间信息，还可以显示同步歌词。
 
-:::info 局部重绘暂不可用
-当前版本的局部重绘暂不可用。你可以修改歌词或风格描述，重新生成一个版本。
+   ![查看歌曲详情和歌词](/images/manual/use-cases/music-studio-details.jpg#bordered)
+
+:::info 局部重绘
+当前版本暂不支持 **Repaint section**。如果想修改歌曲的某一部分，请调整歌词或音乐风格后重新生成。
 :::
 
-## 切换界面语言
+关闭详情，点击 **Recent songs** 中歌曲旁的 <i class="material-symbols-outlined">more_horiz</i>，然后选择所需操作：
 
-打开 **Settings**，找到 **Display language**。选择 **English**、**简体中文**，或选择 **Auto** 跟随 Olares 的语言设置。这个设置只改变界面语言，歌曲语言需要在创作表单中单独选择。
+- **Download：** 将音频保存为 WAV 文件。
+- **Like：** 收藏歌曲，之后可以在曲库中用 **Liked** 筛选。
+- **Reuse seed：** 将歌曲的歌词或纯音乐设置，以及保存的音乐风格载入创作表单。检查标题、语言和时长，修改歌词或风格后点击 **Create**。调整其他设置后，即使复用 seed，也不保证生成相同的音频。
+- **Rename：** 修改歌曲标题。
+- **Delete：** 删除不再需要的歌曲。如果想保留音频，请先下载。
+
+![从歌曲菜单中选择操作](/images/manual/use-cases/music-studio-download.jpg#bordered)
+
+## 微调音乐
+
+创作前，展开 **Advanced options** 调整声音和音乐方向。第一次创作可以保留默认设置。需要进一步控制时，参考下表：
+
+| 设置 | 选择参考 |
+|:--|:--|
+| **Quality profile** | <ul><li><code>XL-SFT · 64 steps · ADG</code>：使用 64 步生成并启用 ADG。</li><li><code>XL-SFT · 50 steps</code>：使用 50 步生成，不启用 ADG。</li></ul> |
+| **Production profile** | <ul><li><code>Clean studio</code>：引导模型生成更干净的录音室声音。</li><li><code>Textured ambience</code>：引导模型生成更有氛围感的声音。</li></ul> |
+| **Style handling** | <ul><li><code>Auto enhance</code>：扩展简短的风格描述。</li><li><code>Strictly preserve</code>：更贴近你输入的描述。</li></ul> |
+| **BPM** | 设置速度。较低的值通常听起来更慢，较高的值通常更快。 |
+| **Key** | 指定调性，例如 `C major` 或 `A minor`。 |
+| **Time signature** | <ul><li><code>Auto</code>：由模型决定。</li><li><code>4/4</code>、<code>3/4</code>、<code>6/8</code> 或 <code>2/4</code>：指定拍号。</li></ul> |
+| **Vocal type** | 输入简短的人声描述，例如 `warm female lead`。留空则由模型决定。 |
+| **Section structure** | 描述段落顺序，例如 `short intro, verse, chorus, outro`。短歌的段落结构尽量简洁。 |
+
+这些设置用于引导生成，不能保证每项结果都完全符合预期。每次只调整少量设置，便于比较不同作品。
+
+## 在曲库中查找歌曲
+
+打开 **Library** 查找保存的歌曲：
+
+- **搜索：** 在搜索框输入标题、音乐风格或歌词。
+- **筛选：** 选择 **Liked** 或 **Instrumental**，也可以使用模型筛选器。
+- **排序：** 选择 **Newest first** 或 **Oldest first**。
+
+曲库中的歌曲旁也有相同的 <i class="material-symbols-outlined">more_horiz</i> 菜单。
+
+![在 Library 中查找和整理歌曲](/images/manual/use-cases/music-studio-library.png#bordered)
 
 ## 常见问题
 
@@ -125,7 +166,7 @@ A hopeful morning song with piano and a simple memorable chorus
 
 ### 为什么没有同步歌词？
 
-歌词高亮依赖该首人声作品返回的时间轴数据。没有时间轴时，仍可阅读歌词、播放或下载音频。纯音乐没有演唱歌词。
+歌词高亮依赖该首人声作品返回的时间信息。没有时间信息时，仍可阅读歌词、播放或下载音频。纯音乐没有演唱歌词。
 
 ## 了解更多
 

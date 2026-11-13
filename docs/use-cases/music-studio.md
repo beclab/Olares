@@ -5,9 +5,9 @@ head:
   - - meta
     - name: keywords
       content: Olares, Music Studio, ACE-Step, AI music, lyrics, instrumental, local music generation
-app_version: "0.1.76"
+app_version: "0.1.77"
 doc_version: "1.0"
-doc_updated: "2026-11-12"
+doc_updated: "2026-11-13"
 ---
 
 # Create a song with Music Studio
@@ -16,31 +16,34 @@ Music Studio is an AI music creation app powered by ACE-Step XL-SFT. You can tur
 
 This example creates a 30-second song called *Morning Light*. Replace the sample lyrics and style with material for your own video or music project.
 
-## Learning objectives
-
-- Create a short song using your own lyrics and musical direction.
-- Use AI to draft lyrics and review its suggestions.
-- Play, organize, and download your finished tracks.
-
 ## Prerequisites
 
 - Olares 1.12.7 or later with Router installed and running.
-- An amd64 device with an NVIDIA GPU and 24 GiB of GPU memory, as specified by this app package.
-- Sufficient disk space for the initial model download of approximately 30 GB and your generated audio.
+- An amd64 (x86-64) device with an NVIDIA GPU and 24 GiB of GPU memory.
+- At least 40 GiB of available disk space.
 
 ## Install Music Studio
 
 1. Open Market and search for "Music Studio".
+
+   <!-- ![Music Studio in Market](/images/manual/use-cases/music-studio.jpg#bordered) -->
 2. Click **Get**, then **Install**, and wait for installation to complete.
-3. Open Music Studio from Launchpad. On first use, the model setup page downloads approximately 30 GB of required model files and displays the download progress. Wait for the download and model loading to finish. The creation page opens automatically when the service is ready.
 
-The app includes its music model. You do not need to select a model in the creation form. Allow network access and sufficient disk space for the first download. Download and loading time depend on your connection and device. Existing cached model files can be reused on later starts.
+:::info First launch
+When you first open Music Studio, it downloads about 30 GB of model files. Keep the app online until setup finishes and the creation page opens.
+:::
 
-## Create your song
+## Create music
 
-### Start with your own lyrics
+Start with your own lyrics, develop a song idea with AI, or create instrumental music.
 
-1. Open **Create** and enter these words in **Lyrics**:
+:::tip One song at a time
+Music Studio generates one song at a time. You can click **Cancel** while a task is running. Generation time depends on song duration, quality settings, and model loading.
+:::
+
+### Create a song with your own lyrics
+
+1. Open **Create** and enter the following lyrics in **Lyrics**:
 
    ```text
    [Verse]
@@ -58,56 +61,97 @@ The app includes its music model. You do not need to select a model in the creat
    clear English vocals, clean studio production
    ```
 
+   ![Enter lyrics and music style for Morning Light](/images/manual/use-cases/music-studio-create-inputs.jpg#bordered)
+
 3. Set **Title** to `Morning Light` and **Language** to **English**.
 4. Under **Song duration**, choose **Fixed** and set **Duration** to 30 seconds. Leave **Instrumental** unchecked for this vocal example.
 5. Click **Create**. Music Studio first refines the lyrics, then displays the song under **In progress** while it generates audio. Wait for the finished track to appear under **Recent songs**.
 
-![Prepare lyrics and musical direction in Music Studio](/images/manual/use-cases/music-studio-create.png#bordered)
+### Create a song from an idea
 
-Music Studio runs one creation task at a time. You can use **Cancel** on an in-progress generation if you want to stop it. Generation time varies with duration, quality settings, and model loading.
+1. To start a new song from an idea, open **Create** and enter a short description in **Song idea**. For example:
 
-### Let AI draft a starting point
+   ```text
+   A hopeful morning song with piano and a simple memorable chorus
+   ```
 
-Enter a short description in **Song idea**, choose the language and duration, then click **Write with AI**. For example:
+2. Leave **Instrumental** unchecked, choose the language and duration, then click **Write with AI**.
+3. Review the resulting **Lyrics**, **Music style**, and **Title**, along with any writing suggestions shown below the form. Shorten lyrics that are too long or repetitive for your chosen duration, and edit any musical directions that do not match your intent.
 
-```text
-A hopeful morning song with piano and a simple memorable chorus
-```
+   ![Review and edit the AI-written lyrics and music style](/images/manual/use-cases/music-studio-ai-draft.jpg#bordered)
 
-Review the resulting **Lyrics**, **Music style**, and **Title** before clicking **Create**. AI suggestions can contain repetition or musical directions that do not match your intended language. Edit them directly to keep the parts you want.
+4. Click **Create** and wait for the finished track under **Recent songs**.
 
-If the app rejects repetitive lyrics, revise the idea and try again, or enter your own lyrics. A failed draft does not prevent you from creating a song with manually written content.
+If the app rejects repetitive lyrics, revise the idea and try again. You can also enter your own lyrics and continue.
 
-### Make an instrumental variation
+### Create instrumental music
 
-For background music without vocals, select **Instrumental** and describe the instruments, mood, and arrangement in **Music style**. Set the duration and click **Create**. You can find the result later using the **Instrumental** filter in **Library**.
+1. To create background music without vocals, open **Create** and select **Instrumental**. This disables the **Lyrics** field.
+2. In **Music style**, enter a description of the instruments, mood, and arrangement. For example:
 
-### Adjust the musical direction
+   ```text
+   Gentle piano and acoustic guitar, warm hopeful mood, light drums,
+   clean instrumental arrangement
+   ```
 
-Expand **Advanced options** when you want more control. **Quality profile** offers XL-SFT with 50 steps or 64 steps with ADG. **Production profile** selects a clean studio sound or textured ambience. **Style handling** lets you enhance the description or preserve it more strictly.
+3. Under **Song duration**, choose **Fixed** and set **Duration** to 30 seconds.
 
-You can also specify BPM, key, time signature, vocal type, and section structure. These settings guide generation rather than guaranteeing an exact musical result. Change a small number of settings at a time so you can compare the variations.
+   ![Enable Instrumental and choose a 30-second duration](/images/manual/use-cases/music-studio-instrumental-options.jpg#bordered)
 
-## Review and keep your music
+4. Click **Create** and wait for the finished track under **Recent songs**.
 
-1. Click the play button beside a completed track. Use the bottom player to pause, move to another track, or drag the playback position.
-2. Click the track to open its details and review the lyrics and music style. Vocal tracks can show synchronized lyrics when timing is available. Instrumental tracks do not need lyric timing.
-3. Open **Library** to search your saved tracks. Use **Liked** or **Instrumental** to narrow the list, or change the model filter and sort order.
-4. Open a track's **More actions** menu to choose **Like**, **Rename**, or **Download**. The generated audio downloads as a WAV file.
+## Play and manage your song
 
-![Review a saved track and use the player](/images/manual/use-cases/music-studio-playback.png#bordered)
+1. When your track appears under **Recent songs**, click the play button on its artwork. Playback starts and the song details open. Use the bottom player to pause or adjust the playback position.
 
-Choose **Reuse seed** from the same menu to copy a track's creation settings back into the form. Edit the lyrics or style and create another version. Reusing a seed does not guarantee identical output after other settings change.
+   ![Play Morning Light from Recent songs](/images/manual/use-cases/music-studio-playback.png#bordered)
 
-Use **Delete** only for tracks you no longer need. Download a copy first if you want to keep the audio.
+2. In the song details, review the lyrics and music style. Vocal tracks can show synchronized lyrics when lyric timing is available.
 
-:::info Section editing
-The current package does not provide a working section repaint workflow. Create another version with revised lyrics or musical direction instead.
+   ![Review the song details and lyrics](/images/manual/use-cases/music-studio-details.jpg#bordered)
+
+:::info Section repaint
+**Repaint section** is unavailable in this version. To change part of a song, revise the lyrics or music style and create another song.
 :::
 
-## Change the display language
+Close the details and click <i class="material-symbols-outlined">more_horiz</i> beside the track in **Recent songs**. Then choose an action:
 
-Open **Settings** and choose **Display language**. Select **English**, **简体中文**, or **Auto** to follow your Olares language. This changes the interface language. Set the song's language separately in the creation form.
+- **Download:** Save the generated audio as a WAV file.
+- **Like:** Add the track to the **Liked** filter in Library.
+- **Reuse seed:** Load the track's lyrics or instrumental setting and saved music style into the creation form. Review the title, language, and duration, then edit the lyrics or style before clicking **Create**. Reusing a seed does not guarantee identical output after other settings change.
+- **Rename:** Change the track's title.
+- **Delete:** Remove a track you no longer need. Download it first if you want to keep the audio.
+
+![Choose an action from the finished song's menu](/images/manual/use-cases/music-studio-download.jpg#bordered)
+
+## Fine-tune your music
+
+Before creating a song, expand **Advanced options** to adjust the sound and musical direction. Leave the fields at their defaults for your first song. Use these guidelines when you want more control:
+
+| Control | Guidance |
+|:--|:--|
+| **Quality profile** | <ul><li><code>XL-SFT · 64 steps · ADG</code>: Uses 64 generation steps with ADG.</li><li><code>XL-SFT · 50 steps</code>: Uses 50 steps without ADG.</li></ul> |
+| **Production profile** | <ul><li><code>Clean studio</code>: Guides the model toward a polished sound.</li><li><code>Textured ambience</code>: Guides it toward a more atmospheric sound.</li></ul> |
+| **Style handling** | <ul><li><code>Auto enhance</code>: Expands a brief style description.</li><li><code>Strictly preserve</code>: Follows your description more closely.</li></ul> |
+| **BPM** | Set the tempo. Lower values generally feel slower, while higher values feel faster. |
+| **Key** | Specify a musical key, such as `C major` or `A minor`. |
+| **Time signature** | <ul><li><code>Auto</code>: Lets the model decide.</li><li><code>4/4</code>, <code>3/4</code>, <code>6/8</code>, or <code>2/4</code>: Sets a specific meter.</li></ul> |
+| **Vocal type** | Enter a short voice description, such as `warm female lead`. Leave it blank to let the model decide. |
+| **Section structure** | Describe the order, such as `short intro, verse, chorus, outro`. Keep it simple for short songs. |
+
+These settings guide generation rather than guaranteeing an exact musical result. Change a small number at a time so you can compare the variations.
+
+## Find songs in Library
+
+Open **Library** to find your saved tracks:
+
+- **Search:** Enter a title, music style, or lyric in the search field.
+- **Filter:** Select **Liked** or **Instrumental**, or choose a model from the model filter.
+- **Sort:** Choose **Newest first** or **Oldest first**.
+
+The same <i class="material-symbols-outlined">more_horiz</i> menu is available beside tracks in Library.
+
+![Find and organize finished tracks in Library](/images/manual/use-cases/music-studio-library.png#bordered)
 
 ## FAQs
 
