@@ -356,6 +356,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   link: "/use-cases/bifrost",
                 },
                 {
+                  text: "Colibri",
+                  link: "/use-cases/colibri",
+                },
+                {
                   text: "LiteLLM",
                   link: "/use-cases/litellm",
                 },
