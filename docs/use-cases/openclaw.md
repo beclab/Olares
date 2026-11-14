@@ -109,6 +109,12 @@ Set up OpenClaw using the step-by-step interactive wizard.
     To get you started quickly, this tutorial skips several advanced settings in the wizard. You can configure or modify them later.
     :::
 
+    :::warning Enter an API key placeholder
+    Do not leave the API key empty. OpenClaw 2026.11.3 requires a non-empty value for this provider, even though the prompt says the key can be left blank. For this Olares Router connection, enter a placeholder such as `olares`.
+
+    If the live completion test reports `No API key found for provider "router"`, select **Fix model/auth setup**, enter a non-empty placeholder in the API key field, and retry the test.
+    :::
+
     | Settings   | Option   |
     |:-----------|:---------|
     | Personal-by-default acknowledgment | Select **Yes**.  |
@@ -125,12 +131,6 @@ Set up OpenClaw using the step-by-step interactive wizard.
     | Does this model support image input? | If prompted, select **Yes** for Qwen3.8-27B (llama.cpp). For another model, check its capabilities in Router. |
     | Test AI access now with a live completion | Select **Yes**.<br>The message `AI access works` indicates that OpenClaw can successfully connect to the model. |
     | Remaining settings (channels, search provider,<br>and skill dependencies) | Select **Skip for now**.<br>You can configure them later. |
-
-    :::tip API key placeholder
-    OpenClaw 2026.11.3 requires a non-empty API key for this provider, even though the prompt allows leaving it blank. For this Olares Router connection, enter a non-empty placeholder, such as `olares`.
-
-    If the live completion test reports `No API key found for provider "router"`, select **Fix model/auth setup**, enter a non-empty placeholder in the API key field, and retry the test.
-    :::
 
     Once you complete the onboarding wizard, OpenClaw opens the Terminal User Interface (TUI) automatically.
 

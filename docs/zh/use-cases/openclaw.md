@@ -113,6 +113,12 @@ OpenClaw 需要较大的"上下文窗口"（即 AI 的短期记忆）来处理�
     为便于快速上手，本教程会跳过向导中的部分高级设置。你可以稍后配置或修改它们。
     :::
 
+    :::warning 填写 API 密钥占位值
+    API 密钥不能留空。OpenClaw 2026.11.3 要求此提供商的 API 密钥非空，即使向导提示可以留空。连接此 Olares Router 时，请填写占位值，例如 `olares`。
+
+    如果实时对话测试提示 `No API key found for provider "router"`，选择 **Fix model/auth setup**，在 API 密钥字段填写非空占位值，然后重新测试。
+    :::
+
     | 配置   | 选项   |
     |:-----------|:---------|
     | Personal-by-default acknowledgment | 选择 **Yes**。  |
@@ -129,12 +135,6 @@ OpenClaw 需要较大的"上下文窗口"（即 AI 的短期记忆）来处理�
     | Does this model support image input? | 如果出现此提示，Qwen3.8-27B (llama.cpp) 选择 **Yes**。使用其他模型时，以 Router 显示的能力为准。 |
     | Test AI access now with a live completion | 选择 **Yes**。<br>出现 `AI access works` 消息表示 OpenClaw 已成功连接到模型。 |
     | Remaining settings (channels, search provider,<br>and skill dependencies) | 选择 **Skip for now**。<br>你可以稍后配置它们。 |
-
-    :::tip API 密钥占位值
-    OpenClaw 2026.11.3 要求此提供商的 API 密钥非空，即使向导提示可以留空。连接此 Olares Router 时，填写非空占位值即可，例如 `olares`。
-
-    如果实时对话测试提示 `No API key found for provider "router"`，选择 **Fix model/auth setup**，在 API 密钥字段填写非空占位值，然后重新测试。
-    :::
 
     完成安装向导后，OpenClaw 会自动打开终端用户界面（TUI）。
 
