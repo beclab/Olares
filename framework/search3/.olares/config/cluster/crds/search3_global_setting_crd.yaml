@@ -1,0 +1,67 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: search3globalsettings.sys.bytetrade.search3
+spec:
+  group: sys.bytetrade.search3
+  names:
+    categories: []
+    kind: Search3GlobalSetting
+    plural: search3globalsettings
+    shortNames: []
+    singular: search3globalsetting
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns: []
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Auto-generated derived type for Search3GlobalSettingSpec via `CustomResource`
+        properties:
+          spec:
+            description: |-
+              The one Search3-wide setting shared across users, nodes and missions.
+
+              Every wire field is required. Defaults are used only when the monitor creates the singleton for the first time; an existing object never silently falls back when its value is invalid.
+            properties:
+              ocrModel:
+                description: |-
+                  OCR models implemented and tested by this Search3 release.
+
+                  These values are stable catalog keys. They never contain a Service URL or an arbitrary Router model name.
+                enum:
+                - ocr-disabled-v1
+                - paddle-ocr-hybrid-v1
+                - surya-ocr-2-v1
+                - dots-ocr-v1
+                type: string
+            required:
+            - ocrModel
+            type: object
+          status:
+            description: |-
+              Controller-owned status for the desired OCR selection.
+
+              `Unavailable` means the catalog key is valid but its fixed model Service is not ready. It does not block Search3's existing FileName/FullContent/Image paths from starting.
+            nullable: true
+            properties:
+              message:
+                nullable: true
+                type: string
+              observedGeneration:
+                format: int64
+                nullable: true
+                type: integer
+              phase:
+                description: '`Valid`, `Invalid`, or `Unavailable`.'
+                nullable: true
+                type: string
+            type: object
+        required:
+        - spec
+        title: Search3GlobalSetting
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
