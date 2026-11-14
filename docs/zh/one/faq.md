@@ -1,6 +1,6 @@
 ---
 outline: [2,3]
-description: 关于 Olares One 的常见问题解答
+description: 关于 Olares One 的常见问题解答。
 head:
   - - meta
     - name: keywords
@@ -38,6 +38,21 @@ Olares One 是一款专为本地 AI 设计的个人云设备。它将工作站�
 
 详细信息请参阅 [Olares One 规格](spec)。
 
+### Olares One 的 RTX 5090 Mobile 与桌面版 RTX 5090 有什么区别？
+
+两者都采用 NVIDIA Blackwell 架构，支持 CUDA。桌面版拥有更多计算资源和显存，移动版则面向功耗和散热空间更小的设备。
+
+| 规格 | Olares One 的 RTX 5090 Mobile | 桌面版 RTX 5090 公版规格 |
+| --- | --- | --- |
+| CUDA 核心数 | 10,496 | 21,760 |
+| 显存 | 24 GB GDDR7 | 32 GB GDDR7 |
+| 显存位宽 | 256 位 | 512 位 |
+| GPU 功耗 | 性能模式下最高 175 W | 整卡功耗 575 W |
+
+对于本地 AI，桌面版多出的 8 GB 显存可以容纳更多模型权重和对话上下文，更多核心则提供更强的并行计算能力。移动版的功耗更低，散热需求也更小，让 Olares One 能在紧凑的机身中运行本地 AI。
+
+显卡规格来自 NVIDIA 的[移动版 GPU 对比](https://www.nvidia.com/en-us/geforce/laptops/compare/)和[桌面版 RTX 5090 规格](https://www.nvidia.com/en-us/geforce/graphics-cards/50-series/rtx-5090/)。Olares One 的功耗模式请参阅[功耗是多少](#功耗是多少)。
+
 ### 设备噪音有多大？
 
 Olares One 即使在负载下也能安静运行。在实验室测试中，设备空闲时产生 19dB 噪音，最大负载下仍保持在 39dB 以下。
@@ -71,7 +86,7 @@ Olares OS 通过一键部署和工作流集成简化了本地 AI，这与标准 
 ### 是否可以升级或扩展硬件？
 
 可以。你可以通过多个内部插槽和扩展端口修改硬件：
-* **存储**：主板包含两个 PCIe SSD 插槽，一个 PCIe 4.0 和一个 PCIe 5.0。预装的 2TB SSD 占用 PCIe 5.0 插槽。空闲的 PCIe 4.0 插槽可用于通过 LVM 扩展系统存储，或用于双启动配置。
+* **存储**：主板包含两个 PCIe SSD 插槽，一个 PCIe 4.0 和一个 PCIe 5.0。预装的 2TB SSD 占用 PCIe 5.0 插槽。空闲的 PCIe 4.0 插槽可用于通过 LVM 扩展系统存储，或用于双启动配置。操作步骤请参阅[使用内置 SSD 扩展存储](expand-storage-internal-ssd.md)。
 * **内存**：RAM 容量可升级至最大 128GB。
 * **外接显卡**：可以连接兼容的雷电外置显卡设备。详情请参阅[可以给 Olares One 连接 eGPU 吗？](#可以给-olares-one-连接-egpu-吗)
 * **外接显示器**：Thunderbolt 5 端口支持通过扩展坞同时连接最多两台外接显示器，最高支持 8K 分辨率。视频输出由内置 RTX 5090 Mobile 处理。
@@ -111,7 +126,9 @@ Olares One 对常见带外管理功能的支持情况如下：
 
 ### 使用 Olares One 是否有额外费用？
 
-没有。Olares OS 和系统更新完全免费。
+Olares OS、系统更新、Olares Market 中的应用和本地 AI 推理均可免费使用。
+
+日常运行成本是电费和网络费。如果你选择接入 OpenAI、Anthropic 等云端模型 API，调用费用由该提供方收取。
 
 ### 我可以在没有互联网连接的情况下使用该设备吗？
 
@@ -131,6 +148,71 @@ Olares OS 还包含内置的自动备份机制，用于定期将加密备份到�
 
 ## AI 与游戏
 
+### 可以用本地 AI 替代付费 AI 订阅吗？
+
+可以。你可以用本地模型完成对话、写作、编程、研究和媒体创作，按订阅的实际用途选择方案：
+
+| 用途 | 本地模型或工作流 | 应用示例 |
+| --- | --- | --- |
+| 对话和写作 | 由 Qwen 等本地大语言模型回答问题、起草文字 | 使用 [LobeHub](../use-cases/lobechat.md) 或 [Open WebUI](../use-cases/openwebui.md) 作为聊天界面 |
+| 文档问答 | 从知识库检索文档，再由本地大语言模型回答 | [LobeHub](../use-cases/lobechat.md) |
+| 带引用的研究报告 | 通过 SearXNG 检索资料，再由本地大语言模型分析 | [Local Deep Research](../use-cases/local-deep-research.md) |
+| 编写和测试代码 | 本地模型配合 Agent 修改文件、运行测试 | [OpenCode](../use-cases/opencode.md)、[Claude Code](../use-cases/claude-code.md) 或 [Codex CLI](../use-cases/codex-cli.md) |
+| 图片和视频创作 | 工作流调用本地模型，生成或编辑图片和视频 | [FlowStudio](../use-cases/flowstudio.md) 或 [ComfyUI](../use-cases/comfyui.md) |
+| 音乐创作 | 本地音乐模型根据歌词和风格提示生成歌曲 | [YuE2 Studio](../use-cases/yue2-studio.md) 或 [ACE-Step](../use-cases/ace-step-1.5.md) |
+
+更多应用和模型请浏览 [Olares Market](https://market.olares.com)。
+
+### 可以在 Olares One 上托管全天运行的 AI Agent 吗？
+
+可以。Agent 托管在 Olares One 上后，可以全天运行，无需保持笔记本或手机在线。从 Market 安装 Agent 并连接本地模型后便可使用，例如：
+
+- **[Lares](../use-cases/lares.md)**：Olares 原生 Agent，可以管理文件、应用和设备设置，也可以连接工具完成研究和创作任务。
+- **[OpenClaw](../use-cases/openclaw.md)**：可以通过聊天应用交互的个人 Agent，结合工具和技能处理文档、浏览网页。
+- **[Hermes Agent](../use-cases/hermes.md)**：支持跨会话记忆和可复用技能，可以管理文件、应用和处理编程任务。
+
+### 可以运行哪些本地大语言模型？
+
+你可以从 Market 安装本地大语言模型，例如：
+
+- **Qwen3.8-27B**：使用 llama.cpp 推理引擎。
+- **Qwen3.6-35B-A3B**：使用 llama.cpp 推理引擎。
+- **Gemma 4 26B**：使用 Ollama 推理引擎。
+
+这些模型应用已配置好推理引擎，并在安装设置时下载模型文件。最新列表请查看 [Olares Market](https://market.olares.com)，使用方法请参阅[运行本地大语言模型](../use-cases/llm-base-apps.md)。
+
+### 可以安装新模型或 Market 中没有的模型吗？
+
+可以。Market 上架新模型应用后，你可以直接安装。如果想运行 Hugging Face 或 Ollama 模型库中的模型，可以通过 Engine Base 应用创建实例。Olares 提供 llama.cpp、Ollama、vLLM 和 SGLang 四种 Engine Base 应用。
+
+选择支持该模型架构和文件格式的引擎，再按设备资源设置内存和上下文上限。[本地模型指南](../use-cases/llm-base-apps.md)介绍了引擎选择和配置方法。
+
+### 显存和系统内存会怎样影响模型选择？
+
+Olares One 配备 24 GB 显存（VRAM）和 96 GB 系统内存（RAM），两者独立。显存存放 GPU 推理所需的模型权重和上下文缓存。系统内存用于运行操作系统和应用。使用支持 CPU 与 GPU 协同推理的引擎时，也可以把较大模型的一部分放入系统内存，由 CPU 处理。
+
+量化通过降低模型权重的存储精度来减少内存占用。除了模型权重，还需要为上下文缓存预留空间，更长的对话和更多并发请求都会增加这部分开销。模型和内存设置请参阅[运行本地大语言模型](../use-cases/llm-base-apps.md)。
+
+### 可以让编程 Agent 使用本地模型吗？
+
+可以。从 Market 安装 [OpenCode](../use-cases/opencode.md)、[Claude Code](../use-cases/claude-code.md) 或 [Codex CLI](../use-cases/codex-cli.md)，通过 Router 连接本地模型。模型生成回复和工具调用，Agent 在自己的开发环境中修改文件、运行命令和测试。
+
+你也可以在自己的电脑上运行 OpenCode CLI，连接 Olares 上的模型。此时，文件和代码执行都留在自己的电脑上，模型推理由 Olares One 完成。请参阅 [AI 应用如何连接 Olares 模型](../manual/best-practices/connect-ai-apps.md)。
+
+### Olares One 支持哪些语言？
+
+语言支持取决于你使用的功能：
+
+- **Olares 和 LarePass 界面**：支持英语、简体中文、德语、西班牙语、意大利语、法语和日语。请参阅 [Olares 语言设置](../manual/olares/settings/language-appearance.md)和 [LarePass 语言设置](../manual/larepass/index.md#更改语言)。
+- **第三方应用**：由各应用提供自己的语言选项。
+- **AI 模型**：对话、语音识别和语音生成模型各有自己的语言支持范围，可以按目标语言选择模型。
+
+### 本地 AI 模型可以理解图片吗？
+
+可以。支持视觉的模型能够分析上传的图片，并回答有关图片内容的问题。例如，Gemma 4 26B (Ollama) 支持图片输入。
+
+将模型连接到支持图片附件的聊天应用，再上传图片并提问。模型设置请参阅[运行本地大语言模型](../use-cases/llm-base-apps.md)。
+
 ### Olares One 是否支持 Kimi K2 模型？
 
 Kimi K2 约有 1 万亿参数，需要大约 1024 GB 显存，因此无法在 Olares Market 中使用。
@@ -139,9 +221,12 @@ Kimi K2 约有 1 万亿参数，需要大约 1024 GB 显存，因此无法在 Ol
 
 ### 本地 AI 模型能否访问互联网进行研究？
 
-可以。Olares 支持多个支持互联网访问的应用：
-* **Vane**（前身为 Perplexica）：Perplexity 的开源替代品。它使用 SearxNG 检索最新信息，并使用本地 LLM 进行分析。
-* **DeerFlow**：OpenResearch 的开源替代品。它使用 RAGFlow 配置本地知识库，集成 Tavily 进行网络搜索，并使用本地 LLM 进行分析。
+可以。Agent 可以调用搜索和网页读取工具，再用本地模型分析结果。Olares Market 提供这两类工具：
+
+- **[SearXNG](../use-cases/searxng.md)**：搜索网页，返回链接和摘要。
+- **[Firecrawl](../use-cases/firecrawl.md)**：读取网页，将内容转成模型可以处理的文本。
+
+将这些工具连接到 Agent 后，就可以组成研究工作流。使用 Lares 和 Router 的设置方法请参阅[使用 Lares 研究网络资料](../use-cases/lares-web-research.md)。
 
 ### 我可以将 NAS 用于存储，将 Olares 用于 AI 处理吗？
 
@@ -149,24 +234,16 @@ Kimi K2 约有 1 万亿参数，需要大约 1024 GB 显存，因此无法在 Ol
 
 ### 我可以在 iPhone 或 Mac 上使用 Olares AI 功能吗？
 
-可以。Olares 支持安全远程访问。你可以使用 iPhone 或 Mac 从任何地方查询在 Olares One 上运行的 AI 模型。
+可以。在手机或电脑的浏览器中打开托管在 Olares One 上的 AI 应用。本地模型推理由 Olares One 完成，手机或电脑负责显示界面和发送请求。
 
-### 120B 模型在 Olares One 上的表现如何？
-
-我们测试了 `gpt-oss:120b` 模型。由于模型大小超过了专用 GPU 显存，系统会将部分模型加载到 96GB 的系统内存中进行 CPU 处理。
-
-在我们的测试中，`gpt-oss:120b` 达到约 36.16 tokens/s。
-
-为了获得更好的效率，我们推荐 `qwen3-30b-a3b`。它在保持显著更小体积的同时提供了更优的结果，最高速度可达 157 tokens/s，或在 8 个并发请求下约 81 tokens/s。
-
-详细的测试方法请参阅[本地 AI 硬件性能基准测试](https://blog.olares.com/local-ai-hardware-performance-benchmarking/)。
+外出访问时，保持 Olares One 开机并连接互联网，然后在手机或电脑上开启 [LarePass VPN](access-olares-via-vpn.md)。
 
 ### 我可以使用 LM Studio 管理 Olares 上的模型吗？
 
 LM Studio 是一个客户端桌面应用，而非服务器端服务，因此无法直接安装在 Olares One 上。
 
 但是，你有两个替代方案：
-* 使用原生应用，如 OpenWebUI 或 LobeHub（前身为 LobeChat），它们提供类似的功能。
+* 使用 [LobeHub](../use-cases/lobechat.md) 与 Olares 托管的模型对话。
 * 在你的电脑上运行 LM Studio 的本地实例，并将其配置为通过 API 访问托管在 Olares One 上的 AI 模型。
 
 ### 如果同时加载多个模型，性能会下降吗？
@@ -202,6 +279,8 @@ Olares One 支持通过 Moonlight 作为 Steam 服务器进行串流游戏，或
 可以。要运行偶尔的 Windows 应用，可以从 Olares Market 安装 Windows 应用。这会运行一个可通过 RDP 访问的虚拟机，与内置 VPN 配合使用时提供无缝的远程桌面体验。
 
 或者，你可以安装第二个内部驱动器用于双启动设置，或将 Olares OS 替换为原生 Windows 安装。
+
+操作步骤请参阅[运行 Windows 虚拟机](../use-cases/windows.md)、[使用第二块硬盘配置双系统](dual-boot-dual-drive.md)或[在 Olares One 上安装 Windows](install-windows-primary-drive.md)。
 
 ### Windows 虚拟机可以使用 GPU 吗？
 
@@ -286,6 +365,20 @@ Olares 目前处于第 3 阶段，即集群化多台运行相同操作系统和�
 ### 如果设备用于集群，为什么以太网端口限制为 2.5Gbps？
 
 我们理解 10Gbps 更适合集群以最大化节点间的数据传输。但是，包含 2.5Gbps 以太网端口是硬件平台供应商施加的严格限制。
+
+## 购买与售后
+
+### 在哪里查看价格、运费和税费？
+
+当前价格、配置和优惠活动请查看 [Olares One 商店页面](https://shop.olares.com/products/olares-one)。选择收货地区后，在结账时查看运费和税费。是否包含关税和税费取决于目的地，详情请参阅[配送政策](https://shop.olares.com/policies/shipping-policy)。
+
+如果需要购买多台设备，或结账时找不到收货地区，可以联系 hi@olares.com。
+
+### 在哪里查看质保和退货信息？
+
+[质保政策](https://shop.olares.com/pages/warranty-policy)说明保修范围、维修、换货和运输安排。[退货与退款政策](https://shop.olares.com/policies/refund-policy)说明退货条件和地区条款。
+
+遇到硬件问题时，请联系 hi@olares.com，提供订单号、设备序列号和问题描述。支持团队会协助排查，如需返修，会提供寄回说明。
 
 ## 高级使用与配置
 
