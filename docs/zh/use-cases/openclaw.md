@@ -8,9 +8,9 @@ head:
   - - meta
     - name: keywords
       content: Olares, OpenClaw, self-hosted ai agent, personal ai agent, local ai agent, openclaw on olares
-app_version: "1.0.44"
-doc_version: "3.0"
-doc_updated: "2026-09-24"
+app_version: "1.0.57"
+doc_version: "3.1"
+doc_updated: "2026-11-11"
 ---
 
 :::warning
@@ -113,6 +113,12 @@ OpenClaw 需要较大的"上下文窗口"（即 AI 的短期记忆）来处理�
     为便于快速上手，本教程会跳过向导中的部分高级设置。你可以稍后配置或修改它们。
     :::
 
+    :::warning 填写 API 密钥占位值
+    API 密钥不能留空。OpenClaw 2026.11.3 要求此提供商的 API 密钥非空，即使向导提示可以留空。连接此 Olares Router 时，请填写占位值，例如 `olares`。
+
+    如果实时对话测试提示 `No API key found for provider "router"`，选择 **Fix model/auth setup**，在 API 密钥字段填写非空占位值，然后重新测试。
+    :::
+
     | 配置   | 选项   |
     |:-----------|:---------|
     | Personal-by-default acknowledgment | 选择 **Yes**。  |
@@ -121,7 +127,7 @@ OpenClaw 需要较大的"上下文窗口"（即 AI 的短期记忆）来处理�
     | Model/auth provider | 选择 **Custom Provider**。 |
     | API Base URL | 粘贴步骤 1 中从 Router 复制的 Base URL，保留 `/v1`。 |
     | How do you want to provide this API key? | 如果出现此提示，选择 **Paste API key now**。 |
-    | API Key (leave blank if not required) | Olares 内的这个应用无需 Router API 密钥，留空。 |
+    | API Key (leave blank if not required) | 填写非空占位值，例如 `olares`。 |
     | Endpoint compatibility | 选择 **OpenAI-compatible**。 |
     | Model ID | 填写 `default-chat`。向导可能先验证端点，再进入下一项。 |
     | Endpoint ID | 填写 `router`。模型引用为 `router/default-chat`。 |

@@ -8,9 +8,9 @@ head:
   - - meta
     - name: keywords
       content: Olares, OpenClaw, self-hosted ai agent, personal ai agent, local ai agent, openclaw on olares
-app_version: "1.0.44"
-doc_version: "3.0"
-doc_updated: "2026-09-24"
+app_version: "1.0.57"
+doc_version: "3.1"
+doc_updated: "2026-11-11"
 ---
 
 # Run OpenClaw as your self-hosted personal AI agent
@@ -109,6 +109,12 @@ Set up OpenClaw using the step-by-step interactive wizard.
     To get you started quickly, this tutorial skips several advanced settings in the wizard. You can configure or modify them later.
     :::
 
+    :::warning Enter an API key placeholder
+    Do not leave the API key empty. OpenClaw 2026.11.3 requires a non-empty value for this provider, even though the prompt says the key can be left blank. For this Olares Router connection, enter a placeholder such as `olares`.
+
+    If the live completion test reports `No API key found for provider "router"`, select **Fix model/auth setup**, enter a non-empty placeholder in the API key field, and retry the test.
+    :::
+
     | Settings   | Option   |
     |:-----------|:---------|
     | Personal-by-default acknowledgment | Select **Yes**.  |
@@ -117,7 +123,7 @@ Set up OpenClaw using the step-by-step interactive wizard.
     | Model/auth provider | Select **Custom Provider**. |
     | API Base URL | Paste the Router Base URL from Step 1, including `/v1`. |
     | How do you want to provide this API key? | Select **Paste API key now** if this prompt appears. |
-    | API Key (leave blank if not required) | Leave blank for this app in Olares. |
+    | API Key (leave blank if not required) | Enter a non-empty placeholder, such as `olares`. |
     | Endpoint compatibility | Select **OpenAI-compatible**. |
     | Model ID | Enter `default-chat`. The wizard may verify the endpoint before continuing. |
     | Endpoint ID | Enter `router`. The model reference is `router/default-chat`. |
