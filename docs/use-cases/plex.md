@@ -21,7 +21,7 @@ In this guide, you will learn how to:
 - Install Plex, choose an acceleration mode, and connect your Plex account.
 - Organize media folders on Olares and choose library types for personal videos, movies, and music.
 - Select playback quality and subtitles in a browser, and check whether hardware transcoding is active.
-- Register a local HTTPS address so a browser or TV on the same LAN can open your library.
+- Add the local HTTPS address in Plex so a browser or TV on the same LAN can open your library.
 - Connect a Plex client on your phone or computer on another network through LarePass VPN.
 
 ## Prerequisites
