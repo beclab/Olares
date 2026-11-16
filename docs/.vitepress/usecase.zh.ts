@@ -100,25 +100,6 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   ]
                 },
                 {
-                  text: "NemoClaw",
-                  link: "/zh/use-cases/nemoclaw",
-                  collapsed: true,
-                  items: [
-                    {
-                      text: "集成 Google Workspace",
-                      link: "/zh/use-cases/nemoclaw-google-workspace",
-                    },
-                    {
-                      text: "使用 Olares CLI 管理 Olares",
-                      link: "/zh/use-cases/nemoclaw-olares-cli",
-                    },
-                    {
-                      text: "常见问题",
-                      link: "/zh/use-cases/nemoclaw-common-issues",
-                    },
-                  ]
-                },
-                {
                   text: "Hermes Agent",
                   link: "/zh/use-cases/hermes",
                   collapsed: true,

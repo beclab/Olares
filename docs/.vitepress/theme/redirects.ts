@@ -1,4 +1,16 @@
 export const redirects = {
+    // Retired NemoClaw tutorials → the closest live OpenClaw guides.
+    '/use-cases/nemoclaw': '/use-cases/openclaw',
+    '/use-cases/nemoclaw-1.12.6': '/use-cases/openclaw',
+    '/use-cases/nemoclaw-google-workspace': '/use-cases/openclaw-skills',
+    '/use-cases/nemoclaw-olares-cli': '/use-cases/openclaw-olares-skills',
+    '/use-cases/nemoclaw-common-issues': '/use-cases/openclaw-common-issues',
+    '/zh/use-cases/nemoclaw': '/zh/use-cases/openclaw',
+    '/zh/use-cases/nemoclaw-1.12.6': '/zh/use-cases/openclaw',
+    '/zh/use-cases/nemoclaw-google-workspace': '/zh/use-cases/openclaw-skills',
+    '/zh/use-cases/nemoclaw-olares-cli': '/zh/use-cases/openclaw-olares-skills',
+    '/zh/use-cases/nemoclaw-common-issues': '/zh/use-cases/openclaw-common-issues',
+
     // Retired Control Hub host terminal pages.
     '/manual/olares/controlhub/terminal': '/manual/access-olares-terminal',
     '/zh/manual/olares/controlhub/terminal': '/zh/manual/access-olares-terminal',

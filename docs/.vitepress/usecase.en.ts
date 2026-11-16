@@ -100,25 +100,6 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   ]
                 },
                 {
-                  text: "NemoClaw",
-                  link: "/use-cases/nemoclaw",
-                  collapsed: true,
-                  items: [
-                    {
-                      text: "Integrate with Google Workspace",
-                      link: "/use-cases/nemoclaw-google-workspace",
-                    },
-                    {
-                      text: "Manage Olares with Olares CLI",
-                      link: "/use-cases/nemoclaw-olares-cli",
-                    },
-                    {
-                      text: "Common issues",
-                      link: "/use-cases/nemoclaw-common-issues",
-                    },
-                  ]
-                },
-                {
                   text: "Hermes Agent",
                   link: "/use-cases/hermes",
                   collapsed: true,
