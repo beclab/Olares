@@ -44,8 +44,6 @@ spec:
                 - bge-reranker-v2-m3-v1
                 type: string
               retrievalParameters:
-                additionalProperties: false
-                description: Bounded query-only parameters. They never enter `RagIndexSignature`.
                 nullable: true
                 properties:
                   scoreCalibration:
