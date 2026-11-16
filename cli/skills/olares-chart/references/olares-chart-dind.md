@@ -4,7 +4,7 @@
 
 Some terminal/agent apps (coding agents, dev sandboxes) need to run `docker` / `docker compose` from inside the workspace. Olares pods cannot reach the host Docker daemon, so the chart ships its **own** daemon as a privileged sidecar and exposes the `docker` CLI to the main (non-privileged) container over TCP.
 
-Canonical example: [pool](https://github.com/beclab/apps/tree/main/pool) (gated by `ENABLE_DIND`). The same pattern is used by [clawdbot](https://github.com/beclab/apps/tree/main/clawdbot) for sandbox isolation. Note: the `claudecode` app does **not** use DinD — it is a plain terminal workspace.
+Canonical example: [pool](https://github.com/beclab/apps/tree/main/pool) (gated by `ENABLE_DIND`). The same pattern is used by [clawdbot](https://github.com/beclab/apps/tree/main/clawdbot) and [nemoclaw](https://github.com/beclab/apps/tree/main/nemoclaw) for sandbox isolation. Note: the `claudecode` app does **not** use DinD — it is a plain terminal workspace.
 
 ## Topology
 
@@ -142,4 +142,4 @@ envs:
 
 ## Variants
 
-**pool** is exactly the template above (CLI-injection + TCP daemon, toggled by `ENABLE_DIND`). **clawdbot** uses the same privileged daemon but adds a startup script that launches `dockerd` and **pre-pulls a sandbox image** before the agent starts, so the first sandboxed task does not wait on a pull.
+**pool** is exactly the template above (CLI-injection + TCP daemon, toggled by `ENABLE_DIND`). **clawdbot / nemoclaw** use the same privileged daemon but add a startup script that launches `dockerd` and **pre-pulls a sandbox image** before the agent starts, so the first sandboxed task does not wait on a pull.

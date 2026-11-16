@@ -116,7 +116,7 @@ To rotate on purpose, delete the Secret and upgrade: the `else` branch mints a f
 
 ## Reference charts
 
-Published charts in `beclab/apps` to read for the generate-once pattern: `deerflowv2` (helper plus a documented rotation path), `nofx` (several keys in one Secret), `documenso` (per-key fallback), `wordpress` (app and database Secrets side by side).
+Published charts in `beclab/apps` to read for the generate-once pattern: `deerflowv2` (helper plus a documented rotation path), `nemoclaw` (user-pinned value, else stored, else generated), `nofx` (several keys in one Secret), `documenso` (per-key fallback), `wordpress` (app and database Secrets side by side).
 
 ## Before packaging
 
