@@ -64,7 +64,7 @@ Plex Media Server 是一款用于管理和串流播放视频、音乐的应用�
 
 5. 请求完成后，点击 **Open Plex Web**。
 6. 在 Plex Web 中登录同一个账号。首次打开时，在欢迎页点击 **Got It!**，进入 **Server Setup**。
-7. 设置一个方便识别的服务器名称，例如 `Home media`。取消勾选 **Allow me to access my media outside my home**，然后点击 **Next**。同一局域网上的设备使用本教程后面的本地 HTTPS 地址。其他网络上的手机和电脑使用 LarePass VPN。
+7. 设置一个方便识别的服务器名称，例如 `Home media`。取消勾选 **Allow me to access my media outside my home**，然后点击 **Next**。本教程通过本地 HTTPS 地址或 LarePass VPN 连接服务器。
 8. 在 **Media Library** 页面点击 **Next**，稍后再添加媒体库，然后点击 **Done** 完成设置。
 9. 打开 Plex Web 设置，选中自己的服务器，再进入 **General**，确认 **Server claimed by** 显示的是刚才绑定的账号。
 
@@ -129,7 +129,7 @@ Plex 对 `Home/Movies` 和 `Home/Music` 的访问为只读。需要整理、重�
 
 ### 先播放原始视频
 
-本地视频播放[免费](https://support.plex.tv/articles/202526943-plex-free-vs-paid/)。[远程播放需要订阅](#从手机和电脑连接-plex)，通过浏览器播放也一样。
+本地视频播放[免费](https://support.plex.tv/articles/202526943-plex-free-vs-paid/)。通过 [LarePass VPN](#从其他网络连接) 打开的浏览器按远程播放计算，需要订阅。
 
 1. 打开 `Family videos`，选择刚才添加的旅行录像。
 2. 以原始质量播放视频。
@@ -174,9 +174,7 @@ Home/Movies/Family/
 
 ## 通过本地 HTTPS 地址连接
 
-电视、Plex 客户端或另一台电脑上的浏览器与 Olares 在同一局域网时，使用这一方式。手机或电脑在其他网络上时，改用 [LarePass VPN](#从手机和电脑连接-plex)。
-
-在 Olares 上通过浏览器使用 Plex 时，从 Launchpad 打开 **Plex Media Server**。
+电视、Plex 客户端或另一台电脑上的浏览器与 Olares 在同一局域网时，使用这一方式。手机或电脑在其他网络上时，改用 [LarePass VPN](#从其他网络连接)。
 
 Overlay 网关会为 Plex Media Server 分配一个局域网 IP。Plex Account Setup 会根据这个 IP 生成 HTTPS `plex.direct` 地址。把地址保存到 Plex 后，局域网里的客户端才能连上服务器。
 
@@ -193,14 +191,16 @@ Overlay 网关会把 Plex 直接放到当前局域网中。请在你信任的网
 1. 打开**设置**，进入**网络** > **Overlay 网关**。
 2. 如果**启用 Overlay 网关**尚未打开，先将其打开。开关不可用时，请超级管理员开启系统级服务。
 3. 在**应用**中找到 Plex Media Server，启用 Overlay 网关，然后点击**确认**。
-4. Plex 正在运行时，Olares 会重启应用以使设置生效。等待应用回到**运行中**，并显示 IP 地址。如果应用仍是**暂停**，打开**设置** > **应用** > **Plex Media Server**，点击**恢复**，启动后再查看 IP。
+4. Plex 正在运行时，Olares 会重启应用以使设置生效。等待应用回到**运行中**，并显示 IP 地址。
 5. 从 Launchpad 打开 **Plex Account Setup**。绑定账号后，这个入口仍然保留。
 6. 在 **Local connection** 中点击 **Refresh local address**。
 7. 页面显示 **HTTPS certificate verified** 后，点击 **Copy address**。
 
 页面会根据当前 Overlay IP 生成 HTTPS `plex.direct` 地址。
 
-如果 **Refresh local address** 提示先启用 Overlay，回到**设置** > **网络** > **Overlay 网关**，为 Plex Media Server 启用后，等 Plex 回到**运行中**再刷新。安全地址仍未出现时，确认 Plex 账号已经绑定。
+如果应用仍是**暂停**，打开**设置** > **应用** > **Plex Media Server**，点击**恢复**。应用回到**运行中**后再查看 IP。
+
+如果 **Refresh local address** 提示先启用 Overlay，先完成上面的 Overlay 网关步骤，等 Plex 回到**运行中**再刷新。安全地址仍未出现时，确认 Plex 账号已经绑定。
 
 ### 将地址添加到 Plex
 
@@ -209,7 +209,7 @@ Overlay 网关会把 Plex 直接放到当前局域网中。请在你信任的网
 3. 将复制的地址粘贴到 **Custom server access URLs**。保留已有地址，多个地址用英文逗号分隔。
 4. 点击 **Save Changes**。
 
-使用复制出来的地址本身，末尾不要带 `/web/` 或 `/identity`。Plex Account Setup 负责显示和复制地址。打开客户端之前，先在 Plex Web 中保存。这个 HTTPS 地址指向局域网里的 Overlay IP，供当前局域网上的设备使用。其他网络上的手机和电脑通过 LarePass VPN 连接。
+使用复制出来的地址本身，末尾不要带 `/web/` 或 `/identity`。Plex Account Setup 负责显示和复制地址。打开客户端之前，先在 Plex Web 中保存。这个 HTTPS 地址指向局域网里的 Overlay IP，供当前局域网上的设备使用。
 
 :::warning Plex 重启后更新已保存的地址
 Overlay 网关会动态分配局域网 IP。重启 Plex、网络变化或应用升级后，IP 可能改变。HTTPS 地址里包含这个 IP。在你粘贴新地址之前，**Custom server access URLs** 会保持原来的值。
@@ -234,7 +234,7 @@ Plex 可能会打开 `app.plex.tv` 上的授权页面，并显示本地 `plex.di
 
 如果服务器没有出现，检查已保存的地址，以及该账号是否可以打开媒体库。电视需要用自己的网络连接访问 Overlay 地址。
 
-## 从手机和电脑连接 Plex
+## 从其他网络连接
 
 手机或电脑与 Olares 不在同一网络时，使用这一方式。开启 LarePass VPN，并在播放期间保持连接。同一局域网上的设备可以使用[本地 HTTPS 地址](#通过本地-https-地址连接)。
 
@@ -274,18 +274,18 @@ Plex 可能会打开 `app.plex.tv` 上的授权页面，并显示本地 `plex.di
 
 设置保存后即可生效，无需重启 Plex。
 
-:::tip Chrome 中 HEVC 转码出现黑屏
-如果 Dolby Vision 或 HDR10 视频在 Chrome 中进行 HEVC 转码时画面冻结或黑屏，将 **Enable HEVC video encoding** 设为 **Never**。保持 **Use hardware acceleration when available** 和 **Use hardware-accelerated video encoding** 开启，保存后重新开始播放。
-
-需要转换视频时，Plex 可以使用 H.264 硬件转码。HEVC 文件仍可以按原始质量播放。如果这个视频仍然卡住，换一个视频播放。
-:::
-
 ### 查看当前播放是否使用 GPU
 
 1. 播放视频，并[选择低于源视频的质量](#选择合适的播放质量)，例如将 1080p 视频转换为 720p。
 2. 在 Plex Web 的 **Activity** 中打开 **Dashboard**，展开当前播放的详细信息。
 3. 查看视频格式旁是否有 `(hw)` 标记。该标记表示正在使用硬件加速解码或编码。
 4. 查看完毕后，可以将播放质量恢复为原始质量。
+
+:::tip Chrome 中 HEVC 转码出现黑屏
+如果 Dolby Vision 或 HDR10 视频在 Chrome 中进行 HEVC 转码时画面冻结或黑屏，将 **Enable HEVC video encoding** 设为 **Never**。保持 **Use hardware acceleration when available** 和 **Use hardware-accelerated video encoding** 开启，保存后重新开始播放。
+
+需要转换视频时，Plex 可以使用 H.264 硬件转码。HEVC 文件仍可以按原始质量播放。如果这个视频仍然卡住，换一个视频播放。
+:::
 
 ## 常见问题
 
