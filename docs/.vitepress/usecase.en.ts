@@ -291,14 +291,6 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   text: "Open Design",
                   link: "/use-cases/open-design",
                 },
-                {
-                  text: "ACE-Step 1.5",
-                  link: "/use-cases/ace-step-1.5",
-                },
-                /*{
-                  text: "ACE-Step",
-                  link: "/use-cases/ace-step",
-                },*/
                 /*{
                   text: "Duix.Avatar",
                   link: "/use-cases/duix-avatar",
