@@ -34,6 +34,9 @@ rules:
       # authenticates the caller and injects Terminus-Nonce/X-BFL-USER;
       # Search3 additionally requires trusted_owner to match that user.
       - "/v1/retrieval/*"
+      # Settings/user-service RAG control plane. Search3 still validates the
+      # provider-injected identity and keeps global rebuild Owner-only.
+      - "/rag/*"
       - "/image/*"
     verbs: ["*"]
 

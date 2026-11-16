@@ -5,6 +5,18 @@ export const redirects = {
     '/zh/manual/best-practices/connect-ai-apps': '/zh/use-cases/olares-router',
     '/zh/manual/best-practices/connect-ai-apps-1.12.6': '/zh/use-cases/olares-router',
 
+    // Retired NemoClaw tutorials → the closest live OpenClaw guides.
+    '/use-cases/nemoclaw': '/use-cases/openclaw',
+    '/use-cases/nemoclaw-1.12.6': '/use-cases/openclaw',
+    '/use-cases/nemoclaw-google-workspace': '/use-cases/openclaw-skills',
+    '/use-cases/nemoclaw-olares-cli': '/use-cases/openclaw-olares-skills',
+    '/use-cases/nemoclaw-common-issues': '/use-cases/openclaw-common-issues',
+    '/zh/use-cases/nemoclaw': '/zh/use-cases/openclaw',
+    '/zh/use-cases/nemoclaw-1.12.6': '/zh/use-cases/openclaw',
+    '/zh/use-cases/nemoclaw-google-workspace': '/zh/use-cases/openclaw-skills',
+    '/zh/use-cases/nemoclaw-olares-cli': '/zh/use-cases/openclaw-olares-skills',
+    '/zh/use-cases/nemoclaw-common-issues': '/zh/use-cases/openclaw-common-issues',
+
     // Retired Control Hub host terminal pages.
     '/manual/olares/controlhub/terminal': '/manual/access-olares-terminal',
     '/zh/manual/olares/controlhub/terminal': '/zh/manual/access-olares-terminal',
@@ -90,9 +102,11 @@ export const redirects = {
     '/use-cases/ollama': '/use-cases/llm-base-apps',
     '/zh/use-cases/ollama': '/zh/use-cases/llm-base-apps',
 
-    // Rename: ace-step → ace-step-1.5 (permanent: old name is retired)
-    '/use-cases/ace-step': '/use-cases/ace-step-1.5',
-    '/zh/use-cases/ace-step': '/zh/use-cases/ace-step-1.5',
+    // Retired: ACE-Step guides → Music Studio
+    '/use-cases/ace-step': '/use-cases/music-studio',
+    '/zh/use-cases/ace-step': '/zh/use-cases/music-studio',
+    '/use-cases/ace-step-1.5': '/use-cases/music-studio',
+    '/zh/use-cases/ace-step-1.5': '/zh/use-cases/music-studio',
 
     // Consolidated FlowStudio direct-creation guide into the main app page.
     '/use-cases/flowstudio-create': '/use-cases/flowstudio',
@@ -271,7 +285,7 @@ export const redirects = {
     '/one/open-webui': '/use-cases/openwebui',
     '/one/comfyui': '/use-cases/comfyui',
     '/one/deerflow': '/use-cases/deerflow2',
-    '/one/ace-step': '/use-cases/ace-step-1.5',
+    '/one/ace-step': '/use-cases/music-studio',
     '/one/create-users': '/manual/olares/settings/manage-team',
     '/one/config-app-access': '/manual/olares/settings/manage-entrance',
     '/zh/one/files': '/zh/manual/olares/files/',
@@ -290,7 +304,7 @@ export const redirects = {
     '/zh/one/open-webui': '/zh/use-cases/openwebui',
     '/zh/one/comfyui': '/zh/use-cases/comfyui',
     '/zh/one/deerflow': '/zh/use-cases/deerflow2',
-    '/zh/one/ace-step': '/zh/use-cases/ace-step-1.5',
+    '/zh/one/ace-step': '/zh/use-cases/music-studio',
     '/zh/one/create-users': '/zh/manual/olares/settings/manage-team',
     '/zh/one/config-app-access': '/zh/manual/olares/settings/manage-entrance',
 

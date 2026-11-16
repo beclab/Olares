@@ -45,7 +45,6 @@ export const categoryLabelsZh: Record<string, string> = {
 export const useCases: UseCase[] = [
   { title: "Hermes Workspace", link: "/use-cases/hermes-workspace", category: "AI workbench", description: "Chat, save files, and take actions", descriptionZh: "对话、存文件、执行操作" },
   { title: "OpenClaw", link: "/use-cases/openclaw", category: "AI agent", description: "Personal AI assistant that integrates with Discord and runs tasks", descriptionZh: "可集成 Discord 并执行任务的个人 AI 助手" },
-  { title: "NemoClaw", link: "/use-cases/nemoclaw", category: "AI agent", description: "Always-on AI agent backed by a local LLM", descriptionZh: "由本地 LLM 驱动的常驻 AI 智能体" },
   { title: "Hermes Agent", link: "/use-cases/hermes", category: "AI agent", description: "Self-directed agent with Olares skills and a Gateway API", descriptionZh: "具备 Olares 技能和 Gateway API 的自主智能体" },
   { title: "MemPalace", link: "/use-cases/mempalace", category: "AI agent", description: "Keep original project notes and share local memory between AI agents", descriptionZh: "保留项目原文，通过 MCP 在不同 AI Agent 之间共享本地记忆" },
   { title: "OpenCode", link: "/use-cases/opencode", category: "AI agent", description: "AI coding agent driven by natural language", descriptionZh: "通过自然语言驱动的 AI 编程智能体" },
@@ -73,7 +72,6 @@ export const useCases: UseCase[] = [
   { title: "FlowStudio", link: "/use-cases/flowstudio", category: "Creative media", description: "Generate images and videos with reusable AI workflows", descriptionZh: "使用可复用的 AI 工作流生成图像和视频" },
   { title: "Music Studio", link: "/use-cases/music-studio", category: "Creative media", description: "Create songs from lyrics and musical ideas", descriptionZh: "将歌词和音乐灵感变成歌曲" },
   { title: "Open Design", link: "/use-cases/open-design", category: "Creative media", description: "Turn prompts into prototypes, pages, and slide decks", descriptionZh: "将提示词转化为原型、页面和幻灯片" },
-  { title: "ACE-Step 1.5", link: "/use-cases/ace-step-1.5", category: "Creative media", description: "Generate music from prompts or lyrics", descriptionZh: "根据提示词或歌词生成音乐" },
   { title: "Whisper-WebUI", link: "/use-cases/whisper-webui", category: "Creative media", description: "Speech-to-text, subtitles, and translation", descriptionZh: "语音转文字、字幕生成与翻译" },
   { title: "Speaches", link: "/use-cases/speaches", category: "Creative media", description: "Speech-to-text, text-to-speech, and voice chat", descriptionZh: "语音转文字、文字转语音与语音对话" },
   { title: "IndexTTS2", link: "/use-cases/indextts2", category: "Creative media", description: "Text-to-speech with zero-shot voice cloning", descriptionZh: "支持零样本声音克隆的文字转语音" },

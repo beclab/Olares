@@ -100,25 +100,6 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   ]
                 },
                 {
-                  text: "NemoClaw",
-                  link: "/zh/use-cases/nemoclaw",
-                  collapsed: true,
-                  items: [
-                    {
-                      text: "集成 Google Workspace",
-                      link: "/zh/use-cases/nemoclaw-google-workspace",
-                    },
-                    {
-                      text: "使用 Olares CLI 管理 Olares",
-                      link: "/zh/use-cases/nemoclaw-olares-cli",
-                    },
-                    {
-                      text: "常见问题",
-                      link: "/zh/use-cases/nemoclaw-common-issues",
-                    },
-                  ]
-                },
-                {
                   text: "Hermes Agent",
                   link: "/zh/use-cases/hermes",
                   collapsed: true,
@@ -310,14 +291,6 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   text: "Open Design",
                   link: "/zh/use-cases/open-design",
                 },
-                {
-                  text: "ACE-Step 1.5",
-                  link: "/zh/use-cases/ace-step-1.5",
-                },
-                /*{
-                  text: "ACE-Step",
-                  link: "/zh/use-cases/ace-step",
-                },*/
                 /*{
                   text: "Duix.Avatar",
                   link: "/zh/use-cases/duix-avatar",
