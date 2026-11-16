@@ -59,6 +59,8 @@ head:
 
 ### 已下架文档
 
+- 下架 ACE-Step 和 ACE-Step 1.5 指南。旧地址会跳转至 [Music Studio](/zh/use-cases/music-studio) 音乐创作教程。
+- 下架 NemoClaw 指南，包括 1.12.6 历史版、Google Workspace 集成、Olares CLI 工作流和故障排查。旧地址会分别跳转至 [OpenClaw](/zh/use-cases/openclaw)、[技能与插件](/zh/use-cases/openclaw-skills)、[Olares 管理](/zh/use-cases/openclaw-olares-skills)和[故障排查](/zh/use-cases/openclaw-common-issues)指南。
 - 下架 AI 应用连接指南及其 1.12.6 历史版。当前连接方式请参阅[使用 Olares Router 作为 AI 网关](/zh/use-cases/olares-router)。旧指南地址会跳转至 Router 指南。
 - 随着 **Terminal > Olares** 入口移除，下架 Control Hub 主机终端指南。旧链接会跳转至 [SSH 访问说明](/zh/manual/access-olares-terminal)；容器终端仍可使用。
 - 从[自定义应用 URL](/zh/manual/olares/settings/custom-app-domain) 中移除自定义域名配置说明。该指南现在介绍自定义路由 ID。

@@ -55,6 +55,8 @@ For release highlights and walkthroughs, see the [Olares 1.12.8 blog post](https
 
 ### Retired docs
 
+- Retired the ACE-Step and ACE-Step 1.5 guides. Previous URLs redirect to [Music Studio](/use-cases/music-studio) for music creation.
+- Retired the NemoClaw guides, including the Olares 1.12.6 version, Google Workspace integration, Olares CLI workflows, and troubleshooting. Previous URLs redirect to the corresponding [OpenClaw](/use-cases/openclaw), [skills and plugins](/use-cases/openclaw-skills), [Olares management](/use-cases/openclaw-olares-skills), and [troubleshooting](/use-cases/openclaw-common-issues) guides.
 - Retired the AI app connection guide and its Olares 1.12.6 version. For current connection instructions, see [Use Olares Router as your AI gateway](/use-cases/olares-router). Previous guide URLs redirect to the Router guide.
 - Retired the Control Hub host terminal guides after the **Terminal > Olares** entry was removed. Previous links redirect to [SSH access instructions](/manual/access-olares-terminal); container terminals remain available.
 - Removed custom-domain setup instructions from [Customize application URLs](/manual/olares/settings/custom-app-domain). The guide now covers custom route IDs.
