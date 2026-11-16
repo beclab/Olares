@@ -9,7 +9,7 @@ search: false
 :::details 模型连接的工作原理
 Olares 上的独立模型作为与客户端应用分开的服务运行。要连接两者，客户端需要准确的 **Model name**，以及与其所需 API 格式相匹配的 **Base URL**。
 
-你可以从模型控制台获取这两个值。有关更多信息，可参阅[连接 AI 应用](/zh/manual/best-practices/connect-ai-apps-1.12.6.md)。
+你可以从模型控制台获取这两个值。
 :::
 <!-- #endregion model-connection-overview -->
 

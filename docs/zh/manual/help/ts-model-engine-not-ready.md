@@ -58,6 +58,6 @@ head:
 ## 相关指南
 
 - [使用 Ollama、vLLM、llama.cpp 和 SGLang 运行本地大模型](/zh/use-cases/llm-base-apps.md)
-- [连接 AI 应用与模型服务](../best-practices/connect-ai-apps.md)
+- [使用 Olares Router 作为 AI 网关](/zh/use-cases/olares-router.md)
 - [内存不足或没有释放](./ts-free-memory.md)
 

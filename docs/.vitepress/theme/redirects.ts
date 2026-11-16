@@ -1,4 +1,10 @@
 export const redirects = {
+    // Retired AI app connection guides, including the 1.12.6 versions.
+    '/manual/best-practices/connect-ai-apps': '/use-cases/olares-router',
+    '/manual/best-practices/connect-ai-apps-1.12.6': '/use-cases/olares-router',
+    '/zh/manual/best-practices/connect-ai-apps': '/zh/use-cases/olares-router',
+    '/zh/manual/best-practices/connect-ai-apps-1.12.6': '/zh/use-cases/olares-router',
+
     // Retired Control Hub host terminal pages.
     '/manual/olares/controlhub/terminal': '/manual/access-olares-terminal',
     '/zh/manual/olares/controlhub/terminal': '/zh/manual/access-olares-terminal',

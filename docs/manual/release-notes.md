@@ -55,6 +55,7 @@ For release highlights and walkthroughs, see the [Olares 1.12.8 blog post](https
 
 ### Retired docs
 
+- Retired the AI app connection guide and its Olares 1.12.6 version. For current connection instructions, see [Use Olares Router as your AI gateway](/use-cases/olares-router). Previous guide URLs redirect to the Router guide.
 - Retired the Control Hub host terminal guides after the **Terminal > Olares** entry was removed. Previous links redirect to [SSH access instructions](/manual/access-olares-terminal); container terminals remain available.
 - Removed custom-domain setup instructions from [Customize application URLs](/manual/olares/settings/custom-app-domain). The guide now covers custom route IDs.
 - Retired outdated Olares ID contract, DID implementation, and verifiable credential development guides. Previous URLs redirect to the relevant [Olares ID](/developer/concepts/olares-id), [DID](/developer/concepts/did), [reputation](/developer/concepts/reputation), or [verifiable credential](/developer/concepts/vc) concepts.
@@ -83,7 +84,7 @@ For release highlights and walkthroughs, see the [Olares 1.12.7 blog post](https
 
 ### Updated docs
 
-- Rewrote [Connect your apps to AI capabilities](/manual/best-practices/connect-ai-apps) for Router, covering API formats, model and tool setup, default system names such as `default-chat`, and API keys for external clients.
+- Rewrote Connect your apps to AI capabilities for Router, covering API formats, model and tool setup, default system names such as `default-chat`, and API keys for external clients.
 - Updated AI client tutorials for the Router workflow, using Qwen3.8-27B (llama.cpp) as the chat example. Added an on-page version selector to affected guides so readers can choose the Olares 1.12.7 or 1.12.6 instructions.
 - Reorganized the [Olares manual](/manual/overview) around user tasks and [installation guidance](/manual/get-started/install-olares) around Linux, Olares One, and DGX Spark setup paths. Updated [Olares One onboarding](/one/olares-onboarding) for Lares.
 - Updated [local access guidance](/manual/best-practices/local-access) with LarePass host mappings on Windows and macOS, alongside VPN and `.local` access options.
@@ -134,7 +135,7 @@ For the highlights and walk-through of Olares v1.12.6, see the [Olares 1.12.6 bl
 
 ### Updated docs
 
-- Rewrote [Connect AI apps](/manual/best-practices/connect-ai-apps) to align with the v1.12.6+ architecture.
+- Rewrote Connect AI apps to align with the v1.12.6+ architecture.
 - Consolidated Olares One software documentation into the main manual and versioned the ISO download links.
 - Updated [My Olares](/one/hardware-settings), adding the **Limit CPU frequency** and **Automatic startup** toggles under **My Hardware**.
 - Updated [Basic file operations](/manual/olares/files/add-edit-download) with new sorting options, Markdown editing, preview, and additional supported formats.

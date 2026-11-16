@@ -170,7 +170,7 @@ On Olares 1.12.7 and later, clients connect to your model instance through Route
 4. Follow [Connect OpenCode to a custom provider](opencode.md#connect-to-a-custom-provider). Use the Router Base URL and add `default-chat` as the model ID. To keep the client on this instance regardless of the default model setting, use its full **Model name** from Router instead.
 5. Send a short message in OpenCode. In Router, check **Usage** to confirm that the request reached the intended model.
 
-For external clients, use the appropriate connection tab and a Router-issued API key. For embedding instances, use their full model name instead of `default-chat`. See [Connect AI apps](/manual/best-practices/connect-ai-apps.md) for details.
+For external clients, use the appropriate connection tab and a Router-issued API key. For embedding instances, use their full model name instead of `default-chat`. See [Use Olares Router as your AI gateway](/use-cases/olares-router.md) for details.
 
 ## References
 

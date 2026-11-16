@@ -262,7 +262,7 @@ This process establishes the agent's identity, behavioral boundaries, and long-t
 6. (Optional) If the agent fails to update the persona files, explicitly instruct it to do so in the chat. 
 
     If the issue persists, resolve it using one of the following methods:
-    - **Check the context window**: [Read the configured context size in Router](/manual/best-practices/connect-ai-apps.md#check-context-window). In Files, open **Data** > **clawdbot** > **config** > **openclaw.json** and set `contextWindow` to a value supported by the engine. For example, if **Engine args** shows `-c 104448`, use no more than `104448`.
+    - **Check the context window**: [Read the configured context size in Router](/use-cases/llm-base-apps.md#view-model-details-in-router). In Files, open **Data** > **clawdbot** > **config** > **openclaw.json** and set `contextWindow` to a value supported by the engine. For example, if **Engine args** shows `-c 104448`, use no more than `104448`.
     
         :::tip
         Changing `contextWindow` in OpenClaw does not increase the engine's context capacity. If you need a larger context, first configure the engine in Router for a value that the model and hardware support, then update the client.

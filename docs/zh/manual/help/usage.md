@@ -45,7 +45,7 @@ head:
     - **LLM 服务应用**：托管大型语言模型（LLM），用于文本生成、代码补全和聊天。包括八个预构建模型应用，以及在[引擎基座应用](/zh/use-cases/llm-base-apps.md)上创建的自定义模型实例。
     - **其他 AI 服务应用**：提供 LLM 之外的功能，例如语音识别（Speaches）和文本提取（PaddleOCR）。
 
-由于不同 provider 使用不同的通信规则，它们依赖特定的 **API 格式**，你可以把这些格式理解为应用之间交流的“语言”。最常见的两种格式是 **OpenAI-Compatible** 和 **Ollama**。连接时，需要在客户端应用中填写服务应用的 Base URL、模型名称和 API key。具体步骤请参考[连接 AI 应用与模型服务](../best-practices/connect-ai-apps.md)。
+由于不同 provider 使用不同的通信规则，它们依赖特定的 **API 格式**，你可以把这些格式理解为应用之间交流的“语言”。最常见的两种格式是 **OpenAI-Compatible** 和 **Ollama**。连接时，需要在客户端应用中填写服务应用的 Base URL、模型名称和 API key。具体步骤请参考[使用 Olares Router 作为 AI 网关](/zh/use-cases/olares-router.md)。
 
 ### 可以手动更新应用版本吗？
 
