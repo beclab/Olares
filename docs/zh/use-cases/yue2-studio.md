@@ -6,8 +6,8 @@ head:
     - name: keywords
       content: Olares, YuE2 Studio, AI 音乐, Q8, BF16, 量化, 钢琴卷帘, ABC, MIDI, 翻唱, 纯音乐
 app_version: "0.0.7"
-doc_version: "2.6"
-doc_updated: "2026-11-07"
+doc_version: "2.7"
+doc_updated: "2026-11-16"
 ---
 
 :::warning
@@ -34,7 +34,8 @@ YuE2 Studio 是一款本地 AI 音乐应用，可根据音乐风格和歌词生�
 
 ## 前提条件
 
-- 一台运行 Olares 1.12.7 或更高版本的 amd64 设备，配备 NVIDIA GPU，并有至少 5 GiB 可用显存。
+- 一台运行 Olares 1.12.7 或更高版本的 amd64 设备。
+- 一块 GeForce RTX 50 系 GPU，可用显存至少 5 GiB。
 - 一个 Hugging Face 账号。
 
 ## 安装 YuE2 Studio

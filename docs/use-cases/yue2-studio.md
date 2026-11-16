@@ -6,8 +6,8 @@ head:
     - name: keywords
       content: Olares, YuE2 Studio, AI music, Q8, BF16, quantization, piano roll, ABC, MIDI, covers, instrumental music
 app_version: "0.0.7"
-doc_version: "2.6"
-doc_updated: "2026-11-07"
+doc_version: "2.7"
+doc_updated: "2026-11-16"
 ---
 
 # Create and edit a song with YuE2 Studio
@@ -30,7 +30,8 @@ In this guide, you will learn how to:
 
 ## Prerequisites
 
-- Olares 1.12.7 or later on an amd64 device with an NVIDIA GPU and at least 5 GiB of available GPU memory.
+- Olares 1.12.7 or later on an amd64 device.
+- A GeForce RTX 50-series GPU with at least 5 GiB of available GPU memory.
 - A Hugging Face account.
 
 ## Install YuE2 Studio
