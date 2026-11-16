@@ -31,7 +31,7 @@ In this guide, you will learn how to:
 ## Prerequisites
 
 - Olares 1.12.7 or later on an amd64 device.
-- A GeForce RTX 50-series GPU with at least 5 GiB of available GPU memory. YuE2 Studio cannot run on other GPUs.
+- A GeForce RTX 50-series GPU with at least 5 GiB of available GPU memory.
 - A Hugging Face account.
 
 ## Install YuE2 Studio
