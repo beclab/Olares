@@ -15,12 +15,50 @@ The docs are built and published from the `main` branch of the [Olares GitHub re
 <details>
 <summary>For Olares OS software release notes, see the GitHub releases page.</summary>
 
+- [Olares 1.12.8](https://github.com/beclab/Olares/releases/tag/1.12.8)
 - [Olares 1.12.7](https://github.com/beclab/Olares/releases/tag/1.12.7)
 - [Olares 1.12.6](https://github.com/beclab/Olares/releases/tag/1.12.6)
 - [Olares 1.12.5](https://github.com/beclab/Olares/releases/tag/1.12.5)
 </details>
 
 To stay informed of Olares news, including documentation updates, follow Olares on X or join the [Discord community](https://discord.com/invite/BzfqrgQPDK).
+
+## Olares 1.12.8
+
+Released: November 16, 2026
+
+For the software changes, see the [Olares 1.12.8 release notes](https://github.com/beclab/Olares/releases/tag/1.12.8).
+For release highlights and walkthroughs, see the [Olares 1.12.8 blog post](https://www.olares.com/blog/olares-1-12-8/).
+
+### New docs
+
+- Added the [Olares 1.12.8 update guide](/manual/update-guides/1.12.8), covering the LarePass update requirement, device activation, GPU app restarts, Files permissions, and alternatives to the Control Hub host terminal.
+- Added [Manage access to Common and External](/manual/olares/files/manage-common-external-access), explaining administrator and member permissions, folder-level access settings, and access to mounted storage.
+- Added [Manage Olares apps with LarePass](/manual/larepass/manage-apps-with-larepass), covering app management from your phone.
+- Added [Music Studio](/use-cases/music-studio), [YuE2 Studio](/use-cases/yue2-studio), and [YuE2 Studio with Lares](/use-cases/yue2-studio-lares) tutorials for music creation.
+- Added [Hermes Workspace](/use-cases/hermes-workspace), [Hermes SSH workflows](/use-cases/hermes-ssh), [Goose](/use-cases/goose), and [OpenClaw mobile pairing](/use-cases/openclaw-mobile) guides for working with AI agents.
+- Added [Cognee](/use-cases/cognee), [TrustGraph](/use-cases/trustgraph), [Hindsight](/use-cases/hindsight), and [MemPalace](/use-cases/mempalace) tutorials for document knowledge and agent memory.
+- Added [Linkwarden](/use-cases/linkwarden), [Local Deep Research](/use-cases/local-deep-research), and [Research the web with Lares](/use-cases/lares-web-research), covering saved web libraries and research workflows.
+- Added [Unsloth](/use-cases/unsloth), covering model fine-tuning, GGUF export, and running a saved adapter in JupyterLab.
+- Added [Plex](/use-cases/plex), [Pterodactyl](/use-cases/pterodactyl), [QEMU](/use-cases/qemu), and [RustDesk](/use-cases/rustdesk) tutorials for media, game servers, virtual machines, and remote desktop access. Added [Store Immich uploads on a NAS](/use-cases/immich-store-uploads-on-nas).
+- Added Olares One guides for [Wake-on-LAN](/one/wake-on-lan) and [configuring GPU mode on Ubuntu](/one/configure-gpu-mode).
+
+### Updated docs
+
+- Reworked [Share files](/manual/olares/files/share-files) with the sharing methods supported in each directory in 1.12.8. Updated storage guides to use **Access settings** for member access to Common and External, replacing unsupported internal shares.
+- Reorganized [Wise](/manual/olares/wise/index) around [saving web pages and files](/manual/olares/wise/collect), [subscribing to feeds](/manual/olares/wise/subscribe), and [reading and organizing your library](/manual/olares/wise/basics), with updated filtering and cookie management instructions.
+- Updated [accelerator resource guidance](/manual/olares/settings/gpu-resource) for the current GPU mode labels and interface. The upgrade guide explains when to restart existing GPU time-slicing apps after updating.
+- Updated [password and device management](/manual/password-and-devices) to explain that changing your password signs out all devices, including the current device.
+- Reworked [Olares CLI onboarding](/developer/cli-install) around the setup wizard, login, Agent Skills, and CLI updates. Consolidated the separate login guide into the onboarding guide.
+- Updated [multi-node installation](/manual/best-practices/install-olares-multi-node), [connecting two Olares One devices](/one/connect-two-olares-one), and [multi-node upgrades](/one/upgrade-multi-node-cluster). Added stopping and uninstalling Olares to the DGX Spark installation guides.
+- Expanded [Minecraft](/use-cases/minecraft) with version selection, mods, private servers, and app cloning. Updated [Hermes Agent](/use-cases/hermes) with Webapp login and task delegation, and [Claude Code](/use-cases/claude-code) with local model compatibility and output token configuration.
+
+### Retired docs
+
+- Retired the Control Hub host terminal guides after the **Terminal > Olares** entry was removed. Previous links redirect to [SSH access instructions](/manual/access-olares-terminal); container terminals remain available.
+- Removed custom-domain setup instructions from [Customize application URLs](/manual/olares/settings/custom-app-domain). The guide now covers custom route IDs.
+- Retired outdated Olares ID contract, DID implementation, and verifiable credential development guides. Previous URLs redirect to the relevant [Olares ID](/developer/concepts/olares-id), [DID](/developer/concepts/did), [reputation](/developer/concepts/reputation), or [verifiable credential](/developer/concepts/vc) concepts.
+- Retired the Wise recommendation guide. Previous links redirect to the [Wise overview](/manual/olares/wise/index).
 
 ## Olares 1.12.7
 
@@ -39,6 +77,7 @@ For release highlights and walkthroughs, see the [Olares 1.12.7 blog post](https
 - Added [Create and manage support tickets in Olares Space](/manual/space/tickets) and expanded [Get support](/manual/help/request-technical-support) with the Ticket app, log collection, and follow-up replies.
 - Added [Recover access to LarePass, Olares Desktop, or your Olares device](/manual/help/ts-access-without-mnemonic), alongside updated [password reset instructions](/manual/help/ts-forget-login-password).
 - Added [Create a Blender scene with Lares](/use-cases/blender-lares) and [Create videos with Concat and Lares](/use-cases/concat), covering MCP setup, creative workflows, and saving outputs in Files.
+- Added [FlowStudio](/use-cases/flowstudio) and [FlowStudio through Lares](/use-cases/flowstudio-lares) guides for image and video generation.
 - Added [Open Design](/use-cases/open-design), [Codex CLI](/use-cases/codex-cli), and [Manage Olares from OpenCode](/use-cases/opencode-olares-cli) tutorials for design, coding, and device management.
 - Added [Minecraft](/use-cases/minecraft) and [Palworld](/use-cases/palworld) server guides with Overlay Gateway setup for local network access.
 
