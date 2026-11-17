@@ -134,9 +134,16 @@ Olares One 对常见带外管理功能的支持情况如下：
 
 ### 使用 Olares One 是否需要订阅或支付其他持续费用？
 
-无需订阅。Olares OS、系统更新、Olares Market 中的应用和本地 AI 推理均可免费使用。
+Olares One 只需一次性购买硬件，无需订阅。Olares OS、系统更新、Olares Market 中的应用和本地 AI 推理均可免费使用。
 
 日常运行成本是电费和网络费。如果你选择接入 OpenAI、Anthropic 等云端模型 API，调用费用由该提供方收取。
+
+Olares Space 提供可选的付费计划，包含两类服务：
+
+- **云备份**：提供集成的云端备份存储。你也可以将数据备份到自己的外置硬盘或兼容 S3 的存储。
+- **远程访问（FRP）**：通过 Olares 托管的中转服务器，提供更高的流量额度和连接速度。你也可以通过 [LarePass VPN](access-olares-via-vpn.md) 或自建 FRP 服务器远程访问 Olares。
+
+根据购买渠道，Olares One 可能附赠 2 年 Olares Space Basic 会员。到期后，账号会恢复为 Free 计划，无需续订也可以继续使用 Olares One 和本地 AI。会员权益及激活步骤请参阅[兑换 Olares Space 会员](redeem-membership.md)。
 
 ### 我可以在没有互联网连接的情况下使用该设备吗？
 

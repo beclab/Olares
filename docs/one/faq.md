@@ -129,9 +129,16 @@ Support for common out-of-band management capabilities on Olares One is as follo
 
 ### Does Olares One require a subscription or other ongoing fees?
 
-No subscription is required. Olares OS, system updates, apps in Olares Market, and local AI inference are free to use.
+Olares One is a one-time hardware purchase with no required subscription. Olares OS, system updates, apps in Olares Market, and local AI inference are free to use.
 
 Your regular running costs are electricity and internet access. If you choose to connect a cloud model API, such as OpenAI or Anthropic, its usage is billed by that provider.
+
+Olares Space offers optional paid plans for two services:
+
+- **Cloud backup**: Integrated cloud storage for your backups. You can also back up to your own external drive or S3-compatible storage.
+- **Remote access (FRP)**: Higher traffic allowances and faster connections through Olares-hosted relay servers. You can also access Olares remotely through [LarePass VPN](access-olares-via-vpn.md) or your own FRP server.
+
+Depending on your purchase channel, your Olares One may include a complimentary 2-year Olares Space Basic membership. When it expires, your account returns to the Free plan, and you can continue using Olares One and local AI without renewing. For included benefits and activation steps, see [Redeem Olares Space membership](redeem-membership.md).
 
 ### Can I use the device without an internet connection?
 
