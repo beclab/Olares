@@ -72,10 +72,16 @@ type EventParams struct {
 }
 
 func PublishEvent(nc *nats.Conn, subject string, data interface{}) error {
-	return publish(nc, subject, data)
+	return publish(nc, subject, "", data)
 }
 
-func publish(nc *nats.Conn, subject string, data interface{}) error {
+// PublishEventWithID publishes an event with a JetStream deduplication ID.
+// An empty msgID preserves the legacy PublishEvent behavior.
+func PublishEventWithID(nc *nats.Conn, subject, msgID string, data interface{}) error {
+	return publish(nc, subject, msgID, data)
+}
+
+func publish(nc *nats.Conn, subject, msgID string, data interface{}) error {
 	d, err := json.Marshal(data)
 	if err != nil {
 		return err
@@ -87,7 +93,11 @@ func publish(nc *nats.Conn, subject string, data interface{}) error {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), natsPublishTimeout)
 	defer cancel()
-	_, err = js.Publish(ctx, subject, d)
+	var opts []jetstream.PublishOpt
+	if msgID != "" {
+		opts = append(opts, jetstream.WithMsgID(msgID))
+	}
+	_, err = js.Publish(ctx, subject, d, opts...)
 	if err != nil {
 		klog.Infof("publish err=%v", err)
 		return err

@@ -6,8 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
@@ -46,7 +44,6 @@ import (
 var appLevelSettingKeys = map[string]struct{}{
 	"enableOverlayGateway": {},
 	"enableLLMGateway":     {},
-	"bluetooth":            {},
 }
 
 // isAppLevelSettingKey reports whether the given Spec.Settings key is
@@ -107,49 +104,10 @@ func (h *Handler) setupApp(req *restful.Request, resp *restful.Response) {
 	appCopy := app.DeepCopy()
 	caller := req.Attribute(constants.UserContextAttribute).(string)
 	shared := v1alpha1.IsShared(appCopy)
-	var bluetoothWorkloads []string
 	client := req.Attribute(constants.KubeSphereClientAttribute).(*clientset.ClientSet)
 
 	// TODO: validate settings keys
 	for k, v := range settings {
-		if k == "bluetooth" {
-			value, ok := v.(string)
-			if !ok {
-				api.HandleBadRequest(resp, req, fmt.Errorf("bluetooth must be a string boolean"))
-				return
-			}
-			enabled, parseErr := strconv.ParseBool(value)
-			if parseErr != nil {
-				api.HandleBadRequest(resp, req, fmt.Errorf("bluetooth must be a string boolean: %w", parseErr))
-				return
-			}
-			_, appConfig, _, _, configErr := h.sidecarWebhook.GetAppConfig(app.Spec.Namespace)
-			if configErr != nil {
-				api.HandleError(resp, req, configErr)
-				return
-			}
-			if appConfig == nil {
-				api.HandleBadRequest(resp, req, fmt.Errorf("application manifest is unavailable"))
-				return
-			}
-			declared := false
-			for workload, option := range appConfig.WorkloadOptions {
-				if allowsCapability(option, "bluetooth") {
-					declared = true
-					bluetoothWorkloads = append(bluetoothWorkloads, workload)
-				}
-			}
-			if !declared {
-				api.HandleBadRequest(resp, req, fmt.Errorf("application does not declare bluetooth capability"))
-				return
-			}
-			if enabled {
-				if validateErr := validateBluetoothAttachmentNodes(req.Request.Context(), client, app.Spec.Attachments, bluetoothWorkloadSet(appConfig)); validateErr != nil {
-					api.HandleUnprocessableEntity(resp, req, validateErr)
-					return
-				}
-			}
-		}
 		var str []byte
 		switch v.(type) {
 		case map[string]interface{}:
@@ -184,13 +142,6 @@ func (h *Handler) setupApp(req *restful.Request, resp *restful.Response) {
 	if err != nil {
 		api.HandleError(resp, req, err)
 		return
-	}
-	if bluetoothWorkloads != nil {
-		sort.Strings(bluetoothWorkloads)
-		if restartErr := restartAttachmentWorkloads(req.Request.Context(), client, app.Spec.Namespace, bluetoothWorkloads); restartErr != nil {
-			api.HandleError(resp, req, restartErr)
-			return
-		}
 	}
 	// Respond with the caller's effective view so the response reflects
 	// both the global Spec.Settings and any per-user overlay just
