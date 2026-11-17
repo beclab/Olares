@@ -44,7 +44,7 @@ RTX 5090 Mobile 配备 24 GB GDDR7 显存，采用 NVIDIA Blackwell 架构并支
 
 - **功耗更低，散热需求更小**：Olares One 在性能模式下的 GPU 功耗最高为 175 W，桌面版 RTX 5090 的额定整卡功耗则为 575 W。较低的功耗让紧凑机身更容易散热，适合长期保持开机。
 - **24 GB 独立显存**：显存容量与[桌面版 RTX 4090](https://www.nvidia.com/en-us/geforce/graphics-cards/40-series/rtx-4090/) 相同。相比 8 GB 或 16 GB 显存，它能为更大的量化模型和更长的对话上下文提供空间。
-- **已有丰富的本地 AI 生态可供参考**：社区已有面向 24 GB 显卡的量化模型和部署指南，例如 [Unsloth 的 Qwen3.6 量化方案](https://unsloth.ai/docs/models/qwen3.6#nvfp4)。你可以参考这些方案选择模型和显存配置，并在 Olares One 上通过支持 CUDA 的 [llama.cpp、Ollama 等推理引擎](../use-cases/llm-base-apps.md)运行本地模型。
+- **已有丰富的本地 AI 生态可供参考**：社区已有面向 24 GB 显卡的量化模型和部署指南，可以帮助你选择模型和显存配置。
 
 两款 RTX 5090 的具体规格如下：
 

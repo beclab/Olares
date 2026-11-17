@@ -39,7 +39,7 @@ The RTX 5090 Mobile combines 24 GB of GDDR7 memory with NVIDIA's Blackwell archi
 
 - **Lower power and cooling requirements**: Olares One's GPU runs at up to 175 W in Performance mode, compared with the desktop RTX 5090's 575 W power rating. The smaller power budget makes it easier to cool a compact device that stays on throughout the day.
 - **24 GB of dedicated GPU memory**: This matches the VRAM capacity of the [desktop RTX 4090](https://www.nvidia.com/en-us/geforce/graphics-cards/40-series/rtx-4090/). It gives you room for larger quantized models and more conversation context than 8 GB or 16 GB GPUs.
-- **An established local AI ecosystem**: Community model releases and deployment guides already cater to 24 GB GPUs, including [Unsloth's Qwen3.6 quantizations](https://unsloth.ai/docs/models/qwen3.6#nvfp4). These provide a useful starting point for choosing models and memory settings. On Olares One, you can run local models through CUDA-enabled engines such as [llama.cpp and Ollama](../use-cases/llm-base-apps.md).
+- **An established local AI ecosystem**: Community quantized models and deployment guides already cater to 24 GB GPUs, giving you a useful starting point for choosing models and memory settings.
 
 Here is how the two RTX 5090 variants compare:
 
