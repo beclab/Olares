@@ -40,7 +40,13 @@ Olares One 是一款专为本地 AI 设计的个人云设备。它将工作站�
 
 ### Olares One 的 RTX 5090 Mobile 与桌面版 RTX 5090 有什么区别？
 
-两者都采用 NVIDIA Blackwell 架构，支持 CUDA。桌面版拥有更多计算资源和显存，移动版则面向功耗和散热空间更小的设备。
+RTX 5090 Mobile 配备 24 GB GDDR7 显存，采用 NVIDIA Blackwell 架构并支持 CUDA，同时兼顾较低功耗和紧凑机身。这些特点很适合在家中全天运行本地 AI：
+
+- **功耗更低，散热需求更小**：Olares One 在性能模式下的 GPU 功耗最高为 175 W，桌面版 RTX 5090 的额定整卡功耗则为 575 W。较低的功耗让紧凑机身更容易散热，适合长期保持开机。
+- **24 GB 独立显存**：显存容量与[桌面版 RTX 4090](https://www.nvidia.com/en-us/geforce/graphics-cards/40-series/rtx-4090/) 相同。相比 8 GB 或 16 GB 显存，它能为更大的量化模型和更长的对话上下文提供空间。
+- **已有丰富的本地 AI 生态可供参考**：社区已有面向 24 GB 显卡的量化模型和部署指南，例如 [Unsloth 的 Qwen3.6 量化方案](https://unsloth.ai/docs/models/qwen3.6#nvfp4)。你可以参考这些方案选择模型和显存配置，并在 Olares One 上通过支持 CUDA 的 [llama.cpp、Ollama 等推理引擎](../use-cases/llm-base-apps.md)运行本地模型。
+
+两款 RTX 5090 的具体规格如下：
 
 | 规格 | Olares One 的 RTX 5090 Mobile | 桌面版 RTX 5090 公版规格 |
 | --- | --- | --- |
@@ -49,7 +55,7 @@ Olares One 是一款专为本地 AI 设计的个人云设备。它将工作站�
 | 显存位宽 | 256 位 | 512 位 |
 | GPU 功耗 | 性能模式下最高 175 W | 整卡功耗 575 W |
 
-对于本地 AI，桌面版多出的 8 GB 显存可以容纳更多模型权重和对话上下文，更多核心则提供更强的并行计算能力。移动版的功耗更低，散热需求也更小，让 Olares One 能在紧凑的机身中运行本地 AI。
+桌面版 RTX 5090 能容纳更大的模型，并提供更多并行计算资源。移动版则在本地 AI 能力、功耗和体积之间取得平衡，适合家中常开的设备。
 
 显卡规格来自 NVIDIA 的[移动版 GPU 对比](https://www.nvidia.com/en-us/geforce/laptops/compare/)和[桌面版 RTX 5090 规格](https://www.nvidia.com/en-us/geforce/graphics-cards/50-series/rtx-5090/)。Olares One 的功耗模式请参阅[功耗是多少](#功耗是多少)。
 
