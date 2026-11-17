@@ -39,7 +39,7 @@ In this guide, you will learn how to:
 
 ## Connect Lares to the Supabase MCP server
 
-Connect Lares to the MCP server exposed by Supabase Studio to manage your database through conversation.
+Connect Lares to Supabase so you can use database tools in a conversation.
 
 :::info Connection authentication
 Lares connects through Olares authentication on the same instance, so you do not need to provide an additional access token or API key. Keep the **Supabase Studio** entrance set to **Internal** in Olares Settings.
@@ -74,7 +74,9 @@ Lares connects through Olares authentication on the same instance, so you do not
 
 ## Create the notes table and access policy with Lares
 
-Each note stores its owner's Supabase Auth user ID in `owner_id`. The access policy compares this value with the signed-in user's ID, allowing that user to read and change only their own notes.
+With the MCP connection ready, use Lares to create a database table for the notes application and an access policy so each user can access only their own notes.
+
+Each note stores its owner's user ID in `owner_id`. The policy compares this value with the signed-in user's ID to control access.
 
 :::warning Database administration access
 The MCP server can change database tables and access policies. Review the proposed SQL and approve only the intended changes.
@@ -129,11 +131,13 @@ with check (auth.uid() = owner_id);
 
 :::
 
-## Connect the notes application to Supabase
+## Build and run a notes application with Supabase
+
+With the table and access policy in place, create a notes application with Lares, run it in Code Server, and check that each user can access only their own notes.
 
 ### Create the notes application with Lares
 
-Use Lares to create a small command-line notes application, then run it in the Code Server terminal to sign in, add notes, and list your notes. The notes are stored in Supabase's `user_notes` table.
+The command-line application signs users in, adds notes, and lists their notes from Supabase's `user_notes` table.
 
 1. Ask Lares to generate the program and its configuration files:
 
@@ -251,7 +255,7 @@ Create a user account in Supabase to sign in to the notes application. This acco
    The list should contain the Riverside note and exclude the first user's Lakeview note.
 5. Restore the first user's email and password in `.env`, save the file, and run `node --env-file=.env notes.mjs list` again. You should see their Lakeview note without the Riverside note.
 
-## Report on project costs with Metabase
+## Query Supabase data with Metabase
 
 Metabase connects directly to PostgreSQL to query project costs. Lares creates the sample data through Supabase MCP, and you configure the database connection and run the report queries in Metabase.
 

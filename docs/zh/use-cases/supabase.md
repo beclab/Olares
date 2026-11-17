@@ -43,7 +43,7 @@ Supabase 在你的 Olares 设备上为应用提供 PostgreSQL 数据库、用户
 
 ## 将 Lares 连接到 Supabase MCP 服务器
 
-将 Lares 连接到 Supabase Studio 提供的 MCP 服务器，通过对话管理数据库。
+将 Lares 连接到 Supabase，以便在对话中使用数据库工具。
 
 :::info 连接认证
 Lares 通过同一实例上的 Olares 身份认证进行连接，因此不需要额外提供访问令牌或 API key。在 Olares 设置中，将 **Supabase Studio** 入口保持为 **Internal**。
@@ -77,7 +77,9 @@ Lares 通过同一实例上的 Olares 身份认证进行连接，因此不需要
 
 ## 使用 Lares 创建笔记表和访问策略
 
-每条笔记的 `owner_id` 字段保存其所属用户的 Supabase Auth 用户 ID。访问策略将该值与当前登录用户的 ID 比较，只允许用户读取和修改自己的笔记。
+MCP 连接就绪后，使用 Lares 为笔记应用创建数据表和访问策略，确保每个用户只能访问自己的笔记。
+
+每条笔记的 `owner_id` 字段保存其所属用户的 ID。策略将该值与当前登录用户的 ID 比较，以控制访问权限。
 
 :::warning 数据库管理权限
 MCP 服务器可以修改数据表和访问策略。请检查拟执行的 SQL，并仅批准预期的修改。
@@ -130,11 +132,13 @@ with check (auth.uid() = owner_id);
 
 :::
 
-## 将笔记应用连接到 Supabase
+## 使用 Supabase 构建并运行笔记应用
+
+数据表和访问策略配置完成后，使用 Lares 创建笔记应用，在 Code Server 中运行，并检查每个用户是否只能访问自己的笔记。
 
 ### 使用 Lares 创建笔记应用
 
-使用 Lares 创建一个小型命令行笔记应用，然后在 Code Server 终端中运行，用于登录、添加笔记和列出自己的笔记。笔记保存在 Supabase 的 `user_notes` 表中。
+这个命令行应用用于用户登录、添加笔记，以及从 Supabase 的 `user_notes` 表中列出自己的笔记。
 
 1. 让 Lares 生成程序及其配置文件：
 
@@ -251,7 +255,7 @@ with check (auth.uid() = owner_id);
    列表应包含 Riverside 笔记，不包含第一个用户的 Lakeview 笔记。
 5. 在 `.env` 中恢复第一个用户的邮箱和密码，保存文件，然后再次运行 `node --env-file=.env notes.mjs list`。你应看到该用户的 Lakeview 笔记，而看不到 Riverside 笔记。
 
-## 使用 Metabase 生成项目费用报表
+## 使用 Metabase 查询 Supabase 数据
 
 Metabase 直接连接 PostgreSQL 查询项目费用。通过 Lares 使用 Supabase MCP 创建示例数据后，你需要在 Metabase 中配置数据库连接并运行报表查询。
 
