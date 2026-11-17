@@ -8,7 +8,6 @@ import (
 	"path"
 	"regexp"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
@@ -29,7 +28,6 @@ const (
 	deviceLeaseNamespace      = "kube-node-lease"
 	deviceLeasePrefix         = "generic-device-plugin-"
 	attachmentsRevision       = "app.bytetrade.io/attachments-revision"
-	bluetoothNodeLabel        = "devices.bytetrade.io/bluetooth-capable"
 	deviceLeaseTimeout        = 30 * time.Second
 )
 
@@ -43,6 +41,9 @@ type DeviceInventoryItem struct {
 	Selectable   bool     `json:"selectable"`
 	KernelPaths  []string `json:"kernelPaths,omitempty"`
 	PortUnstable bool     `json:"portUnstable,omitempty"`
+	Adapter      string   `json:"adapter,omitempty"`
+	Address      string   `json:"address,omitempty"`
+	AccessMode   string   `json:"accessMode,omitempty"`
 	Node         string   `json:"node"`
 	Type         string   `json:"type"`
 	Reason       string   `json:"reason,omitempty"`
@@ -54,6 +55,7 @@ type nodeDeviceInventory struct {
 	Video         []DeviceInventoryItem `json:"video,omitempty"`
 	Audio         []DeviceInventoryItem `json:"audio,omitempty"`
 	HID           []DeviceInventoryItem `json:"hid,omitempty"`
+	Bluetooth     []DeviceInventoryItem `json:"bluetooth,omitempty"`
 	Truncated     bool                  `json:"truncated,omitempty"`
 }
 
@@ -79,7 +81,6 @@ type AttachmentCapabilitiesResponse struct {
 type AttachmentsResponse struct {
 	ResourceVersion string                   `json:"resourceVersion"`
 	Attachments     []appv1alpha1.Attachment `json:"attachments"`
-	Bluetooth       bool                     `json:"bluetooth"`
 }
 
 type UpdateAttachmentsRequest struct {
@@ -149,8 +150,7 @@ func attachmentsResponse(app *appv1alpha1.Application) AttachmentsResponse {
 	if attachments == nil {
 		attachments = []appv1alpha1.Attachment{}
 	}
-	bluetooth, _ := strconv.ParseBool(app.Spec.Settings["bluetooth"])
-	return AttachmentsResponse{ResourceVersion: app.ResourceVersion, Attachments: attachments, Bluetooth: bluetooth}
+	return AttachmentsResponse{ResourceVersion: app.ResourceVersion, Attachments: attachments}
 }
 
 func (h *Handler) getDeviceInventory(req *restful.Request, resp *restful.Response) {
@@ -247,10 +247,11 @@ func collectDeviceInventory(ctx context.Context, client *clientset.ClientSet, al
 		lease, leaseErr := client.KubeClient.Kubernetes().CoordinationV1().Leases(deviceLeaseNamespace).Get(ctx, deviceLeasePrefix+node.Name, metav1.GetOptions{})
 		leaseHealthy := leaseErr == nil && lease.Spec.RenewTime != nil && time.Since(lease.Spec.RenewTime.Time) <= deviceLeaseTimeout
 		byType := map[string][]DeviceInventoryItem{
-			"device.serial": inventory.Serial,
-			"device.video":  inventory.Video,
-			"device.audio":  inventory.Audio,
-			"device.hid":    inventory.HID,
+			"device.serial":    inventory.Serial,
+			"device.video":     inventory.Video,
+			"device.audio":     inventory.Audio,
+			"device.hid":       inventory.HID,
+			"device.bluetooth": inventory.Bluetooth,
 		}
 		for capability, devices := range byType {
 			if _, ok := allowed[capability]; !ok {
@@ -308,13 +309,20 @@ func applyDeviceReservations(ctx context.Context, client *clientset.ClientSet, c
 		}
 	}
 	for i := range items {
-		key := items[i].Node + "/" + items[i].Type + "/" + items[i].ResourceName
-		if appName, exists := reserved[key]; exists {
-			items[i].Selectable = false
-			items[i].Reason = fmt.Sprintf("device is attached to application %s", appName)
-		}
+		applyDeviceReservation(&items[i], reserved)
 	}
 	return nil
+}
+
+func applyDeviceReservation(item *DeviceInventoryItem, reserved map[string]string) {
+	if item.AccessMode == "shared" {
+		return
+	}
+	key := item.Node + "/" + item.Type + "/" + item.ResourceName
+	if appName, exists := reserved[key]; exists {
+		item.Selectable = false
+		item.Reason = fmt.Sprintf("device is attached to application %s", appName)
+	}
 }
 
 func (h *Handler) updateAttachments(req *restful.Request, resp *restful.Response) {
@@ -363,15 +371,6 @@ func (h *Handler) updateAttachments(req *restful.Request, resp *restful.Response
 			return
 		}
 	}
-	bluetoothEnabled, _ := strconv.ParseBool(app.Spec.Settings["bluetooth"])
-	if bluetoothEnabled {
-		workloads := bluetoothWorkloadSet(cfg)
-		if err := validateBluetoothAttachmentNodes(req.Request.Context(), client, body.Attachments, workloads); err != nil {
-			api.HandleUnprocessableEntity(resp, req, err)
-			return
-		}
-	}
-
 	updated := app.DeepCopy()
 	updated.Spec.Attachments = append([]appv1alpha1.Attachment(nil), body.Attachments...)
 	updated, err = client.AppClient.AppV1alpha1().Applications().Update(req.Request.Context(), updated, metav1.UpdateOptions{})
@@ -392,40 +391,6 @@ func (h *Handler) updateAttachments(req *restful.Request, resp *restful.Response
 	if err := resp.WriteAsJson(&result); err != nil {
 		api.HandleInternalError(resp, req, err)
 	}
-}
-
-func bluetoothWorkloadSet(cfg *appcfg.ApplicationConfig) map[string]struct{} {
-	result := make(map[string]struct{})
-	if cfg == nil {
-		return result
-	}
-	for workload, option := range cfg.WorkloadOptions {
-		if allowsCapability(option, "bluetooth") {
-			result[workload] = struct{}{}
-		}
-	}
-	return result
-}
-
-func validateBluetoothAttachmentNodes(ctx context.Context, client *clientset.ClientSet, attachments []appv1alpha1.Attachment, workloads map[string]struct{}) error {
-	checked := make(map[string]struct{})
-	for _, attachment := range attachments {
-		if _, enabled := workloads[attachment.Workload]; !enabled || attachment.Node == "" {
-			continue
-		}
-		if _, ok := checked[attachment.Node]; ok {
-			continue
-		}
-		node, err := client.KubeClient.Kubernetes().CoreV1().Nodes().Get(ctx, attachment.Node, metav1.GetOptions{})
-		if err != nil {
-			return fmt.Errorf("check bluetooth node %s: %w", attachment.Node, err)
-		}
-		if node.Labels[bluetoothNodeLabel] != "true" {
-			return fmt.Errorf("workload %q is pinned to node %q, which is not bluetooth capable", attachment.Workload, attachment.Node)
-		}
-		checked[attachment.Node] = struct{}{}
-	}
-	return nil
 }
 
 func allDeviceTypes(cfg *appcfg.ApplicationConfig) map[string]struct{} {

@@ -20,10 +20,17 @@ func attachmentWebhookHandler(t *testing.T) *Handler {
 	if err := appsv1.AddToScheme(scheme); err != nil {
 		t.Fatal(err)
 	}
+	if err := corev1.AddToScheme(scheme); err != nil {
+		t.Fatal(err)
+	}
 	bfl := &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{
 		Name: "bfl", Namespace: "user-space-alice", Annotations: map[string]string{constants.UserSpaceDirKey: "/olares/userspace/alice"},
 	}}
-	return &Handler{ctrlClient: fake.NewClientBuilder().WithScheme(scheme).WithObjects(bfl).Build()}
+	node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{
+		Name:        "node-a",
+		Annotations: map[string]string{deviceInventoryAnnotation: `{"schemaVersion":1,"bluetooth":[{"uid":"p-1","resourceName":"devices.bytetrade.io/bluetooth-p-1","displayName":"USB Bluetooth Adapter","online":true,"selectable":true,"adapter":"hci1","address":"00:1A:7D:DA:71:13","accessMode":"shared"}]}`},
+	}}
+	return &Handler{ctrlClient: fake.NewClientBuilder().WithScheme(scheme).WithObjects(bfl, node).Build()}
 }
 
 func TestInjectAttachmentsTargetsDeclaredContainer(t *testing.T) {
@@ -220,13 +227,19 @@ func TestInjectAttachmentsUsesDeviceClassSupplementalGroups(t *testing.T) {
 
 func TestInjectBluetoothHidesHostBusFromApplication(t *testing.T) {
 	t.Setenv("BLUEZ_DBUS_PROXY_IMAGE", "example/bluez-proxy:test")
+	handler := attachmentWebhookHandler(t)
 	tpl := &corev1.PodTemplateSpec{Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "app"}, {Name: "other"}}}}
 	cfg := &appcfg.ApplicationConfig{WorkloadOptions: appcfg.WorkloadOptions{
-		"server": {Allow: []appcfg.WorkloadCapability{{Type: "bluetooth", Containers: []string{"app"}}}},
+		"server": {Allow: []appcfg.WorkloadCapability{{Type: "device.bluetooth", Containers: []string{"app"}}}},
 	}}
-	application := &appv1alpha1.Application{Spec: appv1alpha1.ApplicationSpec{Settings: map[string]string{"bluetooth": "true"}}}
-	if err := (&Handler{}).injectAttachments(context.Background(), tpl, "server", cfg, application); err != nil {
+	application := &appv1alpha1.Application{Spec: appv1alpha1.ApplicationSpec{Attachments: []appv1alpha1.Attachment{{
+		Workload: "server", Type: "device.bluetooth", Ref: "devices.bytetrade.io/bluetooth-p-1", Node: "node-a",
+	}}}}
+	if err := handler.injectAttachments(context.Background(), tpl, "server", cfg, application); err != nil {
 		t.Fatal(err)
+	}
+	if got := tpl.Spec.NodeSelector[corev1.LabelHostname]; got != "node-a" {
+		t.Fatalf("hostname selector=%q, want node-a", got)
 	}
 	if len(tpl.Spec.Containers) != 3 || tpl.Spec.Containers[2].Name != bluezProxyContainerName {
 		t.Fatalf("bluez proxy not injected: %#v", tpl.Spec.Containers)
@@ -241,6 +254,16 @@ func TestInjectBluetoothHidesHostBusFromApplication(t *testing.T) {
 		t.Fatal("bluetooth socket leaked to non-target container")
 	}
 	proxy := tpl.Spec.Containers[2]
+	if len(tpl.Spec.Containers[0].Resources.Limits) != 0 {
+		t.Fatalf("Bluetooth attachment injected an extended resource: %#v", tpl.Spec.Containers[0].Resources.Limits)
+	}
+	proxyEnv := map[string]string{}
+	for _, env := range proxy.Env {
+		proxyEnv[env.Name] = env.Value
+	}
+	if proxyEnv["OLARES_BLUETOOTH_RESOURCES"] != "devices.bytetrade.io/bluetooth-p-1" || proxyEnv["OLARES_BLUETOOTH_ADAPTERS"] != "hci1" {
+		t.Fatalf("Bluetooth selection metadata=%#v", proxyEnv)
+	}
 	if proxy.SecurityContext == nil || proxy.SecurityContext.RunAsUser == nil || *proxy.SecurityContext.RunAsUser != 0 {
 		t.Fatalf("bluez proxy must run as uid 0 for system D-Bus EXTERNAL authentication: %#v", proxy.SecurityContext)
 	}
@@ -256,54 +279,12 @@ func TestInjectBluetoothHidesHostBusFromApplication(t *testing.T) {
 	if len(proxy.VolumeMounts) != 2 || proxy.VolumeMounts[0].Name != attachmentVolumePrefix+"bluez-host" {
 		t.Fatal("raw system bus must only be mounted into the bluez proxy")
 	}
-}
-
-func TestRemoveBluetoothAffinityDropsEmptyRequiredSelector(t *testing.T) {
-	tpl := &corev1.PodTemplateSpec{Spec: corev1.PodSpec{Affinity: &corev1.Affinity{
-		NodeAffinity: &corev1.NodeAffinity{
-			RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
-				NodeSelectorTerms: []corev1.NodeSelectorTerm{{
-					MatchExpressions: []corev1.NodeSelectorRequirement{{
-						Key: bluetoothNodeLabel, Operator: corev1.NodeSelectorOpIn, Values: []string{"true"},
-					}},
-				}},
-			},
-		},
-	}}}
-
-	removeBluetoothAffinity(tpl)
-
-	if tpl.Spec.Affinity != nil {
-		t.Fatalf("empty bluetooth-only affinity was retained: %#v", tpl.Spec.Affinity)
+	cleanupManagedAttachments(tpl, true)
+	if err := handler.injectAttachments(context.Background(), tpl, "server", cfg, application); err != nil {
+		t.Fatal(err)
 	}
-}
-
-func TestRemoveBluetoothAffinityPreservesUnmanagedRequirements(t *testing.T) {
-	tpl := &corev1.PodTemplateSpec{Spec: corev1.PodSpec{Affinity: &corev1.Affinity{
-		NodeAffinity: &corev1.NodeAffinity{
-			RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
-				NodeSelectorTerms: []corev1.NodeSelectorTerm{
-					{MatchExpressions: []corev1.NodeSelectorRequirement{{
-						Key: bluetoothNodeLabel, Operator: corev1.NodeSelectorOpIn, Values: []string{"true"},
-					}}},
-					{MatchExpressions: []corev1.NodeSelectorRequirement{
-						{Key: "topology.kubernetes.io/zone", Operator: corev1.NodeSelectorOpIn, Values: []string{"zone-a"}},
-						{Key: bluetoothNodeLabel, Operator: corev1.NodeSelectorOpIn, Values: []string{"true"}},
-					}},
-				},
-			},
-		},
-	}}}
-
-	removeBluetoothAffinity(tpl)
-
-	required := tpl.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution
-	if required == nil || len(required.NodeSelectorTerms) != 1 {
-		t.Fatalf("unmanaged node affinity was not preserved: %#v", tpl.Spec.Affinity)
-	}
-	expressions := required.NodeSelectorTerms[0].MatchExpressions
-	if len(expressions) != 1 || expressions[0].Key != "topology.kubernetes.io/zone" {
-		t.Fatalf("unexpected remaining node affinity expressions: %#v", expressions)
+	if len(tpl.Spec.Containers) != 3 || len(tpl.Spec.Volumes) != 2 || len(tpl.Spec.Containers[0].VolumeMounts) != 1 {
+		t.Fatalf("repeated Bluetooth injection was not idempotent: %#v", tpl.Spec)
 	}
 }
 
