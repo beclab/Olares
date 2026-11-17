@@ -18,7 +18,7 @@ doc_updated: "2026-11-17"
 
 Supabase 在你的 Olares 设备上为应用提供 PostgreSQL 数据库、用户认证和 API。将 Lares 连接到 Supabase Model Context Protocol（MCP）服务器后，你可以通过对话创建数据表和访问策略。
 
-本教程使用一个命令行笔记应用，演示已登录用户如何通过行级安全（RLS）存储和访问自己的数据。另一个独立的项目费用表则演示如何使用 Metabase 连接同一数据库生成报表。
+在本教程中，你将构建并运行一个命令行笔记应用，通过行级安全（RLS）保护每个用户的私有笔记。你还将使用 Metabase 查询存储在另一张数据表中的示例项目费用。
 
 ## 学习目标
 
@@ -26,7 +26,7 @@ Supabase 在你的 Olares 设备上为应用提供 PostgreSQL 数据库、用户
 
 - 将 Lares 连接到 Supabase MCP 服务器。
 - 创建用于存储用户笔记的数据表，并通过 RLS 配置每个用户的访问权限。
-- 使用 Lares 生成笔记应用，在 Code Server 中运行，并通过 Supabase Auth 进行身份认证。
+- 使用 Lares 生成笔记应用，在 Code Server 中运行，并使用在 Supabase 中创建的用户账号登录。
 - 验证每个用户只能访问自己的笔记。
 - 将 Metabase 连接到 Supabase，并查询示例项目费用。
 
@@ -75,7 +75,11 @@ Lares 通过同一实例上的 Olares 身份认证进行连接，因此不需要
 
    Lares 应返回 Supabase API URL 和 `public` schema 中的数据表列表。如果尚未创建任何数据表，列表将为空。
 
-## 使用 Lares 创建笔记表和访问策略
+## 使用 Supabase 构建并运行笔记应用
+
+使用 Lares 准备 Supabase 数据表、配置访问策略并生成笔记应用。然后在 Code Server 中运行应用，检查每个用户是否只能访问自己的笔记。
+
+### 使用 Lares 创建笔记表和访问策略
 
 MCP 连接就绪后，使用 Lares 为笔记应用创建数据表和访问策略，确保每个用户只能访问自己的笔记。
 
@@ -131,10 +135,6 @@ with check (auth.uid() = owner_id);
 ```
 
 :::
-
-## 使用 Supabase 构建并运行笔记应用
-
-数据表和访问策略配置完成后，使用 Lares 创建笔记应用，在 Code Server 中运行，并检查每个用户是否只能访问自己的笔记。
 
 ### 使用 Lares 创建笔记应用
 
@@ -287,7 +287,7 @@ Metabase 直接连接 PostgreSQL 查询项目费用。通过 Lares 使用 Supaba
 
 #### 获取数据库密码
 
-1. 在 Control Hub 中，进入 **Browse** > **supabase-{user-name}** > **Deployments** > **db**，将 `{user-name}` 替换为你的 Olares 用户名。打开其 Pod，然后打开 **db** 容器的终端。
+1. 在 Control Hub 中，进入 **Browse** > **supabase-{user-name}** > **Deployments** > **db**，打开其 Pod，然后打开 **db** 容器的终端。
 2. 运行以下命令显示数据库密码：
 
    ```sh

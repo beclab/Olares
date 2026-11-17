@@ -14,7 +14,7 @@ doc_updated: "2026-11-17"
 
 Supabase provides a PostgreSQL database, user authentication, and APIs for applications on your Olares device. With Lares connected through the Supabase Model Context Protocol (MCP) server, you can create tables and access policies through conversation.
 
-This tutorial uses a command-line notes application to demonstrate how signed-in users store and access their own data with row-level security (RLS). A separate project costs table shows how Metabase connects to the same database for reporting.
+In this tutorial, you will build and run a command-line notes application, using row-level security (RLS) to keep each user's notes private. You will also use Metabase to query sample project costs stored in a separate database table.
 
 ## Learning objectives
 
@@ -22,7 +22,7 @@ In this guide, you will learn how to:
 
 - Connect Lares to the Supabase MCP server.
 - Create a database table to store users’ notes and configure per-user access with RLS.
-- Use Lares to generate a notes application and run it in Code Server with Supabase Auth.
+- Use Lares to generate a notes application, then run it in Code Server and sign in with a user account created in Supabase.
 - Verify that each user can access only their own notes.
 - Connect Metabase to Supabase and query sample project costs.
 
@@ -72,7 +72,11 @@ Lares connects through Olares authentication on the same instance, so you do not
 
    Lares should return the Supabase API URL and a list of tables in the `public` schema. If you have not created any tables yet, the list will be empty.
 
-## Create the notes table and access policy with Lares
+## Build and run a notes application with Supabase
+
+Use Lares to prepare a Supabase database table, configure access policies, and generate a notes application. Then run the application in Code Server and check that each user can access only their own notes.
+
+### Create the notes table and access policy with Lares
 
 With the MCP connection ready, use Lares to create a database table for the notes application and an access policy so each user can access only their own notes.
 
@@ -130,10 +134,6 @@ with check (auth.uid() = owner_id);
 ```
 
 :::
-
-## Build and run a notes application with Supabase
-
-With the table and access policy in place, create a notes application with Lares, run it in Code Server, and check that each user can access only their own notes.
 
 ### Create the notes application with Lares
 
@@ -287,7 +287,7 @@ For Metabase, collect the Supabase database host, exported session port, and dat
 
 #### Get the database password
 
-1. In Control Hub, go to **Browse** > **supabase-{user-name}** > **Deployments** > **db**, replacing `{user-name}` with your Olares username. Open its Pod, then open the **db** container's terminal.
+1. In Control Hub, go to **Browse** > **supabase-{user-name}** > **Deployments** > **db**, open its pod, and then open the **db** container's terminal.
 2. Run the following commands to display the database password:
 
    ```sh
