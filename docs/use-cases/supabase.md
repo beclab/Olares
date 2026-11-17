@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Use Lares and the official Supabase MCP server to prepare a private app backend on Olares, then connect your application and a reporting tool.
+description: Use Lares to build a Supabase backend for a private notes application on Olares, verify per-user access, and query project costs with Metabase.
 head:
   - - meta
     - name: keywords
@@ -12,18 +12,19 @@ doc_updated: "2026-11-17"
 
 # Build an app backend with Supabase and Lares
 
-Supabase combines PostgreSQL, user authentication, Edge Functions, and an API layer that applications connect to directly. Its Studio interface lets you manage these services on your own Olares device.
+Supabase provides a PostgreSQL database, user authentication, and APIs for applications on your Olares device. With Lares connected through the Supabase Model Context Protocol (MCP) server, you can create tables and access policies through conversation.
 
-Lares can use Supabase's official Model Context Protocol (MCP) server to create tables and configure row-level security (RLS) from a conversation. The example in this guide is a home renovation notes application, where each user can access only their own notes. A separate table of fictional project costs provides data for reporting in Metabase.
+This tutorial uses a command-line notes application to demonstrate how signed-in users store and access their own data with row-level security (RLS). A separate project costs table shows how Metabase connects to the same database for reporting.
 
 ## Learning objectives
 
 In this guide, you will learn how to:
 
-- Connect Lares to the official Supabase MCP server.
-- Ask Lares to prepare an app's tables and per-user access policy.
-- Connect an application with ordinary user credentials and check its data access.
-- Connect a reporting tool to the same database with a direct connection.
+- Connect Lares to the Supabase MCP server.
+- Create a database table to store users’ notes and configure per-user access with RLS.
+- Use Lares to generate a notes application and run it in Code Server with Supabase Auth.
+- Verify that each user can access only their own notes.
+- Connect Metabase to Supabase and query sample project costs.
 
 ## Prerequisites
 
@@ -38,13 +39,13 @@ In this guide, you will learn how to:
 
 ## Connect Lares to the Supabase MCP server
 
-The MCP connection lets Lares manage the database through Supabase Studio.
+Connect Lares to the MCP server exposed by Supabase Studio to manage your database through conversation.
 
 :::info Connection authentication
 Lares connects through Olares authentication on the same instance, so you do not need to provide an additional access token or API key. Keep the **Supabase Studio** entrance set to **Internal** in Olares Settings.
 :::
 
-1. Open Olares Settings and go to **Applications** > **Supabase**. Under **Entrances**, click **Supabase Studio**.
+1. Open Olares Settings, and go to **Applications** > **Supabase** > **Supabase Studio**.
 2. Copy the **Endpoint** address, and append `/api/mcp` to the end. For example:
 
    ```text
@@ -148,7 +149,8 @@ Use Lares to create a small command-line notes application, then run it in the C
      then show the saved note and its ID
    - list: select id and note from user_notes, relying on RLS for isolation
    Report SDK errors and exit after each command.
-   Save notes.mjs, .env, .env.example, and .gitignore in your workspace.
+   Save notes.mjs, .env, .env.example, and .gitignore directly in your
+   workspace root, not in a subfolder.
    Fill .env with the API URL and anon key. Leave NOTES_EMAIL and
    NOTES_PASSWORD empty, and ignore .env and node_modules/ in Git.
    Use placeholders in .env.example. Keep passwords out of the conversation
@@ -166,66 +168,71 @@ Use Lares to create a small command-line notes application, then run it in the C
    | `.env.example` | A configuration template with placeholders, for reference or setting up another copy of the application. |
    | `.gitignore` | Tells Git to exclude `.env` and the `node_modules` dependency folder from version control. |
 
-2. In Olares Files, open **Data** > **lares** > **data** > **workspace**, the default Lares workspace. If Lares saved the files in a subfolder, open that folder. Copy `notes.mjs`, `.env`, `.env.example`, and `.gitignore`.
-3. In Olares Files, go to **Home** > **Code**, create a folder named `notes-app`, and paste all four files into it, including the hidden files. Code Server can access this folder.
+2. Open Olares Files, go to **Data** > **lares** > **data** > **workspace**, and copy `notes.mjs`, `.env`, `.env.example`, and `.gitignore`.
+3. In Olares Files, go to **Home** > **Code**, create a folder named `notes-app`, and paste all four files into it. Code Server can access this folder.
 
-### Create a Supabase Auth user
+### Create a user account for the notes application
 
-Create an application account in Supabase Auth for the script to sign in with. This account is separate from your Olares account.
+Create a user account in Supabase to sign in to the notes application. This account is separate from your Olares account.
 
 1. Open Supabase Studio and go to **Authentication** > **Users** > **Add user** > **Create new user**.
 2. Enter an email such as `demo@example.com` and a password of your own. Keep **Auto confirm user?** enabled, then click **Create user**. Auto confirmation lets you sign in for this example without receiving a confirmation email.
 
 ### Run the notes application in Code Server
 
-1. Open Code Server from the Launchpad. Use **File** > **Open Folder** to open `/home/coder/notes-app`, which corresponds to **Home** > **Code** > **notes-app** in Olares Files.
-2. If prompted, confirm that you trust the folder. Check that `notes.mjs` and `.env` appear in the Explorer.
-3. Open **Terminal** > **New Terminal**. This example uses Node.js 22. Check `node -v`. If Node.js is missing or older than version 22, install it with nvm:
+1. Open Code Server from the Launchpad.
+2. Use **File** > **Open Folder** to open `/home/coder/notes-app`, which corresponds to **Home** > **Code** > **notes-app** in Olares Files.
+3. If prompted, confirm that you trust the folder. Check that `notes.mjs` and `.env` appear in the Explorer.
+4. Open **Terminal** > **New Terminal**.
+5. Run `node -v` to check the installed Node.js version. This example uses Node.js 22.
+6. If Node.js is missing or older than version 22, run the following four commands in order to install it with nvm:
 
    ```bash
    touch "$HOME/.bashrc"
    curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.8/install.sh | bash
-   \. "$HOME/.nvm/nvm.sh"
+   . "$HOME/.nvm/nvm.sh"
    nvm install 22
    ```
 
-   Check `node -v` and `npm -v` before continuing. If a new terminal cannot find `node`, run `. "$HOME/.nvm/nvm.sh"` to load nvm in that terminal.
-4. In the Code Server terminal, switch to the project folder and install the Supabase JavaScript SDK:
+7. Run `node -v` and `npm -v` to confirm that both commands display version numbers before continuing. If you installed Node.js in the previous step, `node -v` should show `v22.x.x`.
+8. In the Code Server terminal, switch to the project folder and install the Supabase JavaScript SDK:
 
    ```bash
    cd /home/coder/notes-app
    npm install @supabase/supabase-js@2.118.0
    ```
 
-5. Open `.env` in Code Server. Keep the `SUPABASE_URL` and `SUPABASE_ANON_KEY` values that Lares filled in. The URL must be the Supabase API entrance, without `/rest/v1` or `/api/mcp`. Fill in the user credentials and save the file:
+9. Open `.env` in Code Server. Leave `SUPABASE_URL` and `SUPABASE_ANON_KEY` unchanged. Set `NOTES_EMAIL` and `NOTES_PASSWORD` to the email and password of the notes application account you created, then save the file:
 
    ```dotenv
-   NOTES_EMAIL="demo@example.com"
-   NOTES_PASSWORD="your-user-password"
+   NOTES_EMAIL="your-email@example.com"
+   NOTES_PASSWORD="your-password"
    ```
 
-   Replace these example values with the Supabase Auth user you created. Keep the password in `.env`, not in the Lares conversation or `notes.mjs`.
+   ::: warning Keep your password private
+   Store the password in `.env`. Do not paste it into the Lares conversation or include it in `notes.mjs`.
+   :::
 
    ::: details Alternative: copy the connection details from Supabase Studio and Olares Settings
-   In Olares Settings, go to **Applications** > **Supabase**. Under **Entrances**, open **Supabase API** and copy its **Endpoint** into `SUPABASE_URL` in `.env`.
+   Open Olares Settings, and go to **Applications** > **Supabase** > **Supabase API**. Copy its **Endpoint** into `SUPABASE_URL` in `.env`, without `/rest/v1` or `/api/mcp`.
 
    In Supabase Studio, open **Project Settings** > **API Keys** > **Legacy anon, service_role API keys**, and copy the `anon` key into `SUPABASE_ANON_KEY`. Do not use `service_role`: it bypasses RLS and allows access to other users’ notes.
    :::
 
-6. In the same terminal, run the following commands to sign in, add a note, and read it back. The `--env-file=.env` option loads the connection settings and user credentials from `.env`:
+10. In the same terminal, run the following commands to sign in, add a note, and read it back. The `--env-file=.env` option loads the connection settings and user credentials from `.env`:
 
-   ```bash
-   node --env-file=.env notes.mjs whoami
-   node --env-file=.env notes.mjs add "Ask the Lakeview contractor to confirm the delivery window."
-   node --env-file=.env notes.mjs list
-   ```
+    ```bash
+    node --env-file=.env notes.mjs whoami
+    node --env-file=.env notes.mjs add "Ask the Lakeview contractor to confirm the delivery window."
+    node --env-file=.env notes.mjs list
+    ```
 
-   The terminal shows the signed-in user, the new note's ID, and the saved note. Each `add` command creates a new row.
+    The terminal shows the signed-in user, the new note's ID, and the saved note. Each `add` command creates a new row.
 
 ### Check that users can only access their own notes
 
-1. In Supabase Studio, repeat [Create a Supabase Auth user](#create-a-supabase-auth-user) with a different email, such as `demo2@example.com`, and a separate password.
-2. In Code Server, replace only `NOTES_EMAIL` and `NOTES_PASSWORD` in `.env` with the second user's credentials, then save the file. Keep the same API URL and `anon` key.
+1. In Supabase Studio, repeat [Create a user account for the notes application](#create-a-user-account-for-the-notes-application) with a different email, such as `demo2@example.com`, and a separate password.
+2. In Code Server, open `.env` and update `NOTES_EMAIL` and `NOTES_PASSWORD` with the second user's email and password. Leave `SUPABASE_URL` and `SUPABASE_ANON_KEY` unchanged, then save the file.
 3. Run the following commands:
 
    ```bash
@@ -254,7 +261,7 @@ If this is your first time opening Metabase, complete its setup wizard before ad
 
 1. Open Metabase and click **Let's get started**.
 2. Enter your name, email, team name, and a password for your Metabase administrator account. Click **Next** and answer the usage question.
-3. At **Add your data**, click **Continue with sample data**. You will add Supabase from the administration page below.
+3. At **Add your data**, click **Continue with sample data** to continue setup without connecting Supabase yet. You will add the Supabase connection in [Connect Metabase to Supabase](#connect-metabase-to-supabase).
 4. Choose your usage data preference, click **Finish**, then click **Take me to Metabase**.
 
 ### Collect the database connection details
@@ -263,7 +270,7 @@ For Metabase, collect the Supabase database host, exported session port, and dat
 
 #### Get the database host and port
 
-1. In Olares **Settings** > **Applications** > **Supabase**, note the **Exported port** under **Permissions** > **Exported ports** > `postgres-session`.
+1. Open Olares Settings, and go to **Applications** > **Supabase** > **Permissions** > **Exported ports** > `postgres-session`. Note down the **Exported port**.
 
 2. On your computer, [install Olares CLI](../developer/cli-install.md#install-olares-cli-first) and [log in to your Olares instance](../developer/cli-install.md#log-in-to-olares) if you have not already done so. In your computer's terminal, run:
 
@@ -271,8 +278,8 @@ For Metabase, collect the Supabase database host, exported session port, and dat
    olares-cli settings apps get supabase
    ```
 
-3. Copy the top-level **URL** from the command output as the database host, without `https://` or a path.
-4. In the **Ports** list, check that the **EXPOSE** value for `postgres-session` matches the exported port you noted in step 1. Use this port in Metabase.
+3. Note down the top-level **URL** from the command output as the database host, without `https://` or a path.
+4. In the **Ports** list, check that the **EXPOSE** value for `postgres-session` matches the exported port you noted down in step 1. Use this port in Metabase.
 
 #### Get the database password
 
