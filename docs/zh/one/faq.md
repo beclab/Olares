@@ -174,7 +174,7 @@ Olares OS 还包含内置的自动备份机制，用于定期将加密备份到�
 | 带引用的研究报告 | 通过 SearXNG 检索资料，再由本地大语言模型分析 | [Local Deep Research](../use-cases/local-deep-research.md) |
 | 编写和测试代码 | 本地模型配合 Agent 修改文件、运行测试 | [OpenCode](../use-cases/opencode.md)、[Claude Code](../use-cases/claude-code.md) 或 [Codex CLI](../use-cases/codex-cli.md) |
 | 图片和视频创作 | 工作流调用本地模型，生成或编辑图片和视频 | [FlowStudio](../use-cases/flowstudio.md) 或 [ComfyUI](../use-cases/comfyui.md) |
-| 音乐创作 | 本地音乐模型根据歌词和风格提示生成歌曲 | [YuE2 Studio](../use-cases/yue2-studio.md) 或 [ACE-Step](../use-cases/ace-step-1.5.md) |
+| 音乐创作 | 本地音乐模型根据歌词和风格提示生成歌曲 | [YuE2 Studio](../use-cases/yue2-studio.md) 或 [Music Studio](../use-cases/music-studio.md) |
 
 更多应用和模型请浏览 [Olares Market](https://market.olares.com)。
 
