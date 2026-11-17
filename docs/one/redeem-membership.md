@@ -1,15 +1,15 @@
 ---
 outline: [2,3]
-description: Learn how to redeem your complimentary Olares Space Basic membership.
+description: Learn how to redeem your complimentary 2-year Olares Space Basic membership.
 head:
   - - meta
     - name: keywords
-      content: Olares, Olares One, Olares Space, redeem membership card, Basic plan, kickstarter backers
+      content: Olares, Olares One, Olares Space, redeem membership card, Basic plan, 2-year membership
 ---
 
 # Redeem Olares Space membership
 
-Depending on your purchase channel such as the Kickstarter campaign, your Olares One package might include an Olares Space Membership card. This card grants you a complimentary 2-year Basic membership to use the enhanced connectivity services provided by Olares Space.
+Your Olares One package includes an Olares Space Membership card. The card gives you a complimentary 2-year Basic membership for the enhanced connectivity services provided by Olares Space.
 
 :::tip Olares One is a one-time purchase
 Your Olares One hardware and system updates are free forever.
@@ -46,7 +46,7 @@ Olares Space is a secure connectivity platform that extends the capabilities of 
 The 2-year validity period begins the moment you successfully bind your email to an Olares ID.
 :::
 
-To redeem the Basic plan benefits, you must link your account to the email address associated with your purchase order using the Olares Space dashboard. For example, the email associated with your Kickstarter order.
+To redeem the Basic plan benefits, link your account to the email address used for your purchase order in the Olares Space dashboard.
 
 1. In Olares Space, from the left navigation pane, click **Usage & billing**. 
 2. On the **Account email** tab, click **Email address**.
