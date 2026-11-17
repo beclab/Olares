@@ -7,7 +7,7 @@ head:
       content: Olares, Plex Media Server, personal media library, video streaming, NVIDIA, hardware transcoding, Plex Pass
 app_version: "0.0.14"
 doc_version: "1.2"
-doc_updated: "2026-11-16"
+doc_updated: "2026-11-17"
 ---
 
 # Organize and play your personal videos with Plex
@@ -188,40 +188,62 @@ Overlay gateway places Plex directly on your local network. Enable it on a netwo
 2. If **Enable overlay gateway** is off, turn it on. When the switch is unavailable, ask the Super admin to enable the system-level service.
 3. Under **Applications**, find Plex Media Server, enable overlay gateway, and click **Confirm**.
 4. If Plex is running, Olares restarts it to apply the change. Wait until the app returns to **Running** and an IP address appears.
+
+   :::tip If Plex stays stopped
+   If Plex stays **Stopped**, open **Settings** > **Applications** > **Plex Media Server** and click **Resume**. Check the IP after it is **Running**.
+   :::
+
 5. Open **Plex Account Setup** from Launchpad. This entrance remains available after you connect your account.
 6. In **Local connection**, click **Refresh local address**.
 7. When the page shows **HTTPS certificate verified**, click **Copy address**.
 
 The page builds the HTTPS `plex.direct` address from the current Overlay IP.
 
-If Plex stays **Stopped**, open **Settings** > **Applications** > **Plex Media Server** and click **Resume**. Check the IP after it is **Running**.
+:::tip If Overlay gateway is not enabled
+If **Refresh local address** asks you to enable Overlay, finish the Overlay gateway steps above and refresh again after Plex is **Running**.
+:::
 
-If **Refresh local address** asks you to enable Overlay, finish the Overlay gateway steps above and refresh again after Plex is **Running**. If the secure address is still missing, check that your Plex account is connected.
+:::tip If the page asks you to connect your Plex account
+If the page shows a local IP but says "Your Plex server is not connected yet", [connect your Plex account](#connect-your-plex-account) first. Then click **Refresh local address** again and wait for **HTTPS certificate verified** before copying the address.
+:::
 
 ### Add the address to Plex
 
-1. Open Plex Web, go to **Settings**, and select your server.
+1. Open **Plex Media Server** from Launchpad to access Plex Web, then go to **Settings** and select your server.
 2. Open **Network** and click **Show Advanced**.
 3. Paste the copied address into **Custom server access URLs**. Keep existing addresses and separate entries with commas.
-4. Click **Save Changes**.
 
-Use the copied address as it is, without `/web/` or `/identity`. Plex Account Setup shows the address and copies it. Save that address in Plex Web before you open a client. The HTTPS address points to the local Overlay IP, so devices on this LAN can use it.
+   :::info Use the copied address
+   Use the copied address as it is, without `/web/` or `/identity`. It points to the local Overlay IP for devices on this LAN. Plex Account Setup only displays and copies the address. Save it here before opening a client.
+   :::
+
+4. Click **Save Changes**.
 
 :::warning Update the saved address after Plex restarts
 Overlay gateway assigns the local IP dynamically. Restarting Plex, a network change, or an app upgrade can assign a new IP. The HTTPS address includes that IP. **Custom server access URLs** keeps the previous address until you paste a new one.
 
-After Plex returns to **Running**, open **Plex Account Setup** and click **Refresh local address**. When the IP has changed, copy the new HTTPS address and replace the previous local address in **Custom server access URLs**. Update bookmarks and any addresses you entered in a client, then open the Plex client again.
+1. Wait until Plex returns to **Running**.
+2. Open **Plex Account Setup** from Launchpad and click **Refresh local address**.
+3. If the IP has changed, copy the new HTTPS address and replace the previous local address in **Custom server access URLs**, then click **Save Changes**.
+4. Update bookmarks and any addresses you entered in a client.
+5. Open the Plex client again.
 :::
 
 ### Open Plex in a browser on another computer
 
-On another computer on the same LAN, paste the copied HTTPS address into the browser and add `/web/` at the end. Sign in with the server owner's Plex account, or with an account that can open the library.
+Use Plex Web to play your library on another computer on the same LAN without installing a Plex client.
 
-Plex might open an authorization page on `app.plex.tv` that shows the local `plex.direct` address. Confirm that it matches the address you copied, authorize the sign-in, and return to Plex Web. Select your server and open the `Family videos` library.
+1. On the other computer, paste the copied HTTPS address into a browser and add `/web/` at the end.
+2. Sign in with the server owner's Plex account, or with an account that can open the library.
+3. If Plex opens an authorization page on `app.plex.tv`, check that the displayed local `plex.direct` address matches the address you copied. Authorize the sign-in and return to Plex Web.
+4. Select your server and open the `Family videos` library.
+5. Select the recording and start playback.
 
 Open the library on your own server for personal media. Plex's **Movies & Shows** source plays online titles, with different media and subtitles from your library.
 
 ### Play media on a TV
+
+Use the Plex app on your TV to browse and play your library. Save the local HTTPS address in Plex before connecting the TV.
 
 1. Connect the TV to the same LAN as the Plex Overlay IP.
 2. Open the Plex app on the TV and sign in with the server owner's account, or with an account that can open the library.

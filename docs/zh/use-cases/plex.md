@@ -7,7 +7,7 @@ head:
       content: Olares, Plex Media Server, 个人媒体库, 视频播放, NVIDIA, 硬件转码, Plex Pass
 app_version: "0.0.14"
 doc_version: "1.2"
-doc_updated: "2026-11-16"
+doc_updated: "2026-11-17"
 ---
 
 :::warning
@@ -192,40 +192,62 @@ Overlay 网关会把 Plex 直接放到当前局域网中。请在你信任的网
 2. 如果**启用 Overlay 网关**尚未打开，先将其打开。开关不可用时，请超级管理员开启系统级服务。
 3. 在**应用**中找到 Plex Media Server，启用 Overlay 网关，然后点击**确认**。
 4. Plex 正在运行时，Olares 会重启应用以使设置生效。等待应用回到**运行中**，并显示 IP 地址。
+
+   :::tip 如果 Plex 仍处于暂停状态
+   如果应用仍是**暂停**，打开**设置** > **应用** > **Plex Media Server**，点击**恢复**。应用回到**运行中**后再查看 IP。
+   :::
+
 5. 从 Launchpad 打开 **Plex Account Setup**。绑定账号后，这个入口仍然保留。
 6. 在 **Local connection** 中点击 **Refresh local address**。
 7. 页面显示 **HTTPS certificate verified** 后，点击 **Copy address**。
 
 页面会根据当前 Overlay IP 生成 HTTPS `plex.direct` 地址。
 
-如果应用仍是**暂停**，打开**设置** > **应用** > **Plex Media Server**，点击**恢复**。应用回到**运行中**后再查看 IP。
+:::tip 如果尚未启用 Overlay 网关
+如果 **Refresh local address** 提示先启用 Overlay，先完成上面的 Overlay 网关步骤，等 Plex 回到**运行中**再刷新。
+:::
 
-如果 **Refresh local address** 提示先启用 Overlay，先完成上面的 Overlay 网关步骤，等 Plex 回到**运行中**再刷新。安全地址仍未出现时，确认 Plex 账号已经绑定。
+:::tip 如果页面提示绑定 Plex 账号
+如果页面已显示局域网 IP，但仍提示 "Your Plex server is not connected yet"，先[绑定 Plex 账号](#绑定-plex-账号)。然后再次点击 **Refresh local address**，等页面显示 **HTTPS certificate verified** 后再复制地址。
+:::
 
 ### 将地址添加到 Plex
 
-1. 打开 Plex Web，进入 **Settings**，选择自己的服务器。
+1. 从 Launchpad 打开 **Plex Media Server**，进入 Plex Web，然后打开 **Settings** 并选择自己的服务器。
 2. 打开 **Network**，点击 **Show Advanced**。
 3. 将复制的地址粘贴到 **Custom server access URLs**。保留已有地址，多个地址用英文逗号分隔。
-4. 点击 **Save Changes**。
 
-使用复制出来的地址本身，末尾不要带 `/web/` 或 `/identity`。Plex Account Setup 负责显示和复制地址。打开客户端之前，先在 Plex Web 中保存。这个 HTTPS 地址指向局域网里的 Overlay IP，供当前局域网上的设备使用。
+   :::info 使用复制的地址
+   直接使用复制的地址，末尾不要带 `/web/` 或 `/identity`。该地址指向局域网里的 Overlay IP，供同一局域网上的设备使用。Plex Account Setup 只负责显示和复制地址，打开客户端前需要在这里保存。
+   :::
+
+4. 点击 **Save Changes**。
 
 :::warning Plex 重启后更新已保存的地址
 Overlay 网关会动态分配局域网 IP。重启 Plex、网络变化或应用升级后，IP 可能改变。HTTPS 地址里包含这个 IP。在你粘贴新地址之前，**Custom server access URLs** 会保持原来的值。
 
-Plex 重新进入**运行中**后，打开 **Plex Account Setup**，点击 **Refresh local address**。IP 已变化时，复制新的 HTTPS 地址，替换 **Custom server access URLs** 里原来的本地地址。同时更新书签，以及你在客户端里填写的地址，然后重新打开 Plex 客户端。
+1. 等待 Plex 回到**运行中**。
+2. 从 Launchpad 打开 **Plex Account Setup**，点击 **Refresh local address**。
+3. 如果 IP 已变化，复制新的 HTTPS 地址，替换 **Custom server access URLs** 里原来的本地地址，然后点击 **Save Changes**。
+4. 更新书签，以及你在客户端里填写的地址。
+5. 重新打开 Plex 客户端。
 :::
 
 ### 在另一台电脑的浏览器中打开 Plex
 
-在同一局域网的另一台电脑上，将复制的 HTTPS 地址粘贴到浏览器，并在末尾加上 `/web/`。使用服务器所属的 Plex 账号登录，或使用可以打开该媒体库的账号。
+在同一局域网的另一台电脑上，可以直接用 Plex Web 播放媒体库中的内容，无需安装 Plex 客户端。
 
-Plex 可能会打开 `app.plex.tv` 上的授权页面，并显示本地 `plex.direct` 地址。确认它与刚复制的地址一致后，授权登录并返回 Plex Web。选择自己的服务器，打开 `Family videos` 媒体库。
+1. 在另一台电脑的浏览器中粘贴复制的 HTTPS 地址，并在末尾加上 `/web/`。
+2. 使用服务器所属的 Plex 账号登录，或使用可以打开该媒体库的账号。
+3. 如果 Plex 打开 `app.plex.tv` 上的授权页面，确认页面显示的本地 `plex.direct` 地址与刚复制的地址一致，然后授权登录并返回 Plex Web。
+4. 选择自己的服务器，打开 `Family videos` 媒体库。
+5. 选择录像并开始播放。
 
 播放自己的媒体时，打开自己服务器上的媒体库。Plex 的 **Movies & Shows** 来源播放的是在线内容，媒体和字幕都与本地媒体库不同。
 
 ### 在电视上播放
+
+通过电视上的 Plex 应用浏览和播放媒体库中的内容。连接电视之前，先在 Plex 中保存本地 HTTPS 地址。
 
 1. 将电视连接到 Plex Overlay IP 所在的局域网。
 2. 打开电视上的 Plex 应用，使用服务器所属账号登录，或使用可以打开该媒体库的账号。
