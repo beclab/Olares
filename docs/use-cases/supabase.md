@@ -374,12 +374,12 @@ insert into public.project_costs values
 
 | Symptom | What to check |
 | --- | --- |
-| Lares cannot connect to MCP | Use the Supabase Studio HTTPS URL ending in `/api/mcp` with `Streamable HTTP` transport. Keep the **Supabase Studio** entrance set to **Internal**. The Supabase API entrance's `/mcp` route is blocked |
+| Lares cannot connect to MCP | Use the Supabase Studio HTTPS URL ending in `/api/mcp` with `Streamable HTTP` transport. Keep the **Supabase Studio** entrance set to **Internal**. |
 | Code Server cannot find `notes.mjs` or `.env` | Check that both files are in **Home** > **Code** > **notes-app** in Olares Files, then run the commands from `/home/coder/notes-app` in Code Server |
+| The terminal reports `node: command not found` | Run `. "$HOME/.nvm/nvm.sh"`, then `nvm use 22` in the same terminal. Check `node -v` before running the application again. If nvm or Node.js 22 is not installed, follow the installation steps in [Run the notes application in Code Server](#run-the-notes-application-in-code-server). |
 | `node -v` reports a missing `libatomic.so.1` | In the Code Server terminal, run `sudo apt-get install -y libatomic1`, then check `node -v` again |
-| Login succeeds but REST reports `role "" does not exist` | Inspect the affected user's `auth.users.role` in SQL Editor. A regular app user needs `authenticated`. Correct an empty role, then sign in again or refresh the session to obtain a new token |
-| An SDK query returns no rows | Check the signed-in user, row ownership, and RLS policy before changing credentials |
-| Metabase cannot connect | Check the exported port, host reachability, database password, and `postgres.supabase` username |
+| The notes application returns an empty list | An empty list is expected if the signed-in user has not added any notes. If notes are missing, run `node --env-file=.env notes.mjs whoami` to check the user, then check that the notes' `owner_id` matches that user's ID and that the RLS policy matches [Create the notes table and access policy with Lares](#create-the-notes-table-and-access-policy-with-lares). |
+| Metabase cannot connect | Check the database host and the exported `postgres-session` port from [Get the database host and port](#get-the-database-host-and-port). Confirm that Metabase can reach that host and port. Use `postgres.supabase` as the username and the password from [Get the database password](#get-the-database-password). |
 
 ## Learn more
 
