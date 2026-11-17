@@ -64,6 +64,97 @@ func TestInjectAttachmentsTargetsDeclaredContainer(t *testing.T) {
 	}
 }
 
+func TestCleanupManagedAttachmentsRestoresOriginalHostnameSelector(t *testing.T) {
+	tpl := &corev1.PodTemplateSpec{
+		Spec: corev1.PodSpec{
+			NodeSelector: map[string]string{
+				corev1.LabelHostname:          "node-a",
+				"topology.kubernetes.io/zone": "zone-a",
+			},
+			Containers: []corev1.Container{{Name: "app"}},
+		},
+	}
+	cfg := &appcfg.ApplicationConfig{WorkloadOptions: appcfg.WorkloadOptions{
+		"server": {Allow: []appcfg.WorkloadCapability{{Type: "device.serial", Containers: []string{"app"}}}},
+	}}
+	application := &appv1alpha1.Application{Spec: appv1alpha1.ApplicationSpec{Attachments: []appv1alpha1.Attachment{
+		{Workload: "server", Type: "device.serial", Ref: "devices.bytetrade.io/serial-s-1", Node: "node-a"},
+	}}}
+
+	if err := (&Handler{}).injectAttachments(context.Background(), tpl, "server", cfg, application); err != nil {
+		t.Fatal(err)
+	}
+	if tpl.Annotations[attachmentHostnameSelectorAnnotation] == "" {
+		t.Fatal("hostname selector ownership was not recorded")
+	}
+	cleanupManagedAttachments(tpl, true)
+
+	if got := tpl.Spec.NodeSelector[corev1.LabelHostname]; got != "node-a" {
+		t.Fatalf("manifest hostname selector=%q, want node-a", got)
+	}
+	if got := tpl.Spec.NodeSelector["topology.kubernetes.io/zone"]; got != "zone-a" {
+		t.Fatalf("unmanaged selector=%q, want zone-a", got)
+	}
+	if _, exists := tpl.Annotations[attachmentHostnameSelectorAnnotation]; exists {
+		t.Fatal("hostname selector ownership marker was not cleaned up")
+	}
+}
+
+func TestCleanupManagedAttachmentsRemovesInjectedHostnameSelector(t *testing.T) {
+	tpl := &corev1.PodTemplateSpec{Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "app"}}}}
+	cfg := &appcfg.ApplicationConfig{WorkloadOptions: appcfg.WorkloadOptions{
+		"server": {Allow: []appcfg.WorkloadCapability{{Type: "device.serial", Containers: []string{"app"}}}},
+	}}
+	application := &appv1alpha1.Application{Spec: appv1alpha1.ApplicationSpec{Attachments: []appv1alpha1.Attachment{
+		{Workload: "server", Type: "device.serial", Ref: "devices.bytetrade.io/serial-s-1", Node: "node-a"},
+	}}}
+
+	if err := (&Handler{}).injectAttachments(context.Background(), tpl, "server", cfg, application); err != nil {
+		t.Fatal(err)
+	}
+	cleanupManagedAttachments(tpl, true)
+
+	if _, exists := tpl.Spec.NodeSelector[corev1.LabelHostname]; exists {
+		t.Fatalf("attachment-injected hostname selector was retained: %#v", tpl.Spec.NodeSelector)
+	}
+}
+
+func TestCleanupManagedAttachmentsPreservesExternallyChangedHostnameSelector(t *testing.T) {
+	tpl := &corev1.PodTemplateSpec{Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "app"}}}}
+	cfg := &appcfg.ApplicationConfig{WorkloadOptions: appcfg.WorkloadOptions{
+		"server": {Allow: []appcfg.WorkloadCapability{{Type: "device.serial", Containers: []string{"app"}}}},
+	}}
+	application := &appv1alpha1.Application{Spec: appv1alpha1.ApplicationSpec{Attachments: []appv1alpha1.Attachment{
+		{Workload: "server", Type: "device.serial", Ref: "devices.bytetrade.io/serial-s-1", Node: "node-a"},
+	}}}
+
+	if err := (&Handler{}).injectAttachments(context.Background(), tpl, "server", cfg, application); err != nil {
+		t.Fatal(err)
+	}
+	tpl.Spec.NodeSelector[corev1.LabelHostname] = "node-b"
+	cleanupManagedAttachments(tpl, true)
+
+	if got := tpl.Spec.NodeSelector[corev1.LabelHostname]; got != "node-b" {
+		t.Fatalf("externally changed hostname selector=%q, want node-b", got)
+	}
+}
+
+func TestCleanupManagedAttachmentsPreservesLegacyUnknownHostnameSelector(t *testing.T) {
+	tpl := &corev1.PodTemplateSpec{
+		ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{attachmentInjectedAnnotation: "true"}},
+		Spec: corev1.PodSpec{
+			NodeSelector: map[string]string{corev1.LabelHostname: "node-a"},
+			Containers:   []corev1.Container{{Name: "app"}},
+		},
+	}
+
+	cleanupManagedAttachments(tpl, true)
+
+	if got := tpl.Spec.NodeSelector[corev1.LabelHostname]; got != "node-a" {
+		t.Fatalf("legacy hostname selector=%q, want node-a", got)
+	}
+}
+
 func TestInjectExternalFolderPinsNodeWithoutLocalPathCheck(t *testing.T) {
 	t.Setenv("SHARED_LIB_PATH", "/olares/share")
 	tpl := &corev1.PodTemplateSpec{Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "app"}}}}
