@@ -127,9 +127,9 @@ Support for common out-of-band management capabilities on Olares One is as follo
 - **Remote KVM**: Not supported.
 - **IPMI**: Not supported.
 
-### Are there any additional fees or subscriptions required to use Olares One?
+### Does Olares One require a subscription or other ongoing fees?
 
-Olares OS, system updates, apps in Olares Market, and local AI inference are free to use.
+No subscription is required. Olares OS, system updates, apps in Olares Market, and local AI inference are free to use.
 
 Your regular running costs are electricity and internet access. If you choose to connect a cloud model API, such as OpenAI or Anthropic, its usage is billed by that provider.
 
