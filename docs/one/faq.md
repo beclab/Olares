@@ -54,6 +54,8 @@ The desktop RTX 5090 offers more capacity for larger models and more parallel co
 
 GPU specifications are from NVIDIA's [laptop GPU comparison](https://www.nvidia.com/en-us/geforce/laptops/compare/) and [desktop RTX 5090 specifications](https://www.nvidia.com/en-us/geforce/graphics-cards/50-series/rtx-5090/). For Olares One power modes, see [What is the power consumption?](#what-is-the-power-consumption).
 
+For measured LLM performance, image and video generation times, and test configurations, see [Olares One AI benchmarks](https://www.olares.com/benchmarks/hardware/olares-one).
+
 ### How loud is the device?
 
 Olares One operates quietly even under load. In lab testing, the device generates 19dB when idle and remains under 39dB under maximum load.

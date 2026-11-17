@@ -59,6 +59,8 @@ RTX 5090 Mobile 配备 24 GB GDDR7 显存，采用 NVIDIA Blackwell 架构并支
 
 显卡规格来自 NVIDIA 的[移动版 GPU 对比](https://www.nvidia.com/en-us/geforce/laptops/compare/)和[桌面版 RTX 5090 规格](https://www.nvidia.com/en-us/geforce/graphics-cards/50-series/rtx-5090/)。Olares One 的功耗模式请参阅[功耗是多少](#功耗是多少)。
 
+大语言模型性能、图像和视频生成耗时及测试配置，请参阅 [Olares One AI 性能测试](https://www.olares.com/benchmarks/hardware/olares-one)。
+
 ### 设备噪音有多大？
 
 Olares One 即使在负载下也能安静运行。在实验室测试中，设备空闲时产生 19dB 噪音，最大负载下仍保持在 39dB 以下。
