@@ -132,7 +132,7 @@ Olares One 对常见带外管理功能的支持情况如下：
 - **远程 KVM**：不支持。
 - **IPMI**：不支持。
 
-### 使用 Olares One 是否有额外费用？
+### 使用 Olares One 是否需要额外付费或订阅？
 
 Olares OS、系统更新、Olares Market 中的应用和本地 AI 推理均可免费使用。
 

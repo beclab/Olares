@@ -127,7 +127,7 @@ Support for common out-of-band management capabilities on Olares One is as follo
 - **Remote KVM**: Not supported.
 - **IPMI**: Not supported.
 
-### Are there additional fees to use Olares One?
+### Are there any additional fees or subscriptions required to use Olares One?
 
 Olares OS, system updates, apps in Olares Market, and local AI inference are free to use.
 
