@@ -189,6 +189,14 @@ func main() {
 		}
 	}()
 
+	if err = (&controllers.DeviceInventoryController{
+		Client:  mgr.GetClient(),
+		Publish: appevent.PublishToQueueWithID,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "Unable to create controller", "controller", "DeviceInventory")
+		os.Exit(1)
+	}
+
 	if err = (&controllers.ApplicationManagerController{
 		Client:      mgr.GetClient(),
 		KubeConfig:  config,

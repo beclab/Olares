@@ -22,6 +22,14 @@ rules:
   - list
   - watch
 - apiGroups:
+  - ""
+  resources:
+  - nodes
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - app.bytetrade.io
   resources:
   - applicationmanagers
@@ -118,6 +126,7 @@ rules:
   verbs:
   - get
   - list
+  - watch
   - create
   - update
   - delete

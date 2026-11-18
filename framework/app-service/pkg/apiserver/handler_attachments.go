@@ -15,6 +15,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/client/clientset"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/deviceinventory"
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	"github.com/emicklei/go-restful/v3"
@@ -24,7 +25,7 @@ import (
 )
 
 const (
-	deviceInventoryAnnotation = "bytetrade.io/devices"
+	deviceInventoryAnnotation = deviceinventory.Annotation
 	deviceLeaseNamespace      = "kube-node-lease"
 	deviceLeasePrefix         = "generic-device-plugin-"
 	attachmentsRevision       = "app.bytetrade.io/attachments-revision"
@@ -33,31 +34,8 @@ const (
 
 var attachmentNamePattern = regexp.MustCompile(`^[a-z][a-z0-9-]{0,31}$`)
 
-type DeviceInventoryItem struct {
-	UID          string   `json:"uid"`
-	ResourceName string   `json:"resourceName"`
-	DisplayName  string   `json:"displayName,omitempty"`
-	Online       bool     `json:"online"`
-	Selectable   bool     `json:"selectable"`
-	KernelPaths  []string `json:"kernelPaths,omitempty"`
-	PortUnstable bool     `json:"portUnstable,omitempty"`
-	Adapter      string   `json:"adapter,omitempty"`
-	Address      string   `json:"address,omitempty"`
-	AccessMode   string   `json:"accessMode,omitempty"`
-	Node         string   `json:"node"`
-	Type         string   `json:"type"`
-	Reason       string   `json:"reason,omitempty"`
-}
-
-type nodeDeviceInventory struct {
-	SchemaVersion int                   `json:"schemaVersion"`
-	Serial        []DeviceInventoryItem `json:"serial,omitempty"`
-	Video         []DeviceInventoryItem `json:"video,omitempty"`
-	Audio         []DeviceInventoryItem `json:"audio,omitempty"`
-	HID           []DeviceInventoryItem `json:"hid,omitempty"`
-	Bluetooth     []DeviceInventoryItem `json:"bluetooth,omitempty"`
-	Truncated     bool                  `json:"truncated,omitempty"`
-}
+type DeviceInventoryItem = deviceinventory.Item
+type nodeDeviceInventory = deviceinventory.Inventory
 
 type DeviceInventoryResponse struct {
 	Devices []DeviceInventoryItem `json:"devices"`

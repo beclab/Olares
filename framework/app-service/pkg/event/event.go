@@ -18,15 +18,17 @@ import (
 var AppEventQueue *QueuedEventController
 
 type QueuedEventController struct {
-	wq    workqueue.RateLimitingInterface
-	ctx   context.Context
-	nc    *nats.Conn
-	ncMux sync.Mutex
+	wq              workqueue.RateLimitingInterface
+	ctx             context.Context
+	nc              *nats.Conn
+	ncMux           sync.Mutex
+	publishOverride func(subject, msgID string, data interface{}) error
 }
 
 type QueueEvent struct {
 	Subject string
 	Data    interface{}
+	MsgID   string
 }
 
 type UserEvent struct {
@@ -57,7 +59,7 @@ func (qe *QueuedEventController) process(obj interface{}) {
 		return
 	}
 	for {
-		err := qe.publish(eobj.Subject, eobj.Data)
+		err := qe.publish(eobj.Subject, eobj.MsgID, eobj.Data)
 		if err == nil {
 			klog.Infof("publish event success data: %#v", eobj.Data)
 			return
@@ -91,11 +93,14 @@ func (qe *QueuedEventController) enqueue(obj interface{}) {
 	qe.wq.Add(obj)
 }
 
-func (qe *QueuedEventController) publish(subject string, data interface{}) error {
+func (qe *QueuedEventController) publish(subject, msgID string, data interface{}) error {
+	if qe.publishOverride != nil {
+		return qe.publishOverride(subject, msgID, data)
+	}
 	if err := qe.ensureNatsConnected(); err != nil {
 		return fmt.Errorf("failed to ensure NATS connection: %w", err)
 	}
-	return utils.PublishEvent(qe.nc, subject, data)
+	return utils.PublishEventWithID(qe.nc, subject, msgID, data)
 }
 
 func (qe *QueuedEventController) ensureNatsConnected() error {
@@ -219,6 +224,12 @@ func PublishAppEventToQueue(p utils.EventParams) {
 // so callers that previously opened their own connection should use this.
 func PublishToQueue(subject string, data interface{}) {
 	AppEventQueue.enqueue(&QueueEvent{Subject: subject, Data: data})
+}
+
+// PublishToQueueWithID enqueues a message with a deterministic JetStream
+// message ID. Existing callers can keep using PublishToQueue without one.
+func PublishToQueueWithID(subject, msgID string, data interface{}) {
+	AppEventQueue.enqueue(&QueueEvent{Subject: subject, MsgID: msgID, Data: data})
 }
 
 func PublishUserEventToQueue(topic, user, operator string) {
