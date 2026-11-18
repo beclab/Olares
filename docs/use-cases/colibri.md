@@ -14,7 +14,7 @@ doc_updated: "2026-11-18"
 
 Colibri lets you chat with supported GGUF models on your Olares device. It can read parts of a large mixture-of-experts (MoE) model from disk as needed, so the whole model does not have to fit in memory.
 
-You can choose how much system RAM and GPU memory to give Colibri, or use the CPU for inference. Less memory means more reading from disk and can make replies slower, especially with long inputs.
+You can choose how much system RAM and GPU memory to give Colibri, or use the CPU for inference. Less memory means more reading from disk and can make replies slower, especially with long inputs. See the [performance results](#resource-configuration-and-performance-reference) for an example of how memory settings affect speed.
 
 This guide uses Qwen3.6-35B-A3B as an example. You can follow the same steps with another supported GGUF model and adjust the memory settings for your device.
 
@@ -29,7 +29,7 @@ In this tutorial, you will learn how to:
 ## Prerequisites
 
 - An Intel or AMD 64-bit computer running Olares 1.12.7 or later, with an Intel Core 4th-generation or newer processor, an AMD Ryzen processor, or an equivalent processor.
-- An NVIDIA GPU on the Olares device. This build supports GPU acceleration on GeForce RTX 50-series GPUs and has been tested on an RTX 5090 Laptop GPU. GPU acceleration also requires a driver that supports CUDA 13.0.
+- An NVIDIA GPU on the Olares device. GPU acceleration requires a GeForce RTX 50-series GPU and a driver that supports CUDA 13.0.
 - Enough disk space for your model file. The Qwen3.6-35B-A3B `UD-IQ4_XS` file used below is about 16.5 GiB.
 
 ## Add a model file
@@ -49,8 +49,6 @@ In the LarePass desktop client, go to **Transfer** > **Fetch** and select **Save
 https://huggingface.co/unsloth/Qwen3.6-35B-A3B-GGUF/resolve/main/Qwen3.6-35B-A3B-UD-IQ4_XS.gguf
 ```
 :::
-
-Store models on an SSD where possible. When memory is limited, disk speed affects how quickly Colibri can read model data and respond.
 
 ## Install Colibri and set memory limits
 
@@ -102,9 +100,7 @@ For longer files, send one function or section at a time. The default 16K contex
 
 ### Export the conversation
 
-:::warning Export before refreshing
 Colibri does not retain chat history or generation settings after a page refresh. Export any conversation you want to keep before closing or refreshing the page.
-:::
 
 1. After the reply finishes, click the **Export conversation** icon in the top-right corner.
 2. Select **Markdown (.md)** to download the conversation to your computer. The file contains your input and the model's replies for later editing or sharing. You can also choose **JSON (.json)** for structured storage.
