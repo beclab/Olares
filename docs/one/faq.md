@@ -207,7 +207,7 @@ Quantization reduces the memory needed for model weights by storing them at lowe
 
 Yes. Install [OpenCode](../use-cases/opencode.md), [Claude Code](../use-cases/claude-code.md), or [Codex CLI](../use-cases/codex-cli.md) from Market and connect it to a local model through Router. The model generates responses and tool calls. The agent edits files and runs commands and tests in its development environment.
 
-You can also run OpenCode CLI on your own computer and connect it to the model on Olares. In this setup, files and code execution stay on your computer, while model inference runs on Olares One. See [How AI apps connect to Olares models](../manual/best-practices/connect-ai-apps.md).
+You can also run OpenCode CLI on your own computer and connect it to the model on Olares. In this setup, files and code execution stay on your computer, while model inference runs on Olares One. See [Use Olares Router as your AI gateway](../use-cases/olares-router.md).
 
 ### Which languages does Olares One support?
 
