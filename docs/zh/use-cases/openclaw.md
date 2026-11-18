@@ -10,7 +10,7 @@ head:
       content: Olares, OpenClaw, self-hosted ai agent, personal ai agent, local ai agent, openclaw on olares
 app_version: "1.0.57"
 doc_version: "3.1"
-doc_updated: "2026-11-11"
+doc_updated: "2026-11-18"
 ---
 
 :::warning
@@ -90,6 +90,8 @@ OpenClaw 需要较大的"上下文窗口"（即 AI 的短期记忆）来处理�
 
 <!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
+配置 OpenClaw 时，请使用 `olares` 作为 API 密钥占位值。
+
 ### 步骤 2：运行安装向导
 
 使用交互式向导逐步配置 OpenClaw。
@@ -113,10 +115,10 @@ OpenClaw 需要较大的"上下文窗口"（即 AI 的短期记忆）来处理�
     为便于快速上手，本教程会跳过向导中的部分高级设置。你可以稍后配置或修改它们。
     :::
 
-    :::warning 填写 API 密钥占位值
-    API 密钥不能留空。OpenClaw 2026.11.3 要求此提供商的 API 密钥非空，即使向导提示可以留空。连接此 Olares Router 时，请填写占位值，例如 `olares`。
+    :::info OpenClaw 要求填写 API 密钥字段
+    在 API 密钥字段中填写 `olares`，即使向导提示可以留空。OpenClaw 2026.11.3 要求此连接填写非空值。Olares 内的应用无需 Router API 密钥。
 
-    如果实时对话测试提示 `No API key found for provider "router"`，选择 **Fix model/auth setup**，在 API 密钥字段填写非空占位值，然后重新测试。
+    如果实时对话测试提示 `No API key found for provider "router"`，选择 **Fix model/auth setup**，填写 `olares`，然后重新测试。
     :::
 
     | 配置   | 选项   |

@@ -10,7 +10,7 @@ head:
       content: Olares, OpenClaw, self-hosted ai agent, personal ai agent, local ai agent, openclaw on olares
 app_version: "1.0.57"
 doc_version: "3.1"
-doc_updated: "2026-11-11"
+doc_updated: "2026-11-18"
 ---
 
 # Run OpenClaw as your self-hosted personal AI agent
@@ -86,6 +86,8 @@ OpenClaw requires a large "context window" (that is the AI's short-term memory) 
 
 <!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
+For OpenClaw, use `olares` as the API key placeholder.
+
 ### Step 2: Run onboarding wizard
 
 Set up OpenClaw using the step-by-step interactive wizard.
@@ -109,10 +111,10 @@ Set up OpenClaw using the step-by-step interactive wizard.
     To get you started quickly, this tutorial skips several advanced settings in the wizard. You can configure or modify them later.
     :::
 
-    :::warning Enter an API key placeholder
-    Do not leave the API key empty. OpenClaw 2026.11.3 requires a non-empty value for this provider, even though the prompt says the key can be left blank. For this Olares Router connection, enter a placeholder such as `olares`.
+    :::info API key required by OpenClaw
+    Enter `olares` in the API key field, even though the prompt says it can be left blank. OpenClaw 2026.11.3 requires a non-empty value for this connection. Apps in Olares do not need a Router API key.
 
-    If the live completion test reports `No API key found for provider "router"`, select **Fix model/auth setup**, enter a non-empty placeholder in the API key field, and retry the test.
+    If the live completion test reports `No API key found for provider "router"`, select **Fix model/auth setup**, enter `olares`, and retry.
     :::
 
     | Settings   | Option   |
