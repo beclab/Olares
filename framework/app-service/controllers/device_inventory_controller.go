@@ -12,8 +12,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/deviceinventory"
 	appevent "github.com/beclab/Olares/framework/app-service/pkg/event"
+	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -179,6 +181,12 @@ func (r *DeviceInventoryController) Reconcile(ctx context.Context, req ctrl.Requ
 		parsed.Revision = previous.Revision
 	}
 	changes := diffSnapshots(previous, parsed)
+	r.mu.Unlock()
+
+	if err := r.enrichRemovedBindings(ctx, node.Name, changes); err != nil {
+		return ctrl.Result{}, err
+	}
+	r.mu.Lock()
 	r.snapshots[node.Name] = parsed
 	r.mu.Unlock()
 
@@ -188,6 +196,131 @@ func (r *DeviceInventoryController) Reconcile(ctx context.Context, req ctrl.Requ
 		klog.Infof("generated device inventory event node=%s eventID=%s revision=%s changes=%d", node.Name, e.EventID, e.Revision, len(e.Changes))
 	}
 	return ctrl.Result{RequeueAfter: requeueAfter}, nil
+}
+
+func (r *DeviceInventoryController) enrichRemovedBindings(ctx context.Context, nodeName string, changes []DeviceInventoryChange) error {
+	removed := make(map[string][]int)
+	for i := range changes {
+		change := &changes[i]
+		if change.Kind == "device" && change.Action == "removed" {
+			key := changeBindingKey(change.Type, change.ResourceName)
+			removed[key] = append(removed[key], i)
+		}
+	}
+	if len(removed) == 0 {
+		return nil
+	}
+
+	var applications appv1alpha1.ApplicationList
+	if err := r.List(ctx, &applications); err != nil {
+		return fmt.Errorf("list applications for removed device bindings: %w", err)
+	}
+	var managers appv1alpha1.ApplicationManagerList
+	if err := r.List(ctx, &managers); err != nil {
+		klog.Warningf("list application managers for removed device containers: %v", err)
+	}
+	managerByName := make(map[string]*appv1alpha1.ApplicationManager, len(managers.Items))
+	managerByApp := make(map[string]*appv1alpha1.ApplicationManager, len(managers.Items))
+	for i := range managers.Items {
+		manager := &managers.Items[i]
+		managerByName[manager.Name] = manager
+		managerByApp[applicationIdentity(manager.Spec.AppName, manager.Spec.AppNamespace, manager.Spec.AppOwner)] = manager
+	}
+
+	bindingsByChange := make(map[int]map[string]DeviceBinding)
+	for i := range applications.Items {
+		application := &applications.Items[i]
+		var containersByCapability map[string][]string
+		for _, attachment := range application.Spec.Attachments {
+			indexes := removed[changeBindingKey(attachment.Type, attachment.Ref)]
+			if len(indexes) == 0 || attachment.Node != nodeName {
+				continue
+			}
+			if containersByCapability == nil {
+				manager := managerByName[application.Name]
+				if manager == nil {
+					manager = managerByApp[applicationIdentity(application.Spec.Name, application.Spec.Namespace, application.Spec.Owner)]
+				}
+				if manager == nil {
+					klog.Warningf("application manager config unavailable for removed device binding application=%s", application.Name)
+				}
+				containersByCapability = workloadContainers(manager)
+			}
+			containers := append([]string(nil), containersByCapability[attachment.Workload+"\x00"+attachment.Type]...)
+			if containers == nil {
+				containers = []string{}
+			}
+			sort.Strings(containers)
+			binding := DeviceBinding{
+				AppName: application.Spec.Name, AppNamespace: application.Spec.Namespace,
+				AppOwner: application.Spec.Owner, Workload: attachment.Workload, Containers: containers,
+			}
+			bindingKey := strings.Join([]string{binding.AppNamespace, binding.AppName, binding.AppOwner, binding.Workload, strings.Join(binding.Containers, ",")}, "\x00")
+			for _, index := range indexes {
+				if bindingsByChange[index] == nil {
+					bindingsByChange[index] = make(map[string]DeviceBinding)
+				}
+				bindingsByChange[index][bindingKey] = binding
+			}
+		}
+	}
+	for index, bindings := range bindingsByChange {
+		ordered := make([]DeviceBinding, 0, len(bindings))
+		for _, binding := range bindings {
+			ordered = append(ordered, binding)
+		}
+		sort.Slice(ordered, func(i, j int) bool {
+			left := strings.Join([]string{ordered[i].AppNamespace, ordered[i].AppName, ordered[i].Workload}, "\x00")
+			right := strings.Join([]string{ordered[j].AppNamespace, ordered[j].AppName, ordered[j].Workload}, "\x00")
+			return left < right
+		})
+		changes[index].Bindings = ordered
+	}
+	return nil
+}
+
+func changeBindingKey(deviceType, resourceName string) string {
+	return deviceType + "\x00" + resourceName
+}
+
+func applicationIdentity(name, namespace, owner string) string {
+	return strings.Join([]string{name, namespace, owner}, "\x00")
+}
+
+func workloadContainers(manager *appv1alpha1.ApplicationManager) map[string][]string {
+	result := make(map[string][]string)
+	if manager == nil || manager.Spec.Config == "" {
+		return result
+	}
+	var cfg appcfg.ApplicationConfig
+	if err := json.Unmarshal([]byte(manager.Spec.Config), &cfg); err != nil {
+		klog.Warningf("parse application manager %s workload config for device binding: %v", manager.Name, err)
+		return result
+	}
+	for workload, option := range cfg.WorkloadOptions {
+		for _, capability := range option.Allow {
+			key := workload + "\x00" + capability.Type
+			result[key] = append(result[key], capability.Containers...)
+		}
+	}
+	for key, containers := range result {
+		sort.Strings(containers)
+		result[key] = compactStrings(containers)
+	}
+	return result
+}
+
+func compactStrings(values []string) []string {
+	if len(values) < 2 {
+		return values
+	}
+	result := values[:1]
+	for _, value := range values[1:] {
+		if value != result[len(result)-1] {
+			result = append(result, value)
+		}
+	}
+	return result
 }
 
 func (r *DeviceInventoryController) publisherState(ctx context.Context, nodeName string, now time.Time) (bool, time.Duration, error) {
