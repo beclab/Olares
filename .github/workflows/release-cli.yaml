@@ -186,8 +186,8 @@ jobs:
           BINARY_VERSION: ${{ needs.resolve-versions.outputs.binary_version }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GOPRIVATE: github.com/beclab/oac,github.com/Above-Os/backups-sdk
-          GONOSUMDB: github.com/beclab/oac
-          GONOPROXY: github.com/beclab/oac
+          GONOSUMDB: github.com/beclab/oac,github.com/Above-Os/backups-sdk
+          GONOPROXY: github.com/beclab/oac,github.com/Above-Os/backups-sdk
           GIT_CONFIG_COUNT: "2"
           GIT_CONFIG_KEY_0: "url.https://x-access-token:${{ secrets.GO_PRIVATE_TOKEN }}@github.com/beclab/.insteadof"
           GIT_CONFIG_VALUE_0: "https://github.com/beclab/"
