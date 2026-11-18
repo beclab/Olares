@@ -128,4 +128,4 @@ For apps running in Olares, use the connection details below. Chat, embeddings, 
 2. For the model name, enter the default system name for the capability, such as `default-chat`. To use a specific model, find it on **LLM** or **Tools**, click **View connection example**, and copy the full **Model name** from **How to call this model**.
 3. Leave the API key empty. If the app requires a value, enter `olares`.
 
-For an app running on your computer, open **How to call this model**, select **Devices in LAN** or **Remote** for your network, and copy that Base URL. Use a key created on **API keys**. Remote access also requires LarePass VPN. See [Connect AI apps](../manual/best-practices/connect-ai-apps.md).
+For an app running on your computer, open **How to call this model**, select **Devices in LAN** or **Remote** for your network, and copy that Base URL. Use a key created on **API keys**. Remote access also requires LarePass VPN.

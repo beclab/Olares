@@ -136,4 +136,4 @@ Olares 内的应用使用以下连接信息。聊天、嵌入等能力共用 Rou
 2. 模型名称填写所需能力的系统默认名，例如 `default-chat`。要固定使用某个模型，在 **LLM** 或 **Tools** 页面点击该模型的 **View connection example**，从 **How to call this model** 窗口复制完整的 **Model name**。
 3. API 密钥可留空。应用要求此字段必填时，填写 `olares`。
 
-从电脑上的应用连接 Router 时，打开 **How to call this model**，根据所在网络选择 **Devices in LAN** 或 **Remote**，复制该方式的 Base URL，并使用在 **API keys** 页面创建的密钥。远程访问还需要 LarePass VPN。详见[连接 AI 应用](../manual/best-practices/connect-ai-apps.md)。
+从电脑上的应用连接 Router 时，打开 **How to call this model**，根据所在网络选择 **Devices in LAN** 或 **Remote**，复制该方式的 Base URL，并使用在 **API keys** 页面创建的密钥。远程访问还需要 LarePass VPN。
