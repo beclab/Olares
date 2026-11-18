@@ -553,6 +553,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                 },
               ],
             },
+            {
+              text: "wger",
+              link: "/use-cases/wger",
+            },
             // {
             //   text: "Stirling PDF",
             //   link: "/use-cases/stirling-pdf",

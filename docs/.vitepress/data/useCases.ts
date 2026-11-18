@@ -99,6 +99,7 @@ export const useCases: UseCase[] = [
   { title: "Pterodactyl Panel", link: "/use-cases/pterodactyl", category: "Games", description: "Manage game servers, permissions, schedules, and world backups", descriptionZh: "集中管理游戏服务器、权限、计划任务和世界备份" },
   { title: "TREK (NOMAD)", link: "/use-cases/trek", category: "Entertainment", description: "Plan trips collaboratively", descriptionZh: "协作规划行程" },
   { title: "*Arrs", link: "/use-cases/arrs", category: "Entertainment", description: "Automated media management with Sonarr, Radarr, and more", descriptionZh: "使用 Sonarr、Radarr 等实现媒体自动化管理" },
+  { title: "wger", link: "/use-cases/wger", category: "Productivity", description: "Plan workouts and keep weight and nutrition journals", descriptionZh: "制定训练计划，记录体重与营养摄入" },
   { title: "Excalidraw", link: "/use-cases/excalidraw", category: "Productivity", description: "Hand-drawn style diagrams and whiteboarding", descriptionZh: "手绘风格的图表与白板" },
   { title: "Karakeep", link: "/use-cases/karakeep", category: "Productivity", description: "Save and organize bookmarks, notes, and PDFs", descriptionZh: "保存并整理书签、笔记与 PDF" },
   { title: "Linkwarden", link: "/use-cases/linkwarden", category: "Productivity", description: "Collect, organize and preserve useful web pages", descriptionZh: "收集、整理和保存实用网页" },
