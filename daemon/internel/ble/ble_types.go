@@ -17,7 +17,8 @@ type service struct {
 	apPages          [bleAPPageCount]string
 	terminusInfo     string
 
-	update func()
+	update             func()
+	notifyConnectState func()
 
 	updateApListCB func([]AccessPoint)
 }
