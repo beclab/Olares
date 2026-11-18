@@ -6,8 +6,8 @@ head:
     - name: keywords
       content: Olares, ComfyUI, Krita, AI art, digital painting, Krita AI Diffusion, image generation
 app_version: "1.0.21"
-doc_version: "1.1"
-doc_updated: "2026-07-28"
+doc_version: "1.2"
+doc_updated: "2026-11-18"
 ---
 
 # Create AI art with ComfyUI and Krita
@@ -37,8 +37,6 @@ You can set the GPU mode to **Exclusive** and assign ComfyUI full GPU access in 
 :::
 
 ## Get ComfyUI connection details
-
-<!--@include: ../reusables/ai-service-connections.md#app-endpoint-overview-->
 
 For ComfyUI:
 

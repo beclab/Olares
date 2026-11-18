@@ -8,8 +8,8 @@ head:
     - name: keywords
       content: Olares, Claude Code, Anthropic, AI coding, Ollama, terminal, TUI, self-hosted
 app_version: "0.1.13"
-doc_version: "2.3"
-doc_updated: "2026-11-11"
+doc_version: "2.4"
+doc_updated: "2026-11-18"
 ---
 
 # Write code using Claude Code
@@ -25,20 +25,6 @@ In this guide, you will learn how to:
 - Connect the Claude Code CLI to a model using an Anthropic subscription or a local model.
 - Execute basic and advanced natural language coding workflows.
 - Manage software dependencies securely.
-
-## Prerequisites
-
-Before you begin, you need:
-
-<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
-- Additional requirements depend on how you connect:
-
-  | Connection method | Requirements |
-  | :--- | :--- |
-  | Anthropic subscription | An active Claude Pro or Max subscription |
-  | Local model | Qwen3.8-27B (llama.cpp) installed from Market |
-
-<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## Install Claude Code
 
@@ -78,11 +64,7 @@ Use this method if you hold an active Claude Pro or Max subscription.
 
 ### Connect using a local model
 
-Use this method to run Claude Code locally. This example uses the model app Qwen3.8-27B (llama.cpp).
-
-<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
-
-#### Configure the local model in Router
+This example uses Qwen3.8-27B (llama.cpp), installed from Market.
 
 1. Open Router from Launchpad. On **Default models**, set Qwen3.8-27B (llama.cpp) as the default chat model.
 2. Go to **LLM**, find Qwen3.8-27B (llama.cpp), and click **View model card**.
@@ -93,25 +75,27 @@ Use this method to run Claude Code locally. This example uses the model app Qwen
    Claude Code sends local model requests with `max_tokens` set to `32000`, so Router must allow at least `32000` output tokens. You can set a higher limit only when the model backend and its configured context window support it. This limit does not reserve memory or force every response to use that many tokens.
    :::
 
-5. On the same model row, click **View connection example**. In **How to call this model**, select **Apps in Olares** and copy the **Base URL**. Remove the trailing `/v1`. For example, use `https://router.<your-olares-domain>`.
+5. Copy the Router address from your browser. Keep only the protocol and domain. For example, replace the domain below with your own:
 
-#### Configure Claude Code
+   ```text
+   https://router.laresprime.olares.com
+   ```
 
-1. Open Olares Settings, and then go to **Applications** > **Claude Code** > **Manage environment variables**.
-2. Specify the following environment variables:
+   Do not append `/v1` to this address. Claude Code adds `/v1/messages` when it sends a request.
 
-   - **ANTHROPIC_AUTH_TOKEN**: Enter `olares`.
-   - **ANTHROPIC_BASE_URL**: Enter the **Base URL** you copied from Router.
-   - **ANTHROPIC_MODEL**: Enter `default-chat`.
+6. Open Olares Settings, then go to **Applications** > **Claude Code** > **Manage environment variables**.
+7. Set the following environment variables:
 
-   <!--
-   TODO: 素材清单 02，待补 Router 截图：claude-code-env-router.png；替换下方旧图后再取消注释。
-   ![Claude Code environment variables settings](/images/manual/use-cases/claude-env-var1.png#bordered){width=70%}
-   -->
+   | Variable | Value |
+   | :--- | :--- |
+   | **ANTHROPIC_AUTH_TOKEN** | `olares` |
+   | **ANTHROPIC_BASE_URL** | The Router address from step 5, without `/v1` |
+   | **ANTHROPIC_MODEL** | `default-chat` |
 
+8. Click **Apply** and wait for the app to restart.
+9. Open Claude Code CLI from Launchpad and enter `claude` to start your session.
 
-3. Click **Apply**. Wait about 10 seconds for the container to restart.
-4. Open the Claude Code CLI from the Launchpad, and then enter `claude` in the terminal to start your session.
+To use another local model, select it on Router's **Default models** page and check that its output token limit meets the requirement above. Claude Code follows this selection through `default-chat`, using the same Base URL.
 
 ## Use Claude Code
 

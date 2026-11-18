@@ -6,8 +6,8 @@ head:
     - name: keywords
       content: Olares, OpenClaw, OpenClaw 教程, OpenClaw 学习, OpenClaw 网页搜索
 app_version: "1.0.36"
-doc_version: "2.4"
-doc_updated: "2026-09-04"
+doc_version: "2.5"
+doc_updated: "2026-11-18"
 ---
 
 :::warning
@@ -41,8 +41,6 @@ doc_updated: "2026-09-04"
 ## 步骤 2：获取 SearXNG Endpoint
 
 OpenClaw 需要使用 SearXNG Endpoint 连接其搜索服务。
-
-<!--@include: ../reusables/ai-service-connections.md#app-endpoint-overview-->
 
 1. 前往 Olares **设置** > **应用** > **SearXNG** > **入口**。
 2. 选择 **SearXNG**，然后复制 **Endpoint** URL。

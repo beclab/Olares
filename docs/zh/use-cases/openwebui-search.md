@@ -8,8 +8,8 @@ head:
     - name: keywords
       content: Olares, Open WebUI, 网页搜索, SearXNG, 嵌入模型, RAG
 app_version: "1.0.38"
-doc_version: "2.0"
-doc_updated: "2026-09-23"
+doc_version: "2.1"
+doc_updated: "2026-11-18"
 ---
 
 :::warning
@@ -28,7 +28,7 @@ doc_updated: "2026-09-23"
 
 在本指南中，你将学习如何：
 
-- 获取嵌入模型和 SearXNG 所需的端点 URL。
+- 为嵌入模型使用 Router，并获取 SearXNG 的入口地址。
 - 在 Open WebUI 中配置文档嵌入和网页搜索设置。
 - 在聊天过程中执行带网页辅助的搜索。
 
@@ -44,63 +44,42 @@ doc_updated: "2026-09-23"
    | :--- | :--- | :--- |
    | Embedding | EmbeddingGemma | 从应用市场安装 |
 
-## 获取服务信息
+## 配置嵌入模型
 
-要将 Open WebUI 与后台服务连接起来，你需要找到嵌入模型和 SearXNG 的连接端点。
+<!--@include: ../reusables/openwebui-embeddings.md#configure-embeddings-->
 
-### 获取嵌入模型信息
+## 连接 SearXNG {#启用网络搜索-1}
 
-<!--@include: ../reusables/ai-service-connections.md#get-embedding-model-connection-details-openai-->
+Open WebUI 直接连接 SearXNG 获取搜索结果。此处使用 SearXNG 入口地址。
 
-### 获取 SearXNG 端点
+1. 打开 Olares 设置，进入**应用** > **SearXNG** > **入口**。
+2. 点击 **SearXNG**，复制入口地址。例如：
 
-1. 打开 Olares 设置，然后前往**应用** > **SearXNG**。
-2. 在**入口**下，点击 **SearXNG**，然后复制端点 URL。例如：`https://84a93c3c.laresprime.olares.com`。
+   ```text
+   https://84a93c3c.laresprime.olares.com
+   ```
 
-   ![SearXNG endpoint](/images/manual/use-cases/openwebui-searxng-shared-endpoint1.png#bordered){width=70%}
+   ![SearXNG 入口](/images/manual/use-cases/openwebui-searxng-shared-endpoint1.png#bordered){width=70%}
 
-## 配置 Open WebUI
+3. 在 Open WebUI 中打开 **Admin Panel** > **Settings**。
+4. 在左侧边栏找到 **Tools**，选择 **Web Search**。
+5. 填写以下设置：
 
-将获取到的信息填入 Open WebUI 配置面板。
-
-### 设置文档嵌入
-
-配置嵌入模型，使 Open WebUI 能够将文本转换为用于检索的向量表示。
-
-<!-- #region configure-document-embeddings -->
-1. 在 Open WebUI 中，选择你的头像图标，然后前往 **Admin Panel** > **Settings**。
-2. 在左侧边栏中，找到 **Tools** 部分，然后选择 **Documents**。
-3. 在 **Embedding** 区域中，指定以下设置：
-
-   - **Embedding Model Engine**：选择 **OpenAI**。
-   - **API Base URL**：输入你从 Router 复制的嵌入模型的 **Base URL**。
-   - **Embedding Model**：输入你从 Router 复制的嵌入模型的 **Model name**。
-
-4. 向下滚动到页面底部，然后点击右下角的 **Reindex** 以应用更改。
-5. 选择 **Save**。
-<!-- #endregion configure-document-embeddings -->
-
-### 启用网页搜索
-
-打开网页搜索并将其指向你的 SearXNG 端点。
-
-1. 前往 **Admin Panel** > **Settings**。
-2. 在左侧边栏中，找到 **Tools** 部分，然后选择 **Web Search**。
-3. 指定以下设置：
-
-   - **Web Search**：启用此设置。
+   - **Web Search**：启用。
    - **Web Search Engine**：选择 **SearXNG**。
-   - **Searxng Query URL**：输入你的 SearXNG 端点 URL，并在末尾追加 `/search?q=<query>`。例如：`https://84a93c3c.laresprime.olares.com/search?q=<query>`。
-   - **Bypass Web Loader**：如果你只需要搜索结果摘要，请启用此设置。如果你希望 Open WebUI 通过网页加载器获取完整页面内容，请保持禁用。
+   - **Searxng Query URL**：在刚才复制的 SearXNG 入口地址后添加 `/search?q=<query>`。例如：
 
-      :::tip 全文检索
-      若要检索完整网页，请安装 Firecrawl 并将其配置为网页加载器。参阅[将 Firecrawl 用作网页加载器](firecrawl.md#configure-open-webui)。
-      :::
+     ```text
+     https://84a93c3c.laresprime.olares.com/search?q=<query>
+     ```
 
-   ![SearXNG configurations in Open WebUI](/images/manual/use-cases/openwebui-searxng-config1.png#bordered)
+   - **Bypass Web Loader**：只需要搜索结果摘要时启用。需要读取完整网页内容时关闭。
 
-4. 其他字段保持默认值。
-5. 选择 **Save**。
+     若要读取完整网页，先[配置 Firecrawl 网页加载器](firecrawl.md#configure-open-webui)。
+
+   ![Open WebUI 中的 SearXNG 设置](/images/manual/use-cases/openwebui-searxng-config1.png#bordered)
+
+6. 其他字段保持默认值，点击 **Save**。
 
 ## 验证配置
 

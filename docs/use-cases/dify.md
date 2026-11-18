@@ -13,12 +13,16 @@ head:
 
 Dify is an AI application development platform. It's one of the key open-source projects that Olares integrates to help you build and manage AI applications while maintaining full data ownership. Additionally, you can integrate your personal knowledge base documents into Dify for more personalized interactions.
 
+## Learning objectives
+
+In this guide, you will learn how to:
+
+- Connect Dify to a local chat model through Router.
+- Create an assistant and add documents to its knowledge base.
+
 ## Before you begin
 
-<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - Install Qwen3.8-27B (llama.cpp) from Market.
-
-<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## Install Dify
 :::info
@@ -40,7 +44,8 @@ Starting from Olares 1.11.6, if "Dify For Cluster" or "Dify" was previously inst
 
 ### Get model connection details
 
-<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
+1. Open Router from Launchpad. On **Default models**, set Qwen3.8-27B (llama.cpp) as the default chat model and wait until `default-chat` shows **Callable**.
+2. <!--@include: ../reusables/ai-service-connections.md#router-openai-base-url-->
 
 ### Configure the model in Dify
 
@@ -53,7 +58,6 @@ Starting from Olares 1.11.6, if "Dify For Cluster" or "Dify" was previously inst
 
 1. Navigate to Dify's **Studio** tab and enter Ashia.  
 2. From the model list on the right, select the `default-chat` model you just configured.
-
 
    <!--
    TODO: 素材清单 05，待补 Router 截图：dify-model-router.png；替换下方旧图后再取消注释。

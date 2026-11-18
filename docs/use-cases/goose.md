@@ -6,8 +6,8 @@ head:
     - name: keywords
       content: "Olares, Goose, AI agent, AI Router, Goose Desktop, terminal, file automation"
 app_version: "0.0.13"
-doc_version: "1.0"
-doc_updated: "2026-10-22"
+doc_version: "1.1"
+doc_updated: "2026-11-18"
 ---
 
 # Run Goose as your local AI agent on Olares
@@ -35,14 +35,14 @@ Before you begin, you need:
   | :--- | :--- | :--- |
   | Chat | Qwen3.8-27B (llama.cpp) | Install from Market |
 
-<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
-
 ## Install Goose
 
 1. Open Market and search for "Goose".
 2. Click **Get**, then **Install**, and wait for installation to complete.
 
 ## Use Goose Terminal
+
+Open Router from Launchpad. On **Default models**, set Qwen3.8-27B (llama.cpp) as the default chat model and wait until `default-chat` shows **Callable**. Goose Terminal is already configured to use this default.
 
 Goose Terminal opens in your browser and connects to the Goose service directly. No client installation or connection setup is needed.
 

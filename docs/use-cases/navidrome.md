@@ -6,8 +6,8 @@ head:
     - name: keywords
       content: Olares, Navidrome, self-hosted spotify, home music server, self-hosted music server, Subsonic, navidrome on synology, navidrome on olares
 app_version: "1.0.0"
-doc_version: "1.1"
-doc_updated: "2026-07-29"
+doc_version: "1.2"
+doc_updated: "2026-11-18"
 ---
 
 # Stream your music library with Navidrome
@@ -84,8 +84,6 @@ Navidrome scans the music folder automatically. If newly uploaded songs do not a
 To stream from your phone, get the Navidrome endpoint, enable LarePass VPN, and sign in from a Subsonic-compatible client.
 
 ### Get the Navidrome endpoint
-
-<!--@include: ../reusables/ai-service-connections.md#app-endpoint-overview-->
 
 For Navidrome:
 

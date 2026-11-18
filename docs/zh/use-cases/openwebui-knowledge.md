@@ -8,8 +8,8 @@ head:
     - name: keywords
       content: Olares, Open WebUI, 知识库, RAG, 文档上传, PDF
 app_version: "1.0.38"
-doc_version: "2.0"
-doc_updated: "2026-09-23"
+doc_version: "2.1"
+doc_updated: "2026-11-18"
 ---
 
 :::warning
@@ -47,15 +47,7 @@ Open WebUI 支持检索增强生成（RAG），可帮助本地 AI 模型基于�
 
 ## 配置嵌入模型
 
-文档理解需要嵌入模型将文本转换为向量数据。要配置 Open WebUI，需要先获取嵌入模型信息。
-
-### 获取嵌入模型信息
-
-<!--@include: ../reusables/ai-service-connections.md#get-embedding-model-connection-details-openai-->
-
-### 在 Open WebUI 中应用嵌入设置
-
-<!--@include: ./openwebui-search.md#configure-document-embeddings-->
+<!--@include: ../reusables/openwebui-embeddings.md#configure-embeddings-->
 
 ## 分析单个文档
 

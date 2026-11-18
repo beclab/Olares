@@ -8,8 +8,8 @@ head:
     - name: keywords
       content: Olares, Open Design, AI design studio, AI prototyping, landing page generator, presentation generator, OpenAI-compatible, local LLM, Qwen3.8, self-hosted
 app_version: "0.22.1"
-doc_version: "1.0"
-doc_updated: "2026-09-23"
+doc_version: "1.1"
+doc_updated: "2026-11-18"
 ---
 
 # Create design files with Open Design
@@ -37,14 +37,11 @@ In this guide, you will learn how to:
 
 Before you begin, you need:
 
-<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - The following model:
 
   | Model type | Model | How to get it |
   | :--- | :--- | :--- |
   | Chat | Qwen3.8-27B (llama.cpp) | Install from Market |
-
-<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## Install Open Design
 
@@ -55,11 +52,10 @@ Before you begin, you need:
 
 ### Get the model connection details
 
-<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
-
 In this guide, Open Design connects to Qwen3.8-27B (llama.cpp) using the **OpenAI-Compatible** API format:
 
-<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
+1. Open Router from Launchpad. On **Default models**, set Qwen3.8-27B (llama.cpp) as the default chat model and wait until `default-chat` shows **Callable**.
+2. <!--@include: ../reusables/ai-service-connections.md#router-openai-base-url-->
 
 ### Add the model to Open Design
 
@@ -124,7 +120,7 @@ Cloud usage is billed by the selected provider. Use that provider's exact model 
 
 ### The connection test fails or returns 404
 
-Copy the Base URL from **Apps in Olares** in Router's **How to call this model** window, including `/v1`. Check that the default chat model shows **Callable** on **LLM**.
+Check that the Router Base URL ends with `/v1` and that `default-chat` shows **Callable** on Router's **Default models** page.
 
 ### Generation stops before the design is complete
 

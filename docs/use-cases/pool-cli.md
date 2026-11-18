@@ -8,8 +8,8 @@ head:
     - name: keywords
       content: Olares, Pool CLI, AI coding, terminal, TUI, self-hosted, MCP
 app_version: "0.1.0"
-doc_version: "1.0"
-doc_updated: "2026-09-23"
+doc_version: "1.1"
+doc_updated: "2026-11-18"
 ---
 
 # Code with Pool CLI
@@ -32,14 +32,11 @@ In this guide, you will learn how to:
 
 Before you begin, you need:
 
-<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - The following model:
 
   | Used for | Model | How to get it |
   | :--- | :--- | :--- |
   | Local model connection | Qwen3.8-27B (llama.cpp) | Install from Market |
-
-<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## Install Pool CLI
 
@@ -108,11 +105,8 @@ Use this method to run Pool CLI entirely offline with Qwen3.8-27B.
 
 #### Get model connection details
 
-<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
-
-For Qwen3.8-27B (llama.cpp):
-
-<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
+1. Open Router from Launchpad. On **Default models**, set Qwen3.8-27B (llama.cpp) as the default chat model and wait until `default-chat` shows **Callable**.
+2. <!--@include: ../reusables/ai-service-connections.md#router-openai-base-url-->
 
 #### Configure Pool CLI
 

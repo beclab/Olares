@@ -8,6 +8,9 @@ head:
   - - meta
     - name: keywords
       content: Olares, LobeHub, LobeChat, self-hosted lobechat, AI agent, lobechat on olares
+app_version: "1.0.14"
+doc_version: "2.1"
+doc_updated: "2026-11-18"
 ---
 
 :::warning
@@ -36,14 +39,11 @@ LobeHub 是官方平台名称，但应用目前在 Olares Market 中列为 "Lobe
 
 开始前，你需要：
 
-<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - 以下模型：
 
   | 模型类型 | 模型 | 获取方式 |
   | :--- | :--- | :--- |
   | 聊天 | Qwen3.8-27B (llama.cpp) | 从应用市场安装 |
-
-<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## 安装 LobeHub
 
@@ -66,7 +66,8 @@ LobeHub 是官方平台名称，但应用目前在 Olares Market 中列为 "Lobe
 
 ### 获取模型连接信息
 
-<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
+1. 从启动台打开 Router。在 **Default models** 页面将 Qwen3.8-27B (llama.cpp) 设为默认聊天模型，等待 `default-chat` 显示 **Callable**。
+2. <!--@include: ../reusables/ai-service-connections.md#router-openai-base-url-->
 
 ### 在 LobeHub 中配置连接
 
@@ -77,7 +78,7 @@ LobeHub 是官方平台名称，但应用目前在 Olares Market 中列为 "Lobe
 2. 配置以下设置：
 
    - **API 密钥**：填写 `olares`。
-   - **API 代理 URL**：输入你从 Router 复制的 **Base URL**。例如，`https://router.<your-olares-domain>/v1`。
+   - **API 代理 URL**：输入你从 Router 复制的 **Base URL**。
    - **使用 Responses API 规范**：确保此选项已禁用。
    - **使用客户端请求模式**：确保此选项已禁用。
 
@@ -92,7 +93,6 @@ LobeHub 是官方平台名称，但应用目前在 Olares Market 中列为 "Lobe
    ![获取模型列表并启用模型](/images/manual/use-cases/lobehub-fetch-enable-model1.png#bordered)
    -->
 
-
 4. 点击 <i class="material-symbols-outlined">toggle_off</i> 启用它。
 5. 在**连接检查**部分，从列表中选择你刚刚启用的模型，然后点击**检查**以验证连接。如果模型较大，加载可能需要更长时间。
 
@@ -102,7 +102,6 @@ LobeHub 是官方平台名称，但应用目前在 Olares Market 中列为 "Lobe
    TODO: 素材清单 07，待补 Router 截图：lobehub-connection-check-router.png；替换下方旧图后再取消注释。
    ![连接检查成功](/images/manual/use-cases/lobehub-checkpass2.png#bordered)
    -->
-
 
 6. 点击左上角的 Home 图标返回 LobeHub 主页。
 

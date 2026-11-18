@@ -6,8 +6,8 @@ head:
     - name: keywords
       content: "Olares, Goose, AI 智能体, AI Router, Goose Desktop, 终端, 文件自动化"
 app_version: "0.0.13"
-doc_version: "1.0"
-doc_updated: "2026-10-22"
+doc_version: "1.1"
+doc_updated: "2026-11-18"
 ---
 
 # 在 Olares 上把 Goose 用作本地 AI 智能体
@@ -35,14 +35,14 @@ Goose 是一个开源的通用 AI 智能体，可用于研究、写作、编程�
   | :--- | :--- | :--- |
   | 聊天 | Qwen3.8-27B (llama.cpp) | 从 Market 安装 |
 
-<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
-
 ## 安装 Goose
 
 1. 打开 Market，搜索“Goose”。
 2. 点击**获取**，然后点击**安装**，等待安装完成。
 
 ## 使用 Goose Terminal
+
+从启动台打开 Router，在 **Default models** 页面将 Qwen3.8-27B (llama.cpp) 设为默认聊天模型，等待 `default-chat` 显示 **Callable**。Goose Terminal 已配置为使用此默认模型。
 
 Goose Terminal 在浏览器中打开，直接连接 Goose 服务，无需安装客户端，也无需配置连接。
 

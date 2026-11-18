@@ -8,8 +8,8 @@ head:
     - name: keywords
       content: Olares, Open Notebook, AI notebook, research assistant, NotebookLLM alternative, RAG, knowledge base, podcast, transformations
 app_version: "1.0.4"
-doc_version: "2.1"
-doc_updated: "2026-09-23"
+doc_version: "2.2"
+doc_updated: "2026-11-18"
 ---
 
 :::warning
@@ -38,7 +38,6 @@ Open Notebook 是一个 AI 驱动的研究工作空间，用于收集来源材�
 
 开始前，你需要：
 
-<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - 以下模型：
 
   | 模型类型 | 模型 | 获取方式 |
@@ -47,8 +46,6 @@ Open Notebook 是一个 AI 驱动的研究工作空间，用于收集来源材�
   | 嵌入 | EmbeddingGemma | 从 Market 安装 |
   | TTS | `speaches-ai/Kokoro-82M-v1.0-ONNX` | 从 Market 安装 [Speaches](speaches.md) |
   | STT | `Systran/faster-whisper-small` | 从 Market 安装 Speaches。如果不处理音频或视频来源，则为可选项 |
-
-<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## Open Notebook 的工作原理
 
@@ -79,30 +76,10 @@ Open Notebook 使用 AI 模型进行摘要、聊天、检索和播客生成。�
 
 ### 获取模型连接信息
 
-#### 独立模型
+1. 从启动台打开 Router，在 **Default models** 页面将 Qwen3.8-27B (llama.cpp) 设为默认聊天模型，将 EmbeddingGemma 设为默认嵌入模型。等待 `default-chat` 和 `default-embedding` 两行均显示为 **Callable**。
+2. <!--@include: ../reusables/ai-service-connections.md#router-openai-base-url-->
 
-<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
-
-聊天模型使用以下步骤：
-
-<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
-
-嵌入模型使用以下步骤：
-
-<!--@include: ../reusables/ai-service-connections.md#get-embedding-model-connection-details-openai-->
-
-将下方配置中的 `<embedding-model-name>` 替换为从 Router 复制的完整模型名称。
-
-两个模型均使用 **OpenAI-Compatible** API 格式。
-
-#### Speaches
-
-<!--@include: ../reusables/ai-service-connections.md#app-endpoint-overview-->
-
-对于 Speaches：
-
-1. 前往 Olares **Settings** > **Applications** > **Speaches** > **Entrances**。
-2. 选择 **Speaches API**，然后复制 **Endpoint** URL。
+3. 打开 Olares **Settings** > **Applications** > **Speaches** > **Entrances**，选择 **Speaches API** 并复制 **Endpoint** URL，用于语音模型。
 
 ### 添加提供方配置
 
@@ -110,9 +87,11 @@ Open Notebook 使用 AI 模型进行摘要、聊天、检索和播客生成。�
 
 | 服务 | 提供方 | 配置名称 | Base URL |
 | :-- | :-- | :-- | :-- |
-| Qwen3.8-27B (llama.cpp) | **OpenAI Compatible** | 任意容易识别的名称，例如 `Qwen3.8-27B` | Router 中的 Base URL |
-| EmbeddingGemma | **OpenAI Compatible** | 任意容易识别的名称，例如 `EmbeddingGemma` | Router 中的 Base URL |
+| Qwen3.8-27B (llama.cpp) | **OpenAI Compatible** | 任意容易识别的名称，例如 `Qwen3.8-27B` | 同一个 Router Base URL，包含 `/v1` |
+| EmbeddingGemma | **OpenAI Compatible** | 任意容易识别的名称，例如 `EmbeddingGemma` | 同一个 Router Base URL，包含 `/v1` |
 | Speaches | **OpenAI Compatible** | 任意容易识别的名称，例如 `Speaches` | Speaches API endpoint，并在末尾添加 `/v1` |
+
+两个 Router 连接的 API 密钥字段如果要求必填，填写 `olares`。
 
 ### 添加模型
 
@@ -121,9 +100,11 @@ Open Notebook 使用 AI 模型进行摘要、聊天、检索和播客生成。�
 | 配置 | 类型 | Model ID |
 | :-- | :-- | :-- |
 | Qwen3.8-27B (llama.cpp) | **Language** | `default-chat` |
-| EmbeddingGemma | **Embedding** | `<embedding-model-name>` |
+| EmbeddingGemma | **Embedding** | `default-embedding` |
 | Speaches | **TTS** | `speaches-ai/Kokoro-82M-v1.0-ONNX` |
 | Speaches | **STT** | `Systran/faster-whisper-small` |
+
+以后更换 Router 的默认嵌入模型时，请先为已有来源重新生成嵌入，再继续检索。
 
 ### 分配默认模型
 
@@ -132,7 +113,7 @@ Open Notebook 使用 AI 模型进行摘要、聊天、检索和播客生成。�
 | 插槽 | 模型 |
 | :-- | :-- |
 | Chat Model | `default-chat` |
-| Embedding Model | `<embedding-model-name>` |
+| Embedding Model | `default-embedding` |
 | Text-to-Speech Model | `speaches-ai/Kokoro-82M-v1.0-ONNX` |
 | Speech-to-Text Model | `Systran/faster-whisper-small` |
 | Transformation Model | `default-chat` |

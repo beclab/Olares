@@ -8,8 +8,8 @@ head:
     - name: keywords
       content: Olares, OpenCode, oh-my-openagent, OMO, multi-agent, AI coding agent, ultrawork, MCP, self-hosted
 app_version: "1.0.10"
-doc_version: "1.1"
-doc_updated: "2026-09-23"
+doc_version: "1.2"
+doc_updated: "2026-11-18"
 ---
 
 :::warning
@@ -39,7 +39,6 @@ oh-my-openagent (OMO) 是 OpenCode 的多模型代理编排插件。启用后，
 
 开始前，你需要：
 
-<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - 你的 Olares 设备必须具有互联网访问权限。
 - 在 Olares 上[安装 OpenCode](opencode.md)，chart 版本 1.0.6 或更高。
 - 以下模型：
@@ -54,8 +53,6 @@ oh-my-openagent (OMO) 是 OpenCode 的多模型代理编排插件。启用后，
 在 Router 的 **Default models** 页面，将 Qwen3.8-27B (llama.cpp) 设为默认聊天模型。在 OpenCode 中创建 ID 为 `olares` 的提供方，使用 Router 的 Base URL，并添加 `default-chat` 供核心代理使用。随后，在 Router 中找到 Qwen3.5-9B，复制完整的**模型名称**，将该名称作为第二个模型添加到同一提供方。
 
 下方所有示例中的 `<lightweight-model-name>` 都需替换为复制的完整 Router 模型名称，包含 `Olares/` 前缀。这样，轻量任务固定使用 Qwen3.5-9B，核心代理则跟随默认聊天模型。
-
-<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 :::info 模型能力要求
 - 参数少于 7B 的本地模型通常无法正确处理 `tool_use` 或结构化输出。避免将它们用于任何代理。

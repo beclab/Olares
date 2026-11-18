@@ -8,8 +8,8 @@ head:
     - name: keywords
       content: Olares, Vane, Perplexica, Perplexity 替代方案, 自托管, AI 搜索, SearXNG, 本地模型
 app_version: "1.1.35"
-doc_version: "1.3"
-doc_updated: "2026-10-30"
+doc_version: "1.4"
+doc_updated: "2026-11-18"
 ---
 
 :::warning
@@ -36,7 +36,6 @@ Vane（前身为 Perplexica）是一款开源 AI 问答引擎。它结合网络�
 
 开始前，你需要：
 
-<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - 已从应用市场安装并运行 [SearXNG](searxng.md)。
 - 以下模型：
 
@@ -44,8 +43,6 @@ Vane（前身为 Perplexica）是一款开源 AI 问答引擎。它结合网络�
   | :--- | :--- | :--- |
   | 聊天 | Qwen3.8-27B (llama.cpp) | 从应用市场安装 |
   | 嵌入 | all-MiniLM-L6-v2 | Vane 内置 |
-
-<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## 安装 Vane
 
@@ -56,34 +53,29 @@ Vane（前身为 Perplexica）是一款开源 AI 问答引擎。它结合网络�
 
 ## 配置模型
 
-在 Vane 中连接 Olares Router 来使用聊天模型，并选择一个内置嵌入模型。
+Vane 通过 Router 调用聊天模型，并使用内置的 all-MiniLM-L6-v2 作为嵌入模型。
 
-### 获取 Router 连接信息
+1. 从启动台打开 Router。在 **Default models** 页面将 Qwen3.8-27B (llama.cpp) 设为默认聊天模型。等待同一页面中的 `default-chat` 行显示为 **Callable**。
+2. <!--@include: ../reusables/ai-service-connections.md#router-openai-base-url-->
 
-<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
-
-继续之前，确认聊天模型在 Router 的 **LLM** 页面显示为 **Callable**。
-
-### 在 Vane 中选择模型
-
-1. 从启动台打开 Vane。首次打开时使用设置向导，已完成设置的用户可打开左下角的 **Settings** > **Models**。
-2. 点击 **Add Connection**，选择 **OpenAI**，填写以下信息：
+3. 从启动台打开 Vane。首次打开时使用设置向导，已完成设置的用户可打开左下角的 **Settings** > **Models**。
+4. 点击 **Add Connection**，选择 **OpenAI**，填写以下信息：
 
    | 字段 | 值 |
    | :--- | :--- |
    | **Connection Name** | `Olares Router` |
    | **API Key** | `olares` |
-   | **Base URL** | 从 Router 复制的地址，保留末尾的 `/v1` |
+   | **Base URL** | 步骤 2 中得到的 Router 地址，包含 `/v1` |
 
-3. 点击 **Add Connection**。在该连接的 **CHAT MODELS** 下，点击 **Add**。
-4. 将 **Model name** 设为 `Router chat`，将 **Model key** 设为 `default-chat`，然后点击 **Add Model**。
-5. 在设置向导中，点击 **Next** 进入 **Select models**。如果使用 **Settings** > **Models**，在同一页面找到 **Select models** 区域。
-6. 在 **Select Chat Model** 下选择 **Olares Router - Router chat**，在 **Select Embedding Model** 下选择内置的 **Transformers - all-MiniLM-L6-v2**。
-7. 如果使用设置向导，点击 **Finish**。
+5. 点击 **Add Connection**。在该连接的 **CHAT MODELS** 下，点击 **Add**。
+6. 将 **Model name** 设为 `Router chat`，将 **Model key** 设为 `default-chat`，然后点击 **Add Model**。
+7. 在设置向导中，点击 **Next** 进入 **Select models**。如果使用 **Settings** > **Models**，在同一页面找到 **Select models** 区域。
+8. 在 **Select Chat Model** 下选择 **Olares Router - Router chat**，在 **Select Embedding Model** 下选择内置的 **Transformers - all-MiniLM-L6-v2**。
+9. 如果使用设置向导，点击 **Finish**。
 
 如果新添加的模型没有出现在 **Select Chat Model** 中，刷新页面，然后重新打开 **Settings** > **Models** 选择模型。
 
-之后可在 Vane 的 **Settings** > **Models** 中修改模型或连接。
+要使用其他聊天模型，在 Router 的 **Default models** 页面重新选择即可。Vane 通过 `default-chat` 跟随这一设置，Base URL 保持不变。要修改连接或内置嵌入模型，打开 Vane 的 **Settings** > **Models**。
 
 ## 连接 SearXNG
 
@@ -109,9 +101,7 @@ Vane（前身为 Perplexica）是一款开源 AI 问答引擎。它结合网络�
 只有在已保存的搜索地址为空时，Vane 才会使用 `SEARXNG_API_URL`。如果已有地址，请使用方式一修改。两种方式选择一种即可。
 :::
 
-:::info 可以使用 Router 的 default-search 吗？
-Vane 当前直接连接 SearXNG 实例。**SearXNG URL** 应填写 SearXNG 入口地址，而不是 `default-search` 或 Router 的 Base URL。在 Router 中配置搜索工具不会让 Vane 自动连接该工具。通过 Router 使用搜索工具的应用示例，请参阅[使用 Lares 执行深度研究任务](lares.md#运行深度研究任务)。
-:::
+通过 Router 使用搜索服务的配置方法，请参阅[使用 Lares 研究网页](lares-web-research.md)。Vane 的 **SearXNG URL** 仍填写 SearXNG 入口地址。
 
 ## 开始提问
 

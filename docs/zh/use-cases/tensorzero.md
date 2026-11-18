@@ -8,8 +8,8 @@ head:
     - name: keywords
       content: Olares, TensorZero, LLMOps, AI gateway, observability, evaluation, MCP, self-hosted
 app_version: "1.0.5"
-doc_version: "1.0"
-doc_updated: "2026-09-23"
+doc_version: "1.1"
+doc_updated: "2026-11-18"
 ---
 
 :::warning
@@ -37,7 +37,6 @@ TensorZero 是一个一体化平台，用于管理、连接和监控你的 AI �
 
 开始前，你需要：
 
-<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - 安装以下模型：
 
   | 模型类型 | 模型 | 获取方式 |
@@ -46,8 +45,6 @@ TensorZero 是一个一体化平台，用于管理、连接和监控你的 AI �
   | 嵌入 | EmbeddingGemma | 从 Market 安装。如果客户端应用不需要嵌入功能，则无需安装 |
 
 - 确保你的客户端应用（如 OpenCode 和 AgentZero）已经安装并完全可用。本指南仅涵盖将它们连接到 TensorZero 所需的特定设置。
-
-<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## 安装 TensorZero
 
@@ -71,19 +68,12 @@ TensorZero 不提供图形界面来配置模型。你需要在 Files 中编辑�
 
 - **格式规则**：配置文件使用 TOML 文本格式。你必须在不同部分之间保持至少一个空行，例如在 `[models]` 和 `[functions]` 之间。如果删除空行，应用可能无法启动。
 
-## 获取模型连接信息
+## 获取 Router 地址
 
-<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
+1. 从启动台打开 Router。在 **Default models** 页面将 Qwen3.8-27B (llama.cpp) 设为默认聊天模型，等待 `default-chat` 行显示为 **Callable**。
+2. <!--@include: ../reusables/ai-service-connections.md#router-openai-base-url-->
 
-聊天模型使用以下步骤：
-
-<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
-
-嵌入模型使用以下步骤：
-
-<!--@include: ../reusables/ai-service-connections.md#get-embedding-model-connection-details-openai-->
-
-将下方配置中的 `<embedding-model-name>` 替换为从 Router 复制的完整模型名称。
+下方聊天和嵌入配置中的 `<router-base-url>` 均使用这个地址。
 
 ## 配置聊天模型和功能
 
@@ -95,7 +85,7 @@ TensorZero 不提供图形界面来配置模型。你需要在 Files 中编辑�
 
 1. 打开 Files，然后进入 **Data** > **tensorzero** > **config**。
 2. 右键点击 `tensorzero.toml`，然后点击 <i class="material-symbols-outlined">edit_square</i>。
-3. 在编辑器中添加以下代码片段。将 `<qwen-base-url>` 替换为从 Router 复制的 Base URL。
+3. 在编辑器中添加以下代码片段。将 `<router-base-url>` 替换为上文获取的 Router Base URL。
 
     此配置将模型注册为别名 `router_chat`，并创建一个名为 `general_chat` 的客户端功能，将传入的应用请求路由到该模型。
 
@@ -105,7 +95,7 @@ TensorZero 不提供图形界面来配置模型。你需要在 Files 中编辑�
     routing = ["qwen"]
     [models.router_chat.providers.qwen]
     type = "openai"
-    api_base = "<qwen-base-url>"
+    api_base = "<router-base-url>"
     model_name = "default-chat"
     api_key_location = "none"
 
@@ -126,9 +116,11 @@ TensorZero 不提供图形界面来配置模型。你需要在 Files 中编辑�
 
 某些应用需要嵌入模型来搜索文档或构建记忆功能。TensorZero 将嵌入模型与聊天模型分开处理。你必须定义一个专用的嵌入模型。不要为记忆任务使用聊天功能。
 
+从应用市场安装 EmbeddingGemma。在 Router 的 **Default models** 页面将其设为默认嵌入模型，等待 `default-embedding` 行显示为 **Callable**。以后更换此默认模型时，使用 TensorZero 的知识库应用需要为已有文档重新建立索引。
+
 1. 在 `tensorzero.toml` 中添加以下代码片段以定义一个嵌入模型：
 
-    将 `<embedding-base-url>` 替换为从 Router 复制的 Base URL。此配置将模型注册为别名 `embeddinggemma`。
+    将 `<router-base-url>` 替换为上文获取的 Router Base URL。此配置将模型注册为别名 `embeddinggemma`。
 
     ```toml
     # embedding_models
@@ -136,8 +128,8 @@ TensorZero 不提供图形界面来配置模型。你需要在 Files 中编辑�
     routing = ["embeddinggemma"]
     [embedding_models.embeddinggemma.providers.embeddinggemma]
     type = "openai"
-    api_base = "<embedding-base-url>"
-    model_name = "<embedding-model-name>"
+    api_base = "<router-base-url>"
+    model_name = "default-embedding"
     api_key_location = "none"
     ```
 
@@ -169,8 +161,6 @@ Playground 需要至少一个测试用例（称为 Datapoint）来显示聊天�
     ![验证连接](/images/manual/use-cases/tensorzero-playground.png#bordered)   
 
 ## 获取 TensorZero 端点
-
-<!--@include: ../reusables/ai-service-connections.md#app-endpoint-overview-->
 
 对于 TensorZero：
 

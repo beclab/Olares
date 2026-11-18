@@ -8,8 +8,8 @@ head:
     - name: keywords
       content: Olares, Hermes, Hermes Agent, Webapp, 委派, 本地模型, Discord 机器人, 自托管
 app_version: "1.3.51"
-doc_version: "3.3"
-doc_updated: "2026-11-05"
+doc_version: "3.4"
+doc_updated: "2026-11-18"
 ---
 
 :::warning
@@ -42,7 +42,6 @@ Hermes Agent 是一个能够自主执行任务的 AI 助手。接入本地模型
 
 开始前，你需要：
 
-<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - **Discord 账号**：用来创建机器人应用。
 - **Discord 服务器**：确保你在这个服务器上有添加机器人的权限。
 - 以下模型：
@@ -52,8 +51,6 @@ Hermes Agent 是一个能够自主执行任务的 AI 助手。接入本地模型
     :::tip
     Hermes Agent 要求模型的上下文窗口至少为 64K tokens。
     :::
-
-<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## 安装 Hermes Agent
 
@@ -83,11 +80,10 @@ Olares 支持克隆应用。如果你想同时运行多个独立的 AI 助手，
 
 ### 第 1 步：获取模型连接信息
 
-<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
+1. 从启动台打开 Router。在 **Default models** 页面将 Qwen3.8-27B (llama.cpp) 设为默认聊天模型，等待 `default-chat` 显示 **Callable**。
+2. <!--@include: ../reusables/ai-service-connections.md#router-openai-base-url-->
 
-<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
-
-6. 在 Router 的 **LLM** 页面，点击 Qwen3.8-27B (llama.cpp) 所在行的信息图标，打开 **Model card**。在 **Engine args** 中读取 `-c` 后的数值。例如，`-c 104448` 表示下一步应填写 `104448`。截图说明见[查看实际上下文大小](llm-base-apps.md#在-router-中查看模型详情)。
+3. 在 Router 的 **LLM** 页面，点击 Qwen3.8-27B (llama.cpp) 所在行的信息图标，打开 **Model card**。在 **Engine args** 中读取 `-c` 后的数值。例如，`-c 104448` 表示下一步应填写 `104448`。截图说明见[查看实际上下文大小](llm-base-apps.md#在-router-中查看模型详情)。
 
 ### 第 2 步：运行设置向导
 
@@ -106,7 +102,7 @@ Olares 支持克隆应用。如果你想同时运行多个独立的 AI 助手，
     |:-----------|:---------|
     | How would you like to set up Hermes | 选择 **Full setup — configure every provider, tool & option yourself (bring your own keys)**。 |
     | Select provider | 选择 **Custom endpoint (enter URL manually)**。  |
-    | API base URL  | 输入从 Router 复制的 **Base URL**。<br>例如 `https://router.<your-olares-domain>/v1`。  |
+    | API base URL  | 输入从 Router 复制的 **Base URL**。  |
     | API key  | 填写 `olares`。<br>出于安全考虑，输入内容会被隐藏。 |
     | Select API compatibility mode | 输入 `1`，选择 **Auto-detect**。 |
     | Use this model? [Y/n] — 仅检测到一个模型时出现 | 输入 `n`，然后在接下来的 **Model name** 提示中填写 `default-chat`。确认提示只接受是/否，不是在这里输入模型名。 |

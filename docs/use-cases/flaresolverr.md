@@ -7,8 +7,8 @@ head:
     - name: keywords
       content: Olares, FlareSolverr, Prowlarr, Cloudflare, indexer, proxy, self-hosted, setup FlareSolverr with Prowlarr, FlareSolverr Prowlarr, Prowlarr FlareSolverr, FlareSolverr Kodi, ghcr.io FlareSolverr
 app_version: "1.0.4"
-doc_version: "1.1"
-doc_updated: "2026-07-29"
+doc_version: "1.2"
+doc_updated: "2026-11-18"
 ---
 
 # Access Cloudflare-protected sites in Prowlarr with FlareSolverr
@@ -41,7 +41,6 @@ In this guide, you will learn how to:
 
 FlareSolverr runs as a background service, so it does not appear on Launchpad.
 
-
 In **Settings** > **Applications**, look for FlareSolverr in the app list to confirm it is running.
 
 ![FlareSolverr in Settings](/images/manual/use-cases/flaresolverr-installed-in-settings.png#bordered){width=60%}
@@ -53,8 +52,6 @@ Or open **Market** > **My Olares** to see FlareSolverr among your installed apps
 ## Configure FlareSolverr in Prowlarr
 
 ### Get the FlareSolverr endpoint
-
-<!--@include: ../reusables/ai-service-connections.md#app-endpoint-overview-->
 
 For FlareSolverr:
 

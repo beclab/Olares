@@ -6,8 +6,8 @@ head:
     - name: keywords
       content: "Olares, Local Deep Research, AI research, AI Router, SearXNG, citations, research reports, local models"
 app_version: "0.0.12"
-doc_version: "1.0"
-doc_updated: "2026-10-16"
+doc_version: "1.1"
+doc_updated: "2026-11-18"
 ---
 
 # Research a topic with cited sources using Local Deep Research
@@ -36,8 +36,6 @@ Before you begin, you need:
   | Model type | Model | How to get it |
   | :--- | :--- | :--- |
   | Chat | Qwen3.8-27B (llama.cpp) | Install from Market |
-
-<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## Check model availability
 

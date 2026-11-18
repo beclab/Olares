@@ -13,12 +13,16 @@ head:
 Dify 是一个 AI 应用开发平台。它是 Olares 集成的关键开源项目之一，帮助你构建和管理 AI 应用，同时确保数据完全由自己掌控。
 此外，你也可以在 Dify 中接入个人知识库文档，让 AI 应用更懂你。
 
+## 学习目标
+
+本教程将介绍如何：
+
+- 通过 Router 将 Dify 连接到本地聊天模型。
+- 创建助手，并向知识库添加文档。
+
 ## 开始之前
 
-<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - 从应用市场安装 Qwen3.8-27B (llama.cpp)。
-
-<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## 安装 Dify
 :::info
@@ -40,7 +44,8 @@ Dify 是一个 AI 应用开发平台。它是 Olares 集成的关键开源项目
 
 ### 获取模型连接信息
 
-<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
+1. 从启动台打开 Router。在 **Default models** 页面将 Qwen3.8-27B (llama.cpp) 设为默认聊天模型，等待 `default-chat` 显示 **Callable**。
+2. <!--@include: ../reusables/ai-service-connections.md#router-openai-base-url-->
 
 ### 在 Dify 中配置模型
 
@@ -53,7 +58,6 @@ Dify 是一个 AI 应用开发平台。它是 Olares 集成的关键开源项目
 
 1. 切换至 Dify 的**工作室**选项，并进入 **Ashia** 应用。
 2. 从右侧模型列表中选择刚刚配置的 `default-chat` 模型。
-
 
    <!--
    TODO: 素材清单 05，待补 Router 截图：dify-model-router.png；替换下方旧图后再取消注释。

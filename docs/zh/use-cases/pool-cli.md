@@ -8,8 +8,8 @@ head:
     - name: keywords
       content: Olares, Pool CLI, AI coding, terminal, TUI, self-hosted, MCP
 app_version: "0.1.0"
-doc_version: "1.0"
-doc_updated: "2026-09-23"
+doc_version: "1.1"
+doc_updated: "2026-11-18"
 ---
 
 :::warning
@@ -36,14 +36,11 @@ Pool CLI 是一个基于终端的编码助手，可以帮助你通过自然语�
 
 开始前，你需要：
 
-<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - 以下模型：
 
   | 用途 | 模型 | 获取方式 |
   | :--- | :--- | :--- |
   | 连接本地模型 | Qwen3.8-27B (llama.cpp) | 从 Market 安装 |
-
-<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## 安装 Pool CLI
 
@@ -112,11 +109,8 @@ Pool CLI 是一个基于终端的编码助手，可以帮助你通过自然语�
 
 #### 获取模型连接信息
 
-<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
-
-对于 Qwen3.8-27B (llama.cpp)：
-
-<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
+1. 从启动台打开 Router。在 **Default models** 页面将 Qwen3.8-27B (llama.cpp) 设为默认聊天模型，等待 `default-chat` 显示 **Callable**。
+2. <!--@include: ../reusables/ai-service-connections.md#router-openai-base-url-->
 
 #### 配置 Pool CLI
 

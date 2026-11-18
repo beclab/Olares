@@ -8,8 +8,8 @@ head:
     - name: keywords
       content: Olares, OpenCode, AI coding agent, Qwen3.8, OpenAI, ChatGPT, self-hosted, code generation, TUI
 app_version: "1.0.11"
-doc_version: "1.3"
-doc_updated: "2026-09-23"
+doc_version: "1.4"
+doc_updated: "2026-11-18"
 ---
 
 :::warning
@@ -39,7 +39,6 @@ OpenCode 是一个 AI 驱动的编码代理，允许你通过自然语言编写�
 
 开始前，你需要：
 
-<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - 从 Market 安装应用的管理员权限。
 - 其他条件取决于 OpenCode 的使用方式：
 
@@ -48,8 +47,6 @@ OpenCode 是一个 AI 驱动的编码代理，允许你通过自然语言编写�
    | 在浏览器中使用本地模型 | 从 Market 安装 Qwen3.8-27B (llama.cpp) |
    | 在浏览器中使用 OpenAI | ChatGPT Plus/Pro 账号或 OpenAI API key |
    | 在计算机上使用 OpenCode CLI | Olares 上已配置 Router 默认聊天模型，并已创建 Router API 密钥。 |
-
-<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## 在浏览器中运行 OpenCode
 
@@ -68,15 +65,12 @@ OpenCode 是一个 AI 驱动的编码代理，允许你通过自然语言编写�
 
 ### 获取模型连接信息
 
-:::tip 计划使用 oh-my-openagent？
-对于 [oh-my-openagent](opencode-omo.md) 下的多本地模型设置，请使用单一模型应用。每个模型都有自己的端点，这允许你将其注册为单独的提供方，并调整每个模型的设置（如并发限制）。
-:::
-
-<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
+配置 [oh-my-openagent](opencode-omo.md) 的多个本地模型时，在同一个 Router 提供方下添加各模型的完整 ID，即可分别配置并发限制等参数。
 
 本示例中，OpenCode 通过 OpenAI-compatible API 格式连接 Qwen3.8-27B：
 
-<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
+1. 从启动台打开 Router。在 **Default models** 页面将 Qwen3.8-27B (llama.cpp) 设为默认聊天模型，等待 `default-chat` 显示 **Callable**。
+2. <!--@include: ../reusables/ai-service-connections.md#router-openai-base-url-->
 
 ### 连接到自定义提供方
 
@@ -102,7 +96,6 @@ OpenCode 是一个 AI 驱动的编码代理，允许你通过自然语言编写�
    TODO: 素材清单 10，待补 Router 截图：opencode-provider-router.png；替换下方旧图后再取消注释。
    ![Provider list](/images/manual/use-cases/opencode-provider-list.png#bordered)
    -->
-
 
 ### 连接到 OpenAI
 
@@ -234,7 +227,6 @@ OpenCode 还提供基于终端的 UI（TUI）。你可以通过两种方式启�
    ![Select model in TUI](/images/manual/use-cases/opencode-web-tui-select-model.png#bordered)
    -->
 
-
 4. 直接输入你的提示。例如，要求 OpenCode 改进代码。
    ![Chat in TUI](/images/manual/use-cases/opencode-web-tui-chat.png#bordered)
 
@@ -252,7 +244,6 @@ OpenCode 还提供基于终端的 UI（TUI）。你可以通过两种方式启�
    TODO: 素材清单 12，待补 Router 截图：opencode-terminal-model-router.png；替换下方旧图后再取消注释。
    ![Select model in OpenCode Terminal](/images/manual/use-cases/opencode-terminal-select-model.png#bordered)
    -->
-
 
 4. 直接输入你的提示。例如，使用 `@` 提及文件并向 OpenCode 询问它。
    ![Chat in OpenCode Terminal](/images/manual/use-cases/opencode-terminal-mention.png#bordered)
@@ -351,7 +342,6 @@ OpenCode 还提供基于终端的 UI（TUI）。你可以通过两种方式启�
    TODO: 素材清单 13，待补 Router 截图：opencode-local-tui-model-router.png；替换下方旧图后再取消注释。
    ![Select model in terminal TUI](/images/manual/use-cases/opencode-terminal-tui-select-model.png#bordered)
    -->
-
 
 3. 开始与你的自托管模型聊天。
    ![Chat in terminal TUI](/images/manual/use-cases/router-client-connect-opencode.png#bordered)

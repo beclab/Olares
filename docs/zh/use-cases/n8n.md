@@ -6,8 +6,8 @@ head:
     - name: keywords
       content: Olares, n8n, 工作流自动化, 自托管, 无代码, 低代码, NocoDB, Webhook, 集成
 app_version: "1.0.16"
-doc_version: "2.0"
-doc_updated: "2026-07-31"
+doc_version: "2.1"
+doc_updated: "2026-11-18"
 ---
 
 :::warning
@@ -138,8 +138,6 @@ n8n 会将凭证与工作流逻辑分开保存，因此同一个 NocoDB API toke
    | `is_prerelease` | Single line text |
 
 ### 获取 NocoDB 连接信息
-
-<!--@include: ../reusables/ai-service-connections.md#app-endpoint-overview-->
 
 1. 前往 Olares **设置** > **应用** > **NocoDB** > **入口**。
 2. 选择 **NocoDB**。

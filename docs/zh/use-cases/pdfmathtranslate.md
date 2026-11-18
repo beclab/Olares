@@ -31,14 +31,11 @@ PDFMathTranslate 是一款用于翻译学术 PDF 文档的应用，能够在保�
 
 开始前，你需要：
 
-<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - 以下模型：
 
   | 用途 | 模型 | 获取方式 |
   | :--- | :--- | :--- |
   | 翻译 | Qwen3.8-27B (llama.cpp) | 从 Market 安装 |
-
-<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## 安装 PDFMathTranslate
 
@@ -72,11 +69,8 @@ PDFMathTranslate 是一款用于翻译学术 PDF 文档的应用，能够在保�
 
 PDFMathTranslate 通过 Qwen3.8-27B 的 OpenAI-compatible API 与其连接。
 
-<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
-
-对于 Qwen3.8-27B (llama.cpp)：
-
-<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
+1. 从启动台打开 Router。在 **Default models** 页面将 Qwen3.8-27B (llama.cpp) 设为默认聊天模型，等待 `default-chat` 显示 **Callable**。
+2. <!--@include: ../reusables/ai-service-connections.md#router-openai-base-url-->
 
 ### 配置翻译服务
 

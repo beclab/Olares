@@ -7,8 +7,8 @@ head:
     - name: keywords
       content: Olares, FlareSolverr, Prowlarr, Cloudflare, indexer, proxy, self-hosted, 设置 FlareSolverr 与 Prowlarr, FlareSolverr Prowlarr, Prowlarr FlareSolverr, FlareSolverr Kodi, ghcr.io FlareSolverr
 app_version: "1.0.4"
-doc_version: "1.1"
-doc_updated: "2026-07-29"
+doc_version: "1.2"
+doc_updated: "2026-11-18"
 ---
 
 :::warning
@@ -56,8 +56,6 @@ FlareSolverr 作为后台服务运行，因此不会出现在 Launchpad 上。
 ## 在 Prowlarr 中配置 FlareSolverr
 
 ### 获取 FlareSolverr Endpoint
-
-<!--@include: ../reusables/ai-service-connections.md#app-endpoint-overview-->
 
 对于 FlareSolverr：
 

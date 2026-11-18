@@ -8,8 +8,8 @@ head:
     - name: keywords
       content: Olares, Paperclip, AI agent, multi-agent, Claude Code, Codex, OpenCode, Cursor, self-hosted
 app_version: "1.0.34"
-doc_version: "1.2"
-doc_updated: "2026-10-08"
+doc_version: "1.3"
+doc_updated: "2026-11-18"
 ---
 
 :::warning
@@ -23,15 +23,6 @@ doc_updated: "2026-10-08"
 Paperclip 是一个开源平台，用于在同一个统一工作区下协调多个 AI 智能体。通过设置虚拟公司，你可以添加由 Claude Code、Codex、OpenCode、Cursor 或其他提供商驱动的 AI 智能体，并为它们分配任务单。无论是编码、研究还是内容创作，Paperclip 都能管理工作流。
 
 将 Paperclip 作为自托管应用运行在 Olares 上，可以确保你的 API 密钥、任务历史和智能体输出完全保留在你的设备上。
-
-## 前提条件
-
-开始前，你需要：
-
-<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
-- 如需使用本地模型，从应用市场安装 Qwen3.8-27B (llama.cpp)。
-
-<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## 学习目标
 
@@ -196,9 +187,8 @@ OpenCode 可以通过 Olares Router 调用兼容 OpenAI API 的本地模型。�
 
 从 Market 安装并启动 Qwen3.8-27B (llama.cpp)，然后在 Router 中获取连接信息。
 
-<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
-
-<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
+1. 从启动台打开 Router。在 **Default models** 页面将 Qwen3.8-27B (llama.cpp) 设为默认聊天模型，等待 `default-chat` 显示 **Callable**。
+2. <!--@include: ../reusables/ai-service-connections.md#router-openai-base-url-->
 
 ### 配置 OpenCode
 
@@ -226,14 +216,12 @@ Paperclip 容器内的持久化配置路径为 `/paperclip/.config/opencode/open
         }
       },
       "options": {
-        "baseURL": "https://router.your_olares_id.olares.com/v1"
+        "baseURL": "https://router.laresprime.olares.com/v1"
       }
     }
   }
 }
 ```
-
-认证方式以 Router 连接说明为准。如果接口要求密钥，请配置该接口的密钥，不能用 OpenAI 或 OpenRouter 云端密钥代替。提交问题反馈时不要公开凭证文件。
 
 ### 创建不绑定 AI Connection 的 OpenCode 智能体
 

@@ -8,8 +8,8 @@ head:
     - name: keywords
       content: Olares, Speaches, speech-to-text, text-to-speech, STT, TTS, voice chat, OpenAI-compatible, Whisper, Kokoro
 app_version: "1.0.7"
-doc_version: "1.0"
-doc_updated: "2026-09-23"
+doc_version: "1.1"
+doc_updated: "2026-11-18"
 ---
 
 # Set up speech services with Speaches
@@ -35,15 +35,12 @@ In this guide, you will learn how to:
 
 Before you begin, you need:
 
-<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - Olares is running on a device with an NVIDIA GPU.
 - To use Audio Chat, install the following chat model:
 
   | Model type | Model | How to get it |
   | :--- | :--- | :--- |
   | Chat | Qwen3.8-27B (llama.cpp) | Install from Market |
-
-<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## Install Speaches
 
@@ -122,11 +119,10 @@ Use **Audio Chat** to talk to an AI model with voice, text, or an audio file. Sp
 
 #### Get model connection details
 
-<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
-
 In this guide, Audio Chat uses Qwen3.8-27B (llama.cpp) with the **OpenAI-Compatible** API format.
 
-<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
+1. Open Router from Launchpad. On **LLM**, find Qwen3.8-27B (llama.cpp) and wait until it shows **Callable**.
+2. <!--@include: ../reusables/ai-service-connections.md#router-openai-base-url-->
 
 #### Configure Speaches
 

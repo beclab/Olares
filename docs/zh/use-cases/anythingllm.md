@@ -8,8 +8,8 @@ head:
     - name: keywords
       content: Olares, AnythingLLM, self-hosted rag, private knowledge base, anythingllm ollama, local LLM, embedding, anythingllm on olares
 app_version: "1.0.13"
-doc_version: "2.0"
-doc_updated: "2026-09-23"
+doc_version: "2.1"
+doc_updated: "2026-11-18"
 ---
 
 :::warning
@@ -34,7 +34,6 @@ AnythingLLM 是一个开源的一体化 AI 应用，让你可以使用检索增�
 
 开始前，你需要：
 
-<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - 从 Market 安装应用的管理员权限。
 - 以下模型：
 
@@ -42,8 +41,6 @@ AnythingLLM 是一个开源的一体化 AI 应用，让你可以使用检索增�
   | :--- | :--- | :--- |
   | 聊天 | Qwen3.8-27B (llama.cpp) | 从 Market 安装 |
   | 嵌入 | all-MiniLM-L6-v2 | AnythingLLM 内置的嵌入模型 |
-
-<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## 安装 AnythingLLM
 
@@ -55,11 +52,8 @@ AnythingLLM 是一个开源的一体化 AI 应用，让你可以使用检索增�
 
 ## 获取模型连接信息
 
-<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
-
-对于 Qwen3.8-27B (llama.cpp)：
-
-<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
+1. 从启动台打开 Router。在 **Default models** 页面将 Qwen3.8-27B (llama.cpp) 设为默认聊天模型，等待 `default-chat` 显示 **Callable**。
+2. <!--@include: ../reusables/ai-service-connections.md#router-openai-base-url-->
 
 ## 配置 AnythingLLM
 
@@ -70,14 +64,13 @@ AnythingLLM 是一个开源的一体化 AI 应用，让你可以使用检索增�
 1. 从 Launchpad 打开 AnythingLLM。
 2. 在主页上，点击左下角的 **Open settings** 图标。
 3. 在左侧边栏中，选择 **AI Providers** > **LLM**，然后选择 **Generic OpenAI** 作为 LLM 提供方。
-4. 在 **Base URL** 中，粘贴 Router 中的 Base URL。
+4. 在 **Base URL** 中填写 Router Base URL。如果 API 密钥字段要求必填，填写 `olares`。
 5. 在 **Selected Model** 中手动填写 `default-chat`。
 
    <!--
    TODO: 素材清单 01，待补 Router 截图：anythingllm-chat-model-router.png；替换下方旧图后再取消注释。
    ![配置聊天模型](/images/manual/use-cases/anythingllm-configure-chat-model.png#bordered)
    -->
-
 
 6. 点击 **Save changes**。显示 "LLM preferences saved successfully" 消息。
 

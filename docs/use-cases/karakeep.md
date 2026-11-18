@@ -8,8 +8,8 @@ head:
     - name: keywords
       content: Olares, Karakeep, Hoarder, bookmark manager, self-hosted, AI auto-tag, mobile app, Ollama, video download
 app_version: "1.0.4"
-doc_version: "1.1"
-doc_updated: "2026-09-23"
+doc_version: "1.2"
+doc_updated: "2026-11-18"
 ---
 
 # Save and organize bookmarks with Karakeep
@@ -35,14 +35,11 @@ In this guide, you will learn how to:
 
 Before you begin, you need:
 
-<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - The following model for AI auto-tagging:
 
   | Model type | Model | How to get it |
   | :--- | :--- | :--- |
   | Chat | Qwen3.8-27B (llama.cpp) | Install from Market |
-
-<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## Install Karakeep
 
@@ -93,8 +90,6 @@ Use a strong account password and keep your API key secure.
 
 ### Get your Karakeep endpoint URL
 
-<!--@include: ../reusables/ai-service-connections.md#app-endpoint-overview-->
-
 On the same **Entrances** page, copy the **Endpoint** URL shown for Karakeep.
 
 Use this Endpoint as the **Server Address** in the Karakeep mobile app.
@@ -134,13 +129,14 @@ This guide uses the pre-built Qwen3.8-27B (llama.cpp) model app from Market.
 
 ### Get the model connection details
 
-<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
+1. Open Router from Launchpad. On **Default models**, set Qwen3.8-27B (llama.cpp) as the default chat model and wait until `default-chat` shows **Callable**.
+2. <!--@include: ../reusables/ai-service-connections.md#router-openai-base-url-->
 
 ### Connect Karakeep to the local model
 
 1. Open **Settings** > **Applications** > **Karakeep** > **Manage environment variables** and configure:
 
-   - **OPENAI_API_KEY**: Enter `olares`. Karakeep requires a non-empty value to enable this provider. Router identifies the Olares app through the platform.
+   - **OPENAI_API_KEY**: Enter `olares`.
    - **OLLAMA_BASE_URL**: Clear this field to stop using the old Ollama connection.
    - **INFERENCE_TEXT_MODEL**: Enter `default-chat`.
    - **INFERENCE_IMAGE_MODEL**: Leave empty for text-only tagging. For image tagging, enter the full Router name of a vision-capable model.

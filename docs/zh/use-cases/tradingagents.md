@@ -8,8 +8,8 @@ head:
     - name: keywords
       content: Olares, TradingAgents, AI trading, multi-agent, local LLM, Ollama, market analysis, financial research
 app_version: "1.0.7"
-doc_version: "2.0"
-doc_updated: "2026-09-23"
+doc_version: "2.1"
+doc_updated: "2026-11-18"
 ---
 
 :::warning
@@ -44,14 +44,11 @@ TradingAgents 项目开发者、贡献者和 Olares 对因使用本项目而导�
 
 开始前，你需要：
 
-<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - 以下模型：
 
   | 模型类型 | 模型 | 获取方式 |
   | :--- | :--- | :--- |
   | 聊天 | Qwen3.8-27B (llama.cpp) | 从 Market 安装 |
-
-<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## 安装 TradingAgents
 
@@ -67,14 +64,15 @@ TradingAgents 项目开发者、贡献者和 Olares 对因使用本项目而导�
 
 ### 获取模型连接信息
 
-<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
+1. 从启动台打开 Router。在 **Default models** 页面将 Qwen3.8-27B (llama.cpp) 设为默认聊天模型，等待 `default-chat` 显示 **Callable**。
+2. <!--@include: ../reusables/ai-service-connections.md#router-openai-base-url-->
 
 ### 配置 TradingAgents
 
 1. 打开 Settings，然后进入 **Applications** > **TradingAgents** > **Manage environment variables**。
 2. 点击 <i class="material-symbols-outlined">edit_square</i> 旁边的 `OLLAMA_BASE_URL`。
 
-3. 输入从 Router 复制的 **Base URL**，保留末尾的 `/v1`。例如，`https://router.<your-olares-domain>/v1`。
+3. 输入从 Router 复制的 **Base URL**，保留末尾的 `/v1`。
 
    <!--
    TODO: 素材清单 16，待补 Router 截图：tradingagents-env-router.png；替换下方旧图后再取消注释。

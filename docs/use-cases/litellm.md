@@ -6,8 +6,8 @@ head:
     - name: keywords
       content: Olares, LiteLLM, AI gateway, model proxy, OpenAI-compatible, Ollama, Open WebUI, self-hosted
 app_version: "1.0.8"
-doc_version: "1.1"
-doc_updated: "2026-07-29"
+doc_version: "1.2"
+doc_updated: "2026-11-18"
 ---
 
 # Use LiteLLM as a unified AI model gateway
@@ -137,8 +137,6 @@ This section uses Open WebUI as an example. The same approach applies to any cli
    ![Copy virtual key](/images/manual/use-cases/litellm-copy-key.png#bordered){width=60%}
 
 ### Get the LiteLLM API endpoint
-
-<!--@include: ../reusables/ai-service-connections.md#app-endpoint-overview-->
 
 For LiteLLM:
 

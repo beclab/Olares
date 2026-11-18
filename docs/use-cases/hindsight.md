@@ -6,8 +6,8 @@ head:
     - name: keywords
       content: Olares, Hindsight, Hermes Agent, persistent memory, self-hosted, retain, recall
 app_version: "0.0.17"
-doc_version: "1.0"
-doc_updated: "2026-10-09"
+doc_version: "1.1"
+doc_updated: "2026-11-18"
 ---
 
 # Add persistent memory to your agent with Hindsight
@@ -15,6 +15,14 @@ doc_updated: "2026-10-09"
 Hindsight is an open-source memory service that helps AI agents remember information across conversations. It stores memories on your Olares device and calls models through Router to organize and search them.
 
 This guide uses Hermes Agent to save a fact, retrieve it in a new conversation, and control when memories are saved.
+
+## Learning objectives
+
+In this guide, you will learn how to:
+
+- Prepare the chat and embedding models for Hindsight.
+- Connect Hermes Agent to a Hindsight memory bank.
+- Save, recall, and manage memories across conversations.
 
 ## Prerequisites
 
@@ -27,8 +35,6 @@ This guide uses Hermes Agent to save a fact, retrieve it in a new conversation, 
   | :--- | :--- | :--- |
   | Chat | Qwen3.8-27B (llama.cpp) | Install from Market |
   | Embedding | EmbeddingGemma | Install from Market |
-
-<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## Check model availability
 

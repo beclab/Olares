@@ -8,9 +8,9 @@ head:
   - - meta
     - name: keywords
       content: Olares, DeerFlow, AI agent, deep research, multi-agent, self-hosted, LLM
-doc_version: "1.2"
+doc_version: "1.3"
 app_version: "1.0.6"
-doc_updated: "2026-09-23"
+doc_updated: "2026-11-18"
 ---
 
 # Set up DeerFlow 2.0 for AI-powered research and tasks
@@ -31,14 +31,11 @@ In this guide, you will learn how to:
 
 Before you begin, you need:
 
-<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - The following model:
 
   | Model type | Model | How to get it |
   | :--- | :--- | :--- |
   | Chat | Qwen3.8-27B (llama.cpp) | Install from Market |
-
-<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## Install DeerFlow 2.0
 
@@ -53,11 +50,8 @@ DeerFlow 2.0 uses a `config.yaml` file for its core configuration. To connect it
 
 ### Get model connection details
 
-<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
-
-For Qwen3.8-27B (llama.cpp):
-
-<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
+1. Open Router from Launchpad. On **Default models**, set Qwen3.8-27B (llama.cpp) as the default chat model and wait until `default-chat` shows **Callable**.
+2. <!--@include: ../reusables/ai-service-connections.md#router-openai-base-url-->
 
 ### Edit config.yaml
 
@@ -80,7 +74,6 @@ For Qwen3.8-27B (llama.cpp):
    TODO: 素材清单 04，待补 Router 截图：deerflow2-config-router.png；替换下方旧图后再取消注释。
    ![Edit config.yaml](/images/manual/use-cases/deerflow2-edit-config-yaml1.png#bordered)
    -->
-
 
 4. Click <span class="material-symbols-outlined">save</span> to save the changes.
 

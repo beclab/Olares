@@ -9,7 +9,7 @@ head:
     - name: keywords
       content: Olares, OpenClaw, self-hosted ai agent, personal ai agent, local ai agent, openclaw on olares
 app_version: "1.0.57"
-doc_version: "3.1"
+doc_version: "3.2"
 doc_updated: "2026-11-18"
 ---
 
@@ -35,7 +35,6 @@ In this guide, you will learn how to:
 
 Before you begin, you need:
 
-<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - Discord account: Required to create the bot application.
 - Discord server: A server where you have permissions to add bots.
 - The following model:
@@ -47,8 +46,6 @@ Before you begin, you need:
   :::tip Model provider
   This tutorial uses Qwen3.8-27B (llama.cpp) through Router's OpenAI-compatible API. If you use a different provider or local proxy, see the [OpenClaw documentation on custom providers](https://docs.openclaw.ai/concepts/model-providers#providers-via-models-providers-custom%2Fbase-url).
   :::
-
-<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## Upgrade notes
 
@@ -82,11 +79,8 @@ This tutorial uses Qwen3.8-27B (llama.cpp), a tool-capable model available from 
 OpenClaw requires a large "context window" (that is the AI's short-term memory) to handle complex tasks without forgetting your previous instructions. If you are using local models, it is recommended to select a model that natively supports a context window of at least 64K tokens.
 :::
 
-<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
-
-<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
-
-For OpenClaw, use `olares` as the API key placeholder.
+1. Open Router from Launchpad. On **Default models**, set Qwen3.8-27B (llama.cpp) as the default chat model and wait until `default-chat` shows **Callable**.
+2. <!--@include: ../reusables/ai-service-connections.md#router-openai-base-url-->
 
 ### Step 2: Run onboarding wizard
 
@@ -112,7 +106,7 @@ Set up OpenClaw using the step-by-step interactive wizard.
     :::
 
     :::info API key required by OpenClaw
-    Enter `olares` in the API key field, even though the prompt says it can be left blank. OpenClaw 2026.11.3 requires a non-empty value for this connection. Apps in Olares do not need a Router API key.
+    Enter `olares` in the API key field, even though the prompt says it can be left blank. OpenClaw 2026.11.3 requires a non-empty value for this connection.
 
     If the live completion test reports `No API key found for provider "router"`, select **Fix model/auth setup**, enter `olares`, and retry.
     :::
@@ -125,7 +119,7 @@ Set up OpenClaw using the step-by-step interactive wizard.
     | Model/auth provider | Select **Custom Provider**. |
     | API Base URL | Paste the Router Base URL from Step 1, including `/v1`. |
     | How do you want to provide this API key? | Select **Paste API key now** if this prompt appears. |
-    | API Key (leave blank if not required) | Enter a non-empty placeholder, such as `olares`. |
+    | API Key (leave blank if not required) | Enter `olares`. |
     | Endpoint compatibility | Select **OpenAI-compatible**. |
     | Model ID | Enter `default-chat`. The wizard may verify the endpoint before continuing. |
     | Endpoint ID | Enter `router`. The model reference is `router/default-chat`. |

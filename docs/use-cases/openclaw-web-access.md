@@ -6,8 +6,8 @@ head:
     - name: keywords
       content: Olares, OpenClaw, OpenClaw tutorial, OpenClaw learning, OpenClaw web search
 app_version: "1.0.36"
-doc_version: "2.4"
-doc_updated: "2026-09-04"
+doc_version: "2.5"
+doc_updated: "2026-11-18"
 ---
 
 # Optional: Enable web search in OpenClaw
@@ -37,8 +37,6 @@ Install SearXNG from Market.
 ## Step 2: Get the SearXNG endpoint
 
 OpenClaw needs the SearXNG endpoint to connect to its search service.
-
-<!--@include: ../reusables/ai-service-connections.md#app-endpoint-overview-->
 
 1. Go to Olares **Settings** > **Applications** > **SearXNG** > **Entrances**.
 2. Select **SearXNG**, then copy the **Endpoint** URL.

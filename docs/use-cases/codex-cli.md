@@ -8,8 +8,8 @@ head:
     - name: keywords
       content: Olares, Codex CLI, OpenAI, AI coding agent, browser terminal, ChatGPT, local LLM, Qwen3.8, self-hosted
 app_version: "1.0.18"
-doc_version: "1.0"
-doc_updated: "2026-09-23"
+doc_version: "1.1"
+doc_updated: "2026-11-18"
 ---
 
 # Run Codex CLI on Olares
@@ -34,15 +34,11 @@ In this guide, you will learn how to:
 
 Before you begin, you need:
 
-<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
-
 Depending on how you connect, prepare one of the following:
 
 - **ChatGPT**: A ChatGPT account with Codex access.
 - **OpenAI Platform**: An OpenAI API key.
 - **Local model**: Qwen3.8-27B (llama.cpp) installed from Market.
-
-<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## Install Codex CLI
 
@@ -110,7 +106,8 @@ This example connects Codex CLI to Qwen3.8-27B (llama.cpp) through its OpenAI-co
 
 #### Get the model connection details
 
-<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
+1. Open Router from Launchpad. On **Default models**, set Qwen3.8-27B (llama.cpp) as the default chat model and wait until `default-chat` shows **Callable**.
+2. <!--@include: ../reusables/ai-service-connections.md#router-openai-base-url-->
 
 #### Configure Codex CLI
 
@@ -118,14 +115,13 @@ This example connects Codex CLI to Qwen3.8-27B (llama.cpp) through its OpenAI-co
 2. Configure the following variables:
 
    - **OPENAI_BASE_URL**: Paste the Base URL copied from Router exactly as shown, including the trailing `/v1`.
-   - **OPENAI_API_KEY**: Enter a non-empty placeholder value, such as `olares`. Router identifies requests from this Olares app through the platform.
+   - **OPENAI_API_KEY**: Enter `olares`.
    - **CODEX_MODEL**: Enter `default-chat`.
 
    <!--
    TODO: 素材清单 03，待补 Router 截图：codex-cli-env-router.png；替换下方旧图后再取消注释。
    ![Codex CLI local model environment variables](/images/manual/use-cases/codex-cli-local-model-env.png#bordered)
    -->
-
 
 3. Click **Apply** and wait for Codex CLI to restart.
 4. Open Codex CLI from Launchpad and run:
@@ -216,7 +212,7 @@ The callback service runs inside the Codex CLI container, so your computer's bro
 
 ### Why does the local model return 404?
 
-Copy the Base URL from **Apps in Olares** in Router's **How to call this model** window, including `/v1`. Check that the default chat model shows **Callable** on **LLM**.
+Check that the Router Base URL ends with `/v1` and that `default-chat` shows **Callable** on Router's **Default models** page.
 
 ### Why does Codex report `model not found`?
 

@@ -16,6 +16,14 @@ head:
 
 Olares Router 是内置于 Olares 的 AI 网关，随 v1.12.7 版本提供。它将 Olares 上的所有 AI 能力，无论本地还是云端，都通过同一个访问层暴露出来。客户端从不直接连接本地模型或云厂商，而是连接 Router，由 Router 将每个请求路由到正确的后端。
 
+## 学习目标
+
+通过本指南，你将学会：
+
+- 选择 Router 提供的模型和能力。
+- 使用系统默认名或完整模型名称。
+- 获取应用所需的地址和认证信息。
+
 ## 什么是 Olares Router
 
 要理解 Router 如何简化你的 AI 工作流，可以先看它在平台中的位置，以及它如何把不同的 AI 工作负载统一成标准能力。
@@ -95,15 +103,37 @@ Router 直接集成在 Olares 平台中，与你的应用和模型同处一套�
 - **模型组**：为负载均衡创建的统一名称。例如，你可以创建一个名为 `DeepSeek-V4` 的组，把请求分发到本地模型和远端服务。组名本身不包含斜杠。
 - **别名**：为方便而创建的自定义短名称。例如，把一个冗长的模型名改成简单的名字。
 
+### 选择系统默认名
+
+在 **Default models** 页面为所需能力选择模型或服务，等待对应行显示为 **Callable**。在支持 Router 相应接口的应用中，填写以下名称：
+
+| 能力 | 名称 |
+| :--- | :--- |
+| 聊天 | `default-chat` |
+| 嵌入 | `default-embedding` |
+| 重排序 | `default-rerank` |
+| 网页搜索 | `default-search` |
+| 网页读取 | `default-scrape` |
+| 语音合成 | `default-tts` |
+| 语音转文字 | `default-stt` |
+
+这些名称会跟随 Router 中的默认选择。更换默认嵌入模型后，使用该默认模型的知识库需要为已有内容重新建立索引。
+
+`default-search` 是 Router 的路由名称。只有应用通过 Router 的搜索接口调用时才能使用它。Open WebUI 和 Vane 的 SearXNG 配置仍填写 SearXNG 入口地址。
+
 ## 从 Router 获取连接信息
 
-连接 Router 需要三个参数：
+Olares 内的应用使用以下连接信息。聊天、嵌入等能力共用 Router 地址，无需为每个模型分别复制。
 
-- **Base URL**：打开 **LLM** 等能力页面，找到模型，点击右侧的 **View connection example** 图标。
+1. 打开 Router。<!--@include: ../reusables/ai-service-connections.md#router-openai-base-url-->
 
-  <!-- ![模型行上的 View connection example 图标](/images/manual/use-cases/router-view-connection-examp.png#bordered) -->
+   请使用你自己的 Router 域名。Claude Code 等 Anthropic 兼容应用会自行添加 `/v1/messages`，其 Base URL 不包含 `/v1`：
 
-  <!-- ![How to call this model 窗口](/images/manual/use-cases/router-how-to-call-model.png#bordered) -->
+   ```text
+   https://router.laresprime.olares.com
+   ```
 
-- **Model name**：从 **How to call this model** 窗口复制模型名称。或者在 **Default models** 页面为每类能力设置默认模型，然后使用 `default-chat` 这样的系统名称，而不是具体模型名。
-- **API key**：在 **API keys** 页面创建。只有局域网或互联网的调用方需要。Olares 中的应用无需填写。
+2. 模型名称填写所需能力的系统默认名，例如 `default-chat`。要固定使用某个模型，在 **LLM** 或 **Tools** 页面点击该模型的 **View connection example**，从 **How to call this model** 窗口复制完整的 **Model name**。
+3. API 密钥可留空。应用要求此字段必填时，填写 `olares`。
+
+从电脑上的应用连接 Router 时，打开 **How to call this model**，根据所在网络选择 **Devices in LAN** 或 **Remote**，复制该方式的 Base URL，并使用在 **API keys** 页面创建的密钥。远程访问还需要 LarePass VPN。详见[连接 AI 应用](../manual/best-practices/connect-ai-apps.md)。

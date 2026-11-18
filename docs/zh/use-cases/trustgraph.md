@@ -6,8 +6,8 @@ head:
     - name: keywords
       content: Olares, TrustGraph, 知识图谱, 文档问答, Document RAG, Graph RAG, 本地模型, 文档检索
 app_version: "0.1.23"
-doc_version: "1.3"
-doc_updated: "2026-10-13"
+doc_version: "1.4"
+doc_updated: "2026-11-18"
 ---
 
 :::warning
@@ -19,6 +19,14 @@ doc_updated: "2026-10-13"
 TrustGraph 是一个开源平台，可以从文档中构建和查询知识图谱。你可以围绕文件内容提问，查看生成回答时的检索过程，并探索人物、地点和主题之间的关系。
 
 在 Olares 上，TrustGraph 通过 Router 连接本地模型。本指南使用三份虚构的项目文档，查询迁移进展，并探索从正文中提取出的事件、人物及其关系。
+
+## 学习目标
+
+本教程将介绍如何：
+
+- 准备模型并安装 TrustGraph。
+- 上传文档，通过 Document RAG 和 Graph RAG 提问。
+- 查看知识图谱中的原文段落和关联关系。
 
 ## 前提条件
 
@@ -35,8 +43,6 @@ TrustGraph 是一个开源平台，可以从文档中构建和查询知识图谱
   | 聊天 | Qwen3.8-27B (llama.cpp) | 从 Market 安装 |
   | 嵌入 | EmbeddingGemma | 从 Market 安装 |
   | 重排序 | BGE-Reranker-v2-m3 | 从 Market 安装 |
-
-<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## 检查模型是否可用
 
