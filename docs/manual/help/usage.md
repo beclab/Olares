@@ -47,7 +47,7 @@ When you use AI on Olares, you typically work with two separate applications: on
     - **LLM service apps** host large language models (LLMs) for text generation, code completion, and chat. They include eight pre-built model apps and custom model instances created on [Engine Base apps](/use-cases/llm-base-apps.md).
     - **Other AI service apps** provide non-LLM functions, such as speech recognition (Speaches) and text extraction (PaddleOCR).
 
-Because different providers use different communication rules, they rely on specific **API formats**, which you can think of as the "languages" the apps use to talk to each other. The two most common formats are **OpenAI-Compatible** and **Ollama**. To connect the apps, enter the service app's Base URL, model name, and API key in the client app. For the steps, see [Connect an AI app to a model service](../best-practices/connect-ai-apps.md).
+Because different providers use different communication rules, they rely on specific **API formats**, which you can think of as the "languages" the apps use to talk to each other. The two most common formats are **OpenAI-Compatible** and **Ollama**. To connect the apps, enter the service app's Base URL, model name, and API key in the client app. For the steps, see [Use Olares Router as your AI gateway](/use-cases/olares-router.md).
 
 ### Can I manually update an application version?
 

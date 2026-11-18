@@ -9,7 +9,7 @@ search: false
 :::details How model connections work
 A standalone model on Olares runs as a separate service from the client app. To connect them, the client needs the exact **Model name** and a **Base URL** that matches the API format it expects.
 
-You can get both values from the model's console. For more details, see [Connect AI apps](/manual/best-practices/connect-ai-apps-1.12.6.md).
+You can get both values from the model's console.
 :::
 <!-- #endregion model-connection-overview -->
 

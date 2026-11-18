@@ -328,10 +328,6 @@ const side = {
           link: "/zh/manual/olares/settings/manage-entrance",
         },
         {
-          text: "AI 应用连接方式",
-          link: "/zh/manual/best-practices/connect-ai-apps",
-        },
-        {
           text: "迁移旧版共享应用",
           link: "/zh/manual/migrate-shared-apps",
         },
