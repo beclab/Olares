@@ -35,6 +35,7 @@ metadata:
 type: Opaque
 data:
   pg_password: {{ $pg_password }}
+  database_url: {{ printf "postgres://search3_os_framework:%s@citus-0.citus-headless.os-platform:5432/os_framework_search3" ($pg_password | b64dec) | b64enc }}
 
 ---
 apiVersion: apr.bytetrade.io/v1alpha1
@@ -274,7 +275,14 @@ spec:
         - name: TERMINUSD_HOST
           value: master-node:18088  
         - name: DATABASE_URL
-          value: postgres://search3_os_framework:{{ $pg_password | b64dec }}@citus-0.citus-headless.os-platform:5432/os_framework_search3
+          valueFrom:
+            secretKeyRef:
+              key: database_url
+              name: search3-secrets
+        # The monitor may run as a sidecar in a DaemonSet owned by another component.
+        # Use a dedicated label so discovery does not depend on that workload's app label.
+        - name: SEARCH3_MONITOR_POD_LABEL_SELECTOR
+          value: search3.olares.io/monitor=true
         - name: NATS_HOST
           value: nats.os-platform
         - name: NATS_PORT
@@ -298,115 +306,6 @@ spec:
           value: "true"
         - name: JINA_CLIP_V2_URL
           value: http://sharedentrances-api.jinaclipv2embed-shared
----
-apiVersion: apps/v1
-kind: DaemonSet
-metadata:
-  name: search3monitor
-  namespace: {{ .Release.Namespace }}
-  labels:
-    app: search3monitor
-spec:
-  selector:
-    matchLabels:
-      app: search3monitor
-  template:
-    metadata:
-      labels:
-        app: search3monitor
-    spec:
-      serviceAccountName: os-internal
-      priorityClassName: "system-cluster-critical"
-      containers:
-      - name: search3monitor
-        image: beclab/search3monitor:v0.4.6
-        imagePullPolicy: IfNotPresent
-        ports:
-        - containerPort: 8081
-        env:
-        - name: NODE_IP
-          valueFrom:
-            fieldRef:
-              fieldPath: status.hostIP
-        - name: TERMINUSD_HOST
-          value: master-node:18088  
-        - name: DATABASE_URL
-          value: postgres://search3_os_framework:{{ $pg_password | b64dec }}@citus-0.citus-headless.os-platform:5432/os_framework_search3
-        - name: SEARCH3_SERVER_ADDRESS
-          value: search3.os-framework:80
-        - name: POD_NAME
-          valueFrom:
-            fieldRef:
-              apiVersion: v1
-              fieldPath: metadata.name
-        - name: POD_NAMESPACE
-          valueFrom:
-            fieldRef:
-              apiVersion: v1
-              fieldPath: metadata.namespace
-        - name: LOG_FILE
-          value: "true"
-        - name: NATS_HOST
-          value: nats.os-platform
-        - name: NATS_PORT
-          value: "4222"
-        - name: NATS_USERNAME
-          value: os-search-server
-        - name: NATS_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              key: nats_password
-              name: search-server-nats-secret
-        - name: NATS_SUBJECT_SYSTEM_SEARCH
-          value: os.search
-        - name: NATS_SUBJECT_SYSTEM_USERS
-          value: os.users
-        - name: NATS_SUBJECT_SYSTEM_GROUPS
-          value: os.groups
-        - name: LOG_MAX_FILE_BYTES
-          value: "16777216"
-        - name: LOG_DIR_MAX_BYTES
-          value: "1073741824"
-        - name: JINA_CLIP_V2_URL
-          value: http://sharedentrances-api.jinaclipv2embed-shared
-        volumeMounts:
-          - name: fb-data
-            mountPath: /appdata
-          - name: userspace-dir
-            mountPath: /data
-          - name: upload-appdata
-            mountPath: /appcache/
-          - name: shared-lib
-            mountPath: /data/External
-            mountPropagation: Bidirectional
-          - name: common-data
-            mountPath: /appcommon/
-        securityContext:
-          privileged: true
-          runAsUser: 0
-          allowPrivilegeEscalation: true
-      volumes:
-        - name: userspace-dir
-          hostPath:
-            path: /olares/rootfs/userspace
-            type: Directory
-        - name: fb-data
-          hostPath:
-            path: /olares/userdata/Cache/files
-            type: DirectoryOrCreate
-        - name: upload-appdata
-          hostPath:
-            path: /olares/userdata/Cache
-            type: DirectoryOrCreate
-        - name: shared-lib
-          hostPath:
-            path: /olares/share
-            type: Directory
-        - name: common-data
-          hostPath:
-            path: /olares/rootfs/Common
-            type: DirectoryOrCreate
-
 ---
 apiVersion: v1
 kind: Service
@@ -432,7 +331,7 @@ metadata:
 spec:
   clusterIP: None
   selector:
-    app: search3monitor
+    search3.olares.io/monitor: "true"
   ports:
   - port: 8081
     targetPort: 8081
