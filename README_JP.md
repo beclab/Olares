@@ -36,6 +36,7 @@ https://github.com/user-attachments/assets/3e4b0c5d-dcbe-47eb-8628-88b062411fa0
 
 ## リリース情報
 
+- **[Olares 1.12.8](https://www.olares.com/blog/olares-1-12-8/)**：LarePassでスマートフォンからアプリを管理し、Wiseで読みたいコンテンツを整理。外部ストレージへのメンバーのアクセス権も設定できます。
 - **[Olares 1.12.7](https://www.olares.com/blog/olares-1-12-7/)**：Router、Lares、そしてさらに充実したローカルAIモデル。
 - **[Olares 1.12.6](https://www.olares.com/blog/olares-1-12-6/)**：Agent Skills、ローカルLLM向けのModel Console、共有アプリの信頼性向上。
 
@@ -96,7 +97,7 @@ IntelまたはAMD x86-64マシンに新規インストールする場合は、[I
 - **音声をローカルで処理する**：会議の文字起こし、録音の翻訳、音声合成を、外部にアップロードせずに行えます。
 - **自分たちのワークスペースを持つ**：家族やチームに、ドキュメント・自動化・プロジェクト管理・コミュニケーションの道具をまとめて用意できます。
 - **個人データを自分で管理する**：デバイスをまたいで、ファイル・写真・ドキュメントを保存、同期、バックアップ、閲覧できます。
-- **自分だけの情報ハブを作る**：[Wise](https://www.olares.com/docs/manual/olares/wise/) で記事・動画・ファイルを保存し、フィードを購読して、あとで読みたいコンテンツを自分のOlares上で整理できます。
+- **自分だけの知識ライブラリを築く**：[Wise](https://www.olares.com/docs/manual/olares/wise/) で気になる記事・動画・ファイルをいつでも保存し、情報源をフォローして、自分のOlares上で知識を蓄積・整理できます。
 
 ## システムアーキテクチャ
 
