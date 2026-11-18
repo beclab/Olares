@@ -36,6 +36,7 @@ https://github.com/user-attachments/assets/3e4b0c5d-dcbe-47eb-8628-88b062411fa0
 
 ## Release highlights
 
+- **[Olares 1.12.8](https://www.olares.com/blog/olares-1-12-8/):** Manage apps from your phone, build a reading library with Wise, and control member access to external storage.
 - **[Olares 1.12.7](https://www.olares.com/blog/olares-1-12-7/):** Router, Lares, and a broader local AI model catalog.
 - **[Olares 1.12.6](https://www.olares.com/blog/olares-1-12-6/):** Agent Skills, Model Console for local LLMs, and more reliable shared apps.
 
@@ -96,6 +97,7 @@ Follow the [AI onboarding guide](https://www.olares.com/docs/one/olares-onboardi
 - **Process audio locally.** Transcribe meetings, translate recordings, and generate speech without uploading audio to a third-party service.
 - **Create a self-hosted workspace.** Give your family or team tools for documents, automation, project management, and communication.
 - **Manage your personal data.** Store, sync, back up, and access files, photos, and documents across your devices.
+- **Curate your personal knowledge.** Use [Wise](https://www.olares.com/docs/manual/olares/wise/) to capture articles, videos, and files as you browse, follow your favorite sources, and build a knowledge library on your own Olares.
 
 ## System architecture
 
