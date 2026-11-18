@@ -3,7 +3,6 @@ package gpu
 import (
 	"context"
 	"fmt"
-	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -43,8 +42,11 @@ const nvidiaContainerdDropIn = "/etc/containerd/conf.d/99-nvidia.toml"
 const nvidiaContainerToolkitVersion = "1.19.1-1"
 
 var nvidiaContainerToolkitPackages = []string{
-	"nvidia-container-toolkit",
 	"nvidia-container-toolkit-base",
+}
+
+var legacyNvidiaContainerToolkitPackages = []string{
+	"nvidia-container-toolkit",
 	"libnvidia-container-tools",
 	"libnvidia-container1",
 }
@@ -128,115 +130,146 @@ func (t *InstallCudaDriver) Execute(runtime connector.Runtime) error {
 	return nil
 }
 
-type UpdateNvidiaContainerToolkitSource struct {
+type InstallNvidiaContainerToolkit struct {
 	common.KubeAction
 	manifest.ManifestAction
 }
 
-func (t *UpdateNvidiaContainerToolkitSource) Execute(runtime connector.Runtime) error {
-	var cmd string
-	gpgkey, err := t.Manifest.Get("libnvidia-gpgkey")
-	if err != nil {
-		return err
-	}
-
-	keyPath := gpgkey.FilePath(t.BaseDir)
-
-	if !util.IsExist(keyPath) {
-		return fmt.Errorf("failed to find %s binary in %s", gpgkey.Filename, keyPath)
-	}
-
-	if _, err := runtime.GetRunner().SudoCmd("install -d -m 0755 /usr/share/keyrings", false, true); err != nil {
-		return err
-	}
-	keyringPath := "/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg"
-	cmd = fmt.Sprintf("gpg --batch --yes --dearmor -o %s %s", keyringPath, keyPath)
-	if _, err := runtime.GetRunner().SudoCmd(cmd, false, true); err != nil {
-		return err
-	}
-
-	libnvidia, err := t.Manifest.Get("libnvidia-container.list")
-	if err != nil {
-		return err
-	}
-
-	libPath := libnvidia.FilePath(t.BaseDir)
-
-	if !util.IsExist(libPath) {
-		return fmt.Errorf("failed to find %s binary in %s", libnvidia.Filename, libPath)
-	}
-
-	// remove any conflicting libnvidia-container.list
-	_, err = runtime.GetRunner().SudoCmd("rm -rf /etc/apt/sources.list.d/*nvidia-container*.list", false, false)
-	if err != nil {
-		return err
-	}
-
-	dstPath := filepath.Join("/etc/apt/sources.list.d", filepath.Base(libPath))
-	cmd = fmt.Sprintf("cp %s %s", libPath, dstPath)
-	if _, err := runtime.GetRunner().SudoCmd(cmd, false, true); err != nil {
-		return err
-	}
-
-	if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("sed -i 's#^deb https://#deb [signed-by=%s] https://#' %s", keyringPath, dstPath), false, true); err != nil {
-		return err
-	}
-
-	// decide mirror based on OLARES_SYSTEM_CDN_SERVICE
-	var mirrorHost string
-	cdnService := t.KubeConf.Arg.OlaresCDNService
-	if cdnService != "" {
-		cdnRaw := cdnService
-		if !strings.HasPrefix(cdnRaw, "http") {
-			cdnRaw = "https://" + cdnRaw
-		}
-		if cdnURL, err := url.Parse(cdnRaw); err == nil {
-			host := cdnURL.Host
-			if host == "" {
-				host = cdnService
-			}
-			if strings.HasSuffix(host, "olares.cn") {
-				mirrorHost = "mirrors.ustc.edu.cn"
-			}
-		} else if strings.HasSuffix(cdnService, "olares.cn") {
-			mirrorHost = "mirrors.ustc.edu.cn"
+// packagePaths uses the manifest supplied by the install module or loaded into
+// the pipeline cache for upgrade actions.
+func (t *InstallNvidiaContainerToolkit) packagePaths(runtime connector.Runtime) ([]string, error) {
+	items := t.Manifest
+	if items == nil {
+		var err error
+		items, err = manifest.FromCache(t.PipelineCache)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to get NVIDIA Container Toolkit manifest")
 		}
 	}
-	if mirrorHost == "" {
-		return nil
+	baseDir := t.BaseDir
+	if baseDir == "" {
+		baseDir = runtime.GetBaseDir()
 	}
-	cmd = fmt.Sprintf("sed -i 's#nvidia.github.io#%s#g' %s", mirrorHost, dstPath)
-	if _, err := runtime.GetRunner().SudoCmd(cmd, false, false); err != nil {
-		return errors.Wrap(errors.WithStack(err), "failed to switch nvidia container repo to mirror site")
+	// Match PackageDownload's cache location on WSL, including direct GPU and
+	// upgrade actions that do not pass through the WSL install phase builder.
+	if t.KubeConf != nil && t.KubeConf.Arg != nil && runtime.GetSystemInfo().IsWsl() {
+		if userPath := t.KubeConf.Arg.GetWslUserPath(); userPath != "" {
+			baseDir = filepath.Join(userPath, cc.DefaultBaseDir)
+		}
+	}
+	var packages []string
+	for _, name := range nvidiaContainerToolkitPackages {
+		item, err := items.Get(name)
+		if err != nil {
+			return nil, err
+		}
+		packagePath, err := filepath.Abs(item.FilePath(baseDir))
+		if err != nil {
+			return nil, err
+		}
+		exists, err := runtime.GetRunner().FileExist(packagePath)
+		if err != nil {
+			return nil, err
+		}
+		if !exists {
+			return nil, fmt.Errorf("NVIDIA Container Toolkit package %s is missing from %s; run `olares-cli download` for this version first", name, packagePath)
+		}
+		packages = append(packages, "'"+strings.ReplaceAll(packagePath, "'", "'\"'\"'")+"'")
+	}
+	return packages, nil
+}
+
+func (t *InstallNvidiaContainerToolkit) Execute(runtime connector.Runtime) error {
+	query := "dpkg-query -W -f='${Package} ${Version} ${db:Status-Status}\\n' nvidia-container-toolkit-base " + strings.Join(legacyNvidiaContainerToolkitPackages, " ") + " 2>/dev/null || true"
+	output, err := runtime.GetRunner().SudoCmd(query, false, false)
+	if err != nil {
+		return errors.Wrap(err, "failed to query NVIDIA Container Toolkit packages")
+	}
+	states := make(map[string][]string)
+	for _, line := range strings.Split(output, "\n") {
+		if fields := strings.Fields(line); len(fields) == 3 {
+			states[fields[0]] = fields[1:]
+		}
+	}
+	base := states["nvidia-container-toolkit-base"]
+	installBase := len(base) != 2 || base[0] != nvidiaContainerToolkitVersion || base[1] != "installed"
+	var packages []string
+	if installBase {
+		// Validate the downloaded package before removing anything. A healthy base
+		// already at the target version needs neither a manifest nor a cached DEB.
+		packages, err = t.packagePaths(runtime)
+		if err != nil {
+			return err
+		}
+		metadata, err := runtime.GetRunner().SudoCmd("dpkg-deb --show --showformat='${Package} ${Version} ${Architecture}\\n' "+packages[0], false, false)
+		if err != nil {
+			return errors.Wrap(err, "failed to inspect NVIDIA Container Toolkit base package")
+		}
+		want := fmt.Sprintf("nvidia-container-toolkit-base %s %s", nvidiaContainerToolkitVersion, runtime.GetSystemInfo().GetOsArch())
+		if strings.Join(strings.Fields(metadata), " ") != want {
+			return fmt.Errorf("unexpected NVIDIA Container Toolkit DEB metadata %q, expected %q", strings.TrimSpace(metadata), want)
+		}
+	}
+	var remove []string
+	for _, name := range legacyNvidiaContainerToolkitPackages {
+		if state := states[name]; len(state) == 2 && state[1] != "not-installed" {
+			remove = append(remove, name)
+		}
+	}
+	if len(remove) > 0 {
+		// dpkg refuses broken reverse dependencies instead of selecting additional
+		// packages to uninstall. Check before mutating the host; never force it.
+		if _, err := runtime.GetRunner().SudoCmd("dpkg --dry-run --purge "+strings.Join(remove, " "), false, false); err != nil {
+			return errors.Wrap(err, "cannot remove legacy NVIDIA Container Toolkit packages without breaking dependencies")
+		}
+	}
+	if !installBase {
+		// A base-only 1.19.1 installation can use JIT-CDI immediately. Switch an
+		// explicit legacy configuration before removing its hook and CLI.
+		if err := configureNvidiaContainerRuntimeMode(runtime); err != nil {
+			return err
+		}
+	}
+	if len(remove) > 0 {
+		if _, err := runtime.GetRunner().SudoCmd("dpkg --purge "+strings.Join(remove, " "), false, true); err != nil {
+			return errors.Wrap(err, "failed to remove legacy NVIDIA Container Toolkit packages")
+		}
+	}
+	if installBase {
+		// dpkg upgrades an installed 1.17.9 base in place, preserving its config.
+		// Do not remove the old base first or reinstall an already-current base.
+		cmd := "DEBIAN_FRONTEND=noninteractive dpkg --force-confdef --force-confold --install " + strings.Join(packages, " ")
+		if _, err := runtime.GetRunner().SudoCmd(cmd, false, true); err != nil {
+			return errors.Wrap(err, "failed to install local NVIDIA Container Toolkit base package")
+		}
+		if err := configureNvidiaContainerRuntimeMode(runtime); err != nil {
+			return err
+		}
+	}
+	// The base may have been an automatically installed dependency of the full
+	// toolkit. Retain it when users later run apt autoremove; this uses no network.
+	if _, err := runtime.GetRunner().SudoCmd("if command -v apt-mark >/dev/null 2>&1; then apt-mark manual nvidia-container-toolkit-base; fi", false, false); err != nil {
+		return errors.Wrap(err, "failed to retain NVIDIA Container Toolkit base package")
+	}
+	// Remove the obsolete config.d location written by toolkit <=1.18.0. The
+	// Olares-managed containerd config imports conf.d, used by ConfigureContainerdRuntime.
+	staleDropInDir := "/etc/containerd/config.d"
+	stale, err := runtime.GetRunner().DirExist(staleDropInDir)
+	if err != nil {
+		return errors.Wrap(err, "failed to check stale containerd drop-in directory")
+	}
+	if stale {
+		if _, err := runtime.GetRunner().SudoCmd("rm -rf "+staleDropInDir, false, false); err != nil {
+			return errors.Wrap(err, "failed to remove stale containerd drop-in directory")
+		}
 	}
 	return nil
 }
 
-type InstallNvidiaContainerToolkit struct {
-	common.KubeAction
-}
-
-func (t *InstallNvidiaContainerToolkit) Execute(runtime connector.Runtime) error {
-	// Clean up any stale drop-in from the buggy nvidia-ctk `config.d` location
-	// (nvidia-container-toolkit <=1.18.0 mistakenly wrote 99-nvidia.toml to
-	// /etc/containerd/config.d instead of conf.d). We no longer strip `imports`
-	// from config.toml: the base containerd config (v3) owns
-	// `imports = ["/etc/containerd/conf.d/*.toml"]`, and nvidia-ctk writes its
-	// drop-in under conf.d (see ConfigureContainerdRuntime).
-	staleDropInDir := "/etc/containerd/config.d"
-	if util.IsExist(staleDropInDir) {
-		if err := os.RemoveAll(staleDropInDir); err != nil {
-			return errors.Wrap(errors.WithStack(err), "Failed to remove stale containerd drop-in directory")
-		}
-	}
-	logger.Debugf("install nvidia-container-toolkit")
-	pinned := make([]string, 0, len(nvidiaContainerToolkitPackages))
-	for _, pkg := range nvidiaContainerToolkitPackages {
-		pinned = append(pinned, fmt.Sprintf("%s=%s", pkg, nvidiaContainerToolkitVersion))
-	}
-	cmd := fmt.Sprintf("apt-get update && sudo apt-get install -y --allow-downgrades %s jq", strings.Join(pinned, " "))
-	if _, err := runtime.GetRunner().SudoCmd(cmd, false, true); err != nil {
-		return errors.Wrap(errors.WithStack(err), "failed to apt-get install nvidia-container-toolkit")
+func configureNvidiaContainerRuntimeMode(runtime connector.Runtime) error {
+	// Auto selects JIT-CDI on NVML/WSL and CSV on Tegra with toolkit >=1.18.
+	if _, err := runtime.GetRunner().SudoCmd("nvidia-ctk config --in-place --set nvidia-container-runtime.mode=auto", false, true); err != nil {
+		return errors.Wrap(err, "failed to configure NVIDIA Container Runtime mode")
 	}
 	return nil
 }

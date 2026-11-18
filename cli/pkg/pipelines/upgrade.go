@@ -10,9 +10,11 @@ import (
 	"github.com/beclab/Olares/cli/version"
 
 	"github.com/beclab/Olares/cli/pkg/common"
+	"github.com/beclab/Olares/cli/pkg/core/cache"
 	"github.com/beclab/Olares/cli/pkg/core/logger"
 	"github.com/beclab/Olares/cli/pkg/core/module"
 	"github.com/beclab/Olares/cli/pkg/core/pipeline"
+	"github.com/beclab/Olares/cli/pkg/manifest"
 	"github.com/beclab/Olares/cli/pkg/phase"
 	"github.com/pkg/errors"
 )
@@ -43,11 +45,16 @@ func UpgradeOlaresPipeline(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	pipelineCache, err := upgradePipelineCache(runtime)
+	if err != nil {
+		return err
+	}
 
 	p := &pipeline.Pipeline{
-		Name:    "UpgradeOlares",
-		Modules: []module.Module{&upgrade.Module{TargetVersion: targetVersion}},
-		Runtime: runtime,
+		Name:          "UpgradeOlares",
+		Modules:       []module.Module{&upgrade.Module{TargetVersion: targetVersion}},
+		Runtime:       runtime,
+		PipelineCache: pipelineCache,
 	}
 
 	logger.Infof("Starting Olares upgrade from %s to %s...", currentVersion, targetVersion)
@@ -79,6 +86,10 @@ func UpgradeOlaresStagePipeline(ctx context.Context, stage string) error {
 	if err != nil {
 		return err
 	}
+	pipelineCache, err := upgradePipelineCache(runtime)
+	if err != nil {
+		return err
+	}
 
 	p := &pipeline.Pipeline{
 		Name: "UpgradeOlares/" + stage,
@@ -86,7 +97,8 @@ func UpgradeOlaresStagePipeline(ctx context.Context, stage string) error {
 			TargetVersion: targetVersion,
 			Stage:         stage,
 		}},
-		Runtime: runtime,
+		Runtime:       runtime,
+		PipelineCache: pipelineCache,
 	}
 
 	logger.Infof("Starting upgrade stage %s (target %s) on this node...", stage, targetVersion)
@@ -113,6 +125,18 @@ func upgradeRuntime() (*common.KubeRuntime, error) {
 	}
 	runtime.Arg.SetManifest(path.Join(runtime.GetInstallerDir(), "installation.manifest"))
 	return runtime, nil
+}
+
+// Each node/stage runs in its own process and loads its manifest once. The
+// framework supplies this cache to every module and action during initialization.
+func upgradePipelineCache(runtime *common.KubeRuntime) (*cache.Cache, error) {
+	items, err := manifest.ReadAll(runtime.Arg.Manifest)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to read upgrade installation manifest")
+	}
+	pipelineCache := cache.NewCache()
+	pipelineCache.Set(manifest.CacheKey, items)
+	return pipelineCache, nil
 }
 
 func UpgradePreCheckPipeline(ctx context.Context) error {

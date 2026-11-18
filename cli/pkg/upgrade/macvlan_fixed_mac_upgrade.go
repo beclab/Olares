@@ -616,13 +616,13 @@ func retainEnabledFixedMACInstances(ctx context.Context, kube kubernetes.Interfa
 }
 
 // Stage only the published DHCP binary; other CNI executables remain untouched.
-func stageFixedMACDHCP(runtime connector.Runtime, manifestPath string) (string, error) {
+func (a *upgradeFixedMAC) stageFixedMACDHCP(runtime connector.Runtime) (string, error) {
 	hashes := map[string]string{"amd64": "fd946fea15d15cce9e62e295c974288954a0e283fe55225c43e26f3157fba083", "arm64": "855e62230e7622641853559c038164fc6d046c87157d331d8f0d337ad1fa7bae"}
 	hash := hashes[runtime.GetSystemInfo().GetOsArch()]
 	if hash == "" {
 		return "", fmt.Errorf("unsupported fixed MAC DHCP architecture")
 	}
-	m, err := manifest.ReadAll(manifestPath)
+	m, err := manifest.FromCache(a.PipelineCache)
 	if err != nil {
 		return "", err
 	}
@@ -744,7 +744,7 @@ func (a *upgradeFixedMAC) Execute(runtime connector.Runtime) error {
 		if err = checkFixedMACEvictions(ctx, kube, preview); err != nil {
 			return err
 		}
-		_, e = stageFixedMACDHCP(runtime, a.KubeConf.Arg.Manifest)
+		_, e = a.stageFixedMACDHCP(runtime)
 		if e != nil {
 			return e
 		}
