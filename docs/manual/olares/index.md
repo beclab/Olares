@@ -1,5 +1,5 @@
 ---
-description: Explore Olares system apps with guides to Desktop, Market, Files, Vault, Wise, Profile, Control Hub, and team collaboration.
+description: Explore Olares system apps with guides to Desktop, Market, Files, Vault, Profile, Control Hub, and team collaboration.
 aside: false
 head:
   - - meta
@@ -34,11 +34,6 @@ Olares system applications are a core part of the Olares ecosystem. Pre-installe
     <span class="doc-map-title">Vault</span>
     <span class="doc-map-desc">Store credentials, manage identities, and generate OTPs</span>
   </a>
-  <!-- <a class="doc-map-card" href="./wise/">
-    <span class="doc-map-icon"><span class="material-symbols-outlined">menu_book</span></span>
-    <span class="doc-map-title">Wise</span>
-    <span class="doc-map-desc">Collect, read, and organize content into a personal hub</span>
-  </a> -->
   <a class="doc-map-card" href="./controlhub/">
     <span class="doc-map-icon"><span class="material-symbols-outlined">tune</span></span>
     <span class="doc-map-title">Control Hub</span>

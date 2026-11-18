@@ -1,30 +1,15 @@
 ---
 outline: [2, 3]
-description: 通过控制面板或 SSH 访问 Olares 主机终端。
+description: 通过 SSH 访问 Olares 主机终端。
 ---
 # 访问 Olares 主机终端
 
 部分开发和运维任务需要在 Olares 主机上运行命令，例如检查磁盘、验证主机状态或更新主机级配置。由于 Olares 主机通常不直接连接显示器或键盘，终端访问主要通过远程方式进行。
 
-你可以通过以下两种方式访问主机终端：
-
-- **控制面板终端**：控制面板提供的网页终端，可直接以 `root` 身份访问，适合快速执行命令或处理临时任务。
-- **Secure Shell (SSH)**：远程连接和管理主机的标准协议，更适合自动化或进阶操作。
+使用 SSH 从电脑连接到 Olares 主机。运行需要管理员权限的命令时，请使用具有 `sudo` 权限的账号。
 
 :::tip Olares One 用户
 如果你使用的是 Olares One，可查看 [SSH 访问 Olares One](/zh/one/access-terminal-ssh.md)。
-:::
-
-## 通过控制面板访问
-
-如需在不配置 SSH 客户端的情况下快速访问，可使用控制面板内置的网页终端。
-
-1. 打开控制面板。
-2. 在左侧边栏的**终端**部分，点击 **Olares**。
-  ![终端](/images/zh/manual/developer/controlhub-terminal.png#bordered)
-
-:::tip 以 `root` 权限运行
-通过控制面板打开的终端默认以 `root` 身份运行。请勿在命令前使用 `sudo`。
 :::
 
 ## 通过 SSH 访问

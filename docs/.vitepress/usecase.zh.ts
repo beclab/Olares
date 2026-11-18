@@ -17,21 +17,29 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             {
               text: "Lares",
               link: "/zh/use-cases/lares",
+              collapsed: true,
+              items: [
+                {
+                  text: "开展联网研究",
+                  link: "/zh/use-cases/lares-web-research",
+                },
+                {
+                  text: "使用 Blender",
+                  link: "/zh/use-cases/blender-lares",
+                },
+                {
+                  text: "使用 FlowStudio",
+                  link: "/zh/use-cases/flowstudio-lares",
+                },
+                {
+                  text: "使用 YuE2 Studio",
+                  link: "/zh/use-cases/yue2-studio-lares",
+                },
+              ],
             },
             {
               text: "FlowStudio",
               link: "/zh/use-cases/flowstudio",
-              collapsed: false,
-              items: [
-                {
-                  text: "在 FlowStudio 中创作",
-                  link: "/zh/use-cases/flowstudio-create",
-                },
-                {
-                  text: "通过 Lares 使用",
-                  link: "/zh/use-cases/flowstudio-lares",
-                },
-              ],
             },
           ],
         },
@@ -92,25 +100,6 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   ]
                 },
                 {
-                  text: "NemoClaw",
-                  link: "/zh/use-cases/nemoclaw",
-                  collapsed: true,
-                  items: [
-                    {
-                      text: "集成 Google Workspace",
-                      link: "/zh/use-cases/nemoclaw-google-workspace",
-                    },
-                    {
-                      text: "使用 Olares CLI 管理 Olares",
-                      link: "/zh/use-cases/nemoclaw-olares-cli",
-                    },
-                    {
-                      text: "常见问题",
-                      link: "/zh/use-cases/nemoclaw-common-issues",
-                    },
-                  ]
-                },
-                {
                   text: "Hermes Agent",
                   link: "/zh/use-cases/hermes",
                   collapsed: true,
@@ -120,6 +109,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                       link: "/zh/use-cases/hermes-ssh",
                     },
                   ],
+                },
+                {
+                  text: "MemPalace",
+                  link: "/zh/use-cases/mempalace",
                 },
                 {
                   text: "OpenCode",
@@ -191,6 +184,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               collapsed: true,
               items: [
                 {
+                  text: "Hermes Workspace",
+                  link: "/zh/use-cases/hermes-workspace",
+                },
+                {
                   text: "Open WebUI",
                   collapsed: true,
                   link: "/zh/use-cases/openwebui",
@@ -224,6 +221,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                 {
                   text: "AnythingLLM",
                   link: "/zh/use-cases/anythingllm",
+                },
+                {
+                  text: "Cognee",
+                  link: "/zh/use-cases/cognee",
                 },
                 {
                   text: "Local Deep Research",
@@ -283,17 +284,13 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   link: "/zh/use-cases/concat",
                 },
                 {
+                  text: "Music Studio",
+                  link: "/zh/use-cases/music-studio",
+                },
+                {
                   text: "Open Design",
                   link: "/zh/use-cases/open-design",
                 },
-                {
-                  text: "ACE-Step 1.5",
-                  link: "/zh/use-cases/ace-step-1.5",
-                },
-                /*{
-                  text: "ACE-Step",
-                  link: "/zh/use-cases/ace-step",
-                },*/
                 /*{
                   text: "Duix.Avatar",
                   link: "/zh/use-cases/duix-avatar",
@@ -314,6 +311,17 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   text: "IndexTTS2",
                   link: "/zh/use-cases/indextts2",
                 },
+                {
+                  text: "YuE2 Studio",
+                  link: "/zh/use-cases/yue2-studio",
+                  collapsed: true,
+                  items: [
+                    {
+                      text: "启用 MCP 令牌认证",
+                      link: "/zh/use-cases/yue2-studio-mcp-auth",
+                    },
+                  ],
+                },
               ],
             },
             {
@@ -323,6 +331,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                 {
                   text: "Bifrost",
                   link: "/zh/use-cases/bifrost",
+                },
+                {
+                  text: "Colibri",
+                  link: "/zh/use-cases/colibri",
                 },
                 {
                   text: "LiteLLM",
@@ -423,6 +435,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               link: "/zh/use-cases/navidrome",
             },
             {
+              text: "Plex",
+              link: "/zh/use-cases/plex",
+            },
+            {
               text: "TREK (NOMAD)",
               link: "/zh/use-cases/trek",
               collapsed: true,
@@ -503,6 +519,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               link: "/zh/use-cases/karakeep",
             },
             {
+              text: "Linkwarden",
+              link: "/zh/use-cases/linkwarden",
+            },
+            {
               text: "n8n",
               link: "/zh/use-cases/n8n",
             },
@@ -580,6 +600,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             {
               text: "FlareSolverr",
               link: "/zh/use-cases/flaresolverr",
+            },
+            {
+              text: "RustDesk Server",
+              link: "/zh/use-cases/rustdesk",
             },
             {
               text: "SearXNG",

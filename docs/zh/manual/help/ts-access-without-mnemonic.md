@@ -44,24 +44,12 @@ head:
 卸载命令会移除设备中的 Olares 组件和数据。继续操作前，请备份仍可访问的文件。
 :::
 
-1. 打开 Olares 设备终端：
+1. 通过 SSH 连接到 Olares 设备，或使用显示器和键盘在设备上直接登录。请参考[访问 Olares 主机终端](../access-olares-terminal.md)。
+2. 使用具有 `sudo` 权限的账号卸载 Olares：
 
-   - 如果仍能登录 Olares 桌面，请打开 **Control Hub**，然后选择 **Terminal** > **Olares**。
-   - 否则，请通过 SSH 连接，或使用显示器和键盘在设备上直接登录。
-
-2. 卸载 Olares：
-
-   - 在 Control Hub 终端中运行：
-
-     ```bash
-     olares-cli uninstall
-     ```
-
-   - 在 SSH 或本地终端中运行：
-
-     ```bash
-     sudo olares-cli uninstall
-     ```
+   ```bash
+   sudo olares-cli uninstall
+   ```
 
 3. 等待卸载完成。
 4. 安装或打开 LarePass，创建新的 Olares ID，再按照[安装 Olares](../get-started/install-olares.md)重新安装并激活设备。
@@ -108,26 +96,14 @@ Olares One 激活后，系统用户名为 `olares`。系统密码用于通过 SS
 
 #### 从 Olares 桌面重置系统密码
 
-如果仍能登录 Olares 桌面，但不知道系统密码，可以使用以下任一方式重置。
+如果仍能登录 Olares 桌面，但不知道系统密码，可以在设置中重置。
 
-- **Control Hub**：
-
-  1. 打开 **Control Hub**，然后选择 **Terminal** > **Olares**。
-  2. 运行：
-
-     ```bash
-     passwd olares
-     ```
-
-  3. 根据提示输入两次新密码。
-
-- **Settings**：
-
-  1. 打开 **Settings**，在 **My Olares** 页面选择 **My hardware**。
-  2. 选择 **Reset SSH login password**。
-  3. 输入符合强度要求的新密码，然后点击 **OK**。
-  4. 打开 LarePass，扫描屏幕上显示的二维码。
-  5. 在 LarePass 中点击 **Confirm**。新密码会保存到 Vault。
+1. 打开**设置**，在 **My Olares** 页面选择**集群概览**。
+2. 在**节点**下，选择 **olares**。
+3. 在**节点设置**下，选择**重置 SSH 密码**。
+4. 输入符合强度要求的新密码，然后点击**重置**。
+5. 打开 LarePass，扫描屏幕上显示的二维码。
+6. 在 LarePass 中点击**确认**。新密码会保存到 Vault。
 
 #### 在 LarePass 中查找当前系统密码
 

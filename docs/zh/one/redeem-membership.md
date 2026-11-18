@@ -1,10 +1,10 @@
 ---
 outline: [2,3]
-description: 了解如何兑换你的 Olares Space Basic 会员。
+description: 了解如何兑换你的 2 年 Olares Space Basic 会员。
 head:
   - - meta
     - name: keywords
-      content: Olares, Olares One, Olares Space, 兑换会员卡, Basic 计划, kickstarter 支持者
+      content: Olares, Olares One, Olares Space, 兑换会员卡, Basic 计划, 两年会员
 ---
 
 :::warning
@@ -13,7 +13,7 @@ head:
 
 # 兑换 Olares Space 会员
 
-根据你的购买渠道（如 Kickstarter 众筹活动），你的 Olares One 套装可能包含一张 Olares Space 会员卡。这张卡为你提供为期 2 年的免费 Basic 会员，可使用 Olares Space 提供的增强连接服务。
+你的 Olares One 套装附赠一张 Olares Space 会员卡。凭这张卡可以兑换 2 年 Basic 会员，使用 Olares Space 的增强连接服务。
 
 :::tip Olares One 是一次性购买
 你的 Olares One 硬件和系统更新永久免费。
@@ -50,7 +50,7 @@ Olares Space 是一个安全的连接平台，在扩展本地设备功能的同�
 2 年有效期从你成功将邮箱关联到 Olares ID 的那一刻开始计算。
 :::
 
-要兑换 Basic 计划权益，你必须使用 Olares Space 仪表板将你的账户关联到与购买订单关联的邮箱地址。例如，与 Kickstarter 订单关联的邮箱。
+兑换 Basic 会员时，在 Olares Space 里把下单时使用的邮箱关联到你的账户。
 
 1. 在 Olares Space 中，从左侧导航面板点击 **Usage & billing**。
 2. 在 **Account email** 选项卡上，点击 **Email address**。

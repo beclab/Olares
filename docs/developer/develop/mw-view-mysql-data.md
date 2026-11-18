@@ -35,11 +35,11 @@ Before connecting, obtain MySQL connection details from the Control Hub.
 
 You can use the Olares terminal to access the MySQL container.
 
-1. In Control Hub, open the Olares terminal at the bottom of the left navigation pane.
+1. [Connect to the Olares host via SSH](../../manual/access-olares-terminal.md) with an account that has `sudo` permission.
 2. Enter the MySQL container. The container name is fixed.
 
     ```bash
-    kubectl exec -it -n mysql-middleware mysql-mysql-0 -- sh
+    sudo kubectl exec -it -n mysql-middleware mysql-mysql-0 -- sh
     ```
 3. Connect to MySQL:
 

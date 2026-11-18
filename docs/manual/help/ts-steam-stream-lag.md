@@ -51,10 +51,7 @@ Grant Steam Headless full GPU access to maximize performance.
 
 The GPU on your device may be throttled by power management settings. Make sure the GPU is running at full power.
 
-For Olares One users:
-1. Go to **Settings** > **My Olares** > **My hardware**.
-2. Click <i class="material-symbols-outlined">keyboard_arrow_down</i> next to **Power mode** and select **Performance mode**.
-   ![Set power mode to Performance mode](/images/manual/help/ts-steam-stream-lag-power-mode.png#bordered)
+For Olares One, select **Performance** under **Node settings** > **Power mode** on the node details page. For the steps to open this page, see [Switch power mode](/one/hardware-settings#switch-power-mode).
 
 ### Try a different Proton version
 

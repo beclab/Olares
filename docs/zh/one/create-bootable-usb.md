@@ -36,7 +36,7 @@ head:
 
 ## 创建可启动 USB 驱动器
 
-1. 下载[最新的官方 Olares One ISO 镜像](https://cdn.olares.cn/one/v1.12.7-amd64.iso)到你的电脑。
+1. 下载[最新的官方 Olares One ISO 镜像](https://cdn.olares.cn/one/v1.12.8-amd64.iso)到你的电脑。
 
 2. 下载并安装 [**Balena Etcher**](https://etcher.balena.io/)。
 

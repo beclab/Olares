@@ -13,6 +13,10 @@ const side = {
           collapsed: true,
           items: [
             {
+              text: "Olares 1.12.8",
+              link: "/manual/update-guides/1.12.8",
+            },
+            {
               text: "Olares 1.12.7",
               link: "/manual/update-guides/1.12.7",
             },
@@ -284,6 +288,10 @@ const side = {
           link: "/manual/olares/market/market",
         },
         {
+          text: "Manage apps with LarePass",
+          link: "/manual/larepass/manage-apps-with-larepass",
+        },
+        {
           text: "Manually update an app image",
           link: "/manual/update-app-image",
         },
@@ -314,10 +322,6 @@ const side = {
         {
           text: "Control who can access an app",
           link: "/manual/olares/settings/manage-entrance",
-        },
-        {
-          text: "AI app connections",
-          link: "/manual/best-practices/connect-ai-apps",
         },
         {
           text: "Migrate legacy shared applications",
@@ -353,6 +357,10 @@ const side = {
             {
               text: "Share files",
               link: "/manual/olares/files/share-files",
+            },
+            {
+              text: "Manage access to Common and External",
+              link: "/manual/olares/files/manage-common-external-access",
             },
             {
               text: "Sync files with a computer",
@@ -393,6 +401,29 @@ const side = {
               link: "/manual/olares/files/mount-cloud-storage",
             },
           ],
+        },
+      ],
+    },
+    {
+      text: "Reading and knowledge",
+      link: "/manual/olares/wise/",
+      collapsed: false,
+      items: [
+        {
+          text: "Save web pages and files",
+          link: "/manual/olares/wise/collect",
+        },
+        {
+          text: "Subscribe and manage feeds",
+          link: "/manual/olares/wise/subscribe",
+        },
+        {
+          text: "Read and organize",
+          link: "/manual/olares/wise/basics",
+        },
+        {
+          text: "Manage cookies",
+          link: "/manual/olares/wise/manage-cookies",
         },
       ],
     },
@@ -468,10 +499,6 @@ const side = {
             {
               text: "Manage middleware",
               link: "/manual/olares/controlhub/manage-middleware",
-            },
-            {
-              text: "Run commands in the Control Hub terminal",
-              link: "/manual/olares/controlhub/terminal",
             },
             {
               text: "Configure host name resolution in Olares",

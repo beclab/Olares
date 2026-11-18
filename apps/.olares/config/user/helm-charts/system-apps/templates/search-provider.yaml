@@ -11,6 +11,12 @@ rules:
   - "/document/search*"
   - "/task/*"
   - "/search/*"
+  # user-service is the browser-facing authorization boundary for RAG
+  # retrieval and forwards only its computed owner/root scope to Search3.
+  - "/v1/retrieval/*"
+  # Settings reaches the Search3 RAG control plane through the same trusted
+  # user-service/provider path; Search3 still enforces user/Owner semantics.
+  - "/rag/*"
   - "/monitorsetting/*"
   - "/file/*"
   verbs: ["*"]

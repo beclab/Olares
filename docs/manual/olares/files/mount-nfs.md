@@ -13,6 +13,10 @@ Network File System (NFS) is a widely used protocol for accessing files over a n
 
 ## Before you begin
 
+:::warning Account requirements
+Log in to Olares as the Super Admin or an admin to connect an NFS share. Members cannot connect servers.
+:::
+
 - Ensure Olares and the NFS server are on the same local network with stable connectivity.
 - You have the following information:
   - **NFS server IP address**: For example, `192.168.1.100`.
@@ -20,7 +24,7 @@ Network File System (NFS) is a widely used protocol for accessing files over a n
 
 ## Mount an NFS share
 
-1. Open the Files app, and then go to **Drive** > **External**.
+1. Log in to Olares as the Super Admin or an admin, open **Files**, and go to **Drive** > **External**.
 2. Click **Connect to server** in the upper-right corner.
 3. In the popup window, click the **Protocol** list, and then select **NFS**.
 
@@ -38,11 +42,17 @@ Network File System (NFS) is a widely used protocol for accessing files over a n
    - If you entered only the IP address, the system will query all available NFS shares on the server. In the popup window, select the share you want to mount from the list, and then click **Confirm**.
    - If you entered the full path, the system will try to mount the directory directly.
 
-7. After the connection is successful, the NFS share appears in the **External** directory. You can browse and manage files in it just like a local folder.
+7. Once connected, the NFS share appears under **External**. Open it to check that you can browse the shared files.
+
+## Give members access
+
+In Olares 1.12.8, members have no access to mounted directories by default. To let a member view or edit the files, use **Access settings** on the mounted directory. See [Manage access to Common and External](manage-common-external-access.md) for the steps.
 
 ## Unmount an NFS share
 
-If you no longer need to access the NFS share, you can safely unmount it.
+Log in to Olares as the Super Admin or an admin with management access to the mounted directory. Members cannot unmount storage, even if they have edit access.
+
+Unmounting disconnects the share from Olares for everyone using that mount. It does not delete files on the NFS server.
 
 1. Open the Files app, and then go to **Drive** > **External**.
 2. Right-click the NFS share directory you want to unmount, and then select **Unmount**.

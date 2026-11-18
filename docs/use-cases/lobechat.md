@@ -76,7 +76,7 @@ Connect LobeHub to your local model to make the chat interface work.
 
 2. Configure the following settings:
 
-   - **API Key**: Enter any placeholder text such as `local`.
+   - **API Key**: Enter `olares`.
    - **API Proxy URL**: Enter the **Base URL** you copied from Router. For example, `https://router.<your-olares-domain>/v1`.
    - **Use Responses API Specification**: Ensure this option is disabled.
    - **Use Client Request Mode**: Ensure this option is disabled.

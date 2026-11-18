@@ -217,15 +217,15 @@ Before connecting a local model, you need:
 - Qwen3.8-27B (llama.cpp) installed from Market.
 
 <!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
-5. Open NOFX, and click **+ MODELS_CONFIG** on the **Config** page.
-6. Click **Other API Providers**, and then select **OpenAI**.
-7. Specify the following settings:
+6. Open NOFX, and click **+ MODELS_CONFIG** on the **Config** page.
+7. Click **Other API Providers**, and then select **OpenAI**.
+8. Specify the following settings:
 
-   - **API Key**: Enter any text string such as `local`.
+   - **API Key**: Enter `olares`.
    - **Base URL**: Enter the **Base URL** copied from Router. Ensure the URL ends with `/v1`.
    - **Model Name (Optional)**: Enter `default-chat`.
 
-8. Click **Save Configuration**.
+9. Click **Save Configuration**.
 
 ### Model didn't output structured JSON decision
 

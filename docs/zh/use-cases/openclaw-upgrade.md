@@ -180,7 +180,7 @@ OpenClaw 2026.02.25 版本引入了一项安全增强，要求现有用户显式
     ![更新配置文件](/images/manual/use-cases/add-control-ui-endpoint.png#bordered)
 
     :::info
-    如果你使用多个地址访问 Control UI（例如本地 URL 或自定义域名），可将它们以逗号分隔添加到 `allowedOrigins` 数组中。例如，`["https://url-one.com", "https://url-two.com"]`。
+    如果你还会通过 `.local` 域名访问 Control UI，也需要将该地址加入 `allowedOrigins` 数组。例如，`["https://<entrance_id>.<username>.olares.com", "http://<entrance_id>.<username>.olares.local"]`。请将 `<entrance_id>` 和 `<username>` 替换为实际的入口 ID 和用户名。
     :::
 
 6. 返回文件管理器，将原始的 `openclaw.json` 文件重命名以保留备份，然后上传修改后的 `openclaw.json` 文件。

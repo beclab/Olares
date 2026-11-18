@@ -54,7 +54,6 @@ var (
 		"/bfl/iam/v1alpha1/login",
 		"/bfl/iam/v1alpha1/validate",
 		"/bfl/iam/v1alpha1/refresh-token",
-		"/bfl/apidocs.json",
 		"/bfl/backend/v1/",
 		"/bfl/callback/v1alpha1/backup/",
 		"/bfl/info/v1/",

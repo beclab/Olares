@@ -51,12 +51,7 @@ Steam 串流卡顿或延迟，可能由以下一个或多个原因导致：
 
 你设备上的 GPU 可能因电源管理设置而被降频。请确保 GPU 以全功率运行。
 
-如果你正在使用 Olares One：
-
-1. 前往**设置** > **我的 Olares** > **我的硬件**。
-2. 点击**工作模式**旁边的 <i class="material-symbols-outlined">keyboard_arrow_down</i>，然后选择**性能模式**。
-
-   ![切换至性能模式](/images/zh/manual/help/ts-steam-stream-lag-power-mode.png#bordered)
+如果你正在使用 Olares One，在节点详情页面的**节点设置** > **工作模式**中选择**性能模式**。进入该页面的操作方法请参阅[切换工作模式](/zh/one/hardware-settings#切换工作模式)。
 
 ### 尝试使用其他 Proton 版本
 

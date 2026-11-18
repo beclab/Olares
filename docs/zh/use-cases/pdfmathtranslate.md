@@ -78,13 +78,11 @@ PDFMathTranslate 通过 Qwen3.8-27B 的 OpenAI-compatible API 与其连接。
 
 <!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
-使用 **OpenAI-Compatible** API 格式。模型名称为 `default-chat`。
-
 ### 配置翻译服务
 
 1. 在 PDFMathTranslate 中，从 **Service** 列表选择 **OpenAI**。
 2. 在 **OPENAI_BASE_URL** 字段中，输入从 Router 复制的 Base URL。
-3. 在 **OPENAI_API_KEY** 字段中，输入任意非空值，例如 `none`。本地模型 endpoint 不需要 API key。
+3. 在 **OPENAI_API_KEY** 字段中，填写 `olares`。
 4. 在 **OPENAI_MODEL** 字段中，填写 `default-chat`。
 
 ### 选择语言和范围

@@ -1,0 +1,349 @@
+---
+outline: [2, 3]
+description: 在 Olares 上使用 Plex 整理个人视频，通过浏览器、手机或电脑播放，并启用硬件加速转码。
+head:
+  - - meta
+    - name: keywords
+      content: Olares, Plex Media Server, 个人媒体库, 视频播放, NVIDIA, 硬件转码, Plex Pass
+app_version: "0.0.14"
+doc_version: "1.2"
+doc_updated: "2026-11-17"
+---
+
+:::warning
+本文档由 AI 自动翻译，仅供参考。涉及关键操作或信息时，请以[英文原文](../../use-cases/plex.md)为准。
+:::
+
+# 使用 Plex 整理并播放你的个人视频
+
+Plex Media Server 是一款用于管理和串流播放视频、音乐的应用。在 Olares 上，你可以把媒体收藏存放在自己的设备中，再通过浏览器或 Plex 客户端播放。
+
+## 学习目标
+
+通过本教程，你将学习：
+
+- 安装 Plex、选择加速模式，并绑定自己的 Plex 账号。
+- 整理 Olares 中的媒体目录，并为个人视频、电影或音乐选择合适的媒体库。
+- 在浏览器中选择播放质量和字幕，并查看是否正在使用硬件转码。
+- 在 Plex 中添加本地 HTTPS 地址，让同一局域网上的浏览器或电视打开自己的媒体库。
+- 通过 LarePass VPN，从其他网络上的手机或电脑连接自己的媒体服务器。
+
+## 前提条件
+
+- Olares 1.12.7 或更高版本。
+- 一个 Plex 账号。免费账号即可绑定服务器并创建媒体库。
+- 硬件加速转码需要兼容的 NVIDIA GPU，且服务器所属账号有有效的 Plex Pass。
+
+## 安装 Plex Media Server
+
+1. 打开 Market，搜索 "Plex Media Server"。
+2. 点击 **Get**，然后点击 **Install**。
+3. 在 **Choose a hardware accelerator** 弹窗中选择模式：
+   - **CPU**：使用软件转码。
+   - **NVIDIA GPU**：使用 NVIDIA GPU 进行[硬件加速转码](#使用硬件加速转码)。
+
+   :::info 加速模式
+   安装后无法直接切换加速模式。
+   :::
+
+4. 点击 **Confirm**。如果提示填写 **PLEX_CLAIM**，保持为空并确认继续，下一节再绑定账号。
+5. 等待安装完成，按钮变为 **Open**。
+
+## 绑定 Plex 账号
+
+你会在 Launchpad 中看到 Plex Media Server 的两个入口。先通过 **Plex Account Setup** 将服务器绑定到自己的 Plex 账号，再通过 **Plex Media Server** 管理媒体库和播放内容。
+
+1. 从 Launchpad 打开 **Plex Account Setup**。
+2. 在另一个浏览器标签页打开 [Plex claim 页面](https://www.plex.tv/claim/)，登录准备绑定的 Plex 账号。
+3. 复制以 `claim-` 开头的临时令牌。
+4. 返回 Plex Account Setup，将令牌粘贴到 **Claim token**，点击 **Connect account**。
+
+   :::tip 绑定失败
+   绑定失败时，从 claim 页面复制一个新令牌，再返回设置页重试。
+   :::
+
+5. 请求完成后，点击 **Open Plex Web**。
+6. 在 Plex Web 中登录同一个账号。首次打开时，在欢迎页点击 **Got It!**，进入 **Server Setup**。
+7. 设置一个方便识别的服务器名称，例如 `Home media`。取消勾选 **Allow me to access my media outside my home**，然后点击 **Next**。本教程通过本地 HTTPS 地址或 LarePass VPN 连接服务器。
+8. 在 **Media Library** 页面点击 **Next**，稍后再添加媒体库，然后点击 **Done** 完成设置。
+9. 打开 Plex Web 设置，选中自己的服务器，再进入 **General**，确认 **Server claimed by** 显示的是刚才绑定的账号。
+
+## 添加视频媒体库
+
+Plex 媒体库让你可以浏览和播放所选文件夹中的媒体。下面以一段旅行录像为例，创建个人视频媒体库。你也可以按相同的步骤添加电影和音乐媒体库。
+
+### 上传自己的视频
+
+1. 打开 Olares 文件管理器，进入 `Home/Movies`。
+2. 新建一个子文件夹，例如 `Family`。
+3. 将自己的视频上传到该目录。以下以 `Home/Movies/Family/Family-trip.mp4` 为例，文件名可以自行替换。
+
+整理后的目录可以是：
+
+```text
+Home/
+  Movies/
+    Family/
+      Family-trip.mp4
+  Music/
+```
+
+为每个媒体库使用独立的文件夹。例如，个人录像放在 `Family`，电影收藏放在 `Films`。
+
+上传大文件时，可以使用 [LarePass 桌面客户端上传](../manual/olares/files/add-edit-download.md#通过-larepass-桌面端上传)。
+
+### 在 Plex 中选择媒体目录
+
+Olares 文件管理器中的文件夹，在 Plex 中使用不同的路径。添加媒体库时，请选择下表中对应的 Plex 路径。
+
+| Olares 中的目录 | Plex 中的路径 |
+| --- | --- |
+| `Home/Movies` | `/media/Movies` |
+| `Home/Music` | `/media/Music` |
+
+1. 打开 Plex Web 的设置，选中刚刚绑定的服务器。
+2. 在 **Manage** 下打开 **Libraries**，点击 **Add Library**。
+3. 对于旅行录像等个人视频，选择 **Other Videos**，将媒体库命名为 `Family videos`。
+4. 选择媒体库语言，点击 **Next**。
+5. 点击 **Browse For Media Folder**，选择 `/media/Movies/Family`。
+6. 点击 **Add**，再点击 **Add Library**，等待 Plex 扫描文件。
+7. 打开 `Family videos`，找到刚刚上传的视频。
+
+Plex 对 `Home/Movies` 和 `Home/Music` 的访问为只读。需要整理、重命名或删除源文件时，在 Olares 文件管理器中操作。
+
+### 扩展到电影和音乐收藏
+
+同样的方法也可以用于电影或音乐。新增媒体库时，按内容类型和实际文件位置选择设置：
+
+| 内容 | 媒体库类型 | 目录示例 |
+| --- | --- | --- |
+| 旅行录像、家庭视频 | **Other Videos** | `/media/Movies/Family` |
+| 电影收藏 | **Movies** | `/media/Movies/Films` |
+| 音乐收藏 | **Music** | `/media/Music` |
+
+创建 **Movies** 媒体库时，在文件名中写明片名和上映年份，有助于 Plex 匹配海报和简介。Plex 会按你选择的媒体库语言获取简介。
+
+以后上传新文件后，打开对应媒体库的菜单，选择 **Scan Library Files**，将新文件加入 Plex。
+
+## 播放视频并调整播放方式
+
+### 先播放原始视频
+
+本地视频播放[免费](https://support.plex.tv/articles/202526943-plex-free-vs-paid/)。通过 [LarePass VPN](#从其他网络连接) 打开的浏览器按远程播放计算，需要订阅。
+
+1. 打开 `Family videos`，选择刚才添加的旅行录像。
+2. 以原始质量播放视频。
+
+Plex 会根据文件格式、播放器能力和质量设置决定是否转码。先以原始质量观看，可以避免不必要的画质损失。
+
+### 选择合适的播放质量
+
+Plex 可能采用以下几种播放方式：
+
+| 播放方式 | 含义 |
+| --- | --- |
+| Direct Play | 播放器直接播放原文件，服务器不转换视频 |
+| Direct Stream | 服务器调整文件封装，不重新编码视频 |
+| Transcode | 服务器转换视频或音频，以适应播放器或质量设置 |
+
+播放频繁缓冲时，可以降低分辨率或码率：
+
+1. 在播放器中打开 **Settings** > **Quality**。
+2. 点击 **Show all**，展开可用的转换选项。
+3. 选择低于源视频的质量。例如，播放 1080p 视频时，选择 **Convert to 720p HD (High)**。
+
+Plex 会将视频转码为所选质量。要恢复原始质量，打开质量菜单，选择 **Play Original Quality**。
+
+### 添加并选择字幕
+
+将字幕文件放在视频所在的文件夹中。以英文字幕为例，文件可以这样命名：
+
+```text
+Home/Movies/Family/
+  Family-trip.mp4
+  Family-trip.en.srt
+```
+
+`Family-trip` 与视频文件名对应，`en` 是英文字幕的语言代码。Plex 也支持 ASS 外部字幕。文本字幕建议保存为 UTF-8，减少乱码。
+
+1. 通过 Olares 文件管理器，将字幕上传到视频所在的文件夹。
+2. 在 Plex 中扫描该媒体库。未识别新字幕时，刷新对应视频的元数据。
+3. 打开视频的字幕选项，选择刚刚添加的字幕，再开始播放。
+
+部分字幕需要烧录进画面，因此会触发视频转码。
+
+## 通过本地 HTTPS 地址连接
+
+电视、Plex 客户端或另一台电脑上的浏览器与 Olares 在同一局域网时，使用这一方式。手机或电脑在其他网络上时，改用 [LarePass VPN](#从其他网络连接)。
+
+Overlay 网关会为 Plex Media Server 分配一个局域网 IP。Plex Account Setup 会根据这个 IP 生成 HTTPS `plex.direct` 地址。把地址保存到 Plex 后，局域网里的客户端才能连上服务器。
+
+:::info 网络要求
+Olares 需要运行在原生 Linux 主机上，并通过网线接入网络。Wi-Fi 和 WSL 下无法使用 Overlay 网关。角色和可用条件见[管理 Overlay 网关](../manual/olares/settings/overlay-gateway.md)。
+:::
+
+:::warning 在可信网络中启用
+Overlay 网关会把 Plex 直接放到当前局域网中。请在你信任的网络里启用。
+:::
+
+### 获取本地 HTTPS 地址
+
+1. 打开**设置**，进入**网络** > **Overlay 网关**。
+2. 如果**启用 Overlay 网关**尚未打开，先将其打开。开关不可用时，请超级管理员开启系统级服务。
+3. 在**应用**中找到 Plex Media Server，启用 Overlay 网关，然后点击**确认**。
+4. Plex 正在运行时，Olares 会重启应用以使设置生效。等待应用回到**运行中**，并显示 IP 地址。
+
+   :::tip 如果 Plex 仍处于暂停状态
+   如果应用仍是**暂停**，打开**设置** > **应用** > **Plex Media Server**，点击**恢复**。应用回到**运行中**后再查看 IP。
+   :::
+
+5. 从 Launchpad 打开 **Plex Account Setup**。绑定账号后，这个入口仍然保留。
+6. 在 **Local connection** 中点击 **Refresh local address**。
+7. 页面显示 **HTTPS certificate verified** 后，点击 **Copy address**。
+
+页面会根据当前 Overlay IP 生成 HTTPS `plex.direct` 地址。
+
+:::tip 如果尚未启用 Overlay 网关
+如果 **Refresh local address** 提示先启用 Overlay，先完成上面的 Overlay 网关步骤，等 Plex 回到**运行中**再刷新。
+:::
+
+:::tip 如果页面提示绑定 Plex 账号
+如果页面已显示局域网 IP，但仍提示 "Your Plex server is not connected yet"，先[绑定 Plex 账号](#绑定-plex-账号)。然后再次点击 **Refresh local address**，等页面显示 **HTTPS certificate verified** 后再复制地址。
+:::
+
+### 将地址添加到 Plex
+
+1. 从 Launchpad 打开 **Plex Media Server**，进入 Plex Web，然后打开 **Settings** 并选择自己的服务器。
+2. 打开 **Network**，点击 **Show Advanced**。
+3. 将复制的地址粘贴到 **Custom server access URLs**。保留已有地址，多个地址用英文逗号分隔。
+
+   :::info 使用复制的地址
+   直接使用复制的地址，末尾不要带 `/web/` 或 `/identity`。该地址指向局域网里的 Overlay IP，供同一局域网上的设备使用。Plex Account Setup 只负责显示和复制地址，打开客户端前需要在这里保存。
+   :::
+
+4. 点击 **Save Changes**。
+
+:::warning Plex 重启后更新已保存的地址
+Overlay 网关会动态分配局域网 IP。重启 Plex、网络变化或应用升级后，IP 可能改变。HTTPS 地址里包含这个 IP。在你粘贴新地址之前，**Custom server access URLs** 会保持原来的值。
+
+1. 等待 Plex 回到**运行中**。
+2. 从 Launchpad 打开 **Plex Account Setup**，点击 **Refresh local address**。
+3. 如果 IP 已变化，复制新的 HTTPS 地址，替换 **Custom server access URLs** 里原来的本地地址，然后点击 **Save Changes**。
+4. 更新书签，以及你在客户端里填写的地址。
+5. 重新打开 Plex 客户端。
+:::
+
+### 在另一台电脑的浏览器中打开 Plex
+
+在同一局域网的另一台电脑上，可以直接用 Plex Web 播放媒体库中的内容，无需安装 Plex 客户端。
+
+1. 在另一台电脑的浏览器中粘贴复制的 HTTPS 地址，并在末尾加上 `/web/`。
+2. 使用服务器所属的 Plex 账号登录，或使用可以打开该媒体库的账号。
+3. 如果 Plex 打开 `app.plex.tv` 上的授权页面，确认页面显示的本地 `plex.direct` 地址与刚复制的地址一致，然后授权登录并返回 Plex Web。
+4. 选择自己的服务器，打开 `Family videos` 媒体库。
+5. 选择录像并开始播放。
+
+播放自己的媒体时，打开自己服务器上的媒体库。Plex 的 **Movies & Shows** 来源播放的是在线内容，媒体和字幕都与本地媒体库不同。
+
+### 在电视上播放
+
+通过电视上的 Plex 应用浏览和播放媒体库中的内容。连接电视之前，先在 Plex 中保存本地 HTTPS 地址。
+
+1. 将电视连接到 Plex Overlay IP 所在的局域网。
+2. 打开电视上的 Plex 应用，使用服务器所属账号登录，或使用可以打开该媒体库的账号。
+3. 保存自定义服务器地址后，关闭并重新打开电视应用。选择自己的服务器，例如 `Home media`。
+4. 打开 `Family videos`，播放旅行录像。先使用原始质量。电视无法直接播放源格式时，Plex 可以为播放器转码。
+
+如果服务器没有出现，检查已保存的地址，以及该账号是否可以打开媒体库。电视需要用自己的网络连接访问 Overlay 地址。
+
+## 从其他网络连接
+
+手机或电脑与 Olares 不在同一网络时，使用这一方式。开启 LarePass VPN，并在播放期间保持连接。同一局域网上的设备可以使用[本地 HTTPS 地址](#通过本地-https-地址连接)。
+
+:::info 远程视频播放需要订阅
+远程视频播放需要你使用的账号有有效的 Plex Pass 或 Remote Watch Pass。Plex 也可能将 VPN 连接判定为远程连接。详见 [Plex 远程播放要求](https://support.plex.tv/articles/requirements-for-remote-playback-of-personal-media/)。
+:::
+
+### 开启 LarePass VPN
+
+在要播放媒体的手机或电脑上[安装 LarePass](../manual/larepass/index.md)，使用 Olares ID 登录，并确认当前连接的是运行 Plex 的 Olares 设备。
+
+<!--@include: ../reusables/larepass-vpn.md#enable-larepass-vpn-->
+
+在 iOS 或 macOS 上，若系统提示添加 VPN 配置，请允许添加。等待连接完成后再打开 Plex，详见 [LarePass 连接状态说明](../manual/larepass/private-network.md#了解连接状态)。
+
+### 在 Plex 客户端中播放
+
+1. 在手机或电脑上安装并打开 [Plex 客户端](https://www.plex.tv/media-server-downloads/#plex-app)。
+2. 使用前面绑定服务器时的 Plex 账号登录。
+3. 在媒体来源或服务器列表中，选择你在 Plex 中设置的服务器名称，例如 `Home media`。
+4. 打开 `Family videos` 媒体库，选择旅行录像并播放。
+
+在电脑上使用浏览器观看时，保持 LarePass VPN 开启，然后从 Launchpad 打开 **Plex Media Server**。
+
+## 使用硬件加速转码
+
+硬件加速转码使用 GPU 解码或编码视频。播放器不支持源文件格式，或你选择了较低的分辨率或码率时，Plex 会进行转码。
+
+以下步骤要求安装时已选择 NVIDIA 模式，且服务器所属账号有有效的 Plex Pass。
+
+### 开启硬件加速
+
+1. 打开 Plex Web 设置，选中自己的服务器，再进入 **Transcoder**。
+2. 显示高级选项，开启 **Use hardware acceleration when available** 和 **Use hardware-accelerated video encoding**。
+3. 在 **Hardware transcoding device** 中选择为该实例分配的 NVIDIA GPU。
+4. 点击 **Save Changes**。
+
+设置保存后即可生效，无需重启 Plex。
+
+### 查看当前播放是否使用 GPU
+
+1. 播放视频，并[选择低于源视频的质量](#选择合适的播放质量)，例如将 1080p 视频转换为 720p。
+2. 在 Plex Web 的 **Activity** 中打开 **Dashboard**，展开当前播放的详细信息。
+3. 查看视频格式旁是否有 `(hw)` 标记。该标记表示正在使用硬件加速解码或编码。
+4. 查看完毕后，可以将播放质量恢复为原始质量。
+
+:::tip Chrome 中 HEVC 转码出现黑屏
+如果 Dolby Vision 或 HDR10 视频在 Chrome 中进行 HEVC 转码时画面冻结或黑屏，将 **Enable HEVC video encoding** 设为 **Never**。保持 **Use hardware acceleration when available** 和 **Use hardware-accelerated video encoding** 开启，保存后重新开始播放。
+
+需要转换视频时，Plex 可以使用 H.264 硬件转码。HEVC 文件仍可以按原始质量播放。如果这个视频仍然卡住，换一个视频播放。
+:::
+
+## 常见问题
+
+### 在 Plex 中看不到上传的视频
+
+先确认文件已经上传完成，再检查媒体库目录。例如，`Home/Movies/Family` 在 Plex 中对应 `/media/Movies/Family`。确认路径后，运行 **Scan Library Files**。
+
+### 为什么看不到硬件转码选项？
+
+确认服务器绑定的账号有有效的 Plex Pass。在服务器的 **Transcoder** 设置中展开高级选项，即可找到硬件加速选项。
+
+### 为什么播放时没有 `(hw)` 标记？
+
+Direct Play 和 Direct Stream 不会重新编码视频，因此不会使用硬件转码。要查看 GPU 是否参与转码，可以[降低播放质量，再打开 Dashboard](#查看当前播放是否使用-gpu)。
+
+如果视频正在转码，但没有 `(hw)` 标记，请检查安装时是否选择了 NVIDIA 模式，以及 **Transcoder** 下的两个硬件加速选项是否已开启。
+
+### 字幕没有出现或显示乱码
+
+将字幕和视频放在同一文件夹中，检查文件名是否对应，例如 `Family-trip.mp4` 和 `Family-trip.en.srt`，然后重新扫描媒体库并刷新视频元数据。出现乱码时，将字幕保存为 UTF-8，再重新上传。支持的格式和命名规则见 [Plex 本地字幕指南](https://support.plex.tv/articles/200471133-adding-local-subtitles-to-your-media/)。
+
+### 需要重新启动 Plex 时怎么操作
+
+1. 在 Olares 中进入**设置** > **应用** > **Plex Media Server**，点击**暂停**。
+2. 等待应用停止后，点击**恢复**，重新启动应用。
+
+如果资源占用导致应用无法恢复，参见[恢复应用](../manual/olares/market/market.md#如何恢复应用)。
+
+### 开启 VPN 后，Plex 客户端仍找不到服务器
+
+确认 Plex 正在运行，且 LarePass 已连接到运行 Plex 的 Olares 设备。在 Plex Web 中打开服务器的 **General** 设置，查看服务器所属账号。使用该账号登录客户端，再重新打开服务器列表。
+
+## 了解更多
+
+- [Jellyfin](jellyfin.md)：在 Olares 上搭建开源媒体服务器，作为 Plex 的替代选择。
+- [LarePass 专用网络](../manual/larepass/private-network.md)：了解手机和电脑上的 VPN 开关及连接状态。
+- [Plex 媒体库创建指南](https://support.plex.tv/articles/200288926-creating-libraries/)：了解媒体类型和目录选择。
+- [Plex 本地字幕指南](https://support.plex.tv/articles/200471133-adding-local-subtitles-to-your-media/)：了解字幕命名、语言代码和支持格式。
+- [Plex 硬件加速指南](https://support.plex.tv/articles/115002178853-using-hardware-accelerated-streaming/)：了解 Plex Pass 要求与硬件转码状态。

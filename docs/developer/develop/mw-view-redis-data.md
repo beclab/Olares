@@ -26,11 +26,11 @@ Before connecting, obtain Redis connection details from the Control Hub.
 
 You can use the Olares terminal to access the database container.
 
-1. In Control Hub, open the Olares terminal at the bottom of the left navigation pane.
+1. [Connect to the Olares host via SSH](../../manual/access-olares-terminal.md) with an account that has `sudo` permission.
 2. Enter the Redis container. The container name is fixed.
 
     ```bash
-    kubectl exec -it -n os-platform kvrocks-0 -- sh 
+    sudo kubectl exec -it -n os-platform kvrocks-0 -- sh
     ```
 3. Connect to the Redis database:
 

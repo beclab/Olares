@@ -17,10 +17,10 @@ The **Repository management** page allows you to view the source repositories th
 
 ### View repositories
 
-1. Go to **Settings** > **Advanced** > **Repository management**. 
+1. Go to **Settings** > **Advanced** > **Manage repositories**. 
 2. In the repository list, you can view the name of the repository, number of related images, and image size for each repository.
 
-    ![Repo management](/images/manual/olares/repo-management1.png#bordered){width=65%}
+    ![Repo management](/images/manual/olares/repo-management-1.12.8.png#bordered)
 
 ### Manage repository mirrors
 
@@ -29,7 +29,7 @@ Manage mirror endpoints for repositories to improve access speed and stability.
 1. On the **Repository management** page, find the target repo, and then click <i class="material-symbols-outlined">chevron_forward</i> in the **Action** column.
 2. On the **Mirror management** page, you can perform the following actions:
 
-    ![Mirror management](/images/manual/olares/mirror-management.png#bordered){width=68%}
+    ![Mirror management](/images/manual/olares/mirror-management-1.12.8.png#bordered)
     
     - To re-order the mirror endpoints, click <i class="material-symbols-outlined">keyboard_control_key</i> or <i class="material-symbols-outlined">keyboard_arrow_down</i>. Olares prioritizes endpoints higher on the list.
     - To delete an endpoint you no longer need, click <i class="material-symbols-outlined">delete</i>.
@@ -37,9 +37,10 @@ Manage mirror endpoints for repositories to improve access speed and stability.
 
 ## Manage images
 
-The **Image management** page provides a comprehensive view of all downloaded and cached application and software package images on your Olares system. You can filter or search to quickly find specific images.
+The **Manage images** page provides a comprehensive view of all downloaded and cached application and software package images on your Olares system. You can filter or search to quickly find specific images.
 
-![Image management](/images/manual/olares/image-management1.png#bordered){width=65%}
+![Image management](/images/manual/olares/image-management-1.12.8.png#bordered)
+
 ## Export system logs
 
 System logs record the operational status of system components and provide crucial diagnostic information.

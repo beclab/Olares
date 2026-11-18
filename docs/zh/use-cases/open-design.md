@@ -73,7 +73,7 @@ Olares 上的 Open Design 0.22.1 暂不支持通过文本直接生成独立图�
 4. 配置提供方：
 
    - **Base URL**：粘贴从 Router 复制的 Base URL，包括末尾的 `/v1`。
-   - **API Key**：输入任意非空值，例如 `olares`。同一 Olares 集群中的应用调用本地模型时，不需要真实密钥。
+   - **API Key**：填写 `olares`。
    - **Model**：填写 `default-chat`。
    - **Max tokens（可选）**：输入 `65536`。如需使用更小的上下文窗口，可改为 `32768`。
 
@@ -149,5 +149,5 @@ Olares 上的 Open Design 0.22.1 暂不支持通过文本直接生成独立图�
 ## 了解更多
 
 - [使用引擎基座应用托管本地大语言模型](llm-base-apps.md)：使用引擎基座应用部署本地模型，并通过 Router 连接。
-- [将 AI 应用连接到模型服务](/zh/manual/best-practices/connect-ai-apps.md)：了解模型名称、API 格式和 Base URL。
+- [使用 Olares Router 作为 AI 网关](/zh/use-cases/olares-router.md)：了解模型名称、API 格式和 Base URL。
 - [Open Design 官网](https://open-design.ai/)：了解上游项目及其功能。

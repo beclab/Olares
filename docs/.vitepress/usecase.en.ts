@@ -17,21 +17,29 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             {
               text: "Lares",
               link: "/use-cases/lares",
+              collapsed: true,
+              items: [
+                {
+                  text: "Research the web",
+                  link: "/use-cases/lares-web-research",
+                },
+                {
+                  text: "Use Blender",
+                  link: "/use-cases/blender-lares",
+                },
+                {
+                  text: "Use FlowStudio",
+                  link: "/use-cases/flowstudio-lares",
+                },
+                {
+                  text: "Use YuE2 Studio",
+                  link: "/use-cases/yue2-studio-lares",
+                },
+              ],
             },
             {
               text: "FlowStudio",
               link: "/use-cases/flowstudio",
-              collapsed: false,
-              items: [
-                {
-                  text: "Create in FlowStudio",
-                  link: "/use-cases/flowstudio-create",
-                },
-                {
-                  text: "Use through Lares",
-                  link: "/use-cases/flowstudio-lares",
-                },
-              ],
             },
           ],
         },
@@ -92,25 +100,6 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   ]
                 },
                 {
-                  text: "NemoClaw",
-                  link: "/use-cases/nemoclaw",
-                  collapsed: true,
-                  items: [
-                    {
-                      text: "Integrate with Google Workspace",
-                      link: "/use-cases/nemoclaw-google-workspace",
-                    },
-                    {
-                      text: "Manage Olares with Olares CLI",
-                      link: "/use-cases/nemoclaw-olares-cli",
-                    },
-                    {
-                      text: "Common issues",
-                      link: "/use-cases/nemoclaw-common-issues",
-                    },
-                  ]
-                },
-                {
                   text: "Hermes Agent",
                   link: "/use-cases/hermes",
                   collapsed: true,
@@ -120,6 +109,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                       link: "/use-cases/hermes-ssh",
                     },
                   ],
+                },
+                {
+                  text: "MemPalace",
+                  link: "/use-cases/mempalace",
                 },
                 {
                   text: "OpenCode",
@@ -191,6 +184,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               collapsed: true,
               items: [
                 {
+                  text: "Hermes Workspace",
+                  link: "/use-cases/hermes-workspace",
+                },
+                {
                   text: "Open WebUI",
                   link: "/use-cases/openwebui",
                   collapsed: true,
@@ -224,6 +221,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                 {
                   text: "AnythingLLM",
                   link: "/use-cases/anythingllm",
+                },
+                {
+                  text: "Cognee",
+                  link: "/use-cases/cognee",
                 },
                 {
                   text: "Local Deep Research",
@@ -283,17 +284,13 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   link: "/use-cases/concat",
                 },
                 {
+                  text: "Music Studio",
+                  link: "/use-cases/music-studio",
+                },
+                {
                   text: "Open Design",
                   link: "/use-cases/open-design",
                 },
-                {
-                  text: "ACE-Step 1.5",
-                  link: "/use-cases/ace-step-1.5",
-                },
-                /*{
-                  text: "ACE-Step",
-                  link: "/use-cases/ace-step",
-                },*/
                 /*{
                   text: "Duix.Avatar",
                   link: "/use-cases/duix-avatar",
@@ -314,6 +311,17 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                   text: "IndexTTS2",
                   link: "/use-cases/indextts2",
                 },
+                {
+                  text: "YuE2 Studio",
+                  link: "/use-cases/yue2-studio",
+                  collapsed: true,
+                  items: [
+                    {
+                      text: "Protect the MCP connection",
+                      link: "/use-cases/yue2-studio-mcp-auth",
+                    },
+                  ],
+                },
               ],
             },
             {
@@ -323,6 +331,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                 {
                   text: "Bifrost",
                   link: "/use-cases/bifrost",
+                },
+                {
+                  text: "Colibri",
+                  link: "/use-cases/colibri",
                 },
                 {
                   text: "LiteLLM",
@@ -423,6 +435,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               link: "/use-cases/navidrome",
             },
             {
+              text: "Plex",
+              link: "/use-cases/plex",
+            },
+            {
               text: "TREK (NOMAD)",
               link: "/use-cases/trek",
               collapsed: true,
@@ -497,6 +513,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             {
               text: "Karakeep",
               link: "/use-cases/karakeep",
+            },
+            {
+              text: "Linkwarden",
+              link: "/use-cases/linkwarden",
             },
             {
               text: "n8n",
@@ -580,6 +600,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
             {
               text: "FlareSolverr",
               link: "/use-cases/flaresolverr",
+            },
+            {
+              text: "RustDesk Server",
+              link: "/use-cases/rustdesk",
             },
             {
               text: "SearXNG",

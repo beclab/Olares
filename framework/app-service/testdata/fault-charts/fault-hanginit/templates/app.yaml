@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: faulthanginit
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: {{ .Values.workloads.faulthanginit.replicaCount }}
+  selector:
+    matchLabels:
+      app: faulthanginit
+  template:
+    metadata:
+      labels:
+        app: faulthanginit
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/control-plane
+                operator: Exists
+      containers:
+        - name: faulthanginit
+          image: docker.io/library/redis:7.4
+          command: ["sleep", "3600"]
+          ports:
+            - name: http
+              containerPort: 80
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: faulthanginit-svc
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    app: faulthanginit
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80

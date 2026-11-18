@@ -6,20 +6,30 @@ head:
     - name: keywords
       content: Olares, FlowStudio, Lares, Olares Router, conversational image generation, video generation
 app_version: "0.3.78"
-doc_version: "1.0"
-doc_updated: "2026-09-29"
+doc_version: "1.1"
+doc_updated: "2026-11-07"
 ---
 
 # Use FlowStudio through Lares
 
 Lares lets you request image and video generation in a conversation. Router connects the request to an available FlowStudio capability, and FlowStudio runs the generation workflow.
 
+This guide uses scenes prepared in FlowStudio to generate a poster and a short video without reopening each workflow form.
+
+## Learning objectives
+
+In this guide, you will learn how to:
+
+- Check which FlowStudio capabilities are available to Lares.
+- Request an image from a specific prepared workflow.
+- Let Lares choose an available workflow for a video request.
+
 ## Prerequisites
 
 - Olares OS 1.12.7 or later.
 - FlowStudio, Router, and Lares installed from Market. Update existing installations to the latest available versions.
 - Qwen3.8-27B (llama.cpp) installed, with the model download complete.
-- Required FlowStudio scenes created, with model downloads and initialization complete. For setup instructions, see [Generate images and videos in FlowStudio](flowstudio-create.md).
+- Required FlowStudio scenes created, with model downloads and initialization complete. For setup instructions, see [Generate images and videos in FlowStudio](flowstudio.md).
 
 :::warning Important: Run one task at a time
 When running Qwen3.8-27B (llama.cpp) on Olares One, we recommend running only one request at a time to ensure the best experience with the 102K context window and model precision.
@@ -65,6 +75,5 @@ When using Qwen3.8-27B (llama.cpp) in Lares, wait for any image or video generat
 
 ## Learn more
 
-- [FlowStudio](flowstudio.md#how-the-apps-work-together): Understand how FlowStudio, Router, and Lares work together.
-- [Lares](lares.md): Learn how to use Lares to manage Olares and run research tasks.
-- [Generate images and videos in FlowStudio](flowstudio-create.md): Use the scenes directly and prepare example media.
+- [Generate images and videos in FlowStudio](flowstudio.md): Prepare scenes and create media directly in FlowStudio.
+- [Get started with Lares](lares.md): Prepare the assistant and choose a task-specific capability.

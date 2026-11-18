@@ -16,9 +16,9 @@ A reverse proxy acts as a secure gateway between your Olares and the open web, e
 
 You can change your reverse proxy configuration at any time.
 
- ![Change reverse proxy](/images/manual/olares/set-reverse-proxy.png#bordered)
+ ![Change reverse proxy](/images/manual/olares/set-reverse-proxy-1.12.8.png#bordered)
 
-1. Open **Settings**, then go to **Network** > **Reverse Proxy**.
+1. Open **Settings**, then go to **Network** > **Reverse proxy**.
 2. Select your preferred reverse proxy option:
    - **Olares Tunnel**: Choose a node that’s geographically closest to you for optimal performance.
    

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	oac "github.com/beclab/Olares/framework/oac"
+	oac "github.com/beclab/oac"
 	"github.com/beclab/api/manifest"
 	"sigs.k8s.io/yaml"
 )

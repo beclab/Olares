@@ -1,0 +1,56 @@
+{{- $break := "" }}
+{{- if .Values.olaresEnv }}
+{{- $break = index .Values.olaresEnv "BREAK" | default "" | toString }}
+{{- end }}
+{{- if eq $break "1" }}
+{{- fail "apply-env-boom" }}
+{{- end }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: faultgood
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: {{ .Values.workloads.faultgood.replicaCount }}
+  selector:
+    matchLabels:
+      app: fault-good
+  template:
+    metadata:
+      labels:
+        app: fault-good
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/control-plane
+                operator: Exists
+      containers:
+        - name: fault-good
+          image: docker.io/beclab/harveyff-adguardhome:v0.107.77
+          args: ["--web-addr", "0.0.0.0:80", "--no-check-update"]
+          ports:
+            - name: http
+              containerPort: 80
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fault-good-svc
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    app: fault-good
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80

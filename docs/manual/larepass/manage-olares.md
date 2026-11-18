@@ -40,7 +40,7 @@ To check for and install a system update, see [Check and update Olares](../olare
 You can restart or shut down Olares from the LarePass app or from Olares Settings. Either way, you'll confirm the action in LarePass.
 
 - **From LarePass**: On the **Olares management** page, tap the <i class="material-symbols-outlined">power_settings_new</i> icon in the upper-right corner.
-- **From Olares Settings**: On the **My Olares** > **My hardware** page, click **Shutdown** or **Restart**.
+- **From Olares Settings**: Open **Settings**, click your avatar in the upper-left corner, then click **Cluster overview**. Select **Restart cluster** or **Shut down cluster** to act on all nodes. To restart only one node, open its details and click **Restart node**. See [Restart or shut down the device](/one/hardware-settings#restart-or-shut-down-the-device).
 
 ![Restart or shut down Olares](/images/manual/larepass/device-control1.png#bordered)
 

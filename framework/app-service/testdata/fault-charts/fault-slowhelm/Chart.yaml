@@ -1,0 +1,6 @@
+apiVersion: v2
+name: faultslowhelm
+description: pre-install hook sleeps past the installing deadline
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

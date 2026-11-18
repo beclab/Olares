@@ -21,7 +21,7 @@ Olares treats GPUs and other acceleration devices as shared resources in the clu
 For GPU-dependent apps, Olares considers several factors during allocation:
 
 - Resource type, such as **NVIDIA GPU**.
-- GPU mode, such as **Time slicing**, **Memory slicing**, or **Exclusive**.
+- GPU mode, such as **Time slice**, **Memory slice**, or **Exclusive**.
 - Total and free VRAM.
 - Whether the app can bind to one GPU or multiple GPUs.
 - Apps already assigned to the same resource.
@@ -50,12 +50,12 @@ For supported GPU resources, the mode controls how apps share the GPU. Not every
 
 | Mode | Description | Usage & notes |
 | -- | -- | -- |
-| **Time slicing** | Multiple apps share one GPU<br> by taking turns using compute<br> and VRAM. Each app can see <br>the full GPU, but workloads run<br> in slices. | <ul><li>**Best for**: Running several GPU-dependent apps at the same time.</li><li>**Note**: The quota for each app is fixed to the GPU's full dedicated VRAM and cannot be edited. Launch may also be blocked by the node memory check described below.</li></ul> |
-| **Memory slicing** | Multiple apps share one GPU<br> with fixed VRAM allocations. | <ul><li>**Best for**: Running multiple GPU-dependent apps while controlling VRAM usage. </li><li>**Note**: During launch, Olares allocates the app's minimum required VRAM by default. You can adjust the allocation.</li></ul> |
+| **Time slice** | Multiple apps share one GPU<br> by taking turns using compute<br> and VRAM. Each app can see <br>the full GPU, but workloads run<br> in slices. | <ul><li>**Best for**: Running several GPU-dependent apps at the same time.</li><li>**Note**: The quota for each app is fixed to the GPU's full dedicated VRAM and cannot be edited. Launch may also be blocked by the node memory check described below.</li></ul> |
+| **Memory slice** | Multiple apps share one GPU<br> with fixed VRAM allocations. | <ul><li>**Best for**: Running multiple GPU-dependent apps while controlling VRAM usage. </li><li>**Note**: During launch, Olares allocates the app's minimum required VRAM by default. You can adjust the allocation.</li></ul> |
 | **Exclusive** | One app gets full access to the<br> GPU. | <ul><li>**Best for**: Running heavy workloads that need maximum performance, such as large models, rendering, or high-end gaming. </li><li>**Note**: No other apps can bind to this GPU until it is released.</li></ul> |
 
-:::info How node memory is calculated in Time slicing
-In **Time slicing** mode, Olares currently checks node memory using these calculations:
+:::info How node memory is calculated in Time slice
+In **Time slice** mode, Olares currently checks node memory using these calculations:
 
 - Required memory: `App memory requirement + GPU dedicated VRAM`
 - Memory available below the scheduling threshold: `Total node memory × 90% - Used node memory`
@@ -80,7 +80,7 @@ The page shows each available resource with:
 - Resource type, such as **NVIDIA GPU**.
 - Dedicated VRAM on the node.
 - GPU model, such as **NVIDIA GeForce RTX 4060 Ti**.
-- Current sharing mode, such as **Time slicing**, **Memory slicing**, or **Exclusive**.
+- Current sharing mode, such as **Time slice**, **Memory slice**, or **Exclusive**.
 - Apps currently assigned to the resource.
 
 ![Accelerator overview](/images/manual/olares/settings-gpu-info.png#bordered)
@@ -92,9 +92,9 @@ Switching modes stops all apps currently using this GPU and removes their assign
 :::
 
 1. Go to **Settings** > **Accelerator**, then click **Manage** on the resource card.
-2. On the **Manage node** page, find the target GPU, open its mode dropdown, and select **Time slicing**, **Memory slicing**, or **Exclusive**.
+2. On the **Manage node** page, find the target GPU, open its mode dropdown, and select **Time slice**, **Memory slice**, or **Exclusive**.
 
-   ![Select mode](/images/manual/olares/settings-gpu-dropdown.png#bordered)
+   ![Select mode](/images/manual/olares/settings-gpu-dropdown-1-12-8.png#bordered)
 
 ## Resume an app and assign resources
 
@@ -108,13 +108,13 @@ You can resume a stopped app and manually assign resources from either **Setting
 4. Under **Select GPUs**, choose a resource. The dialog shows its dedicated VRAM, sharing mode, quota for the current app, and assigned apps. If the app cannot be launched, follow the inline message:
    - If the available quota is below the app's minimum requirement, expand **Assigned apps** and click **Remove** for an app to free resources, or select another GPU.
    - If the GPU's total dedicated VRAM is below the app's minimum requirement, removing apps will not help. Select another GPU.
-   - In **Time slicing** mode, launch can also be blocked by the node memory check described above. The message shows the node's total, used, and required memory. Retry later or select another node.
+   - In **Time slice** mode, launch can also be blocked by the node memory check described above. The message shows the node's total, used, and required memory. Retry later or select another node.
 
    ![Launch blocked by insufficient system memory](/images/manual/olares/settings-gpu-launch-node-memory-overload-warning.png#bordered){width=70%}
 
-5. For **Memory slicing** mode, **Quota for current app** defaults to the app's minimum VRAM requirement. To adjust it, enter a new amount directly in the quota field. The value cannot exceed the available quota.
+5. For **Memory slice** mode, **Quota for current app** defaults to the app's minimum VRAM requirement. To adjust it, enter a new amount directly in the quota field. The value cannot exceed the available quota.
 
-   ![Set VRAM in Memory slicing mode](/images/manual/olares/settings-gpu-mem-slicing-vram.png#bordered){width=70%}
+   ![Set VRAM in Memory slice mode](/images/manual/olares/settings-gpu-mem-slicing-vram.png#bordered){width=70%}
 
    :::info Reallocate VRAM
    You cannot adjust VRAM after the app is assigned. To change it later, you must remove the app from the GPU and resume it again.
@@ -135,7 +135,7 @@ If an app is bound to multiple GPUs or GPUs across multiple nodes, removing the 
 1. Go to **Settings** > **Accelerator**, then click **Manage** on the resource card.
 2. Under **Assigned apps**, find the target app, then click **Remove**.
 
-   ![Remove an app](/images/manual/olares/settings-gpu-remove-app.png#bordered)
+   ![Remove an app](/images/manual/olares/settings-gpu-remove-app-1-12-8.png#bordered)
 
 3. In the confirmation dialog, click **Remove**.
 

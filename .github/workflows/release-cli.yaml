@@ -171,6 +171,8 @@ jobs:
       # in the log above, and the tag GoReleaser reads was created by this job
       # at this commit — so the two checks being skipped are ones this job has
       # already made for itself.
+      # Prefer GIT_CONFIG_* over `git config --global` so the PAT is never
+      # written to ~/.gitconfig on the runner.
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v3.1.0
         with:
@@ -183,6 +185,14 @@ jobs:
           OLARES_RELEASE_ID: ${{ inputs.release-id }}
           BINARY_VERSION: ${{ needs.resolve-versions.outputs.binary_version }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GOPRIVATE: github.com/beclab/oac,github.com/Above-Os/backups-sdk
+          GONOSUMDB: github.com/beclab/oac,github.com/Above-Os/backups-sdk
+          GONOPROXY: github.com/beclab/oac,github.com/Above-Os/backups-sdk
+          GIT_CONFIG_COUNT: "2"
+          GIT_CONFIG_KEY_0: "url.https://x-access-token:${{ secrets.GO_PRIVATE_TOKEN }}@github.com/beclab/.insteadof"
+          GIT_CONFIG_VALUE_0: "https://github.com/beclab/"
+          GIT_CONFIG_KEY_1: "url.https://x-access-token:${{ secrets.GO_ABOVEOS_TOKEN }}@github.com/Above-Os/.insteadof"
+          GIT_CONFIG_VALUE_1: "https://github.com/Above-Os/"
 
       - name: Assert binary version was injected
         working-directory: cli

@@ -36,6 +36,7 @@ https://github.com/user-attachments/assets/3e4b0c5d-dcbe-47eb-8628-88b062411fa0
 
 ## 版本动态
 
+- **[Olares 1.12.8](https://www.olares.com/blog/olares-1-12-8/)**：LarePass 手机端应用管理，Wise 知识库，以及外部存储访问控制。
 - **[Olares 1.12.7](https://www.olares.com/blog/olares-1-12-7/)**：Router、Lares，以及更丰富的本地 AI 模型。
 - **[Olares 1.12.6](https://www.olares.com/blog/olares-1-12-6/)**：Agent Skills、本地大模型的模型控制台，以及更可靠的共享应用。
 
@@ -96,6 +97,7 @@ curl -fsSL https://olares.sh | bash -
 - **在本地处理音频**：会议转写、录音翻译、语音合成，全都不必把音频上传到第三方。
 - **搭建自托管工作空间**：为家人或团队提供文档协作、自动化、项目管理和沟通工具。
 - **管理个人数据**：在各种设备之间，存储、同步、备份和取用文件、照片与文档。
+- **构建个人知识库**：用 [Wise](https://www.olares.com/docs/zh/manual/olares/wise/) 随时收藏文章、视频和文件，订阅感兴趣的信息源，在自己的 Olares 上沉淀和管理知识。
 
 ## 系统架构
 

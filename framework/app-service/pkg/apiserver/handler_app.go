@@ -14,7 +14,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/appinstaller"
-	"github.com/beclab/Olares/framework/app-service/pkg/appstate"
+	"github.com/beclab/Olares/framework/app-service/pkg/applifecycle/domain"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/images"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
@@ -69,7 +69,7 @@ func (h *Handler) status(req *restful.Request, resp *restful.Response) {
 	// Pure read; no status write, so it triggers no reconcile or etcd write.
 	progress := am.Status.Progress
 	switch am.Status.State {
-	case v1alpha1.Downloading, v1alpha1.Upgrading:
+	case v1alpha1.Downloading, v1alpha1.UpgradeDownloading, v1alpha1.Upgrading:
 		if p, found, e := images.GetDownloadProgress(req.Request.Context(), h.ctrlClient, &am); e == nil && found {
 			progress = strconv.FormatFloat(p, 'f', 2, 64)
 		}
@@ -100,7 +100,7 @@ func (h *Handler) appsStatus(req *restful.Request, resp *restful.Response) {
 		ss = strings.Split(state, "|")
 	}
 	all := make([]string, 0)
-	for _, a := range appstate.All {
+	for _, a := range domain.AllStates {
 		all = append(all, a.String())
 	}
 	stateSet := sets.NewString(all...)
@@ -276,7 +276,7 @@ func (h *Handler) apps(req *restful.Request, resp *restful.Response) {
 		ss = strings.Split(state, "|")
 	}
 	all := make([]string, 0)
-	for _, a := range appstate.All {
+	for _, a := range domain.AllStates {
 		all = append(all, a.String())
 	}
 	stateSet := sets.NewString(all...)
@@ -560,7 +560,7 @@ func (h *Handler) allUsersApps(req *restful.Request, resp *restful.Response) {
 		ss = strings.Split(state, "|")
 	}
 	all := make([]string, 0)
-	for _, a := range appstate.All {
+	for _, a := range domain.AllStates {
 		all = append(all, a.String())
 	}
 	stateSet := sets.NewString(all...)

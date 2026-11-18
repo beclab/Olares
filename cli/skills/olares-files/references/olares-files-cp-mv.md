@@ -67,3 +67,4 @@ Use `--node` only when you have a specific multi-node deployment with a non-defa
 | `<src> is a directory; pass -r` | Directory source without recursion | Add `-r` |
 | `refusing to mv drive/Home/<protected-name>` | Quirk #4 mv-source guard | Use `cp -r` (preserves the original) if the goal is duplication |
 | `is the volume listing layer (read-only)` | `external/<node>/` destination | Add `<volume>` segment |
+| `the folder, or a folder in it, is shared: ... (HTTP 409)` | The target is shared, or holds a shared folder; the message lists the shares | Confirm with the user, then re-run with `--unshare`: the shares are cancelled and do not follow the folder |

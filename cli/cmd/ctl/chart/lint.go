@@ -7,7 +7,7 @@ import (
 
 	pkgchart "github.com/beclab/Olares/cli/pkg/chart"
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
-	oac "github.com/beclab/Olares/framework/oac"
+	oac "github.com/beclab/oac"
 	"github.com/spf13/cobra"
 )
 

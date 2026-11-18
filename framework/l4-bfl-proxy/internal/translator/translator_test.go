@@ -1029,3 +1029,44 @@ func TestBuildUserVirtualHosts_ProfileRootVerify(t *testing.T) {
 	assert.Equal(t, autheliaVerifyPathPrefix, profile.Routes[0].ExtAuth.PathPrefix)
 	assert.Nil(t, profile.Routes[0].RequestHeaders, "profile must not stamp outbound zone-owner X-BFL-USER")
 }
+
+// The share API goes to the master, whose files alone can reach Seafile,
+// except shares made on a node's own Cache or External, which go to that
+// node ahead of the master's catch-all.
+func TestBuildFileserverRoutes_ShareAPIOnMaster(t *testing.T) {
+	tr := &Translator{cfg: &Config{}}
+	user := &message.UserInfo{
+		Name: "testip162",
+		FileserverNodes: []*message.FileserverNodeInfo{
+			{NodeName: "olares", IsMaster: false},
+			{NodeName: "olares-worker", IsMaster: true},
+		},
+	}
+	routes := tr.buildFileserverRoutes(user, make(map[string]*ir.ClusterIR))
+
+	// route returns the first route matching path, as Envoy picks it.
+	route := func(path string) *ir.HTTPRouteIR {
+		for _, r := range routes {
+			if r.PathPrefix != "" && strings.HasPrefix(path, r.PathPrefix) {
+				return r
+			}
+		}
+		return nil
+	}
+	for path, cluster := range map[string]string{
+		"/api/share/share_path/":                                       "files_testip162_olares-worker",
+		"/api/share/share_path/share_members/":                         "files_testip162_olares-worker",
+		"/api/share/share_member/":                                     "files_testip162_olares-worker",
+		"/api/share/smb_share_member/":                                 "files_testip162_olares-worker",
+		"/api/share/share_path/sync/repo-id/dir/":                      "files_testip162_olares-worker",
+		"/api/share/share_path/drive/Home/dir/":                        "files_testip162_olares-worker",
+		"/api/share/share_path/external/olares/USB-0/dir/":             "files_testip162_olares",
+		"/api/share/share_path/cache/olares/dir/":                      "files_testip162_olares",
+		"/api/share/share_path/external/olares-worker/nas/":            "files_testip162_olares-worker",
+		"/api/share/get_share_internal_smb/external/olares/USB-0/dir/": "files_testip162_olares",
+	} {
+		r := route(path)
+		require.NotNil(t, r, "no route for %s", path)
+		assert.Equal(t, cluster, r.Cluster, "route for %s", path)
+	}
+}

@@ -28,7 +28,7 @@ Olares file search is configured in **File search**, which contains three main s
 - **Excluded files**: Acts as a global ignore list for the search engine, defining which files are excluded from the index.
 - **Full-text search directories**: Lists the folders where content search is enabled, so files are searchable by both filename and text content.
 
-![File search](/images/manual/olares/file-search.png#bordered)
+![File search](/images/manual/olares/file-search-1.12.8.png#bordered)
 
 ## View search index status
 

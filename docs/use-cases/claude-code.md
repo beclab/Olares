@@ -8,8 +8,8 @@ head:
     - name: keywords
       content: Olares, Claude Code, Anthropic, AI coding, Ollama, terminal, TUI, self-hosted
 app_version: "0.1.13"
-doc_version: "2.0"
-doc_updated: "2026-09-23"
+doc_version: "2.3"
+doc_updated: "2026-11-11"
 ---
 
 # Write code using Claude Code
@@ -31,11 +31,12 @@ In this guide, you will learn how to:
 Before you begin, you need:
 
 <!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
+- Additional requirements depend on how you connect:
 
-Depending on how you connect, prepare one of the following:
-
-- **Claude**: An active Claude Pro or Max subscription.
-- **Local model**: Qwen3.8-27B (llama.cpp) installed from Market.
+  | Connection method | Requirements |
+  | :--- | :--- |
+  | Anthropic subscription | An active Claude Pro or Max subscription |
+  | Local model | Qwen3.8-27B (llama.cpp) installed from Market |
 
 <!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
@@ -77,17 +78,30 @@ Use this method if you hold an active Claude Pro or Max subscription.
 
 ### Connect using a local model
 
-Use this method to run Claude Code locally. This example uses the model app **Qwen3.8-27B (llama.cpp)**.
+Use this method to run Claude Code locally. This example uses the model app Qwen3.8-27B (llama.cpp).
 
 <!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
 
-<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-anthropic-->
+#### Configure the local model in Router
 
-5. Open Olares Settings, and then go to **Applications** > **Claude Code** > **Manage environment variables**.
-6. Specify the following environment variables:
+1. Open Router from Launchpad. On **Default models**, set Qwen3.8-27B (llama.cpp) as the default chat model.
+2. Go to **LLM**, find Qwen3.8-27B (llama.cpp), and click **View model card**.
+3. Click **Edit**. Under **Context & Rate Limits**, set **Max output tokens** to `32000`, then click **Save**.
+4. Wait until the model shows **Callable**.
 
-   - **ANTHROPIC_AUTH_TOKEN**: Enter any text, such as `local`. Router identifies this Olares app through the platform. Claude Code still requires a non-empty token field.
-   - **ANTHROPIC_BASE_URL**: Enter the **Base URL** you copied from Router. For example, `https://router.<your-olares-domain>`.
+   :::info Max output token limit
+   Claude Code sends local model requests with `max_tokens` set to `32000`, so Router must allow at least `32000` output tokens. You can set a higher limit only when the model backend and its configured context window support it. This limit does not reserve memory or force every response to use that many tokens.
+   :::
+
+5. On the same model row, click **View connection example**. In **How to call this model**, select **Apps in Olares** and copy the **Base URL**. Remove the trailing `/v1`. For example, use `https://router.<your-olares-domain>`.
+
+#### Configure Claude Code
+
+1. Open Olares Settings, and then go to **Applications** > **Claude Code** > **Manage environment variables**.
+2. Specify the following environment variables:
+
+   - **ANTHROPIC_AUTH_TOKEN**: Enter `olares`.
+   - **ANTHROPIC_BASE_URL**: Enter the **Base URL** you copied from Router.
    - **ANTHROPIC_MODEL**: Enter `default-chat`.
 
    <!--
@@ -96,8 +110,8 @@ Use this method to run Claude Code locally. This example uses the model app **Qw
    -->
 
 
-7. Click **Apply**. Wait about 10 seconds for the container to restart.
-8. Open the Claude Code CLI from the Launchpad, and then enter `claude` in the terminal to start your session.
+3. Click **Apply**. Wait about 10 seconds for the container to restart.
+4. Open the Claude Code CLI from the Launchpad, and then enter `claude` in the terminal to start your session.
 
 ## Use Claude Code
 

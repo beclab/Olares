@@ -13,9 +13,7 @@ Olares OS 不支持 eGPU 热插拔。连接或断开 eGPU 前，必须关闭 Ola
 
 ## 连接 eGPU
 
-1. 打开 **Settings** > **My hardware** > **Shutdown**。
-
-   ![关闭 Olares One](/images/one/shut-down-olares-one.png#bordered)
+1. 打开**设置**，点击左上角头像，然后选择**集群概览** > **关闭集群**。详情请参阅[重启或关闭设备](./hardware-settings.md#重启或关闭设备)。
 
 2. 使用 LarePass 扫描二维码，再点击 **Confirm**。
 3. 等待 Olares One 完全关机。
@@ -114,7 +112,7 @@ after rescan: 0000:0a:00.0 speed=2.5 GT/s PCIe driver=nvidia
 
 ## 断开 eGPU
 
-1. 打开 **Settings** > **My hardware** > **Shutdown**。
+1. 打开**设置**，点击左上角头像，然后选择**集群概览** > **关闭集群**。详情请参阅[重启或关闭设备](./hardware-settings.md#重启或关闭设备)。
 2. 在 LarePass 中批准关机，并等待 Olares One 完全关闭。
 3. 关闭 eGPU 电源。
 4. 从 Olares One 断开雷电线。

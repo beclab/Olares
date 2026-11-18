@@ -91,6 +91,24 @@ func (qe *QueuedEventController) enqueue(obj interface{}) {
 	qe.wq.Add(obj)
 }
 
+// Enqueue exposes the internal workqueue add for callers that
+// already hold a *QueuedEventController and have built a
+// *QueueEvent themselves. Introduced so
+// pkg/applifecycle/adapters/natsrecorder can push events without
+// reaching into the AppEventQueue global — the new Runner-side
+// path must not depend on process-global state so it stays
+// unit-testable with a fake queue.
+//
+// Existing in-tree callers should keep using
+// PublishAppEventToQueue / PublishToQueue / PublishUserEventToQueue
+// which handle the payload shape internally.
+func (qe *QueuedEventController) Enqueue(ev *QueueEvent) {
+	if ev == nil {
+		return
+	}
+	qe.enqueue(ev)
+}
+
 func (qe *QueuedEventController) publish(subject string, data interface{}) error {
 	if err := qe.ensureNatsConnected(); err != nil {
 		return fmt.Errorf("failed to ensure NATS connection: %w", err)

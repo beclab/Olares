@@ -324,7 +324,7 @@ func (t *MountJuiceFSForMigration) Execute(runtime connector.Runtime) error {
 	if _, err := runtime.GetRunner().SudoCmd(fmt.Sprintf("mkdir -p %s", MigrationTempMountPoint), false, false); err != nil {
 		return err
 	}
-	cmd := fmt.Sprintf("%s mount --background --cache-dir %s %s %s", JuiceFsFile, JuiceFsCacheDir, metaURL, MigrationTempMountPoint)
+	cmd := fmt.Sprintf("%s mount --background --enable-xattr --cache-dir %s %s %s", JuiceFsFile, JuiceFsCacheDir, metaURL, MigrationTempMountPoint)
 	if _, err := runtime.GetRunner().SudoCmd(cmd, false, true); err != nil {
 		return errors.Wrap(err, "failed to mount JuiceFS for migration")
 	}

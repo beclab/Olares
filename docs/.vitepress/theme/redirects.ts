@@ -1,4 +1,28 @@
 export const redirects = {
+    // Retired AI app connection guides, including the 1.12.6 versions.
+    '/manual/best-practices/connect-ai-apps': '/use-cases/olares-router',
+    '/manual/best-practices/connect-ai-apps-1.12.6': '/use-cases/olares-router',
+    '/zh/manual/best-practices/connect-ai-apps': '/zh/use-cases/olares-router',
+    '/zh/manual/best-practices/connect-ai-apps-1.12.6': '/zh/use-cases/olares-router',
+
+    // Retired NemoClaw tutorials → the closest live OpenClaw guides.
+    '/use-cases/nemoclaw': '/use-cases/openclaw',
+    '/use-cases/nemoclaw-1.12.6': '/use-cases/openclaw',
+    '/use-cases/nemoclaw-google-workspace': '/use-cases/openclaw-skills',
+    '/use-cases/nemoclaw-olares-cli': '/use-cases/openclaw-olares-skills',
+    '/use-cases/nemoclaw-common-issues': '/use-cases/openclaw-common-issues',
+    '/zh/use-cases/nemoclaw': '/zh/use-cases/openclaw',
+    '/zh/use-cases/nemoclaw-1.12.6': '/zh/use-cases/openclaw',
+    '/zh/use-cases/nemoclaw-google-workspace': '/zh/use-cases/openclaw-skills',
+    '/zh/use-cases/nemoclaw-olares-cli': '/zh/use-cases/openclaw-olares-skills',
+    '/zh/use-cases/nemoclaw-common-issues': '/zh/use-cases/openclaw-common-issues',
+
+    // Retired Control Hub host terminal pages.
+    '/manual/olares/controlhub/terminal': '/manual/access-olares-terminal',
+    '/zh/manual/olares/controlhub/terminal': '/zh/manual/access-olares-terminal',
+    '/one/access-terminal-control-hub': '/one/access-terminal-ssh',
+    '/zh/one/access-terminal-control-hub': '/zh/one/access-terminal-ssh',
+
     // Move the Hindsight app tutorial to Use cases.
     '/manual/tutorial/hindsight': '/use-cases/hindsight',
     '/zh/manual/tutorial/hindsight': '/zh/use-cases/hindsight',
@@ -78,9 +102,15 @@ export const redirects = {
     '/use-cases/ollama': '/use-cases/llm-base-apps',
     '/zh/use-cases/ollama': '/zh/use-cases/llm-base-apps',
 
-    // Rename: ace-step → ace-step-1.5 (permanent: old name is retired)
-    '/use-cases/ace-step': '/use-cases/ace-step-1.5',
-    '/zh/use-cases/ace-step': '/zh/use-cases/ace-step-1.5',
+    // Retired: ACE-Step guides → Music Studio
+    '/use-cases/ace-step': '/use-cases/music-studio',
+    '/zh/use-cases/ace-step': '/zh/use-cases/music-studio',
+    '/use-cases/ace-step-1.5': '/use-cases/music-studio',
+    '/zh/use-cases/ace-step-1.5': '/zh/use-cases/music-studio',
+
+    // Consolidated FlowStudio direct-creation guide into the main app page.
+    '/use-cases/flowstudio-create': '/use-cases/flowstudio',
+    '/zh/use-cases/flowstudio-create': '/zh/use-cases/flowstudio',
 
     // Refactor: openwebui-ollama → openwebui (merged: Ollama is now Option A in the unified quick start)
     '/use-cases/openwebui-ollama': '/use-cases/openwebui',
@@ -199,8 +229,37 @@ export const redirects = {
     '/developer/contribute/overview': '/developer/contribute/olares',
     '/zh/developer/contribute/overview': '/zh/developer/contribute/olares',
 
-    // Removed: stale olares-id section hero page → first olares-id doc
-    '/developer/contribute/olares-id/': '/developer/contribute/olares-id/contract/contract',
+    // Retired protocol development docs → live concepts in the same locale.
+    '/developer/contribute/olares-id/': '/developer/concepts/olares-id',
+    '/zh/developer/contribute/olares-id/': '/zh/developer/concepts/olares-id',
+    '/developer/contribute/olares-id/contract/architecture': '/developer/concepts/olares-id',
+    '/developer/contribute/olares-id/contract/contract-reputation': '/developer/concepts/reputation',
+    '/developer/contribute/olares-id/contract/contract': '/developer/concepts/olares-id',
+    '/developer/contribute/olares-id/contract/did/design': '/developer/concepts/did',
+    '/developer/contribute/olares-id/contract/did/faq': '/developer/concepts/did',
+    '/developer/contribute/olares-id/contract/did/official-taggers': '/developer/concepts/did',
+    '/developer/contribute/olares-id/contract/did/release-history': '/developer/concepts/did',
+    '/developer/contribute/olares-id/contract/manage/contract': '/developer/concepts/olares-id',
+    '/developer/contribute/olares-id/contract/manage/environment': '/developer/concepts/olares-id',
+    '/developer/contribute/olares-id/contract/manage/sdk': '/developer/concepts/olares-id',
+    '/developer/contribute/olares-id/verifiable-credential/issuer': '/developer/concepts/vc',
+    '/developer/contribute/olares-id/verifiable-credential/olares': '/developer/concepts/vc',
+    '/developer/contribute/olares-id/verifiable-credential/overview': '/developer/concepts/vc',
+    '/developer/contribute/olares-id/verifiable-credential/verifer': '/developer/concepts/vc',
+    '/zh/developer/contribute/olares-id/contract/architecture': '/zh/developer/concepts/olares-id',
+    '/zh/developer/contribute/olares-id/contract/contract-reputation': '/zh/developer/concepts/reputation',
+    '/zh/developer/contribute/olares-id/contract/contract': '/zh/developer/concepts/olares-id',
+    '/zh/developer/contribute/olares-id/contract/did/design': '/zh/developer/concepts/did',
+    '/zh/developer/contribute/olares-id/contract/did/faq': '/zh/developer/concepts/did',
+    '/zh/developer/contribute/olares-id/contract/did/official-taggers': '/zh/developer/concepts/did',
+    '/zh/developer/contribute/olares-id/contract/did/release-history': '/zh/developer/concepts/did',
+    '/zh/developer/contribute/olares-id/contract/manage/contract': '/zh/developer/concepts/olares-id',
+    '/zh/developer/contribute/olares-id/contract/manage/environment': '/zh/developer/concepts/olares-id',
+    '/zh/developer/contribute/olares-id/contract/manage/sdk': '/zh/developer/concepts/olares-id',
+    '/zh/developer/contribute/olares-id/verifiable-credential/issuer': '/zh/developer/concepts/vc',
+    '/zh/developer/contribute/olares-id/verifiable-credential/olares': '/zh/developer/concepts/vc',
+    '/zh/developer/contribute/olares-id/verifiable-credential/overview': '/zh/developer/concepts/vc',
+    '/zh/developer/contribute/olares-id/verifiable-credential/verifer': '/zh/developer/concepts/vc',
 
     // Removed: single-gpu/multi-gpu were noindex include-only fragments of gpu-resource → consolidated page
     '/manual/olares/settings/single-gpu': '/manual/olares/settings/gpu-resource',
@@ -222,10 +281,11 @@ export const redirects = {
     '/one/steam-stream': '/use-cases/steam-stream',
     '/one/steam-direct-play': '/use-cases/steam-direct-play',
     '/one/wise-download': '/manual/olares/wise/',
+    '/manual/olares/wise/recommend': '/manual/olares/wise/',
     '/one/open-webui': '/use-cases/openwebui',
     '/one/comfyui': '/use-cases/comfyui',
     '/one/deerflow': '/use-cases/deerflow2',
-    '/one/ace-step': '/use-cases/ace-step-1.5',
+    '/one/ace-step': '/use-cases/music-studio',
     '/one/create-users': '/manual/olares/settings/manage-team',
     '/one/config-app-access': '/manual/olares/settings/manage-entrance',
     '/zh/one/files': '/zh/manual/olares/files/',
@@ -240,10 +300,11 @@ export const redirects = {
     '/zh/one/steam-stream': '/zh/use-cases/steam-stream',
     '/zh/one/steam-direct-play': '/zh/use-cases/steam-direct-play',
     '/zh/one/wise-download': '/zh/manual/olares/wise/',
+    '/zh/manual/olares/wise/recommend': '/zh/manual/olares/wise/',
     '/zh/one/open-webui': '/zh/use-cases/openwebui',
     '/zh/one/comfyui': '/zh/use-cases/comfyui',
     '/zh/one/deerflow': '/zh/use-cases/deerflow2',
-    '/zh/one/ace-step': '/zh/use-cases/ace-step-1.5',
+    '/zh/one/ace-step': '/zh/use-cases/music-studio',
     '/zh/one/create-users': '/zh/manual/olares/settings/manage-team',
     '/zh/one/config-app-access': '/zh/manual/olares/settings/manage-entrance',
 

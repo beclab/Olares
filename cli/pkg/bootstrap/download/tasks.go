@@ -7,6 +7,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/distribution/reference"
 	"github.com/pkg/errors"
 
 	cc "github.com/beclab/Olares/cli/pkg/core/common"
@@ -46,7 +47,7 @@ func (d *PackageDownload) Execute(runtime connector.Runtime) error {
 		return errors.Wrap(err, "failed to check local cache")
 	}
 	if len(d.missingItems) == 0 {
-		logger.Info("all files are already downloaded and is the expected version")
+		logger.Info("all required packages and images are already available")
 	} else {
 		logger.Infof("%d out of %d files need to be downloaded", len(d.missingItems), len(d.missingItems)+len(d.existingItems))
 	}
@@ -62,6 +63,7 @@ func (d *PackageDownload) Execute(runtime connector.Runtime) error {
 
 // CheckLocalCache compares the items in the manifest file
 // against the local files by MD5 checksum
+// or, for images, the tags already available in containerd,
 // and filters out the existing and missing items
 func (d *PackageDownload) CheckLocalCache(runtime connector.Runtime) error {
 	if d.Manifest == "" {
@@ -80,7 +82,9 @@ func (d *PackageDownload) CheckLocalCache(runtime connector.Runtime) error {
 	if err != nil {
 		return errors.Wrap(err, "unable to open manifest")
 	}
+	defer f.Close()
 
+	var containerdImages map[string]struct{}
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -91,10 +95,50 @@ func (d *PackageDownload) CheckLocalCache(runtime connector.Runtime) error {
 		if must(isRealExists(runtime, item, baseDir)) {
 			d.existingItems = append(d.existingItems, item)
 		} else {
+			if item.ImageName != "" {
+				if containerdImages == nil {
+					containerdImages = listContainerdImages(runtime)
+				}
+				if _, ok := containerdImages[normalizeImageRef(item.ImageName)]; ok {
+					logger.Infof("image %s already exists in containerd, skipping download", item.ImageName)
+					d.existingItems = append(d.existingItems, item)
+					continue
+				}
+			}
 			d.missingItems = append(d.missingItems, item)
 		}
 	}
-	return nil
+	return scanner.Err()
+}
+
+// Query once, only when an image archive is missing or invalid. Downloads also
+// run before containerd is installed, so an unavailable runtime is a cache miss.
+func listContainerdImages(runtime connector.Runtime) map[string]struct{} {
+	images := make(map[string]struct{})
+	if !runtime.GetSystemInfo().IsLinux() {
+		return images
+	}
+	output, err := runtime.GetRunner().SudoCmd(
+		"command -v ctr >/dev/null 2>&1 && test -S /run/containerd/containerd.sock && ctr --connect-timeout 5s --timeout 5s -n k8s.io images list -q",
+		false, false)
+	if err != nil {
+		logger.Debugf("unable to check containerd image cache, falling back to archive download: %v", err)
+		return images
+	}
+	for _, name := range strings.Fields(output) {
+		if ref := normalizeImageRef(name); ref != "" {
+			images[ref] = struct{}{}
+		}
+	}
+	return images
+}
+
+func normalizeImageRef(name string) string {
+	ref, err := reference.ParseNormalizedNamed(name)
+	if err != nil {
+		return ""
+	}
+	return reference.TagNameOnly(ref).String()
 }
 
 func (d *CheckDownload) Execute(runtime connector.Runtime) error {

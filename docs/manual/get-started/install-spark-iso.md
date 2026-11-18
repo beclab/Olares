@@ -23,7 +23,7 @@ This guide explains how to install Olares on NVIDIA DGX Spark using the official
 
 ## Create a bootable USB drive
 
-1. Download [the official Olares ISO image for DGX Spark](https://cdn.olares.com/spark/olares-v1.12.7-arm64.iso).
+1. Download [the official Olares ISO image for DGX Spark](https://cdn.olares.com/spark/olares-v1.12.8-arm64.iso).
 2. Download and install [Balena Etcher](https://etcher.balena.io/).
 3. Insert the USB flash drive into your computer.
 4. Launch Balena Etcher and follow these steps:
@@ -118,17 +118,18 @@ Once activation is complete, LarePass will display the desktop address of your O
 
 DGX Spark features a unified memory architecture where the CPU and GPU share 128 GB of LPDDR5x memory. Unlike traditional GPUs with dedicated VRAM, DGX Spark does not distinguish between system memory and GPU memory.
 
-On DGX Spark, Olares uses **Memory slicing** mode by default for GPU resource management. When you install an AI application, Olares automatically allocates the minimum required memory to ensure the app can start and run properly.
+On DGX Spark, Olares uses **Memory slice** mode by default for GPU resource management. When you install an AI application, Olares automatically allocates the minimum memory required to start it.
 
-If needed, you can manually adjust the memory allocation for each AI application:
+To change the memory quota for an AI app that is already running, remove its GPU assignment and set a new quota when you resume it. Removing the assignment stops the app.
 
-1. Open Settings from Olares, and then navigate to **GPU**.
-2. In the **Allocate VRAM** section, find the target app.
+1. Go to **Settings** > **Accelerator** and click **Manage** on the DGX Spark GPU resource card.
+2. Under **Assigned apps**, find the app, click **Remove**, and confirm. The app stops and its GPU allocation is released.
+3. Go to **Settings** > **Applications**, find the stopped app, and click **Resume**.
+4. Under **Select GPUs**, select the DGX Spark GPU. In **Memory slice** mode, enter the desired amount in **Quota for current app**. The quota cannot exceed the available capacity.
 
-    ![Memory slicing](/images/manual/get-started/install-spark-memory-slicing.png#bordered){width=70%}
+5. Click **Launch**.
 
-3. Click <i class="material-symbols-outlined">edit_square</i> next to the VRAM value.
-4. In the **Edit VRAM allocation** dialog, enter the desired VRAM amount in GB and click **Confirm**.
+For details about assigning resources and changing GPU modes, see [Manage accelerator resources](../olares/settings/gpu-resource.md).
 
 <!--@include: ./reusables.md#protect-olares-id-->
 

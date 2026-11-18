@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stopk8scpu
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: {{ .Values.workloads.stopk8scpu.replicaCount }}
+  selector:
+    matchLabels:
+      app: stopk8scpu
+  template:
+    metadata:
+      labels:
+        app: stopk8scpu
+    spec:
+      containers:
+        - name: stopk8scpu
+          image: docker.io/beclab/harveyff-adguardhome:v0.107.77
+          args: ["--web-addr", "0.0.0.0:80", "--no-check-update"]
+          ports:
+            - name: http
+              containerPort: 80
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: stopk8scpu-svc
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    app: stopk8scpu
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80

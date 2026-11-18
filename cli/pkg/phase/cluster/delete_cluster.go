@@ -92,6 +92,8 @@ func (p *phaseBuilder) phaseInstall() *phaseBuilder {
 			)
 		}
 
+		p.modules = append(p.modules, &storage.UmountNetworkDrivesModule{})
+
 		switch p.runtime.Cluster.Kubernetes.Type {
 		case common.K3s:
 			p.modules = append(p.modules, &k3s.DeleteClusterModule{})

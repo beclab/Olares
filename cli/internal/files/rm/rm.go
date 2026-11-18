@@ -39,6 +39,10 @@ import (
 type Client struct {
 	HTTPClient *http.Client
 	BaseURL    string // FilesURL, e.g. https://files.alice.olares.com
+	// Unshare lets the backend change a folder that is shared, or
+	// holds one: the shares on it are cancelled once the change is
+	// done. Without it the backend answers 409 and lists the shares.
+	Unshare bool
 }
 
 // HTTPError carries the status + truncated body of a non-2xx response
@@ -495,6 +499,9 @@ func (c *Client) DeleteBatch(ctx context.Context, g *Group) error {
 	}
 	plain := g.FileType + "/" + g.Extend + parent
 	endpoint := c.BaseURL + "/api/resources/" + encodepath.EncodeURL(plain)
+	if c.Unshare {
+		endpoint += "?unshare=true"
+	}
 
 	bodyBytes, err := json.Marshal(deleteRequestBody{Dirents: g.Dirents})
 	if err != nil {

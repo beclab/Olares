@@ -38,7 +38,11 @@ Starting from Olares 1.11.6, if "Dify For Cluster" or "Dify" was previously inst
 
 ## Add a chat model through Router
 
+### Get model connection details
+
 <!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
+
+### Configure the model in Dify
 
 1. In Dify, open **Settings** > **Model Provider**, then install and select the **OpenAI-API-compatible** provider plugin.
 2. Add a model with **Model Name** set to `default-chat` and the model type set to chat or **LLM**.

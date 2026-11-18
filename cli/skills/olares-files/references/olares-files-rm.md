@@ -9,6 +9,7 @@ Delete one or more files / directories. Batch-aware: multiple targets that share
 
 - **Destructive verb — confirm intent with the user before invocation.** The CLI prompts y/N by default; `-f` skips the prompt.
 - **`-f` does NOT bypass the preflight existence check** — a missing path still aborts (safer-than-Unix `rm -f`). This means a typo cannot half-delete a batch.
+- **Shared folders are kept.** A shared folder, or one holding a shared folder, is refused (409, with the shares listed). `--unshare` cancels those shares and deletes; ask the user first.
 - **Trailing slash signals directory intent.** Without `-r`, `rm drive/Home/Foo/` errors with "<Foo> is a folder, pass -r". Without trailing slash AND target is actually a dir, errors with the same CTA.
 - **Protected names** ([backend quirks](../SKILL.md#backend-quirks-that-change-decisions)) are refused at the first level under `drive/Home/` only; deeper paths (`drive/Home/Pictures/Trip2024/`) are fully deletable.
 
@@ -49,3 +50,4 @@ Volume roots are rejected upstream by the planner; the preflight only sees real 
 | `refusing to delete drive/Home/<protected-name>` | Quirk #4 | Pick a different target, or operate on a nested path |
 | `<path> does not exist on the server` | Stale / typo | `files ls` the parent first |
 | 401/403 | Token rotation | See [`../../olares-shared/SKILL.md`](../../olares-shared/SKILL.md) |
+| `the folder, or a folder in it, is shared: ... (HTTP 409)` | The target is shared, or holds a shared folder; the message lists the shares | Confirm with the user, then re-run with `--unshare`: the shares are cancelled and do not follow the folder |

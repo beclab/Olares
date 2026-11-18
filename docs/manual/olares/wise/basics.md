@@ -1,162 +1,113 @@
 ---
 outline: [2, 3]
-description: Get started with Wise in Olares. Learn to collect content, organize your reading library, add notes, track progress, and customize your reading experience.
+description: Read and organize content in Wise with Inbox, Read Later, notes, tags, search, and filtered views.
 head:
   - - meta
     - name: keywords
-      content: Olares, Wise, reading library, save content, RSS feeds, notes, tags, LarePass extension
+      content: Olares, Wise, reading library, Inbox, Read Later, notes, tags, search, filtered views
 ---
-# Wise basics
 
-Wise helps you build a focused reading workflow on top of your personal information hub. This page walks you through the core actions you'll use every day: collecting content, organizing what to read next, and capturing your own insights.
+# Read and organize your Wise library <Badge type="tip" text="Olares 1.12.8+" />
 
-This page focuses on saving and working with individual items. For a deeper look at feeds and subscriptions, see [Subscribe and manage feeds](./subscribe).
+Once you have saved content or chosen something from **Feeds**, use Wise to decide what to read next, record your thoughts, and find it again later.
 
+The **Library** area in the sidebar offers several ways to browse content:
 
-## Before you begin
+| View | What it shows |
+| --- | --- |
+| **Feeds** | Content from sources you subscribe to. |
+| **Inbox** | Content you saved to Wise. |
+| **Articles**, **Videos**, **Audios**, **Books**, and **PDFs** | Content saved to Wise, organized by format. |
 
-To unlock the full potential of Wise, it is recommended to install the following apps from Olares Market:
+These views can overlap. For example, an item from a feed can also appear in **Inbox** and under its content type.
 
-- **Rss Subscribe**: Use it to subscribe to RSS feeds directly while browsing web pages.
-- **YT-DLP**: Use it to download audio and video from supported web pages into Wise.
-- **Twitter/X plugin**: Use it to save posts and download attached files from Twitter/X into Wise.
+## Choose Inbox or Read Later
 
-:::tip 
-Wise works without these apps, but some features require them, such as in-browser subscriptions, media downloads, and Twitter/X link recognition and saving.
-:::
+Use **Inbox** for items you want to work through soon and **Read Later** for items you want to revisit later. Select either action on an item's card or in the reader to choose where to keep it.
 
-## Build your library
+![Actions for choosing Inbox or Read Later](/images/manual/olares/wise-item-status.png#bordered)
 
-Wise pulls content into your library in two ways:
+## Organize a view into tabs
 
-- **Saved items:** Individual web pages, files, audio, and video that you capture manually. These items appear in your main **Inbox** and are automatically sorted into categories such as **Articles**.
-- **Feeds:** Subscriptions to dynamic sources like websites, blogs, and podcasts. New updates appear under **Feeds**, where you can select specific entries to save to your library.
+To organize the tabs in **Inbox**:
 
-### Save items
+1. Select **Inbox** in the left sidebar.
+2. In the main pane, click the menu beside the **Inbox** title and choose **Organize tabs**.
+3. Under **Group by**, choose how to display the content:
+   - **Inbox / Read later**: Show separate tabs for items in Inbox and Read Later.
+   - **Unread / Read**: Show separate tabs by reading status.
+   - **No tabs**: Show all items together.
+4. Click **Confirm**.
 
-You can save individual items to Wise in three ways: 
-- Upload files
-- Add items via link
-- Save from browser with LarePass extension
+## Use the reader
 
-#### Upload files
-
-Import files directly from your computer, including PDFs, EPUBs, audio, video, and other document types. Wise automatically places each supported format into the right content folder in your library. 
-
-1. Click <i class="material-symbols-outlined">add_circle</i> in the bottom-left menu bar, and select **Upload**.
-2. Select one or more files from your local computer.
-    :::tip 
-    You can also drag and drop files into the Wise interface.
-    :::
-3. In the Upload files window, select the destination folder, then click **Confirm**.
-
-#### Add items via link
-
-Paste a URL to save articles, videos, or subscribe to feeds.
-
-::: tip Handle restricted content
-If a link requires login or other access control, Wise may need cookies to fetch it correctly. To configure cookies for protected sites, see **[Manage cookies for Wise](./manage-cookies)**.
-:::
-
-1. Click <i class="material-symbols-outlined">add_circle</i> in the bottom-left menu bar, and select **Add Link**.
-2. Paste or type a URL.
-
-    Wise analyzes the link and lists all the available actions:
-    - **Save to library**: The content will be saved as an item in your library and added to **Inbox**. Twitter/X posts are supported when the Twitter/X plugin is installed.
-    - **Subscribe to RSS feed**: If Wise detects one or more RSS feeds for the site, they will be listed here. Select the feed you want to follow, and new items from that feed will be automatically [added to **Feeds**](./subscribe).
-    ![Subscribe to RSS feed](/images/manual/olares/wise-add-link-subscribe.png#bordered){width=300}
-    - **Download file**: If Wise detects downloadable media (such as audio, video, or attached files in Twitter/X posts), this option will appear. Select the file you want to download to save it for offline access. 
-        :::tip Install helper services
-        Some downloads require helper services: 
-        - [YT-DLP](https://market.olares.com/app/market.olares/ytdlp) is commonly used to download audio or video from supported pages when downloadable media is available.
-        - [Twitter/X plugin](https://market.olares.com/app/market.olares/twitter) is required to download attached files from Twitter/X posts.
-        :::
-    ![Download files](/images/manual/olares/wise-add-link-download.png#bordered){width=300}
-
-Newly saved items will appear under their content type.
-
-#### Save from browser with LarePass extension
-
-You can also save content to Wise directly from your browser using the [LarePass extension](https://www.olares.com/larepass), without opening Wise first.
-
-1. Open the LarePass browser extension and select the "Collect" icon.
-2. Under **Save to library**, review the content detected on the current page.
-3. Click <i class="material-symbols-outlined">box_add</i> next to the item you want to save.
-![Save content via LarePass extension](/images/manual/olares/wise-larepass-add-to-lib.png#bordered)
-
-Items saved via LarePass are added to your Wise library and appear in the main **Inbox** folder and under the appropriate content type.
-
-### Monitor and manage file tasks
-
-Wise tracks background transfer tasks in two lists:
-
-- **Download list**: Created when you add downloadable media. Wise downloads the files to Olares so you can access them offline.
-- **Upload list**: Created when you upload local files into Wise. Wise tracks the upload progress and results.
-
-To manage transfer tasks:
-
-1. Go to **<i class="material-symbols-outlined">settings</i> Settings** > **Download list** or **Upload list**.
-2. Use the tabs to filter tasks: 
-    - Download list tabs: **All**, **Downloading**, **Completed**, **Failed**
-    - Upload list tabs: **All**, **Uploading**, **Completed**, **Failed**.
-3. Review the task list and status.
-4. You can:
-   - Click <i class="material-symbols-outlined">folder_open</i> to locate the transferred file in Files.
-   - Click <i class="material-symbols-outlined">do_not_disturb_on</i> to remove it from the list.
-
-## Use reading tools
-
-Wise provides several tools to enhance your reading experience and help you keep track of what matters.
+Open an item in Wise. The reader toolbar helps you:
 
 ![Wise reading toolbar](/images/manual/olares/wise-reading-toolbar.png#bordered)
 
-### Track reading progress
+- **Track reading**: Wise tracks your progress and can mark an item as read when you finish it. You can also mark it as read or unread from the toolbar.
+- **Take notes**: Click **Show panel**, enter a note under **Note**, and click **Save**. Return to the panel to edit or delete it.
+- **Adjust the text**: For supported content, open **Reading settings** to change the font, font size, or typography.
 
-Wise uses green dot indicators on article covers to help you track unread content. When you open an article, it's automatically marked as read.
-![Wise unseen content](/images/manual/olares/wise-unseen-content.png#bordered){width=600}
+If an article appears incomplete, **Fetch original content** retries retrieving it from the source.
 
-In the reader toolbar, you can manually toggle between **<i class="material-symbols-outlined">playlist_add_check</i>Seen** or **<i class="material-symbols-outlined">playlist_remove</i>Unseen** to maintain your reading progress.
+## Organize with tags
 
-### Capture notes
+1. On an item's card, click the tag icon.
+2. Select an existing tag or enter a name to create one.
 
-You can add private notes to any content in your library:
+![Add tags to a Wise entry](/images/manual/olares/wise-tags.png#bordered){width=600}
 
-1. While browsing, click <i class="material-symbols-outlined" style="font-variation-settings: 'wght' 200;">right_panel_open</i> to open the **Info** panel.
-2. Type your thoughts in the **Note** section.
-3. Click **Save**.
+To work with tags you have created, open **Settings** > **Tags**:
 
-You can edit or delete notes from the same panel at any time.
+- Search, add, rename, or delete tags from the list.
+- Select **Manage views...** beside a tag to create a filtered view or add the tag to an existing view. See [Use filtered views](#use-filtered-views) for the steps.
 
-## Use tags
+## Find content
 
-Tags allow you to add flexible labels to your content for easy retrieval later.
+If you remember the title of a page, PDF, or feed, use Olares search to find it:
 
-1. On the list page, click <i class="material-symbols-outlined" style="font-variation-settings: 'wght' 200;">sell</i> on the content card to add tags to it.
-2. Select an existing tag, or type a new name to create one.
+1. On Olares Desktop, press `Shift + Space` or click the search icon in the Dock.
+2. Set the search scope to **Wise** and enter a word from the title or name.
+3. Select a result to open it in Wise.
 
-![Tags](/images/manual/olares/wise-tags.png#bordered){width=600}
+## Use filtered views
 
-You can manage all your tags in **<i class="material-symbols-outlined">settings</i> Settings** > **Tags**.
+Use a filtered view when you want a reusable list of content that matches a topic, source, format, or other condition. A view can include content from **Feeds** and items you saved. It updates as matching content appears.
 
-::: tip
-Tags become even more powerful when combined with filtered views. See [Organize your knowledge with filters](./filter) to build tag-based views such as "AI articles" or "Design inspiration".
-:::
+### Create a view from a tag or feed
 
-## Search your library
+1. Open **Settings** > **Tags** or **RSS feeds**.
+2. Find the tag or feed you want and select **Manage views...**.
+3. Select **Create a new view**, enter a name, and click **Confirm**. If you already have a view for this topic, select it from the list instead.
 
-Once you've collected your content in Wise, you can search for particular content themes or entries using aggregated search in Olares.
+    ![Create a filtered view from a tag or feed](/images/manual/olares/wise-create-views.png#bordered)
 
-1. Click <i class="material-symbols-outlined">search</i> in the Dock to open the search window.
-2. Specify the search scope to Wise, and enter the keywords to search.
-![Search in Wise](/images/manual/tutorials/wise-search.png#bordered)
+### Create a custom view
 
-## Customize appearance
+1. Open **Settings** > **Filtered views** and click **Add view**.
+2. Name the view and enter a query. For example, `tag:AI` shows content tagged `AI`.
+3. Click **Confirm**. The view shows content that matches your query.
 
-By default, Wise follows your system's light/dark theme settings. You can override this to set your preferred appearance:
+![Add a custom filtered view](/images/manual/olares/wise-add-filtered-view.png#bordered){width=60%}
 
-1. Click the <i class="material-symbols-outlined">settings</i> in the bottom left corner and select **Preferences**.
-2. Under **Theme**, choose your preferred system theme:
-   - Light mode
-   - Dark mode
+For more query ideas and rules:
 
-Your choice applies to the Wise interface and reader.
+- [Filter examples](./filter-examples) show queries you can adapt.
+- [Filter syntax](./filter-syntax-guide) lists the available conditions.
+
+### Pin a view
+
+You can pin a view from the list or while viewing its content.
+
+**From the view list**
+
+1. Open **Settings** > **Filtered views**.
+2. Find the view and click the pin icon in its **Operations** column.
+
+**From an open view**
+
+1. Open the view and click the menu beside its title.
+2. Select **Pin to sidebar**.
+
+    ![Pin a filtered view to the sidebar](/images/manual/olares/wise-pin-sidebar.png#bordered)

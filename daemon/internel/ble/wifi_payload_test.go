@@ -23,6 +23,20 @@ func TestWifiConnectionPayload(t *testing.T) {
 		t.Fatal("legacy payload changed")
 	}
 }
+func TestWifiConnectResultNotifiesImmediately(t *testing.T) {
+	var notified []string
+	s := &service{}
+	s.notifyConnectState = func() { notified = append(notified, s.wifiConnectState) }
+	s.connectWifi([]byte(strings.Repeat(" ", 513)))
+	if len(notified) != 1 {
+		t.Fatalf("expected one immediate notification, got %d", len(notified))
+	}
+	var state ConnectState
+	if err := json.Unmarshal([]byte(notified[0]), &state); err != nil || state.State == nil || *state.State != Fail {
+		t.Fatalf("unexpected notified state: %s", notified[0])
+	}
+}
+
 func TestWifiAPListKeepsHTTPComplete(t *testing.T) {
 	list := []AccessPoint{}
 	for i := 0; i < 20; i++ {
@@ -36,18 +50,18 @@ func TestWifiAPListKeepsHTTPComplete(t *testing.T) {
 	if len(httpList) != 20 {
 		t.Fatal("HTTP scan list truncated")
 	}
-	if len(s.apList) > 512 {
+	if len(s.apPages[0]) > 512 {
 		t.Fatal("BLE payload exceeds attribute limit")
 	}
 	var bleList []AccessPoint
-	if err := json.Unmarshal([]byte(s.apList), &bleList); err != nil {
+	if err := json.Unmarshal([]byte(s.apPages[0]), &bleList); err != nil {
 		t.Fatal(err)
 	}
 	if len(bleList) == 0 || len(bleList) >= 20 || bleList[0].SecurityTypes[0] != wifi.EAP {
 		t.Fatal("incorrect BLE payload")
 	}
 	var wireList []map[string]any
-	if err := json.Unmarshal([]byte(s.apList), &wireList); err != nil {
+	if err := json.Unmarshal([]byte(s.apPages[0]), &wireList); err != nil {
 		t.Fatal(err)
 	}
 	for _, ap := range wireList {
@@ -72,7 +86,7 @@ func TestWifiAPListKeepsHTTPComplete(t *testing.T) {
 		t.Fatal("internal connection status was lost")
 	}
 	s.publishAPList([]AccessPoint{})
-	if s.apList != "[]" {
+	if s.apPages != emptyAPPages() {
 		t.Fatal("empty list encoding changed")
 	}
 }
@@ -86,18 +100,18 @@ func TestWifiAPListDeduplicatesAcrossDevices(t *testing.T) {
 	s := &service{}
 	s.publishAPList(list)
 	var aps []advertisedAP
-	if err := json.Unmarshal([]byte(s.apList), &aps); err != nil {
+	if err := json.Unmarshal([]byte(s.apPages[0]), &aps); err != nil {
 		t.Fatal(err)
 	}
 	if len(aps) != 2 || aps[0].Strength != 90 || aps[1].SecurityTypes[0] != wifi.EAP {
-		t.Fatalf("incorrect network deduplication: %s", s.apList)
+		t.Fatalf("incorrect network deduplication: %s", s.apPages[0])
 	}
 	if list[1].SecurityTypes[0] != wifi.SAE {
 		t.Fatal("scan metadata was mutated")
 	}
 }
 
-func TestWifiAPListFitsEncodedBytesAndFillsRemainingSpace(t *testing.T) {
+func TestWifiAPListFitsEncodedBytesAndSpillsToNextPage(t *testing.T) {
 	list := []AccessPoint{}
 	// Escaped SSIDs must be measured as JSON bytes, not characters.
 	for i := 0; i < 3; i++ {
@@ -106,15 +120,18 @@ func TestWifiAPListFitsEncodedBytesAndFillsRemainingSpace(t *testing.T) {
 	list = append(list, AccessPoint{AccessPoint: wifi.AccessPoint{SSID: "short", SecurityTypes: []wifi.Security{wifi.Open}}})
 	s := &service{}
 	s.publishAPList(list)
-	var aps []advertisedAP
-	if err := json.Unmarshal([]byte(s.apList), &aps); err != nil {
+	var page1, page2 []advertisedAP
+	if err := json.Unmarshal([]byte(s.apPages[0]), &page1); err != nil {
 		t.Fatal(err)
 	}
-	if len(s.apList) > 512 || len(aps) != 3 || aps[2].SSID != "short" {
-		t.Fatalf("remaining capacity was not used correctly: %s", s.apList)
+	if err := json.Unmarshal([]byte(s.apPages[1]), &page2); err != nil {
+		t.Fatal(err)
+	}
+	if len(s.apPages[0]) > 512 || len(page1) != 2 || len(page2) != 2 || page2[0].SSID != list[2].SSID || page2[1].SSID != "short" {
+		t.Fatalf("entries did not spill to the next page in order: %v", s.apPages)
 	}
 	s.publishAPList(nil)
-	if s.apList != "[]" {
+	if s.apPages != emptyAPPages() {
 		t.Fatal("nil input must produce an empty array")
 	}
 }

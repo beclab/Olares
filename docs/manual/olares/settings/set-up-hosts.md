@@ -10,9 +10,11 @@ head:
 The hosts file is a system configuration file that maps domain names to specific IP addresses. By editing this file, you can customize how Olares resolves domain names, bypass the default DNS resolution, and control access to certain websites or services.
 ## Add a host
 To add a new domain name and IP address mapping in Olares:
-![Add a host](/images/manual/olares/add-host.png#bordered)
-1. Open Settings, and go to **System** > **Hosts**.
-2. Select **Add hosts** in the top-right corner, and specify the domain name/IP address pair.
+
+![Add a host](/images/manual/olares/add-host-1.12.8.png#bordered)
+
+1. Open Settings, and go to **Network** > **Hosts**.
+2. Click **Add hosts**, and specify the domain name/IP address pair.
    - **Host name**: Enter the domain name you want to map (e.g., `example.com`).
    - **IP**: Enter the corresponding IP address (e.g., `93.184.216.34`).
 3. Click **Confirm** to save the changes.

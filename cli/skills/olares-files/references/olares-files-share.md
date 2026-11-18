@@ -13,13 +13,19 @@ Create and manage shares for directories. **All three flavors are directory-only
 | `public` | Anyone with the link + password | Opaque link, recipients open it at `share.<user-hostname>/sharable-link/<id>/` | `set-password` |
 | `smb` | Local network (Finder / Explorer / etc.) | SMB-account IDs (managed via `smb-users`), or `--public` for "anyone on the LAN" | `set-smb` |
 
-## Per-flavor namespace allow-list
+## Share types per storage
 
-| Flavor | Allowed | Notes |
-|---|---|---|
-| `internal` | `drive`, `sync`, `external`, `cache` | Cloud rejected — cross-cloud-account share doesn't work. `external/<node>/` bare-root and `cache/<node>/` bare-root rejected (quirks #3, #5) — point at a sub-path. **`drive/Common` refused** — public-only |
-| `smb` | `drive`, `external`, `cache` | Sync rejected (Seafile has its own mount story, not Samba) + cloud rejected. Same bare-root guards as internal. **`drive/Common` refused** — public-only |
-| `public` | `drive` ONLY | Tightest of the three. Sync / external / cache / cloud all refused (the GUI restricts Public to drive only). **`drive/Common` is allowed here** — `public` is the only share flavor it supports. Error messages route the user to `share internal` (sync) or `share internal` / `share smb` (external / cache) |
+The same table as the files backend and the LarePass GUI; the CLI refuses the rest before sending anything.
+
+| Storage | `internal` | `smb` | `public` |
+|---|---|---|---|
+| `drive/Home` | yes | yes | yes |
+| `sync` | yes | no | no |
+| `external` | no | yes | no |
+| `drive/Data`, `drive/Common`, `cache` | no | no | no |
+| cloud (`awss3`, `google`, `dropbox`, `tencent`) | no | no | no |
+
+`external/<node>/` bare-root is rejected too (quirk #3) — point at a volume. Shares made before this rule keep working.
 
 ## `--users` format (internal / smb / set-members)
 
@@ -124,10 +130,9 @@ Anyone omitted loses access. Treat a `set-members` on a share whose roster you w
 | Symptom | Cause | Fix |
 |---|---|---|
 | `share target is a file, not a directory` | Tried to share a single file | Wrap it in a directory and share that |
-| `Public only supports the drive namespace` | `share public sync/...` / `share public external/...` / etc. | Use `share internal` instead (or `share smb` for external/cache) |
+| `<storage> only supports <flavor> shares` | A flavor the storage does not take, e.g. `share public external/...` | Use the flavor the message names, or copy the data into `drive/Home` |
+| `<storage> cannot be shared` | `drive/Data`, `drive/Common`, `cache` | Copy the data into `drive/Home` and share that |
 | `cloud namespaces are not supported` | `share <flavor> awss3/...` etc. | Move the data into drive first, then share |
-| `drive/Common (the app common data area) only supports outbound public links` | `share internal` / `share smb` on a `drive/Common` path | Use `files share public` (the only flavor Common allows) |
 | `refusing to share external/<node>/` | Quirk #3 bare root | Point at `external/<node>/<volume>/<sub>/` |
-| `refusing to share cache/<node>/` | Quirk #5 node-picker layer | Point at `cache/<node>/<sub>/` |
 | `--users and --clear are mutually exclusive` | Both passed to `set-members` | Pick one |
 | `share-type mismatch` (e.g. set-password on Internal) | Wrong update verb for the flavor | Use the matching verb from the flavor table |

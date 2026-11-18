@@ -38,7 +38,11 @@ Dify 是一个 AI 应用开发平台。它是 Olares 集成的关键开源项目
 
 ## 通过 Router 添加聊天模型
 
+### 获取模型连接信息
+
 <!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
+
+### 在 Dify 中配置模型
 
 1. 在 Dify 中打开 **Settings** > **Model Provider**，安装并选择 **OpenAI-API-compatible** 提供商插件。
 2. 添加模型，**Model Name** 填写 `default-chat`，模型类型选择聊天或 **LLM**。
@@ -48,7 +52,7 @@ Dify 是一个 AI 应用开发平台。它是 Olares 集成的关键开源项目
 ## 配置 Ashia
 
 1. 切换至 Dify 的**工作室**选项，并进入 **Ashia** 应用。
-2. 从右侧模型列表中选择已配置好的 Gemma2 本地模型。
+2. 从右侧模型列表中选择刚刚配置的 `default-chat` 模型。
 
 
    <!--
@@ -56,7 +60,7 @@ Dify 是一个 AI 应用开发平台。它是 Olares 集成的关键开源项目
    ![选择模型](/images/zh/manual/use-cases/dify-select-model.png#bordered)
    -->
 
-3. 点击**发布**。现在可以在**调试与预览**窗口试着和 Gemma2 聊天了。
+3. 点击**发布**。现在可以在**调试与预览**窗口与 Ashia 聊天了。
 
    ![聊天](/images/zh/manual/use-cases/dify-chat-with-ashia.png#bordered)
 

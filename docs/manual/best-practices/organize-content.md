@@ -1,5 +1,6 @@
 ---
 outline: [2, 3]
+noindex: true
 description: Build a knowledge hub with Wise on Olares. Collect web pages, manage PDFs and e-books, subscribe to RSS feeds, and organize your content library.
 head:
   - - meta
@@ -10,7 +11,7 @@ head:
 
 Managing information across different sources and devices can be a challenge. You might find yourself using multiple tools to bookmark articles, track RSS feeds, or manage documents, only to end up with fragmented workflows.
 	
-Wise, a built-in app in Olares, is designed to centralize and organize your knowledge. It collects information from the web and your devices, using local recommendation algorithms to help you discover meaningful content privately and free from algorithmic bias.
+Wise helps you collect and organize content from the web and your devices in one library on Olares.
 	
 This tutorial guides you on how to leverage Wise and LarePass to collect, organize, and access content across platforms.
 
@@ -78,7 +79,7 @@ The LarePass extension is currently only available for Chrome.
 After installation, pin the LarePass extension in Chrome extension menu for quick and easy access.
 :::
 
-Once logged in, your LarePass browser extension and your Olares device are synced. This means that any content you collect via LarePass extension will automatically be added to your Wise library.
+Once connected to your Olares, LarePass can send content you choose to save to your Wise library.
 
 ## Collect web content
 
@@ -101,7 +102,7 @@ To collect web content using the LarePass extension:
    ![Collect web content](/images/manual/tutorials/wise-collect-web-content.png#bordered)
 3. In **Collect** > **Page**, click <i class="material-symbols-outlined">add_box</i> next to the title to add the page to the Wise library.
 
-Once collected, you can find the content in **Library** > **Articles** in Wise. All media files, including audios, videos, and images on the page, will also be downloaded locally to the `/download/Wise/Article` directory. 
+Once collected, you can find the content in **Library** > **Articles** in Wise. Available media depends on the source and the download options you use.
 
 ### Collect via the LarePass mobile client
 
@@ -137,11 +138,11 @@ View your PDFs under **Library** > **PDFs** and EPUBs under **Library** > **Book
 ![View and manage PDF](/images/manual/tutorials/wise-pdf.png#bordered)
 
 ::: tip
-You can efficiently categorize and connect related content instantly with tags, or capture insights and ideas directly alongside the content using notes. For details, refer to [Organize your reading](../olares/wise/basics.md#organize-your-reading).
+You can organize content with tags and record your thoughts in notes. For details, see [Get started with Wise](../olares/wise/).
 :::
 
 ## Subscribe to RSS feeds
-You can subscribe to podcasts, blogs, and your video playlists in Wise. New episodes or updates are automatically downloaded, ensuring you stay up-to-date without worrying about content being deleted or becoming inaccessible. Additionally, Wise can automatically download your favorite videos from platforms like YouTube, even for sources that aren't RSS-supported natively.
+You can subscribe to podcasts, blogs, and other supported feeds in Wise. New entries appear in your feed list. To download multimedia attachments automatically, enable that option in Wise's RSS settings or for an individual feed.
 
 ### Subscribe via the LarePass extension
 
@@ -164,9 +165,9 @@ To manually add an RSS source to Wise:
    ![Manually add RSS](/images/manual/tutorials/wise-add-rss.png#bordered){width=50%}
 4. Click **Add** to subscribe.
 
-### Automatically download videos <Badge type="tip" text="^1.11.3" />
+### Follow a video playlist
 
-In addition to regular RSS subscriptions, you can use the LarePass extension and Wise to automatically download videos from your playlist on video platforms. Here's how to do it on YouTube:
+If a video platform exposes a feed for a playlist, you can subscribe to it through LarePass and read its entries in Wise. Here's a YouTube example:
 
 1. Log into your YouTube account.
 2. In LarePass extension, go to **Collect** > **Cookie**, and click **Upload** to upload the cookies to Olares. Olares needs the cookies of the site to access your subscription and download videos.
@@ -180,10 +181,10 @@ In addition to regular RSS subscriptions, you can use the LarePass extension and
 
    ![Subscribe to YouTube playlist](/images/manual/tutorials/wise-youtube-rss.png#bordered)
 
-Wise will automatically download all the videos saved to this playlist.
+New entries from the playlist can appear in Wise. To download supported media, check the feed's auto-download setting and the status in **Download list**.
 
-::: tip Download videos from a specific channel
-You can use LarePass extension similarly on your favorite YouTuber's channel. Once you get the corresponding RSS feed and subscribe to it, Wise will automatically download all the videos in the channel.
+::: tip Follow a specific channel
+You can use LarePass to find a channel's feed and subscribe to it in Wise. Media availability depends on the feed and the download service.
 :::
 
 ### Access your RSS content
@@ -194,14 +195,9 @@ To access your RSS content in Wise:
 
 ![Access RSS](/images/manual/tutorials/wise-access-rss.png#bordered)
 
-::: tip Smart content recommendations
-In addition to regular RSS subscriptions, Wise offers a fully local, privacy-protected intelligent content recommendation system. You can download the recommended algorithms from the Olares app market. Learn more in [Discover themed content](../olares/wise/recommend.md).
-:::
-
 ## Search through collected content
 <!--@include: ./wise.reusables.md#wise-aggregated-search-->
 ## Learn more
 
-- [Wise basics](../olares/wise/basics.md)
-- [Discover themed content](../olares/wise/recommend.md)
+- [Get started with Wise](../olares/wise/)
 - [Subscribe and manage feeds](../olares/wise/subscribe.md)

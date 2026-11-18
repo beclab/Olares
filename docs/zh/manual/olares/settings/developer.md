@@ -17,10 +17,10 @@ head:
 
 ### 查看仓库
 
-1. 前往**设置** > **高级** > **仓库管理**。
+1. 前往**设置** > **高级** > **管理仓库**。
 2. 在仓库列表中，你可以查看每个仓库的名称、相关镜像数量和镜像大小。  
 
-   ![仓库管理](/images/zh/manual/olares/repo-management1.png#bordered){width=65%}
+   ![仓库管理](/images/zh/manual/olares/repo-management-1.12.8.png#bordered)
 
 ### 管理仓库镜像
 
@@ -29,7 +29,7 @@ head:
 1. 在**仓库管理**页面，找到目标仓库，然后在**操作**列点击 <i class="material-symbols-outlined">chevron_forward</i>。
 2. 在**镜像站管理**页面，你可以执行以下操作：
 
-    ![镜像站管理](/images/zh/manual/olares/mirror-management1.png#bordered){width=65%}
+    ![镜像站管理](/images/zh/manual/olares/mirror-management-1.12.8.png#bordered)
     
     - 要重新排序镜像端点，点击 <i class="material-symbols-outlined">keyboard_control_key</i> 或 <i class="material-symbols-outlined">keyboard_arrow_down</i>。Olares 会优先使用列表中排名靠前的端点。
     - 要删除不再需要的端点，点击 <i class="material-symbols-outlined">delete</i>。
@@ -39,7 +39,7 @@ head:
 
 **镜像管理**页面提供了 Olares 系统上下载和缓存的所有应用及软件包镜像的全面视图。你可以通过筛选或搜索快速找到特定镜像。
 
-![镜像管理](/images/zh/manual/olares/image-management1.png#bordered){width=65%}
+![镜像管理](/images/zh/manual/olares/image-management-1.12.8.png#bordered)
 
 ## 导出系统日志
 

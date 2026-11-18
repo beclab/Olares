@@ -157,9 +157,23 @@ func MonitorUsbDevice(ctx context.Context, cb func(action, serial string) error)
 	return nil
 }
 
+// listMounts returns the mount points with /proc/mounts escapes (e.g. \040) decoded,
+// so that paths and devices can be compared with the original values.
+func listMounts() ([]mountutils.MountPoint, error) {
+	list, err := mountutils.New("").List()
+	if err != nil {
+		return nil, err
+	}
+
+	for i := range list {
+		list[i].Path = unescapeMountField(list[i].Path)
+		list[i].Device = unescapeMountField(list[i].Device)
+	}
+	return list, nil
+}
+
 func getMountedPath(devs []storageDevice) ([]string, error) {
-	mounter := mountutils.New("")
-	list, err := mounter.List()
+	list, err := listMounts()
 	if err != nil {
 		klog.Error("list mount path error, ", err)
 		return nil, err
@@ -214,7 +228,7 @@ func FilterBySerial(serial string) func(dev storageDevice) bool {
 
 func MountUsbDevice(ctx context.Context, mountBaseDir string, dev []storageDevice) (mountedPath []string, err error) {
 	mounter := mountutils.New("")
-	mountedList, err := mounter.List()
+	mountedList, err := listMounts()
 	if err != nil {
 		klog.Error("list mount path error, ", err)
 		return nil, err
@@ -424,8 +438,7 @@ var (
 )
 
 func UmountOrRecordBrokenMounts(ctx context.Context, baseDir string) error {
-	mounter := mountutils.New("")
-	list, err := mounter.List()
+	list, err := listMounts()
 	if err != nil {
 		klog.Error("list mount path error, ", err)
 		return err
@@ -613,8 +626,7 @@ func isReadOnly(mp *mountutils.MountPoint) bool {
 }
 
 func MountedSambaPath(ctx context.Context) ([]mountedPath, error) {
-	mounter := mountutils.New("")
-	list, err := mounter.List()
+	list, err := listMounts()
 	if err != nil {
 		klog.Error("list mount path error, ", err)
 		return nil, err
@@ -642,8 +654,7 @@ func MountedPath(ctx context.Context) ([]mountedPath, error) {
 		return nil, err
 	}
 
-	mounter := mountutils.New("")
-	list, err := mounter.List()
+	list, err := listMounts()
 	if err != nil {
 		klog.Error("list mount path error, ", err)
 		return nil, err

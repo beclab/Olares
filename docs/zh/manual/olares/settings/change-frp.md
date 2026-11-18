@@ -19,7 +19,7 @@ Olares 提供两种反向代理访问方式：
 
 请按以下步骤变更反向代理：
 
-![变更反向代理](/images/zh/manual/olares/set-reverse-proxy.png#bordered)
+![变更反向代理](/images/zh/manual/olares/set-reverse-proxy-1.12.8.png#bordered)
 
 1. 打开设置，进入**网络** > **反向代理**。
 2. 选择你想使用的反向代理方式。 

@@ -75,7 +75,7 @@ TensorZero 不提供图形界面来配置模型。你需要在 Files 中编辑�
 
 <!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
 
-对于 Qwen3.8-27B (llama.cpp) 和 EmbeddingGemma，选择 **OpenAI-Compatible** API 格式：
+聊天模型使用以下步骤：
 
 <!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 

@@ -148,7 +148,7 @@ spec:
 {{ end }}
 
         - name: samba-server
-          image: beclab/samba-server:0.0.18
+          image: beclab/samba-server:0.0.28
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: true
@@ -242,7 +242,7 @@ spec:
           command:
             - /samba_share
         - name: files
-          image: beclab/files-server:v0.2.202
+          image: beclab/files-server:v0.2.221
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: true
@@ -916,6 +916,7 @@ data:
           proxy_set_header Host $host;
           proxy_set_header X-Real-IP $remote_addr;
           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Host $host;
 
           add_header Accept-Ranges bytes;
       }

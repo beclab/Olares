@@ -76,7 +76,7 @@ LobeHub 是官方平台名称，但应用目前在 Olares Market 中列为 "Lobe
 
 2. 配置以下设置：
 
-   - **API 密钥**：输入任意占位文本，例如 `local`。
+   - **API 密钥**：填写 `olares`。
    - **API 代理 URL**：输入你从 Router 复制的 **Base URL**。例如，`https://router.<your-olares-domain>/v1`。
    - **使用 Responses API 规范**：确保此选项已禁用。
    - **使用客户端请求模式**：确保此选项已禁用。

@@ -40,7 +40,7 @@ LarePass 应用可以让你轻松管理你的 Olares 设备。你可以通过手
 你可以从 LarePass 应用或 Olares 设置中重启或关闭 Olares。无论哪种方式，都需要在 LarePass 中确认操作。
 
 - **在 LarePass 中**：在 **Olares 管理**页右上角点击 <i class="material-symbols-outlined">power_settings_new</i> 图标。
-- **在 Olares 设置中**：在**我的 Olares** > **硬件**页面，点击**关机**或**重启**。
+- **在 Olares 设置中**：打开**设置**，点击左上角头像，然后点击**集群概览**。选择**重启集群**或**关闭集群**，可重启或关闭所有节点。如需只重启一个节点，打开其详情页面，点击**重启节点**。详情请参阅[重启或关闭设备](/zh/one/hardware-settings#重启或关闭设备)。
 
 ![重启或关闭 Olares](/images/zh/manual/larepass/device-control1.png#bordered)
 

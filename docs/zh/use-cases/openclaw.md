@@ -8,9 +8,9 @@ head:
   - - meta
     - name: keywords
       content: Olares, OpenClaw, self-hosted ai agent, personal ai agent, local ai agent, openclaw on olares
-app_version: "1.0.44"
-doc_version: "3.0"
-doc_updated: "2026-09-24"
+app_version: "1.0.57"
+doc_version: "3.1"
+doc_updated: "2026-11-18"
 ---
 
 :::warning
@@ -90,6 +90,8 @@ OpenClaw 需要较大的"上下文窗口"（即 AI 的短期记忆）来处理�
 
 <!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
 
+配置 OpenClaw 时，请使用 `olares` 作为 API 密钥占位值。
+
 ### 步骤 2：运行安装向导
 
 使用交互式向导逐步配置 OpenClaw。
@@ -113,6 +115,12 @@ OpenClaw 需要较大的"上下文窗口"（即 AI 的短期记忆）来处理�
     为便于快速上手，本教程会跳过向导中的部分高级设置。你可以稍后配置或修改它们。
     :::
 
+    :::info OpenClaw 要求填写 API 密钥字段
+    在 API 密钥字段中填写 `olares`，即使向导提示可以留空。OpenClaw 2026.11.3 要求此连接填写非空值。Olares 内的应用无需 Router API 密钥。
+
+    如果实时对话测试提示 `No API key found for provider "router"`，选择 **Fix model/auth setup**，填写 `olares`，然后重新测试。
+    :::
+
     | 配置   | 选项   |
     |:-----------|:---------|
     | Personal-by-default acknowledgment | 选择 **Yes**。  |
@@ -121,7 +129,7 @@ OpenClaw 需要较大的"上下文窗口"（即 AI 的短期记忆）来处理�
     | Model/auth provider | 选择 **Custom Provider**。 |
     | API Base URL | 粘贴步骤 1 中从 Router 复制的 Base URL，保留 `/v1`。 |
     | How do you want to provide this API key? | 如果出现此提示，选择 **Paste API key now**。 |
-    | API Key (leave blank if not required) | Olares 内的这个应用无需 Router API 密钥，留空。 |
+    | API Key (leave blank if not required) | 填写非空占位值，例如 `olares`。 |
     | Endpoint compatibility | 选择 **OpenAI-compatible**。 |
     | Model ID | 填写 `default-chat`。向导可能先验证端点，再进入下一项。 |
     | Endpoint ID | 填写 `router`。模型引用为 `router/default-chat`。 |
@@ -266,7 +274,7 @@ OpenClaw 需要较大的"上下文窗口"（即 AI 的短期记忆）来处理�
 6. （可选）如果助手未能更新人设文件，请在聊天中明确要求它执行。
 
     如果问题仍然存在，请使用以下方法之一解决：
-    - **检查上下文窗口**：先[在 Router 中查看实际配置的上下文大小](/zh/manual/best-practices/connect-ai-apps.md#check-context-window)。在 Files 中打开 **Data** > **clawdbot** > **config** > `openclaw.json`，将 `contextWindow` 设为引擎支持的值。例如，**Engine args** 显示 `-c 104448` 时，填写值不能超过 `104448`。
+    - **检查上下文窗口**：先[在 Router 中查看实际配置的上下文大小](/zh/use-cases/llm-base-apps.md#在-router-中查看模型详情)。在 Files 中打开 **Data** > **clawdbot** > **config** > `openclaw.json`，将 `contextWindow` 设为引擎支持的值。例如，**Engine args** 显示 `-c 104448` 时，填写值不能超过 `104448`。
 
         :::tip
         修改 OpenClaw 的 `contextWindow` 不会扩大引擎的上下文容量。如需更大的上下文，先在 Router 中将引擎配置为模型和硬件支持的值，再更新客户端。

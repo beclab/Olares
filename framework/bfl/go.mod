@@ -7,11 +7,9 @@ require (
 	github.com/beclab/api v0.0.24
 	github.com/beclab/lldap-client v0.0.11
 	github.com/emicklei/go-restful v2.16.0+incompatible
-	github.com/emicklei/go-restful-openapi/v2 v2.11.0
 	github.com/emicklei/go-restful/v3 v3.13.0
 	github.com/enobufs/go-nats v0.0.1
 	github.com/go-logr/logr v1.4.3
-	github.com/go-openapi/spec v0.21.0
 	github.com/go-resty/resty/v2 v2.16.5
 	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/json-iterator/go v1.1.12

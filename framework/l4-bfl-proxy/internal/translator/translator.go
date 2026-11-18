@@ -61,6 +61,12 @@ var nodeLocationPrefixes = []string{
 	"/api/permission/external/",
 	"/api/task/",
 	"/api/archive/",
+	// Shares made on a node's own storage: the node checks and marks the
+	// directory, which only it can see.
+	"/api/share/share_path/cache/",
+	"/api/share/share_path/external/",
+	"/api/share/get_share_internal_smb/cache/",
+	"/api/share/get_share_internal_smb/external/",
 }
 
 var masterLocationPrefixes = []string{
@@ -83,6 +89,10 @@ var masterLocationPrefixes = []string{
 	"/api/md5/sync/",
 	"/api/sync/account/info/",
 	"/api/search/sync_search/",
+	// The rest of the share API: creating, changing and removing a Sync
+	// share talks to Seafile, which only the master's files can reach.
+	// Shares on node-local storage are matched above, by node.
+	"/api/share/",
 }
 
 var nodeRegexSharePrefixes = []string{

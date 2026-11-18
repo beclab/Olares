@@ -156,7 +156,7 @@ Pods 面板提供了应用程序部署状态的动态视图。Pod 数量实时�
 ![风扇面板](/images/zh/manual/olares/dashboard-fans.png#bordered)
 
 ::: tip 调整风扇配速策略
-你可以在**设置** > **我的 Olares** > **我的硬件** > **工作模式**下切换安静模式或性能模式来调整风扇配速策略。
+如需调整风扇配速策略，在 Olares One 节点详情页面切换工作模式。操作方法请参阅[切换工作模式](/zh/one/hardware-settings#切换工作模式)。
 :::
 
 #### 查看详细资源指标

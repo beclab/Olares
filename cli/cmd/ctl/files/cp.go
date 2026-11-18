@@ -22,6 +22,7 @@ import (
 type cpOptions struct {
 	recursive bool
 	node      string
+	unshare   bool // mv only
 }
 
 // NewCpCommand: `olares-cli files cp [-r] <src>... <dst>`
@@ -175,6 +176,10 @@ Examples:
 
     # Recursive directory move.
     olares-cli files mv -r drive/Home/Photos/ drive/Home/Backups/
+
+A shared folder, or a folder holding one, is not moved: the server
+answers 409 and lists the shares. Pass --unshare to cancel them and
+move anyway; shares do not follow a moved folder.
 `,
 		Args: cobra.MinimumNArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -182,6 +187,7 @@ Examples:
 		},
 	}
 	registerCpMvFlags(cmd, o)
+	cmd.Flags().BoolVar(&o.unshare, "unshare", false, "cancel the shares on a shared folder (or the shared folders in it) and go ahead, instead of refusing")
 	return cmd
 }
 
@@ -267,6 +273,7 @@ func runCpMv(
 	client := &cp.Client{
 		HTTPClient: httpClient,
 		BaseURL:    rp.FilesURL,
+		Unshare:    o.unshare,
 	}
 
 	// Default {node} resolution mirrors `files upload`'s policy:
@@ -608,6 +615,12 @@ func reformatCpHTTPErr(err error, olaresID, op, target string) error {
 	var cpErr *cp.HTTPError
 	if errors.As(err, &cpErr) {
 		status = cpErr.Status
+		if msg, ok := sharedFolderConflict(cpErr.Status, cpErr.Body); ok {
+			if target == "" {
+				return fmt.Errorf("%s: %s", op, msg)
+			}
+			return fmt.Errorf("%s %s: %s", op, target, msg)
+		}
 	}
 	var dlErr *download.HTTPError
 	if status == 0 && errors.As(err, &dlErr) {

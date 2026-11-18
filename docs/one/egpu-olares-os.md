@@ -13,9 +13,7 @@ Olares OS does not support eGPU hot-plugging. Shut down Olares One before connec
 
 ## Connect the eGPU
 
-1. Open **Settings** > **My hardware** > **Shutdown**.
-
-   ![Shut down Olares One](/images/one/shut-down-olares-one.png#bordered)
+1. Open **Settings**, click your avatar in the upper-left corner, then select **Cluster overview** > **Shut down cluster**. See [Restart or shut down the device](./hardware-settings.md#restart-or-shut-down-the-device).
 
 2. Scan the QR code with LarePass, then tap **Confirm**.
 3. Wait until Olares One is completely off.
@@ -114,7 +112,7 @@ If the eGPU is still missing or unstable, follow [Troubleshoot eGPU issues](./ts
 
 ## Disconnect the eGPU
 
-1. Open **Settings** > **My hardware** > **Shutdown**.
+1. Open **Settings**, click your avatar in the upper-left corner, then select **Cluster overview** > **Shut down cluster**. See [Restart or shut down the device](./hardware-settings.md#restart-or-shut-down-the-device).
 2. Approve the shutdown in LarePass and wait until Olares One is completely off.
 3. Turn off the eGPU.
 4. Disconnect the Thunderbolt cable from Olares One.

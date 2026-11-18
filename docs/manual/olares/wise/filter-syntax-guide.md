@@ -112,10 +112,10 @@ Available operations are:
 Filter entries based on true/false values using the format `field_name:true/false`.
 
 #### `islibrary`
-Whether the entry is from a "library" source.
+Whether the entry has been saved as an individual item, for example through **Inbox**, **Read Later**, or **Save to library**. This parameter refers to the entry's saved status, not the **Library** heading in the sidebar.
 
 #### `isfeed`
-Whether the entry is from a "feed" source.
+Whether the entry comes from a feed.
 
 #### `seen`
 Whether the entry has been read.
@@ -127,7 +127,7 @@ Filter entries based on their location.
 Indicates the location of the entry.
 
 Available values are:
-- `all`: All entries.
+- `all`: All saved entries, including Inbox and Read Later.
 - `readlater`: Entries marked as "Read Later".
 - `inbox`: Entries in the inbox.
 
@@ -146,4 +146,4 @@ Filter entries by the name of a specific tag.
 
 #### `tag_id`
 Filter entries by the unique ID of a specific tag.
-You can find the Feed ID in the <i class="material-symbols-outlined">settings</i> > **Tags** page.
+You can find the tag ID in the <i class="material-symbols-outlined">settings</i> > **Tags** page.

@@ -55,9 +55,13 @@ capabilities; the strongest AP represents a group. HTTP additionally includes
 status entirely (neither `connected` nor `co`). Its AP list contains only
 `ss` (SSID), `st` (signal strength), and `se` (authentication types); `bs` and
 `if` are omitted. Equivalent SSID/authentication entries across radios are merged,
-keeping the strongest signal. Entries retain
-the internal connection/signal priority order; an entry that does not fit is
-skipped so a shorter later entry can use the remaining 512-byte capacity. Connection payloads exceeding 512 bytes are
+keeping the strongest signal. The BLE AP list is split across up to five
+characteristics, each a standalone JSON array of at most 512 bytes: page 1 is
+`0x1200` (unchanged, so clients reading only it keep working) and pages 2-5 are
+`0x1202`, `0x1203`, `0x1204`, and `0x1205`. Pages are filled in the internal
+connection/signal priority order; when the next entry does not fit, it starts
+the next page, so concatenating pages 1-5 preserves the order. Unused pages are
+`[]`, and entries beyond the fifth page are dropped. Connection payloads exceeding 512 bytes are
 rejected by the BLE parser; no application-level fragmentation is implemented.
 Bluetooth stacks may themselves reject an oversized write before it reaches the
 server. Use HTTP for larger enterprise requests.

@@ -26,9 +26,9 @@ Examples: `drive/Home/`, `drive/Home/Documents/report.pdf`, `drive/Common/huggin
 | `cp` / `mv` | same as `mkdir` |
 | `upload` | `drive/Home`, `drive/Data`, `drive/Common`, `sync/<repo_id>`, `cache/<node>`, `external/<node>/<volume>`, `awss3`, `google`, `dropbox`; `tencent` rejected |
 | `chown` | `drive/Home`, `drive/Data`, `drive/Common`, `cache/<node>` |
-| `share internal` | `drive`, `sync`, `external`, `cache`; `drive/Common` refused |
-| `share smb` | `drive`, `external`, `cache`; sync/cloud refused; `drive/Common` refused |
-| `share public` | `drive` only; this is the only share flavor `drive/Common` allows |
+| `share internal` | `drive/Home`, `sync` |
+| `share smb` | `drive/Home`, `external` |
+| `share public` | `drive/Home` only |
 | `compress` / `extract` / `archive entries` / `archive cat` | `drive/Home`, `drive/Data`, `drive/Common`, `cache/<node>`, `external/<node>/<volume>` only |
 | `smb` / `nfs` | keyed by `<node>` + remote target, not frontend paths |
 | `task` | keyed by `<node>` + `task_id`, not frontend paths |

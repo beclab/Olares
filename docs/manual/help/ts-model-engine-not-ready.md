@@ -58,6 +58,6 @@ Then download the application operation log from **Market** > **My Olares** > **
 ## Related guides
 
 - [Run local LLMs with Ollama, vLLM, llama.cpp, and SGLang](/use-cases/llm-base-apps.md)
-- [Connect an AI app to a model service](../best-practices/connect-ai-apps.md)
+- [Use Olares Router as your AI gateway](/use-cases/olares-router.md)
 - [Memory is insufficient or not freed](./ts-free-memory.md)
 

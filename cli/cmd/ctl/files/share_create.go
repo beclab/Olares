@@ -44,6 +44,9 @@ func newShareInternalCommand(f *cmdutil.Factory) *cobra.Command {
 		Long: `Create an Internal share — visible to other Olares users on the same
 node — for a directory under the per-user files-backend.
 
+Allowed on drive/Home and sync/<repo> only. external takes SMB shares
+only; drive/Data, drive/Common, cache and cloud drives take no share.
+
 Wire shape (two calls, both required when --users is given):
 
     POST /api/share/share_path/<fileType>/<extend><subPath>/
@@ -212,6 +215,10 @@ func newSharePublicCommand(f *cmdutil.Factory) *cobra.Command {
 anyone who has the password; recipients open it through the
 LarePass app at the share host's /sharable-link/<id>/ path.
 
+Allowed on drive/Home only. sync takes internal shares only, external
+SMB shares only; drive/Data, drive/Common, cache and cloud drives take
+no share.
+
 Wire shape:
 
     POST /api/share/share_path/<fileType>/<extend><subPath>/
@@ -282,11 +289,11 @@ func runSharePublic(
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	// frontendPathToShareTarget runs the per-flavor namespace gate
-	// (see [validateShareNamespace] in share.go) BEFORE the
+	// frontendPathToShareTarget checks the storage against the
+	// flavor (see [validateShareNamespace] in share.go) BEFORE the
 	// volume-listing-layer / node-picker-layer checks, so a Public
-	// share against external/<node>/ surfaces the broader "Public
-	// only supports drive" error rather than the narrower
+	// share against external/<node>/ surfaces the broader "external
+	// only supports smb shares" error rather than the narrower
 	// volume-listing-layer one — same final answer for the user
 	// but a more actionable explanation.
 	tgt, err := frontendPathToShareTarget(pathArg, share.TypePublic)
@@ -453,6 +460,9 @@ func newShareSMBCommand(f *cmdutil.Factory) *cobra.Command {
 		Long: `Create an SMB (Samba) share. The result includes a UNC-style smb_link
 (e.g. \\smb-host\share-name) plus the smb_user / smb_password the
 client should use to mount it.
+
+Allowed on drive/Home and external. sync takes internal shares only;
+drive/Data, drive/Common, cache and cloud drives take no share.
 
 Wire shape:
 

@@ -73,15 +73,23 @@ func (s *service) SetUpdateApListCB(f func([]AccessPoint)) {
 	s.updateApListCB = f
 }
 
+// setConnectState publishes the state to the ConnectWifi characteristic right
+// away; the periodic refresh can lag up to bleScanIntervalIdle once online,
+// which is longer than the client waits for a result.
+func (s *service) setConnectState(state ConnectState) {
+	s.wifiConnectState = state.String()
+	if s.notifyConnectState != nil {
+		s.notifyConnectState()
+	}
+}
+
 func (s *service) connectWifi(value []byte) {
 	cctx, err := s.parseConnectConext(value)
 	if err != nil {
-		state := ConnectState{
+		s.setConnectState(ConnectState{
 			State:  ptr.To(Fail),
 			ErrMsg: ptr.To(err.Error()),
-		}
-
-		s.wifiConnectState = state.String()
+		})
 		return
 	}
 
@@ -90,20 +98,16 @@ func (s *service) connectWifi(value []byte) {
 	cmd := connectwifi.New()
 	_, err = cmd.Execute(s.ctx, &param)
 	if err != nil {
-		state := ConnectState{
+		s.setConnectState(ConnectState{
 			State:  ptr.To(Fail),
 			ErrMsg: ptr.To(err.Error()),
-		}
-
-		s.wifiConnectState = state.String()
+		})
 		return
 	}
 
-	state := ConnectState{
+	s.setConnectState(ConnectState{
 		State: ptr.To(OK),
-	}
-
-	s.wifiConnectState = state.String()
+	})
 }
 
 func (s *service) parseConnectConext(value []byte) (*ConnectContext, error) {
@@ -214,26 +218,38 @@ func (s *service) publishAPList(list []AccessPoint) {
 		positions[key] = len(compact)
 		compact = append(compact, advertisedAP{SSID: ap.SSID, Strength: ap.Strength, SecurityTypes: security})
 	}
-	// Measure serialized bytes, including JSON punctuation and escaping. Skip
-	// entries that cannot fit so shorter later entries can fill the capacity.
+	s.apPages = paginateAPs(compact)
+}
+
+// paginateAPs fills pages in order so concatenating them preserves priority.
+// Each page is a standalone JSON array of at most bleAPPageSize bytes, measured
+// including punctuation and escaping. Unused pages are "[]".
+func paginateAPs(aps []advertisedAP) [bleAPPageCount]string {
+	pages := emptyAPPages()
+	page := 0
 	data := []byte{'['}
-	for _, ap := range compact {
+	for _, ap := range aps {
 		item, err := json.Marshal(ap)
 		if err != nil {
 			klog.Error("Failed to marshal wifi access point")
 			continue
 		}
-		separator := 0
-		if len(data) > 1 {
-			separator = 1
-		}
-		if len(data)+separator+len(item)+1 > 512 {
+		if len(item)+2 > bleAPPageSize {
 			continue
 		}
-		if separator != 0 {
+		if len(data) > 1 && len(data)+1+len(item)+1 > bleAPPageSize {
+			pages[page] = string(append(data, ']'))
+			page++
+			if page == bleAPPageCount {
+				return pages
+			}
+			data = []byte{'['}
+		}
+		if len(data) > 1 {
 			data = append(data, ',')
 		}
 		data = append(data, item...)
 	}
-	s.apList = string(append(data, ']'))
+	pages[page] = string(append(data, ']'))
+	return pages
 }

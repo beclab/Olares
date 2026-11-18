@@ -22,6 +22,7 @@ import (
 type rmOptions struct {
 	recursive bool
 	force     bool
+	unshare   bool
 }
 
 // NewRmCommand: `olares-cli files rm [-r] [-f] <remote-path>...`
@@ -112,6 +113,10 @@ Examples:
     olares-cli files rm -r drive/Home/Backups/2024
     olares-cli files rm -r drive/Home/Backups/2024/
     olares-cli files rm -rf drive/Home/junk drive/Home/scratch/
+
+A shared folder, or a folder holding one, is not deleted: the server
+answers 409 and lists the shares. Pass --unshare to cancel them and
+delete anyway.
 `,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -122,6 +127,7 @@ Examples:
 		"recursively remove directories (also: -R)")
 	// -R is the BSD spelling; same flag, just an alias so users with
 	// muscle memory either way get the expected behavior.
+	cmd.Flags().BoolVar(&o.unshare, "unshare", false, "cancel the shares on a shared folder (or the shared folders in it) and go ahead, instead of refusing")
 	cmd.Flags().BoolVarP(&o.force, "force", "f", false,
 		"skip the interactive y/N confirmation")
 	cmd.Flags().BoolP("recursive-bsd", "R", false, "alias for -r")
@@ -195,6 +201,7 @@ func runRm(
 	client := &rm.Client{
 		HTTPClient: httpClient,
 		BaseURL:    rp.FilesURL,
+		Unshare:    o.unshare,
 	}
 
 	// Preflight: Stat every target to verify it exists on the server
@@ -479,6 +486,12 @@ func reformatRmHTTPErr(err error, olaresID string, g *rm.Group) error {
 	var rmErr *rm.HTTPError
 	if errors.As(err, &rmErr) {
 		status = rmErr.Status
+		if msg, ok := sharedFolderConflict(rmErr.Status, rmErr.Body); ok {
+			if g != nil {
+				return fmt.Errorf("delete in %s/%s%s: %s", g.FileType, g.Extend, g.ParentSubPath, msg)
+			}
+			return fmt.Errorf("rm: %s", msg)
+		}
 	}
 	var dlErr *download.HTTPError
 	if status == 0 && errors.As(err, &dlErr) {
