@@ -2,9 +2,11 @@ package appinstaller
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
@@ -278,15 +280,30 @@ func (h *HelmOps) SetValues(isInstallOp bool) (values map[string]interface{}, er
 		}
 	}
 
+	customDomains, err := h.entranceCustomDomains()
+	if err != nil {
+		klog.Errorf("Failed to read custom domain err=%v", err)
+		return values, err
+	}
 	entries := make(map[string]interface{})
 	for i, entrance := range h.app.Entrances {
+		urls := make([]string, 0)
+		if cfg, ok := customDomains[entrance.Name]; ok {
+			if cDomain, _ := cfg["third_party_domain"].(string); cDomain != "" {
+				urls = append(urls, cDomain)
+			}
+			if prefix, _ := cfg["third_level_domain"].(string); prefix != "" {
+				urls = append(urls, fmt.Sprintf("%s.%s", prefix, zone))
+			}
+		}
 		var url string
 		if len(h.app.Entrances) == 1 {
 			url = fmt.Sprintf("%s.%s", h.app.AppID, zone)
 		} else {
 			url = fmt.Sprintf("%s%d.%s", h.app.AppID, i, zone)
 		}
-		entries[entrance.Name] = url
+		urls = append(urls, url)
+		entries[entrance.Name] = strings.Join(urls, ",")
 	}
 
 	values["domain"] = entries
@@ -417,6 +434,29 @@ func (h *HelmOps) SetValues(isInstallOp bool) (values map[string]interface{}, er
 	klog.Infof("values[node]: %#v", values["nodes"])
 
 	return values, err
+}
+
+func (h *HelmOps) entranceCustomDomains() (map[string]map[string]interface{}, error) {
+	if h.client == nil {
+		return nil, fmt.Errorf("app client is nil")
+	}
+	app, err := h.client.AppClient.AppV1alpha1().Applications().Get(h.ctx,
+		v1alpha1.AppResourceName(h.app.AppName, h.app.Namespace), metav1.GetOptions{})
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("get application %s/%s for custom domain: %w", h.app.Namespace, h.app.AppName, err)
+	}
+	raw := app.EffectiveSettings(h.app.OwnerName)["customDomain"]
+	if raw == "" {
+		return nil, nil
+	}
+	var domains map[string]map[string]interface{}
+	if err = json.Unmarshal([]byte(raw), &domains); err != nil {
+		return nil, fmt.Errorf("parse customDomain for %s: %w", h.app.AppName, err)
+	}
+	return domains, nil
 }
 
 func (h *HelmOps) TaprApply(values map[string]interface{}, namespace string) error {

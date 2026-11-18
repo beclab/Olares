@@ -16,7 +16,6 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/applifecycle/domain"
 	"github.com/beclab/Olares/framework/app-service/pkg/client/clientset"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
-	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/provider"
 	"github.com/beclab/Olares/framework/app-service/pkg/tapr"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
@@ -253,6 +252,23 @@ func (h *Handler) setupAppEntranceDomain(req *restful.Request, resp *restful.Res
 
 	customDomain, ok := settings["customDomain"].(map[string]interface{})
 
+	var appMgr *v1alpha1.ApplicationManager
+	if ok {
+		appMgr, err = kclient.AppClient.AppV1alpha1().ApplicationManagers().Get(req.Request.Context(), appCopy.Name, metav1.GetOptions{})
+		if err != nil {
+			api.HandleError(resp, req, err)
+			return
+		}
+		if blockIfRequestPending(resp, req, appMgr, v1alpha1.UpgradeOp) {
+			return
+		}
+		if !domain.DefaultTable.AllowsOp(appMgr.Status.State, v1alpha1.UpgradeOp) {
+			err = fmt.Errorf("%s operation is not allowed for %s state", v1alpha1.UpgradeOp, appMgr.Status.State)
+			api.HandleBadRequest(resp, req, err)
+			return
+		}
+	}
+
 	existing := appCopy.EffectiveSettings(caller)["customDomain"]
 
 	merge := make(map[string]interface{})
@@ -361,7 +377,6 @@ func (h *Handler) setupAppEntranceDomain(req *restful.Request, resp *restful.Res
 	if ok {
 		// upgrade app set values
 		owner := req.Attribute(constants.UserContextAttribute).(string)
-		zone, err := kubesphere.GetUserZone(req.Request.Context(), owner)
 		if err != nil {
 			api.HandleError(resp, req, err)
 			return
@@ -374,50 +389,10 @@ func (h *Handler) setupAppEntranceDomain(req *restful.Request, resp *restful.Res
 			return
 		}
 
-		vals := make(map[string]interface{})
-		entries := make(map[string]interface{})
-		for i, entrance := range app.Spec.Entrances {
-			cfg, ok := customDomain[entrance.Name].(map[string]interface{})
-			if !ok {
-				continue
-			}
-			urls := make([]string, 0)
-			if cDomain, _ := cfg["third_party_domain"].(string); cDomain != "" {
-				urls = append(urls, cDomain)
-			}
-			if prefix := cfg["third_level_domain"]; prefix != "" {
-				urls = append(urls, fmt.Sprintf("%s.%s", prefix, zone))
-			}
-			var url string
-			if len(app.Spec.Entrances) == 1 {
-				url = fmt.Sprintf("%s.%s", app.Spec.Appid, zone)
-			} else {
-				url = fmt.Sprintf("%s%d.%s", app.Spec.Appid, i, zone)
-			}
-			urls = append(urls, url)
-
-			entries[entrance.Name] = strings.Join(urls, ",")
-		}
-		vals["domain"] = entries
-
-		appMgr, err := kclient.AppClient.AppV1alpha1().ApplicationManagers().Get(req.Request.Context(), appUpdated.Name, metav1.GetOptions{})
-		if err != nil {
-			api.HandleError(resp, req, err)
-			return
-		}
-
 		var appCfg *appcfg.ApplicationConfig
 		err = json.Unmarshal([]byte(appMgr.Spec.Config), &appCfg)
 		if err != nil {
 			api.HandleError(resp, req, err)
-			return
-		}
-		if blockIfRequestPending(resp, req, appMgr, v1alpha1.UpgradeOp) {
-			return
-		}
-		if !domain.DefaultTable.AllowsOp(appMgr.Status.State, v1alpha1.UpgradeOp) {
-			err = fmt.Errorf("%s operation is not allowed for %s state", v1alpha1.UpgradeOp, appMgr.Status.State)
-			api.HandleBadRequest(resp, req, err)
 			return
 		}
 
