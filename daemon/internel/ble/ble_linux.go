@@ -85,13 +85,10 @@ func NewBleService(ctx context.Context) (*service, error) {
 					}
 				}
 
-				state = ConnectState{
+				s.setConnectState(ConnectState{
 					State:  ptr.To(Connecting),
 					ErrMsg: ptr.To(fmt.Sprintf("start to connect wifi")),
-				}
-
-				s.wifiConnectState = state.String()
-				connectWifi.Write([]byte(s.wifiConnectState))
+				})
 
 				// connect wifi
 				go s.connectWifi(value)
@@ -126,6 +123,10 @@ func NewBleService(ctx context.Context) (*service, error) {
 		UUID:            OlaresServiceUUID,
 		Characteristics: characteristics,
 	})
+
+	s.notifyConnectState = func() {
+		connectWifi.Write([]byte(s.wifiConnectState))
+	}
 
 	s.update = func() {
 		for i := range listAp {

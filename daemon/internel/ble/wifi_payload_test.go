@@ -23,6 +23,20 @@ func TestWifiConnectionPayload(t *testing.T) {
 		t.Fatal("legacy payload changed")
 	}
 }
+func TestWifiConnectResultNotifiesImmediately(t *testing.T) {
+	var notified []string
+	s := &service{}
+	s.notifyConnectState = func() { notified = append(notified, s.wifiConnectState) }
+	s.connectWifi([]byte(strings.Repeat(" ", 513)))
+	if len(notified) != 1 {
+		t.Fatalf("expected one immediate notification, got %d", len(notified))
+	}
+	var state ConnectState
+	if err := json.Unmarshal([]byte(notified[0]), &state); err != nil || state.State == nil || *state.State != Fail {
+		t.Fatalf("unexpected notified state: %s", notified[0])
+	}
+}
+
 func TestWifiAPListKeepsHTTPComplete(t *testing.T) {
 	list := []AccessPoint{}
 	for i := 0; i < 20; i++ {

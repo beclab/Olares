@@ -73,15 +73,23 @@ func (s *service) SetUpdateApListCB(f func([]AccessPoint)) {
 	s.updateApListCB = f
 }
 
+// setConnectState publishes the state to the ConnectWifi characteristic right
+// away; the periodic refresh can lag up to bleScanIntervalIdle once online,
+// which is longer than the client waits for a result.
+func (s *service) setConnectState(state ConnectState) {
+	s.wifiConnectState = state.String()
+	if s.notifyConnectState != nil {
+		s.notifyConnectState()
+	}
+}
+
 func (s *service) connectWifi(value []byte) {
 	cctx, err := s.parseConnectConext(value)
 	if err != nil {
-		state := ConnectState{
+		s.setConnectState(ConnectState{
 			State:  ptr.To(Fail),
 			ErrMsg: ptr.To(err.Error()),
-		}
-
-		s.wifiConnectState = state.String()
+		})
 		return
 	}
 
@@ -90,20 +98,16 @@ func (s *service) connectWifi(value []byte) {
 	cmd := connectwifi.New()
 	_, err = cmd.Execute(s.ctx, &param)
 	if err != nil {
-		state := ConnectState{
+		s.setConnectState(ConnectState{
 			State:  ptr.To(Fail),
 			ErrMsg: ptr.To(err.Error()),
-		}
-
-		s.wifiConnectState = state.String()
+		})
 		return
 	}
 
-	state := ConnectState{
+	s.setConnectState(ConnectState{
 		State: ptr.To(OK),
-	}
-
-	s.wifiConnectState = state.String()
+	})
 }
 
 func (s *service) parseConnectConext(value []byte) (*ConnectContext, error) {
