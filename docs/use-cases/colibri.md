@@ -1,72 +1,78 @@
 ---
 outline: [2, 3]
-description: Run a larger MoE model in Colibri on Olares with less resident memory, turn meeting notes into action items, and export the conversation.
+description: Run a larger MoE model in Colibri on Olares, use it to review a short Python function, and export the chat.
 head:
   - - meta
     - name: keywords
-      content: Olares, Colibri, local LLM, GGUF, MoE, RAM, GPU memory, CPU inference, meeting notes, Olares Router
-app_version: "0.2.34"
-doc_version: "2.2"
-doc_updated: "2026-11-12"
+      content: Olares, Colibri, local LLM, GGUF, MoE, RAM, GPU memory, CPU inference, Python code review, Olares Router
+app_version: "0.2.35"
+doc_version: "3.0"
+doc_updated: "2026-11-18"
 ---
 
 # Run a larger MoE model with Colibri on Olares
 
-Colibri is a local AI inference engine with a web chat interface. It loads supported GGUF models. For mixture-of-experts (MoE) models, it can read expert weights from disk as needed, reducing the need to keep every expert in memory.
+Colibri runs supported GGUF models locally and gives you a web chat interface. A mixture-of-experts (MoE) model uses only some of its experts for each reply. Colibri can keep other expert weights in the model file and read them from disk when needed, so you can try a larger model without keeping all its weights in memory.
 
-This can make larger models accessible when keeping all their weights in memory would require too much RAM. You can set the system RAM limit and GPU memory allocation. Setting GPU memory to 0 runs inference on the CPU. With fewer resources, the first response and subsequent generation can become much slower, especially with long inputs.
+You can choose how much system RAM and GPU memory to give Colibri, or use the CPU for inference. Less memory means more reading from disk and can make replies slower, especially with long inputs.
 
-On Olares, you can reuse existing model files and access the chat interface through your Olares sign-in. This tutorial uses Qwen3.6-35B-A3B to turn meeting notes into action items, then exports the conversation to save the result.
-
-Qwen3.6-35B-A3B is only an example for demonstrating the workflow. Colibri does not require this specific model. You can substitute another supported MoE model in GGUF format that fits your available resources. Memory use and response speed vary with the model, quantization, and context length.
+On Olares, you can reuse existing model files and access the chat interface through your Olares sign-in. This tutorial uses Qwen3.6-35B-A3B to find a bug in a short Python function, then exports the conversation. You can follow the same steps with another supported GGUF model.
 
 ## Learning objectives
 
 In this tutorial, you will learn how to:
 
-- Set RAM and GPU memory limits for your available resources and select an existing GGUF model.
-- Organize meeting notes with a local model and export the conversation.
+- Add a GGUF model file, set RAM and GPU memory limits, and choose an inference profile.
+- Ask a local model to review a Python function and export the conversation.
 - Switch the chat connection to the default chat model in Olares Router.
 
 ## Prerequisites
 
-- An amd64 device running Olares 1.12.7 or later, with AVX2 support.
-- Colibri 0.2.34, with enough available resources to load your chosen model.
-- An NVIDIA device on the host. GPU acceleration requires an NVIDIA GPU compatible with this Blackwell sm_120 build and a driver that supports CUDA 13.0. This build has been tested on an RTX 5090 Laptop GPU. It does not support acceleration on older NVIDIA GPU architectures.
-- A downloaded GGUF model supported by Colibri. This tutorial uses the `UD-IQ4_XS` quantization of Qwen3.6-35B-A3B, whose weight file is about 16.5 GiB. Keep enough disk space for the complete weights even when using a smaller resident memory budget.
+- An amd64 device running Olares 1.12.7 or later, with AVX2 support. See [Check and update Olares](/manual/olares/settings/update.md) if you need to update.
+- An NVIDIA device on the host. GPU acceleration requires a Blackwell sm_120 GPU and a driver that supports CUDA 13.0. To check the GPU model, open Dashboard, select the GPU card under **Cluster's physical resources**, then open **Graphics management**. This build has been tested on an RTX 5090 Laptop GPU.
+- Enough disk space for your model file. The Qwen3.6-35B-A3B `UD-IQ4_XS` file used below is about 16.5 GiB.
 
-## Prepare your model files
+## Add a model file
 
-Open Files and go to `Common/huggingface`. Make sure your GGUF file is in this directory or one of its subdirectories. You can reuse an existing Hugging Face cache. Keep its `snapshots` structure and relative links intact, without moving files or copying paths.
+Colibri scans `Common/huggingface` for GGUF files. It does not download model weights during installation. If your model is already in this folder or in a Hugging Face cache under it, continue to [install Colibri](#install-colibri-and-set-memory-limits). Keep the cache's `snapshots` structure and relative links intact.
 
-Keep any matching `mmproj` vision projector in the same directory as the main weights. Colibri displays it as a vision companion under its model, rather than as a second chat model. Finding a vision file does not enable image input. Check the loaded engine's reported capabilities.
+To add the example model:
 
-Colibri reads the original weights without modifying them. Imported indexes and your model selection are saved in the application's own data directory. The package does not include or automatically download model weights.
+1. Download [Qwen3.6-35B-A3B-UD-IQ4_XS.gguf](https://huggingface.co/unsloth/Qwen3.6-35B-A3B-GGUF/blob/main/Qwen3.6-35B-A3B-UD-IQ4_XS.gguf) to your computer.
+2. Open Files from Launchpad and go to **Common** > **huggingface**.
+3. Drag the GGUF file into the Files window, or click the upload icon in the top-right corner. See [Upload files](/manual/olares/files/add-edit-download.md#upload-files).
 
-Your disk must have room for the complete model files. Colibri reads expert weights as needed, so disk read speed can also affect response times when RAM is limited. Store your models on an SSD where possible. More disk space lets you store larger models, but does not guarantee that they can run. Available RAM, GPU memory, and model compatibility still matter.
+:::tip Save the model directly to Olares
+In the LarePass desktop client, go to **Transfer** > **Fetch** and select **Save to Olares**. Paste the address below, choose `Common/huggingface` as the destination, and start the download. See [Save resources to Olares](/manual/larepass/save-resources-to-olares.md).
 
-## Set RAM and GPU memory limits
+```text
+https://huggingface.co/unsloth/Qwen3.6-35B-A3B-GGUF/resolve/main/Qwen3.6-35B-A3B-UD-IQ4_XS.gguf
+```
+:::
 
-During installation, enter the RAM limit and GPU memory allocation for your available resources. Leave the other settings at their defaults. This example uses a `32Gi` RAM limit and an `8Gi` GPU memory allocation. These are tested example values, not minimum requirements for every model.
+Keep any matching `mmproj` vision projector beside the main weights. Colibri lists it under the model as a vision companion. The loaded engine determines whether image input is available.
 
-| Setting | Example value | Description |
-|---|---|---|
-| `MEMORY_LIMIT` | `32Gi` | System RAM limit for Colibri's main container, not GPU memory |
-| `GPU_MEMORY_LIMIT` | `8Gi` | Total GPU memory allocated to the application |
+Colibri reads the original weights without modifying them. It saves imported indexes and your model selection in its own application data. Store models on an SSD where possible: Colibri reads expert weights from disk as needed, so disk speed affects replies when RAM is limited.
 
-`MEMORY_LIMIT` and `GPU_MEMORY_LIMIT` are required at installation and have no preset values. Positive values must include `Mi` or `Gi`, such as `32Gi`, `48Gi`, or `49152Mi`. Do not enter `48GB` or a bare `48`. `1Gi` equals `1024Mi`.
+## Install Colibri and set memory limits
 
-Colibri converts 75% of the RAM limit into its engine budget, leaving headroom for the runtime, context, and file cache. For example, a `32Gi` limit gives the engine a budget of about 25 decimal GB. The limit does not preallocate that memory or increase the machine's physical RAM. A limit that is too low can still cause model loading or generation to fail.
+Before installing, check the available RAM in Dashboard and the GPU allocation in **Settings** > **GPU**. If your device can spare `32Gi` of RAM and `8Gi` of GPU memory, start with these values:
 
-The GPU allocation covers model weights, expert cache, and runtime buffers. It is not an additional expert-cache allowance. The minimum positive allocation is `4Gi`. Colibri keeps `2Gi` of the allocation for CUDA and temporary buffers, and uses the remainder for model placement. GPU memory is not necessarily filled immediately at startup.
+1. Open Market and search for "Colibri". Click **Get**, then **Install**.
+2. In **Configure environment variables for Colibri**, enter:
 
-Set GPU memory to `0` to disable CUDA and run inference on the CPU. Set it to `4Gi` or more to enable GPU acceleration. Both use the same installation entry, and Olares still records an NVIDIA device binding.
+   | Setting | Start with | What it controls |
+   |---|---|---|
+   | `MEMORY_LIMIT` | `32Gi` | The most system RAM Colibri's main service can use |
+   | `GPU_MEMORY_LIMIT` | `8Gi` | The GPU memory allocated to Colibri |
 
-### Adjust resources after installation
+   :::tip Choose an allocation for your device
+   If your device has less memory available, enter an amount it can spare and start with a smaller model. Set GPU memory to `0` to use the CPU instead. CPU inference still requires an NVIDIA-equipped Olares device for this package.
+   :::
 
-To change the RAM limit, open Colibri's environment variable settings in Olares Settings and update `MEMORY_LIMIT`. Saving restarts the application and reloads the selected model. Export any conversation you want to keep first.
+   Leave the other settings at their defaults.
 
-`GPU_MEMORY_LIMIT` cannot be edited directly after installation. To change the allocation, uninstall the application with its data retained, then reinstall and enter the new value. Enter `0` to switch to CPU inference. You do not need to download the weights in the shared directory again.
+3. Click **Confirm** and wait for installation to finish.
 
 ## Scan for and select a local model
 
@@ -84,55 +90,63 @@ To switch models, click the local model icon on the left side of the chat page. 
 
 Click **Stop local model** and confirm to stop the inference process and release the RAM and GPU memory it was using. When GPU acceleration is enabled, Olares still retains the application's GPU allocation. You can select a model again later. The stopped state is also saved, so restarting the application does not automatically reload the model.
 
-## Organize meeting notes with your local model
+## Adjust resources for your model
+
+### Change memory limits
+
+For another model, load it and try a short prompt with the current settings. If Colibri reports insufficient RAM, raise `MEMORY_LIMIT` when your device has room. If the model loads but replies are slow, try a higher RAM limit first. If the GPU also has room, a larger GPU allocation can help. When neither resource has room, choose a smaller model or quantization.
+
+To change the RAM limit, open **Settings** > **Applications** > **Colibri** > **Manage environment variables**, edit `MEMORY_LIMIT`, and apply the change. Colibri restarts and reloads the selected model. Export any conversation you want to keep before changing it.
+
+To change `GPU_MEMORY_LIMIT`, uninstall Colibri while retaining its application data, then reinstall it with the new value. This setting cannot be edited after installation. The model files in `Common/huggingface` remain available.
+
+### Choose an inference profile
+
+Colibri starts in `standard`. If you want to try a supported MoE model with less memory available, you can switch to `low-memory-moe`. It uses staged GPU execution and may be slower, especially with long inputs. Both profiles use the RAM and GPU memory limits you entered during installation.
+
+1. Open **Settings** > **Applications** > **Colibri** > **Manage environment variables**.
+2. Set `INFERENCE_PROFILE` to `low-memory-moe`, then click **Confirm** and **Apply**. Colibri restarts.
+3. Return to Colibri and wait for **Model ready** before starting a new chat.
+
+To switch back, set `INFERENCE_PROFILE` to `standard` and apply the change. Export a conversation you want to keep before either restart.
+
+## Review a Python function with your local model
 
 ### Connect to the local engine
 
 1. The following steps use English interface labels. To change the chat interface language, click the settings icon in the bottom-left corner and select **English** under **Settings** > **General** > **Language**.
 2. Under **Settings** > **Connection**, check that **Connection service** is **Colibri local engine (default)**. Keep the automatically filled **API endpoint**.
 3. Click **Probe server**. When **Engine reachable** appears, the connection is ready. If it fails, return to the local model page and check the loading status.
-4. Open the **Model** tab and select the loaded local model. For this example, set **Max output tokens** to `512` and leave **Reasoning** off to keep the meeting summary brief.
-
-`512` is only the maximum output length for this short-summary example, not a fixed model output limit. You can adjust it for your task, but the input, conversation history, and output must fit within the current context limit.
+4. Open the **Model** tab and select the loaded local model. Set **Max output tokens** to `1024` and leave **Reasoning** off for this short code review.
 
 The web interface authenticates through your Olares sign-in. You do not need to enter an API key in Colibri.
 
-### Generate a meeting summary
+### Find and fix the sorting bug
 
 1. Click the **New chat** icon on the left to start a conversation.
-2. Paste the following fictional meeting notes into the input box and click the send arrow. You can also substitute a short text of your own.
+2. Paste this short Python example into the input box and click the send arrow. You can use a function of your own instead.
 
    ```text
-   Turn the following meeting notes into a concise meeting summary.
-   List confirmed decisions first, then use a table for tasks, owners,
-   and deadlines. If the notes do not provide a detail, write "To be
-   confirmed" instead of guessing.
+   This function should return the highest scores first.
+   Explain the bug in one sentence, then rewrite the function.
 
-   Meeting notes:
-   The team decided to launch the updated help center on November 10.
-   Alex will organize the frequently asked questions by November 6.
-   Casey will check the page links by November 8.
-   The product screenshots also need updating, but the owner and
-   deadline have not been decided.
+   def top_scores(scores, limit=3):
+       ranked = sorted(scores)
+       return ranked[:limit]
    ```
 
-3. Wait for the reply to appear. Compare the action items with the original notes, especially the owners and deadlines. Check that missing details remain marked as "To be confirmed."
-4. In the same conversation, enter "Rewrite these action items as a short message to the team" to turn the summary into a message you can use.
+3. Compare the suggested fix with the function you sent. The result should contain the highest scores first. If the explanation is unclear, ask a follow-up question in the same chat.
 
-   ![Colibri chat interface showing a streamed reply from a local model](/images/manual/use-cases/colibri-moe-chat-en.jpg#bordered)
-
-   The screenshot shows the same meeting task in the English chat interface.
-
-This version provides a 16K context by default, shared by the input, conversation history, and output. For longer notes, work through one topic at a time, then continue with a shorter summary. Even when the input fits within the context limit, lower RAM or GPU memory allocations can increase waiting time.
+This version provides a 16K context by default for the input, conversation history, and output together. For longer files, send one function at a time. Lower RAM or GPU memory allocations can increase the wait before a reply.
 
 ### Export the conversation
 
+:::warning Export before refreshing
+Colibri does not retain chat history or generation settings after a page refresh. Export any conversation you want to keep before closing or refreshing the page.
+:::
+
 1. After the reply finishes, click the **Export conversation** icon in the top-right corner.
 2. Select **Markdown (.md)** to download the conversation to your computer. The file contains your input and the model's replies for later editing or sharing. You can also choose **JSON (.json)** for structured storage.
-
-:::warning Export before refreshing
-The current version does not retain chat history or generation settings after a page refresh. Export any conversation you want to keep before closing or refreshing the page.
-:::
 
 ## Resource configuration and performance reference
 
@@ -185,12 +199,13 @@ Changing the connection service only changes where chat requests go. It does not
 1. In Colibri, open **Settings** > **Connection**.
 2. Change **Connection service** to **Olares Router** and keep the automatically filled address. You do not need to create or enter an API key.
 3. Click **Probe server**, then select `default-chat` on the **Model** tab.
-4. Click **New chat** and send the same meeting notes in a new conversation. Router's current default chat model generates the reply. If you change that default model in Router later, this connection follows the change.
+4. Click **New chat** and send the same `top_scores` prompt in a new conversation. Router's current default chat model generates the reply. If you change that default model in Router later, this connection follows the change.
 
 Router replies do not appear in Colibri's local engine performance statistics. To return to local inference, select **Colibri local engine (default)** under **Connection service**, probe the server again, select the local model, and start a new conversation.
 
 ## Learn more
 
 - [Connect AI applications to Olares models](/manual/best-practices/connect-ai-apps.md): Learn about Router model names, connection addresses, and authentication.
+- [Save resources to Olares](/manual/larepass/save-resources-to-olares.md): Download a model file directly to Olares with LarePass Fetch.
 - [Use Olares Router as your AI gateway](/use-cases/olares-router.md): Manage model services and default chat models.
 - [Colibri official documentation (this build)](https://github.com/JustVugg/colibri/blob/0a5504a1dc64f86fcd0fe7db298b0448c730e7e6/README.md): Read about model compatibility, how the engine works, and tuning.
