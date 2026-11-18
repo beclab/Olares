@@ -169,7 +169,7 @@ Yes. You can run local models for chat, writing, coding, research, and media cre
 | Research reports with citations | A local LLM analyzes sources retrieved through SearXNG | [Local Deep Research](../use-cases/local-deep-research.md) |
 | Writing and testing code | A local model works with an agent that edits files and runs tests | [OpenCode](../use-cases/opencode.md), [Claude Code](../use-cases/claude-code.md), or [Codex CLI](../use-cases/codex-cli.md) |
 | Image and video creation | A workflow calls local models to generate or edit images and videos | [FlowStudio](../use-cases/flowstudio.md) or [ComfyUI](../use-cases/comfyui.md) |
-| Music creation | Local music models generate songs from lyrics and style prompts | [YuE2 Studio](../use-cases/yue2-studio.md) or [ACE-Step](../use-cases/ace-step-1.5.md) |
+| Music creation | Local music models generate songs from lyrics and style prompts | [YuE2 Studio](../use-cases/yue2-studio.md) or [Music Studio](../use-cases/music-studio.md) |
 
 Browse [Olares Market](https://market.olares.com) for more apps and models.
 
