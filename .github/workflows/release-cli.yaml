@@ -189,9 +189,9 @@ jobs:
           GONOSUMDB: github.com/beclab/oac
           GONOPROXY: github.com/beclab/oac
           GIT_CONFIG_COUNT: "2"
-          GIT_CONFIG_KEY_0: "url.https://x-access-token:${{ secrets.GO_PRIVATE_TOKEN }}@github.com/.insteadof"
+          GIT_CONFIG_KEY_0: "url.https://x-access-token:${{ secrets.GO_PRIVATE_TOKEN }}@github.com/beclab/.insteadof"
           GIT_CONFIG_VALUE_0: "https://github.com/beclab/"
-          GIT_CONFIG_KEY_1: "url.https://x-access-token:${{ secrets.GO_ABOVEOS_TOKEN }}@github.com/.insteadof"
+          GIT_CONFIG_KEY_1: "url.https://x-access-token:${{ secrets.GO_ABOVEOS_TOKEN }}@github.com/Above-Os/.insteadof"
           GIT_CONFIG_VALUE_1: "https://github.com/Above-Os/"
 
       - name: Assert binary version was injected
