@@ -7,7 +7,9 @@ import (
 	"time"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
+	"github.com/beclab/Olares/framework/app-service/pkg/users"
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
+	iamv1alpha2 "github.com/beclab/api/iam/v1alpha2"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
@@ -179,6 +182,93 @@ func TestEnrichRemovedBindingsKeepsBindingWhenConfigUnavailable(t *testing.T) {
 	if len(changes[0].Bindings) != 1 || changes[0].Bindings[0].Containers == nil || len(changes[0].Bindings[0].Containers) != 0 {
 		t.Fatalf("binding without config = %#v", changes[0].Bindings)
 	}
+}
+
+func TestPublishDeviceInventoryEventFansOutToAdminsAndBoundOwners(t *testing.T) {
+	scheme := runtime.NewScheme()
+	if err := appv1alpha1.AddToScheme(scheme); err != nil {
+		t.Fatal(err)
+	}
+	if err := iamv1alpha2.AddToScheme(scheme); err != nil {
+		t.Fatal(err)
+	}
+	ref := "devices.bytetrade.io/serial-s-1"
+	objects := []client.Object{
+		userForDeviceEventTest("alice", "owner"),
+		userForDeviceEventTest("carol", "admin"),
+		userForDeviceEventTest("bob", "normal"),
+		userForDeviceEventTest("dave", "normal"),
+		&appv1alpha1.Application{
+			ObjectMeta: metav1.ObjectMeta{Name: "bound-app"},
+			Spec: appv1alpha1.ApplicationSpec{
+				Name: "homeassistant", Namespace: "homeassistant-bob", Owner: "bob",
+				Attachments: []appv1alpha1.Attachment{{Workload: "homeassistant", Type: "device.serial", Ref: ref, Node: "node-a"}},
+			},
+		},
+	}
+	type publishedEvent struct {
+		subject string
+		msgID   string
+		event   DeviceInventoryEvent
+	}
+	published := make([]publishedEvent, 0)
+	r := &DeviceInventoryController{
+		Client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build(),
+		Publish: func(subject, msgID string, data interface{}) {
+			published = append(published, publishedEvent{subject: subject, msgID: msgID, event: data.(DeviceInventoryEvent)})
+		},
+	}
+	event := DeviceInventoryEvent{
+		SchemaVersion: 1, EventID: "device-inventory:node-a:base", Node: "node-a",
+		Changes: []DeviceInventoryChange{{Kind: "device", Action: "added", Type: "device.serial", ResourceName: ref}},
+	}
+	if err := r.publishToRecipients(context.Background(), event); err != nil {
+		t.Fatal(err)
+	}
+	wantRecipients := []string{"alice", "bob", "carol"}
+	if len(published) != len(wantRecipients) {
+		t.Fatalf("published = %#v", published)
+	}
+	for i, recipient := range wantRecipients {
+		wantSubject := "os.device.inventory." + recipient
+		wantID := event.EventID + ":" + recipient
+		if published[i].subject != wantSubject || published[i].msgID != wantID || published[i].event.EventID != wantID {
+			t.Fatalf("published[%d] = %#v, want subject=%q id=%q", i, published[i], wantSubject, wantID)
+		}
+	}
+}
+
+func TestPublisherEventIncludesOwnersOfAllAttachmentsOnNode(t *testing.T) {
+	scheme := runtime.NewScheme()
+	if err := appv1alpha1.AddToScheme(scheme); err != nil {
+		t.Fatal(err)
+	}
+	if err := iamv1alpha2.AddToScheme(scheme); err != nil {
+		t.Fatal(err)
+	}
+	application := &appv1alpha1.Application{
+		ObjectMeta: metav1.ObjectMeta{Name: "bound-app"},
+		Spec: appv1alpha1.ApplicationSpec{
+			Name: "homeassistant", Namespace: "homeassistant-bob", Owner: "bob",
+			Attachments: []appv1alpha1.Attachment{
+				{Workload: "homeassistant", Type: "device.serial", Ref: "devices.bytetrade.io/serial-s-1", Node: "node-a"},
+			},
+		},
+	}
+	r := &DeviceInventoryController{Client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(application).Build()}
+	recipients, err := r.eventRecipients(context.Background(), "node-a", []DeviceInventoryChange{{Kind: "publisher", Action: "offline"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(recipients) != 1 || recipients[0] != "bob" {
+		t.Fatalf("recipients = %#v", recipients)
+	}
+}
+
+func userForDeviceEventTest(name, role string) *iamv1alpha2.User {
+	return &iamv1alpha2.User{ObjectMeta: metav1.ObjectMeta{
+		Name: name, Annotations: map[string]string{users.UserAnnotationOwnerRole: role},
+	}}
 }
 
 func nodeWithInventory(name, inventory string) *corev1.Node {

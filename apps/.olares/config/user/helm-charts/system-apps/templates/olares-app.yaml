@@ -354,6 +354,8 @@ spec:
               value: os.market.{{ .Values.bfl.username}}
             - name: NATS_SUBJECT_APPLICATION
               value: os.application.{{ .Values.bfl.username}}
+            - name: NATS_SUBJECT_DEVICE_INVENTORY
+              value: os.device.inventory.{{ .Values.bfl.username}}
             - name: NATS_SUBJECT_USER_NOTIFICATION
               value: os.notification.{{ .Values.bfl.username}}
             - name: NATS_SUBJECT_FILES
@@ -415,6 +417,8 @@ spec:
               value: os.market.{{ .Values.bfl.username}}
             - name: NATS_SUBJECT_APPLICATION
               value: os.application.{{ .Values.bfl.username}}
+            - name: NATS_SUBJECT_DEVICE_INVENTORY
+              value: os.device.inventory.{{ .Values.bfl.username}}
             - name: NATS_SUBJECT_USER_NOTIFICATION
               value: os.notification.{{ .Values.bfl.username}}
             - name: NATS_SUBJECT_DOWNLOAD_STATUS
@@ -790,6 +794,10 @@ spec:
         permission:
           sub: allow
           pub: allow
+      - name: device.inventory.{{ .Values.bfl.username }}
+        permission:
+          sub: allow
+          pub: deny
       - name: knowledge.{{ .Values.bfl.username }}
         permission:
           sub: allow

@@ -15,7 +15,9 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/deviceinventory"
 	appevent "github.com/beclab/Olares/framework/app-service/pkg/event"
+	"github.com/beclab/Olares/framework/app-service/pkg/users"
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
+	iamv1alpha2 "github.com/beclab/api/iam/v1alpha2"
 
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -147,8 +149,7 @@ func (r *DeviceInventoryController) Reconcile(ctx context.Context, req ctrl.Requ
 	var node corev1.Node
 	if err := r.Get(ctx, types.NamespacedName{Name: req.Name}, &node); err != nil {
 		if apierrors.IsNotFound(err) {
-			r.handleNodeDeleted(req.Name, now)
-			return ctrl.Result{}, nil
+			return ctrl.Result{}, r.handleNodeDeleted(ctx, req.Name, now)
 		}
 		return ctrl.Result{}, err
 	}
@@ -186,15 +187,16 @@ func (r *DeviceInventoryController) Reconcile(ctx context.Context, req ctrl.Requ
 	if err := r.enrichRemovedBindings(ctx, node.Name, changes); err != nil {
 		return ctrl.Result{}, err
 	}
+	if len(changes) > 0 {
+		e := buildDeviceInventoryEvent(previous, parsed, changes, now)
+		if err := r.publishToRecipients(ctx, e); err != nil {
+			return ctrl.Result{}, err
+		}
+		klog.Infof("generated device inventory event node=%s eventID=%s revision=%s changes=%d", node.Name, e.EventID, e.Revision, len(e.Changes))
+	}
 	r.mu.Lock()
 	r.snapshots[node.Name] = parsed
 	r.mu.Unlock()
-
-	if len(changes) > 0 {
-		e := buildDeviceInventoryEvent(previous, parsed, changes, now)
-		r.Publish(deviceInventorySubject, e.EventID, e)
-		klog.Infof("generated device inventory event node=%s eventID=%s revision=%s changes=%d", node.Name, e.EventID, e.Revision, len(e.Changes))
-	}
 	return ctrl.Result{RequeueAfter: requeueAfter}, nil
 }
 
@@ -346,24 +348,115 @@ func (r *DeviceInventoryController) publisherState(ctx context.Context, nodeName
 	return true, expiresAt.Sub(now), nil
 }
 
-func (r *DeviceInventoryController) handleNodeDeleted(nodeName string, now time.Time) {
+func (r *DeviceInventoryController) handleNodeDeleted(ctx context.Context, nodeName string, now time.Time) error {
 	r.mu.Lock()
 	if r.snapshots == nil {
 		r.mu.Unlock()
-		return
+		return nil
 	}
 	previous, existed := r.snapshots[nodeName]
-	if existed {
-		delete(r.snapshots, nodeName)
-	}
 	r.mu.Unlock()
 	if !existed {
-		return
+		return nil
 	}
 	current := nodeDeviceSnapshot{NodeName: nodeName, PublisherOnline: false, Devices: map[string]deviceSnapshot{}}
 	changes := []DeviceInventoryChange{{Kind: "publisher", Action: "offline", Reason: "node_deleted"}}
 	e := buildDeviceInventoryEvent(previous, current, changes, now)
-	r.Publish(deviceInventorySubject, e.EventID, e)
+	if err := r.publishToRecipients(ctx, e); err != nil {
+		return err
+	}
+	r.mu.Lock()
+	delete(r.snapshots, nodeName)
+	r.mu.Unlock()
+	return nil
+}
+
+// publishToRecipients fans a cluster device event out to every owner/admin
+// user and to owners of applications bound to an affected device. Publisher
+// transitions affect every attachment on the node. A recipient-specific event
+// ID is required because JetStream message de-duplication is stream-wide, not
+// scoped to an individual subject.
+func (r *DeviceInventoryController) publishToRecipients(ctx context.Context, event DeviceInventoryEvent) error {
+	recipients, err := r.eventRecipients(ctx, event.Node, event.Changes)
+	if err != nil {
+		return err
+	}
+	if len(recipients) == 0 {
+		klog.Infof("device inventory fan-out: no recipients for node %s, dropping event %s", event.Node, event.EventID)
+		return nil
+	}
+	for _, recipient := range recipients {
+		recipientEvent := event
+		recipientEvent.EventID = event.EventID + ":" + recipient
+		r.Publish(deviceInventorySubject+"."+recipient, recipientEvent.EventID, recipientEvent)
+	}
+	return nil
+}
+
+func (r *DeviceInventoryController) eventRecipients(ctx context.Context, nodeName string, changes []DeviceInventoryChange) ([]string, error) {
+	recipients := make(map[string]struct{})
+	var userList iamv1alpha2.UserList
+	if err := r.List(ctx, &userList); err != nil {
+		return nil, fmt.Errorf("list owner/admin users for device inventory event: %w", err)
+	}
+	for i := range userList.Items {
+		user := &userList.Items[i]
+		role := user.Annotations[users.UserAnnotationOwnerRole]
+		if role == "owner" || role == "admin" {
+			addDeviceEventRecipient(recipients, user.Name)
+		}
+	}
+
+	deviceKeys := make(map[string]struct{})
+	publisherChanged := false
+	for i := range changes {
+		change := &changes[i]
+		if change.Kind == "publisher" {
+			publisherChanged = true
+			continue
+		}
+		if change.Kind == "device" {
+			deviceKeys[changeBindingKey(change.Type, change.ResourceName)] = struct{}{}
+		}
+	}
+	if len(deviceKeys) == 0 && !publisherChanged {
+		return sortedDeviceEventRecipients(recipients), nil
+	}
+
+	var applications appv1alpha1.ApplicationList
+	if err := r.List(ctx, &applications); err != nil {
+		return nil, fmt.Errorf("list bound applications for device inventory recipients: %w", err)
+	}
+	for i := range applications.Items {
+		application := &applications.Items[i]
+		for _, attachment := range application.Spec.Attachments {
+			if attachment.Node != nodeName {
+				continue
+			}
+			if _, affected := deviceKeys[changeBindingKey(attachment.Type, attachment.Ref)]; !publisherChanged && !affected {
+				continue
+			}
+			addDeviceEventRecipient(recipients, application.Spec.Owner)
+			break
+		}
+	}
+	return sortedDeviceEventRecipients(recipients), nil
+}
+
+func addDeviceEventRecipient(recipients map[string]struct{}, username string) {
+	username = strings.TrimSpace(username)
+	if username != "" {
+		recipients[username] = struct{}{}
+	}
+}
+
+func sortedDeviceEventRecipients(recipients map[string]struct{}) []string {
+	result := make([]string, 0, len(recipients))
+	for recipient := range recipients {
+		result = append(result, recipient)
+	}
+	sort.Strings(result)
+	return result
 }
 
 func parseNodeInventory(node *corev1.Node) (nodeDeviceSnapshot, error) {

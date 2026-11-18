@@ -437,7 +437,7 @@ spec:
         permission:
           pub: allow
           sub: allow
-      - name: device.inventory
+      - name: "device.inventory.*"
         permission:
           pub: allow
           sub: deny
