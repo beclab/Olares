@@ -437,4 +437,8 @@ spec:
         permission:
           pub: allow
           sub: allow
+      - name: device.inventory
+        permission:
+          pub: allow
+          sub: deny
     user: os-app-service
