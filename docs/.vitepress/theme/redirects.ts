@@ -1,4 +1,10 @@
 export const redirects = {
+    // Retired AI app connection guides, including the 1.12.6 versions.
+    '/manual/best-practices/connect-ai-apps': '/use-cases/olares-router',
+    '/manual/best-practices/connect-ai-apps-1.12.6': '/use-cases/olares-router',
+    '/zh/manual/best-practices/connect-ai-apps': '/zh/use-cases/olares-router',
+    '/zh/manual/best-practices/connect-ai-apps-1.12.6': '/zh/use-cases/olares-router',
+
     // Retired NemoClaw tutorials → the closest live OpenClaw guides.
     '/use-cases/nemoclaw': '/use-cases/openclaw',
     '/use-cases/nemoclaw-1.12.6': '/use-cases/openclaw',

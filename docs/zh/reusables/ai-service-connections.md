@@ -9,7 +9,7 @@
 :::details 模型连接的工作原理
 在 Olares 1.12.7 及以上版本中，AI 客户端通过 Olares Router 连接模型。Router 提供 Base URL，并将 `default-chat` 的请求转发给**默认模型（Default models）**页面中设置的聊天模型。
 
-本教程使用 Qwen3.8-27B (llama.cpp) 作为默认聊天模型。连接格式和 API 密钥要求详见[连接 AI 应用](/zh/manual/best-practices/connect-ai-apps.md)。
+本教程使用 Qwen3.8-27B (llama.cpp) 作为默认聊天模型。连接格式和 API 密钥要求详见[使用 Olares Router 作为 AI 网关](/zh/use-cases/olares-router.md)。
 :::
 <!-- #endregion model-connection-overview -->
 

@@ -9,7 +9,7 @@
 :::details How model connections work
 On Olares 1.12.7 and later, AI clients connect through Olares Router. Router provides the Base URL and routes `default-chat` to the model selected on its **Default models** page.
 
-This guide uses Qwen3.8-27B (llama.cpp) as the default chat model. For connection formats and API key requirements, see [Connect AI apps](/manual/best-practices/connect-ai-apps.md).
+This guide uses Qwen3.8-27B (llama.cpp) as the default chat model. For connection formats and API key requirements, see [Use Olares Router as your AI gateway](/use-cases/olares-router.md).
 :::
 <!-- #endregion model-connection-overview -->
 

@@ -324,10 +324,6 @@ const side = {
           link: "/manual/olares/settings/manage-entrance",
         },
         {
-          text: "AI app connections",
-          link: "/manual/best-practices/connect-ai-apps",
-        },
-        {
           text: "Migrate legacy shared applications",
           link: "/manual/migrate-shared-apps",
         },

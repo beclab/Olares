@@ -174,7 +174,7 @@ Olares 提供四个引擎基座应用，每个基于不同的推理引擎构建�
 4. 按照[将 OpenCode 连接到自定义提供方](opencode.md#连接到自定义提供方)操作，使用 Router 的 Base URL，并手动添加 `default-chat` 作为模型 ID。如果希望客户端始终使用该实例，不随默认模型更改，请改用 Router 中的完整**模型名称**。
 5. 在 OpenCode 中发送一条简短消息，然后在 Router 的 **Usage** 中确认请求使用了预期的模型。
 
-外部客户端需使用对应连接标签页中的地址和 Router 签发的 API 密钥。嵌入模型实例应使用完整模型名称，不能使用 `default-chat`。详情见[连接 AI 应用](/zh/manual/best-practices/connect-ai-apps.md)。
+外部客户端需使用对应连接标签页中的地址和 Router 签发的 API 密钥。嵌入模型实例应使用完整模型名称，不能使用 `default-chat`。详情见[使用 Olares Router 作为 AI 网关](/zh/use-cases/olares-router.md)。
 
 ## 参考资料
 

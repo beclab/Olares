@@ -19,12 +19,53 @@ head:
 <details>
 <summary>Olares OS 软件发行说明请参见 GitHub releases 页面。</summary>
 
+- [Olares 1.12.8](https://github.com/beclab/Olares/releases/tag/1.12.8)
 - [Olares 1.12.7](https://github.com/beclab/Olares/releases/tag/1.12.7)
 - [Olares 1.12.6](https://github.com/beclab/Olares/releases/tag/1.12.6)
 - [Olares 1.12.5](https://github.com/beclab/Olares/releases/tag/1.12.5)
 </details>
 
 关注 Olares 社交媒体，或加入 [Discord 社区](https://discord.com/invite/BzfqrgQPDK)，及时了解 Olares 新闻和文档更新。
+
+## Olares 1.12.8
+
+发布日期：2026 年 11 月 16 日
+
+软件变更请参阅 [Olares 1.12.8 发行说明](https://github.com/beclab/Olares/releases/tag/1.12.8)。
+版本亮点与功能介绍请参阅 [Olares 1.12.8 发布博客](https://www.olares.com/blog/olares-1-12-8/)。
+
+### 新增文档
+
+- 新增 [Olares 1.12.8 升级指南](/zh/manual/update-guides/1.12.8)，说明 LarePass 更新要求、设备激活、GPU 应用重启、文件访问权限，以及 Control Hub 主机终端的替代访问方式。
+- 新增[管理 Common 和 External 的访问权限](/zh/manual/olares/files/manage-common-external-access)，介绍管理员与成员的权限、文件夹访问设置，以及挂载存储的访问方式。
+- 新增[通过 LarePass 管理 Olares 应用](/zh/manual/larepass/manage-apps-with-larepass)，介绍如何在手机上管理应用。
+- 新增 [Music Studio](/zh/use-cases/music-studio)、[YuE2 Studio](/zh/use-cases/yue2-studio) 和[通过 Lares 使用 YuE2 Studio](/zh/use-cases/yue2-studio-lares) 音乐创作教程。
+- 新增 [Hermes Workspace](/zh/use-cases/hermes-workspace)、[Hermes SSH 工作流](/zh/use-cases/hermes-ssh)、[Goose](/zh/use-cases/goose) 和 [OpenClaw 手机配对](/zh/use-cases/openclaw-mobile)指南，介绍 AI Agent 的使用方式。
+- 新增 [Cognee](/zh/use-cases/cognee)、[TrustGraph](/zh/use-cases/trustgraph)、[Hindsight](/zh/use-cases/hindsight) 和 [MemPalace](/zh/use-cases/mempalace) 教程，介绍文档知识管理与 Agent 记忆。
+- 新增 [Linkwarden](/zh/use-cases/linkwarden)、[Local Deep Research](/zh/use-cases/local-deep-research) 和[使用 Lares 开展网页研究](/zh/use-cases/lares-web-research)，介绍网页资料库与研究流程。
+- 新增 [Unsloth](/zh/use-cases/unsloth) 教程，介绍模型微调、GGUF 导出，以及在 JupyterLab 中运行保存的适配器。
+- 新增 [Plex](/zh/use-cases/plex)、[Pterodactyl](/zh/use-cases/pterodactyl)、[QEMU](/zh/use-cases/qemu) 和 [RustDesk](/zh/use-cases/rustdesk) 教程，涵盖媒体管理、游戏服务器、虚拟机与远程桌面访问；新增[将 Immich 上传文件存储到 NAS](/zh/use-cases/immich-store-uploads-on-nas)。
+- 新增 Olares One [网络唤醒](/zh/one/wake-on-lan)和 [Ubuntu GPU 模式配置](/zh/one/configure-gpu-mode)指南。
+
+### 更新文档
+
+- 重写[共享文件](/zh/manual/olares/files/share-files)，列出 1.12.8 中各目录支持的共享方式。更新存储指南，说明如何通过**访问设置**授予成员 Common 和 External 的访问权限，替代已不支持的内部共享方式。
+- 按[保存网页与文件](/zh/manual/olares/wise/collect)、[订阅信息源](/zh/manual/olares/wise/subscribe)、[阅读与整理资料库](/zh/manual/olares/wise/basics)重新组织 [Wise 文档](/zh/manual/olares/wise/index)，并更新过滤规则与 Cookie 管理说明。
+- 更新[加速器资源管理](/zh/manual/olares/settings/gpu-resource)，使用当前的 GPU 模式名称与界面。升级指南补充了已有 GPU 分时共享应用在升级后需要重启的情况。
+- 更新[密码与设备管理](/zh/manual/password-and-devices)，说明修改密码会退出所有设备的登录，包括当前设备。
+- 重写 [Olares CLI 入门指南](/zh/developer/cli-install)，围绕设置向导、登录、Agent Skills 和 CLI 更新组织内容，并将独立的登录指南合并至此。
+- 更新[多节点安装](/zh/manual/best-practices/install-olares-multi-node)、[连接两台 Olares One](/zh/one/connect-two-olares-one)和[多节点集群升级](/zh/one/upgrade-multi-node-cluster)指南，并在 DGX Spark 安装指南中补充停止与卸载 Olares 的步骤。
+- 扩展 [Minecraft](/zh/use-cases/minecraft) 教程，介绍版本选择、模组、私人服务器与应用克隆；更新 [Hermes Agent](/zh/use-cases/hermes) 的 Webapp 登录和任务委派说明，以及 [Claude Code](/zh/use-cases/claude-code) 的本地模型兼容性与输出 token 配置。
+
+### 已下架文档
+
+- 下架 ACE-Step 和 ACE-Step 1.5 指南。旧地址会跳转至 [Music Studio](/zh/use-cases/music-studio) 音乐创作教程。
+- 下架 NemoClaw 指南，包括 1.12.6 历史版、Google Workspace 集成、Olares CLI 工作流和故障排查。旧地址会分别跳转至 [OpenClaw](/zh/use-cases/openclaw)、[技能与插件](/zh/use-cases/openclaw-skills)、[Olares 管理](/zh/use-cases/openclaw-olares-skills)和[故障排查](/zh/use-cases/openclaw-common-issues)指南。
+- 下架 AI 应用连接指南及其 1.12.6 历史版。当前连接方式请参阅[使用 Olares Router 作为 AI 网关](/zh/use-cases/olares-router)。旧指南地址会跳转至 Router 指南。
+- 随着 **Terminal > Olares** 入口移除，下架 Control Hub 主机终端指南。旧链接会跳转至 [SSH 访问说明](/zh/manual/access-olares-terminal)；容器终端仍可使用。
+- 从[自定义应用 URL](/zh/manual/olares/settings/custom-app-domain) 中移除自定义域名配置说明。该指南现在介绍自定义路由 ID。
+- 下架过时的 Olares ID 合约、DID 实现和可验证凭证开发指南。旧链接会跳转至 [Olares ID](/zh/developer/concepts/olares-id)、[DID](/zh/developer/concepts/did)、[声誉](/zh/developer/concepts/reputation)或[可验证凭证](/zh/developer/concepts/vc)概念文档。
+- 下架 Wise 推荐指南。旧链接会跳转至 [Wise 概览](/zh/manual/olares/wise/index)。
 
 ## Olares 1.12.7
 
@@ -43,12 +84,13 @@ head:
 - 新增[在 Olares Space 中创建和管理工单](/zh/manual/space/tickets)，并在[获取支持](/zh/manual/help/request-technical-support)中补充 Ticket 应用、日志收集和工单跟进流程。
 - 新增[恢复 LarePass、Olares 桌面或设备访问权限](/zh/manual/help/ts-access-without-mnemonic)，并更新[登录密码重置说明](/zh/manual/help/ts-forget-login-password)。
 - 新增[使用 Lares 创建 Blender 场景](/zh/use-cases/blender-lares)和[使用 Concat 和 Lares 制作视频](/zh/use-cases/concat)，涵盖 MCP 配置、创作流程，以及在文件管理器中保存和查看输出。
+- 新增 [FlowStudio](/zh/use-cases/flowstudio) 和[通过 Lares 使用 FlowStudio](/zh/use-cases/flowstudio-lares) 指南，介绍图像与视频生成。
 - 新增 [Open Design](/zh/use-cases/open-design)、[Codex CLI](/zh/use-cases/codex-cli) 和[通过 OpenCode 管理 Olares](/zh/use-cases/opencode-olares-cli) 教程，覆盖设计、编程和设备管理。
 - 新增 [Minecraft](/zh/use-cases/minecraft) 和 [Palworld](/zh/use-cases/palworld) 服务器教程，介绍如何通过 Overlay Gateway 在局域网中连接。
 
 ### 更新文档
 
-- 重写[为应用接入 AI 能力](/zh/manual/best-practices/connect-ai-apps)，介绍 Router 的 API 格式、模型与工具配置、`default-chat` 等默认系统名称，以及外部客户端的 API 密钥。
+- 重写为应用接入 AI 能力，介绍 Router 的 API 格式、模型与工具配置、`default-chat` 等默认系统名称，以及外部客户端的 API 密钥。
 - 更新 AI 客户端教程，以 Qwen3.8-27B (llama.cpp) 为聊天示例，改用 Router 连接流程。在相关页面加入版本切换，可选择 Olares 1.12.7 或 1.12.6 的操作说明。
 - 按用户任务重新组织 [Olares 手册](/zh/manual/overview)，按 Linux、Olares One 和 DGX Spark 区分[安装路径](/zh/manual/get-started/install-olares)。[Olares One 新手引导](/zh/one/olares-onboarding)已更新为使用 Lares。
 - 更新[本地访问指南](/zh/manual/best-practices/local-access)，补充 Windows 和 macOS 上的 LarePass hosts 映射，并说明 VPN 与 `.local` 地址的使用方式。
@@ -99,7 +141,7 @@ Olares v1.12.6 的亮点和详细介绍请参见 [Olares 1.12.6 发布博客](ht
 
 ### 更新文档
 
-- [连接 AI 应用](/zh/manual/best-practices/connect-ai-apps)已针对 v1.12.6+ 架构重写。
+- 连接 AI 应用已针对 v1.12.6+ 架构重写。
 - Olares One 软件文档已整合到主手册中，ISO 下载链接也添加了版本号。
 - [我的 Olares](/zh/one/hardware-settings) 已更新，在 **我的硬件** 下新增了 **限制 CPU 频率** 和 **自动开机** 两个开关。
 - [基础文件操作](/zh/manual/olares/files/add-edit-download)已更新，新增排序方式、Markdown 编辑、预览以及更多支持格式。
