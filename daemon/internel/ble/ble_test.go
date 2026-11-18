@@ -12,7 +12,9 @@ import (
 func TestUUID(t *testing.T) {
 	fmt.Printf("Service UUID: %s\n", OlaersServiceUUID.String())
 	fmt.Printf("Connect Characteristic UUID: %s\n", ConnectWifiUUID.String())
-	fmt.Printf("ListAP Characteristic UUID: %s\n", ListAPUUID.String())
+	for i, uuid := range ListAPPageUUIDs {
+		fmt.Printf("ListAP Page %d Characteristic UUID: %s\n", i+1, uuid.String())
+	}
 	fmt.Printf("TerminusInfo Characteristic UUID: %s\n", TerminusInfoUUID.String())
 }
 
