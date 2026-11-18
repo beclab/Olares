@@ -30,9 +30,8 @@ func (m *InstallDriversModule) IsSkip() bool {
 func (m *InstallDriversModule) Init() {
 	m.Name = "InstallGPUDriver"
 
-	installCudaDriver := &task.RemoteTask{ // not for WSL
-		Name:  "InstallNvidiaDriver",
-		Hosts: m.Runtime.GetHostsByRole(common.Master),
+	installCudaDriver := &task.LocalTask{
+		Name: "InstallNvidiaDriver",
 		Prepare: &prepare.PrepareCollection{
 			new(CudaNotInstalled),
 			&NvidiaGraphicsCard{ExitOnNotFound: m.FailOnNoInstallation},
@@ -43,8 +42,7 @@ func (m *InstallDriversModule) Init() {
 				BaseDir:  m.BaseDir,
 			},
 		},
-		Parallel: false,
-		Retry:    1,
+		Retry: 1,
 	}
 
 	m.Tasks = []task.Interface{
@@ -72,40 +70,26 @@ func (m *InstallContainerToolkitModule) Init() {
 		prepareCollection = append(prepareCollection, new(CudaInstalled))
 	}
 
-	updateCudaSource := &task.RemoteTask{
-		Name:  "UpdateNvidiaToolkitSource",
-		Hosts: m.Runtime.GetHostsByRole(common.Master),
-		Action: &UpdateNvidiaContainerToolkitSource{
+	installNvidiaContainerToolkit := &task.LocalTask{
+		Name:    "InstallNvidiaToolkit",
+		Prepare: &prepareCollection,
+		Action: &InstallNvidiaContainerToolkit{
 			ManifestAction: manifest.ManifestAction{
 				Manifest: m.Manifest,
 				BaseDir:  m.BaseDir,
 			},
 		},
-		Prepare:  &prepareCollection,
-		Parallel: false,
-		Retry:    1,
+		Retry: 1,
 	}
 
-	installNvidiaContainerToolkit := &task.RemoteTask{
-		Name:     "InstallNvidiaToolkit",
-		Hosts:    m.Runtime.GetHostsByRole(common.Master),
-		Prepare:  &prepareCollection,
-		Action:   new(InstallNvidiaContainerToolkit),
-		Parallel: false,
-		Retry:    1,
-	}
-
-	configureContainerdRuntime := &task.RemoteTask{
-		Name:     "ConfigureContainerdRuntime",
-		Hosts:    m.Runtime.GetHostsByRole(common.Master),
-		Prepare:  &prepareCollection,
-		Action:   new(ConfigureContainerdRuntime),
-		Parallel: false,
-		Retry:    1,
+	configureContainerdRuntime := &task.LocalTask{
+		Name:    "ConfigureContainerdRuntime",
+		Prepare: &prepareCollection,
+		Action:  new(ConfigureContainerdRuntime),
+		Retry:   1,
 	}
 
 	m.Tasks = []task.Interface{
-		updateCudaSource,
 		installNvidiaContainerToolkit,
 		configureContainerdRuntime,
 	}
@@ -124,15 +108,13 @@ func (m *RestartK3sServiceModule) IsSkip() bool {
 func (m *RestartK3sServiceModule) Init() {
 	m.Name = "RestartK3sService"
 
-	patchK3sDriver := &task.RemoteTask{
-		Name:  "PatchK3sDriver",
-		Hosts: m.Runtime.GetHostsByRole(common.Master),
+	patchK3sDriver := &task.LocalTask{
+		Name: "PatchK3sDriver",
 		Prepare: &prepare.PrepareCollection{
 			new(common.OnlyFirstMaster),
 		},
-		Action:   new(PatchK3sDriver),
-		Parallel: false,
-		Retry:    1,
+		Action: new(PatchK3sDriver),
+		Retry:  1,
 	}
 
 	m.Tasks = []task.Interface{
@@ -152,15 +134,13 @@ func (m *RestartContainerdModule) IsSkip() bool {
 func (m *RestartContainerdModule) Init() {
 	m.Name = "RestartContainerd"
 
-	restartContainerd := &task.RemoteTask{
-		Name:  "RestartContainerd",
-		Hosts: m.Runtime.GetHostsByRole(common.Master),
+	restartContainerd := &task.LocalTask{
+		Name: "RestartContainerd",
 		Prepare: &prepare.PrepareCollection{
 			new(ContainerdInstalled),
 		},
-		Action:   new(container.RestartContainerd),
-		Parallel: false,
-		Retry:    1,
+		Action: new(container.RestartContainerd),
+		Retry:  1,
 	}
 
 	m.Tasks = []task.Interface{
@@ -251,29 +231,24 @@ type NodeUnlabelingModule struct {
 func (l *NodeUnlabelingModule) Init() {
 	l.Name = "NodeUnlabeling"
 
-	removeNode := &task.RemoteTask{
-		Name:  "RemoveNodeLabels",
-		Hosts: l.Runtime.GetHostsByRole(common.Master),
+	removeNode := &task.LocalTask{
+		Name: "RemoveNodeLabels",
 		Prepare: &prepare.PrepareCollection{
-			new(common.OnlyFirstMaster),
 			new(CurrentNodeInK8s),
 		},
-		Action:   new(RemoveNodeLabels),
-		Parallel: false,
-		Retry:    1,
+		Action: new(RemoveNodeLabels),
+		Retry:  1,
 	}
 
-	restartPlugin := &task.RemoteTask{
-		Name:  "RestartPlugin",
-		Hosts: l.Runtime.GetHostsByRole(common.Master),
+	restartPlugin := &task.LocalTask{
+		Name: "RestartPlugin",
 		Prepare: &prepare.PrepareCollection{
 			new(common.OnlyFirstMaster),
 			new(CurrentNodeInK8s),
 			new(GpuDevicePluginInstalled),
 		},
-		Action:   new(RestartPlugin),
-		Parallel: false,
-		Retry:    1,
+		Action: new(RestartPlugin),
+		Retry:  1,
 	}
 
 	l.Tasks = []task.Interface{
@@ -293,29 +268,24 @@ type NvidiaNodeUnlabelingModule struct {
 func (l *NvidiaNodeUnlabelingModule) Init() {
 	l.Name = "NvidiaNodeUnlabeling"
 
-	removeNode := &task.RemoteTask{
-		Name:  "RemoveNvidiaNodeLabels",
-		Hosts: l.Runtime.GetHostsByRole(common.Master),
+	removeNode := &task.LocalTask{
+		Name: "RemoveNvidiaNodeLabels",
 		Prepare: &prepare.PrepareCollection{
-			new(common.OnlyFirstMaster),
 			new(CurrentNodeInK8s),
 		},
-		Action:   new(RemoveNvidiaNodeLabels),
-		Parallel: false,
-		Retry:    1,
+		Action: new(RemoveNvidiaNodeLabels),
+		Retry:  1,
 	}
 
-	restartPlugin := &task.RemoteTask{
-		Name:  "RestartPlugin",
-		Hosts: l.Runtime.GetHostsByRole(common.Master),
+	restartPlugin := &task.LocalTask{
+		Name: "RestartPlugin",
 		Prepare: &prepare.PrepareCollection{
 			new(common.OnlyFirstMaster),
 			new(CurrentNodeInK8s),
 			new(GpuDevicePluginInstalled),
 		},
-		Action:   new(RestartPlugin),
-		Parallel: false,
-		Retry:    1,
+		Action: new(RestartPlugin),
+		Retry:  1,
 	}
 
 	l.Tasks = []task.Interface{
@@ -331,22 +301,15 @@ type UninstallCudaModule struct {
 func (l *UninstallCudaModule) Init() {
 	l.Name = "UninstallCuda"
 
-	uninstallCuda := &task.RemoteTask{
-		Name:  "UninstallCuda",
-		Hosts: l.Runtime.GetHostsByRole(common.Master),
-		Prepare: &prepare.PrepareCollection{
-			new(common.OnlyFirstMaster),
-		},
-		Action:   new(UninstallNvidiaDrivers),
-		Parallel: false,
-		Retry:    1,
+	uninstallCuda := &task.LocalTask{
+		Name:   "UninstallCuda",
+		Action: new(UninstallNvidiaDrivers),
+		Retry:  1,
 	}
 
-	removeRuntime := &task.RemoteTask{
-		Name:  "RemoveRuntime",
-		Hosts: l.Runtime.GetHostsByRole(common.Master),
+	removeRuntime := &task.LocalTask{
+		Name: "RemoveRuntime",
 		Prepare: &prepare.PrepareCollection{
-			new(common.OnlyFirstMaster),
 			new(ContainerdInstalled),
 		},
 		Action: new(RemoveContainerRuntimeConfig),

@@ -93,7 +93,7 @@ type upgradeContainerdAction struct {
 }
 
 func (u *upgradeContainerdAction) Execute(runtime connector.Runtime) error {
-	m, err := manifest.ReadAll(u.KubeConf.Arg.Manifest)
+	m, err := manifest.FromCache(u.PipelineCache)
 	if err != nil {
 		return err
 	}
@@ -171,6 +171,18 @@ func (a *migrateContainerdConfigV3Action) Execute(runtime connector.Runtime) err
 
 	// On GPU nodes the old inline nvidia runtime was just overwritten; re-apply it
 	// as a conf.d drop-in via the (drop-in aware) nvidia-container-toolkit.
+	return a.migrateNvidiaContainerRuntime(runtime)
+}
+
+func (a *migrateContainerdConfigV3Action) migrateNvidiaContainerRuntime(runtime connector.Runtime) error {
+	return (&migrateNvidiaContainerToolkitAction{KubeAction: a.KubeAction}).Execute(runtime)
+}
+
+type migrateNvidiaContainerToolkitAction struct {
+	common.KubeAction
+}
+
+func (a *migrateNvidiaContainerToolkitAction) Execute(runtime connector.Runtime) error {
 	model, _, err := utils.DetectNvidiaModelAndArch(runtime)
 	if err != nil {
 		// A detection error means the probe command itself could not run (infra /
@@ -178,19 +190,37 @@ func (a *migrateContainerdConfigV3Action) Execute(runtime connector.Runtime) err
 		// Since the v2->v3 rewrite just removed any inline nvidia runtime, silently
 		// skipping on error would leave a GPU node without a default runtime, so
 		// fail loudly and let the upgrade be retried.
-		return errors.Wrap(errors.WithStack(err), "detect nvidia gpu for containerd v3 migration failed")
+		return errors.Wrap(errors.WithStack(err), "detect nvidia gpu for toolkit migration failed")
 	}
 	if strings.TrimSpace(model) == "" {
 		return nil
 	}
 	logger.Infof("nvidia gpu detected (%s), migrating nvidia container runtime to a conf.d drop-in", model)
-	if err := (&gpu.InstallNvidiaContainerToolkit{}).Execute(runtime); err != nil {
+	if err := (&gpu.InstallNvidiaContainerToolkit{KubeAction: a.KubeAction}).Execute(runtime); err != nil {
 		return errors.Wrap(errors.WithStack(err), "install nvidia-container-toolkit failed")
 	}
 	if err := (&gpu.ConfigureContainerdRuntime{}).Execute(runtime); err != nil {
 		return errors.Wrap(errors.WithStack(err), "configure nvidia containerd runtime failed")
 	}
 	return nil
+}
+
+func migrateNvidiaContainerToolkit() []task.Interface {
+	return []task.Interface{
+		&task.LocalTask{
+			Name:   "MigrateNvidiaContainerToolkit",
+			Action: new(migrateNvidiaContainerToolkitAction),
+			Retry:  3,
+			Delay:  10 * time.Second,
+		},
+		&task.LocalTask{
+			Name:    "RestartNvidiaContainerd",
+			Prepare: new(gpu.NvidiaGraphicsCard),
+			Action:  new(container.RestartContainerd),
+			Retry:   3,
+			Delay:   10 * time.Second,
+		},
+	}
 }
 
 const (
@@ -618,7 +648,7 @@ func (a *upgradeGPUDriverIfNeeded) Execute(runtime connector.Runtime) error {
 		return nil
 	}
 
-	m, err := manifest.ReadAll(a.KubeConf.Arg.Manifest)
+	m, err := manifest.FromCache(a.PipelineCache)
 	if err != nil {
 		return err
 	}

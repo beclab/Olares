@@ -44,7 +44,10 @@ type upgradeCniPluginsBinary struct {
 }
 
 func (u *upgradeCniPluginsBinary) Execute(runtime connector.Runtime) error {
-	m, err := manifest.ReadAll(u.KubeConf.Arg.Manifest)
+	m, err := manifest.FromCache(u.PipelineCache)
+	if err != nil {
+		return err
+	}
 
 	binary, err := m.Get("cni-plugins")
 	if err != nil {

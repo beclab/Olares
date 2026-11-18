@@ -32,7 +32,8 @@ func (u upgrader_1_12_9) AddedBreakingChange() bool {
 }
 
 func (u upgrader_1_12_9) PreUpgradeNode() []task.Interface {
-	return append(juiceFSXattrTasks(), u.upgraderBase.PreUpgradeNode()...)
+	tasks := append(juiceFSXattrTasks(), migrateNvidiaContainerToolkit()...)
+	return append(tasks, u.upgraderBase.PreUpgradeNode()...)
 }
 
 func (u upgrader_1_12_9) UpgradeSystemComponents() []task.Interface {
