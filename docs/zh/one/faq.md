@@ -212,7 +212,7 @@ Olares One 配备 24 GB 显存（VRAM）和 96 GB 系统内存（RAM），两者
 
 可以。从 Market 安装 [OpenCode](../use-cases/opencode.md)、[Claude Code](../use-cases/claude-code.md) 或 [Codex CLI](../use-cases/codex-cli.md)，通过 Router 连接本地模型。模型生成回复和工具调用，Agent 在自己的开发环境中修改文件、运行命令和测试。
 
-你也可以在自己的电脑上运行 OpenCode CLI，连接 Olares 上的模型。此时，文件和代码执行都留在自己的电脑上，模型推理由 Olares One 完成。请参阅 [AI 应用如何连接 Olares 模型](../manual/best-practices/connect-ai-apps.md)。
+你也可以在自己的电脑上运行 OpenCode CLI，连接 Olares 上的模型。此时，文件和代码执行都留在自己的电脑上，模型推理由 Olares One 完成。请参阅 [使用 Olares Router 作为你的 AI 网关](../use-cases/olares-router.md)。
 
 ### Olares One 支持哪些语言？
 
