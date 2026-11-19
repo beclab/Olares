@@ -22,14 +22,31 @@ func (u upgrader_1_12_7_20260824) Version() *semver.Version {
 	return semver.MustParse("1.12.7-20260824")
 }
 
-// PostUpgrade, rather than PrepareForUpgrade, is where the regeneration goes:
-// it restarts k3s, and every phase before this one runs tasks that exec into
-// pods. Doing it up front made those tasks race the kubelet's re-sync and fail
-// with "pod does not exist". Here the only thing that follows is the base's
-// wait for the system components to come back, which is exactly the guard a
-// restart wants.
+// PostUpgradeNode is where the regeneration goes, and both halves of that
+// matter.
+//
+// Node, because the reserve is computed from the RAM and swap of the machine
+// the task runs on, and the service file it rewrites is that machine's. Run
+// only on the control node it would leave every other node on the old reserve,
+// which is the thing this change exists to correct.
+//
+// Post, because it restarts k3s, and every stage before this one runs tasks
+// that exec into pods. Doing it up front made those race the kubelet's re-sync
+// and fail with "pod does not exist".
+//
+// What makes the restart safe for whatever runs next is not where this sits in
+// the flow but that the regeneration ends in WaitForKubeAPIServerUp. The guard
+// travels with the tasks, so the stage after this one — the version flip,
+// which needs the apiserver — cannot begin until the apiserver it needs has
+// answered. Anything that moves this work must keep that wait attached to it.
+func (u upgrader_1_12_7_20260824) PostUpgradeNode() []task.Interface {
+	return append(regenerateKubeFilesOnNode(), u.upgraderBase.PostUpgradeNode()...)
+}
+
+// PostUpgrade carries the kubeadm half, which only the control node may run.
+// See regenerateKubeFilesOnControlNode.
 func (u upgrader_1_12_7_20260824) PostUpgrade() []task.Interface {
-	return append(regenerateKubeFiles(), u.upgraderBase.PostUpgrade()...)
+	return append(regenerateKubeFilesOnControlNode(), u.upgraderBase.PostUpgrade()...)
 }
 
 func init() {

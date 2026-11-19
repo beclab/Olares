@@ -22,11 +22,11 @@ import (
 type upgradeWatcher struct {
 	watcher.Watcher
 	sync.Mutex
-	upgrading bool
+	upgrading      bool
+	selectedTarget *state.UpgradeTarget
 	// Internal retry state
 	retryCount    int
 	nextRetryTime *time.Time
-	target        *state.UpgradeTarget
 	cancel        context.CancelFunc
 }
 
@@ -61,23 +61,29 @@ func (w *upgradeWatcher) Watch(ctx context.Context) {
 		}
 	}
 
-	var err error
-	w.target, err = state.GetOlaresUpgradeTarget()
+	target, err := state.GetOlaresUpgradeTarget()
 	if err != nil {
 		klog.Errorf("failed to check upgrade target: %v", err)
 		return
 	}
 
-	if w.target == nil {
+	if target == nil {
 		if w.cancel != nil {
 			w.cancel()
 			w.cancel = nil
 		}
 		w.resetRetryState()
+		// The orchestrator does not watch the target file. Stopping the
+		// watcher without stopping the run leaves a cluster upgrade going,
+		// and a daemon that restarts afterwards resumes it — which is how
+		// deleting the file, without the signed cancel that also calls
+		// RequestStop, used to keep preparing nodes after a cancel.
+		upgrade.StopActiveClusterUpgrade()
 
 		state.TerminusStateMu.Lock()
 		state.CurrentState.UpgradingState = ""
 		state.CurrentState.UpgradingTarget = ""
+		state.CurrentState.UpgradingOperationID = ""
 		state.CurrentState.UpgradingRetryNum = 0
 		state.CurrentState.UpgradingNextRetryAt = nil
 		state.CurrentState.UpgradingStep = ""
@@ -92,6 +98,12 @@ func (w *upgradeWatcher) Watch(ctx context.Context) {
 		state.CurrentState.UpgradingDownloadError = ""
 		state.TerminusStateMu.Unlock()
 
+		return
+	}
+	if w.runningAnotherTarget(*target) {
+		if w.cancel != nil {
+			w.cancel()
+		}
 		return
 	}
 
@@ -110,15 +122,56 @@ func (w *upgradeWatcher) Watch(ctx context.Context) {
 		return
 	}
 	currentVersion, err := semver.NewVersion(*currentVersionStr)
-	if err != nil || currentVersion.LessThan(&w.target.Version) {
-		state.CurrentState.UpgradingTarget = w.target.Version.Original()
+	if err != nil || currentVersion.LessThan(&target.Version) {
+		state.CurrentState.UpgradingTarget = target.Version.Original()
 	} else if !w.isUpgrading() {
-		w.target = nil
-		_, err = upgrade.NewRemoveUpgradeTarget().Execute(ctx, nil)
-		if err != nil {
-			klog.Error("failed to remove upgrade files: ", err)
+		// The version CR has reached the target. On a single node that means
+		// the upgrade is over. On a cluster it does not, and the gap is where
+		// the reboot lives: post-upgrade-admin flips the CR, and reboot-nodes
+		// runs after it — the stage that takes this very machine down. The
+		// daemon that comes back therefore finds the target reached with no
+		// upgrade running in this process, while the orchestrator is quietly
+		// resuming the rest of the run behind it.
+		//
+		// Removing the target here does two things, both wrong. It calls
+		// StopClusterUpgrade, which cancels the run that is still going. And
+		// it clears the upgrading state, so anything that fails from this
+		// point on — a node that never comes back from its reboot — is shown
+		// to nobody: the status this whole flow is followed by goes blank, and
+		// the only remaining trace is an operation record no one is looking at.
+		outcome, orchestrated := upgrade.ClusterUpgradeOutcome(*target)
+		switch {
+		case orchestrated && !outcome.Settled:
+			// Still running. Say so and leave it be — falling through would
+			// start a second upgrade alongside the one already going.
+			state.CurrentState.UpgradingState = state.InProgress
+			state.CurrentState.UpgradingTarget = target.Version.Original()
+			state.CurrentState.UpgradingOperationID = outcome.ID
+			state.CurrentState.UpgradingError = ""
+			return
+		case orchestrated && !outcome.Succeeded:
+			// Over, and it did not work. Keeping the target is the whole of
+			// the fix: it puts this back in the hands of the ordinary failure
+			// path below, reported as a failed upgrade and retried on the
+			// usual backoff, which is the answer a failure at any earlier
+			// point in the run already gets. An operator who brings the
+			// missing node back gets the rest finished on the next attempt.
+			//
+			// The state and the error are deliberately left to that path.
+			// They describe the attempt happening now — "node olares-worker1:
+			// NetworkUnavailable" — where this record describes the one that
+			// already ended, and the fresher of the two is the one worth
+			// showing. The id is set because it is the handle to what the
+			// flat fields cannot say: which stage failed, and on which node.
+			state.CurrentState.UpgradingTarget = target.Version.Original()
+			state.CurrentState.UpgradingOperationID = outcome.ID
+		default:
+			_, err = upgrade.NewRemoveUpgradeTarget().Execute(ctx, nil)
+			if err != nil {
+				klog.Error("failed to remove upgrade files: ", err)
+			}
+			return
 		}
-		return
 	}
 
 	if !w.isUpgrading() {
@@ -129,13 +182,14 @@ func (w *upgradeWatcher) Watch(ctx context.Context) {
 		exeCtx, cancel := context.WithCancel(ctx)
 		w.cancel = cancel
 
-		go func() {
-			w.startUpgrading()
+		// Claim the attempt before a state-triggered tick can launch another.
+		w.startUpgrading(*target)
+		go func(selected state.UpgradeTarget) {
 			defer w.stopUpgrading()
-			if err := w.doUpgradeWithRetry(exeCtx); err != nil {
+			if err := w.doUpgradeWithRetry(exeCtx, selected); err != nil {
 				klog.Errorf("upgrading error: %v", err)
 			}
-		}()
+		}(*target)
 	}
 }
 
@@ -145,16 +199,24 @@ func (w *upgradeWatcher) isUpgrading() bool {
 	return w.upgrading
 }
 
-func (w *upgradeWatcher) startUpgrading() {
+func (w *upgradeWatcher) startUpgrading(target state.UpgradeTarget) {
 	w.Lock()
 	defer w.Unlock()
 	w.upgrading = true
+	w.selectedTarget = &target
+}
+
+func (w *upgradeWatcher) runningAnotherTarget(target state.UpgradeTarget) bool {
+	w.Lock()
+	defer w.Unlock()
+	return w.upgrading && w.selectedTarget != nil && !w.selectedTarget.SameRequest(target)
 }
 
 func (w *upgradeWatcher) stopUpgrading() {
 	w.Lock()
 	defer w.Unlock()
 	w.upgrading = false
+	w.selectedTarget = nil
 }
 
 func (w *upgradeWatcher) isTimeToRetry() bool {
@@ -197,9 +259,9 @@ func (w *upgradeWatcher) getRetryCount() int {
 	return w.retryCount
 }
 
-func (w *upgradeWatcher) doUpgradeWithRetry(ctx context.Context) error {
-	err := w.doUpgrade(ctx)
-	if err != nil {
+func (w *upgradeWatcher) doUpgradeWithRetry(ctx context.Context, target state.UpgradeTarget) error {
+	err := w.doUpgrade(ctx, target)
+	if err != nil && ctx.Err() == nil {
 		w.incrementRetry()
 
 		state.CurrentState.UpgradingRetryNum = w.getRetryCount()
@@ -217,27 +279,61 @@ type upgradePhase struct {
 	progressSpan   int
 }
 
-var downloadPhases = []upgradePhase{
-	{upgrade.NewDownloadCLI, 0, 10},
-	{upgrade.NewDownloadWizard, 10, 20},
-	{upgrade.NewDownloadSpaceCheck, 30, 10},
-	{upgrade.NewDownloadComponent, 40, 60},
-}
-
-var upgradePhases = []upgradePhase{
-	{upgrade.NewPreCheck, 0, 10},
-	{upgrade.NewInstallCLI, 10, 10},
-	{upgrade.NewInstallOlaresd, 20, 10},
-	{upgrade.NewImportImages, 30, 30},
-	{upgrade.NewUpgrade, 60, 35},
-	{upgrade.NewRemoveTarget, 95, 5},
-}
-
-func (w *upgradeWatcher) doUpgrade(ctx context.Context) (err error) {
-	target := w.target
-	if target == nil {
-		return nil
+// weigh attaches this watcher's progress bar to a shared phase sequence.
+//
+// Which phases there are, and in what order, belongs to the package that
+// implements them, because a compute node runs the same ones; only the
+// percentages are the watcher's, and only the watcher has a bar to fill. The
+// span pairs are positional, so a phase added to the shared list without a
+// weight here stops the daemon at startup rather than silently shifting every
+// number after it.
+func weigh(phases []func() commands.Interface, spans ...int) []upgradePhase {
+	if len(spans) != 2*len(phases) {
+		panic(fmt.Sprintf("upgrade watcher: %d phases need %d progress bounds, got %d",
+			len(phases), 2*len(phases), len(spans)))
 	}
+	weighted := make([]upgradePhase, 0, len(phases))
+	for i, newCMD := range phases {
+		weighted = append(weighted, upgradePhase{newCMD, spans[2*i], spans[2*i+1]})
+	}
+	return weighted
+}
+
+func phases(groups ...[]upgradePhase) []upgradePhase {
+	var all []upgradePhase
+	for _, g := range groups {
+		all = append(all, g...)
+	}
+	return all
+}
+
+var downloadPhases = weigh(upgrade.ReleaseDownloadPhases,
+	0, 10,
+	10, 20,
+	30, 10,
+	40, 60,
+)
+
+// upgradePhases is the control node upgrading itself: check, adopt the
+// release, run the upgrade, forget the target.
+//
+// The middle of it is the same sequence, in the same order, that the
+// orchestrator has a compute node run before it may be given a stage. See
+// upgrade.ReleaseAdoptPhases for why that is shared rather than written twice.
+var upgradePhases = phases(
+	[]upgradePhase{{upgrade.NewPreCheck, 0, 10}},
+	weigh(upgrade.ReleaseAdoptPhases,
+		10, 10,
+		20, 10,
+		30, 30,
+	),
+	[]upgradePhase{
+		{upgrade.NewUpgrade, 60, 35},
+		{upgrade.NewRemoveTarget, 95, 5},
+	},
+)
+
+func (w *upgradeWatcher) doUpgrade(ctx context.Context, target state.UpgradeTarget) (err error) {
 	targetVersionLogsDir := filepath.Join(commands.TERMINUS_BASE_DIR, "versions", "v"+target.Version.Original(), "logs")
 	prepareLogFile := filepath.Join(targetVersionLogsDir, "install.log")
 	upgradeLogFile := filepath.Join(targetVersionLogsDir, "upgrade.log")
@@ -248,7 +344,7 @@ func (w *upgradeWatcher) doUpgrade(ctx context.Context) (err error) {
 	}
 	if !target.Downloaded {
 		// Execute download phases
-		return doDownloadPhases(ctx, *target)
+		return doDownloadPhases(ctx, target)
 	}
 
 	klog.Info("download already completed, skipping download phases")
@@ -259,7 +355,7 @@ func (w *upgradeWatcher) doUpgrade(ctx context.Context) (err error) {
 		return nil
 	}
 
-	return doUpgradePhases(ctx, *target)
+	return doUpgradePhases(ctx, target)
 }
 
 func doDownloadPhases(ctx context.Context, target state.UpgradeTarget) (err error) {
@@ -286,6 +382,9 @@ func doDownloadPhases(ctx context.Context, target state.UpgradeTarget) (err erro
 	state.CurrentState.UpgradingDownloadError = ""
 
 	for _, phase := range downloadPhases {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		phaseCMD := phase.newCMD()
 		state.CurrentState.UpgradingDownloadStep = string(phaseCMD.OperationName())
 
@@ -300,25 +399,16 @@ func doDownloadPhases(ctx context.Context, target state.UpgradeTarget) (err erro
 		if executionRes.Finished() {
 			continue
 		}
-		var phaseProgress int
-		for phaseProgress < 100 {
-			select {
-			case <-ctx.Done():
+		if err := upgrade.AwaitExecution(ctx, executionRes, func(progress int) {
+			refreshDownloadProgressFromPhase(phase, progress)
+		}); err != nil {
+			if ctx.Err() != nil {
 				return nil
-			case p, ok := <-executionRes.Progress():
-				if !ok {
-					if phaseProgress != commands.ProgressNumFinished {
-						return fmt.Errorf("error: download phase %s: command execution did not succeed", phaseCMD.OperationName())
-					}
-				} else if p > phaseProgress {
-					klog.Infof("refreshing download phase %s, progress: %d", phaseCMD.OperationName(), phaseProgress)
-					phaseProgress = p
-				}
 			}
-			refreshDownloadProgressFromPhase(phase, phaseProgress)
+			return fmt.Errorf("error: download phase %s: %w", phaseCMD.OperationName(), err)
 		}
 	}
-	return markDownloaded()
+	return markDownloaded(target)
 }
 
 func doUpgradePhases(ctx context.Context, target state.UpgradeTarget) (err error) {
@@ -340,6 +430,9 @@ func doUpgradePhases(ctx context.Context, target state.UpgradeTarget) (err error
 	state.StateTrigger <- struct{}{}
 
 	for _, phase := range upgradePhases {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		phaseCMD := phase.newCMD()
 		state.CurrentState.UpgradingStep = string(phaseCMD.OperationName())
 
@@ -354,34 +447,28 @@ func doUpgradePhases(ctx context.Context, target state.UpgradeTarget) (err error
 		if executionRes.Finished() {
 			continue
 		}
-		var phaseProgress int
-		for phaseProgress < 100 {
-			select {
-			case <-ctx.Done():
+		if err := upgrade.AwaitExecution(ctx, executionRes, func(progress int) {
+			refreshUpgradeProgressFromPhase(phase, progress)
+		}); err != nil {
+			if ctx.Err() != nil {
 				return nil
-			case p, ok := <-executionRes.Progress():
-				if !ok {
-					if phaseProgress != commands.ProgressNumFinished {
-						return fmt.Errorf("error: upgrade phase %s: command execution did not succeed", phaseCMD.OperationName())
-					}
-				} else if p > phaseProgress {
-					klog.Infof("refreshing upgrading phase %s, progress: %d", phaseCMD.OperationName(), phaseProgress)
-					phaseProgress = p
-				}
 			}
-			refreshUpgradeProgressFromPhase(phase, phaseProgress)
+			return fmt.Errorf("error: upgrade phase %s: %w", phaseCMD.OperationName(), err)
 		}
 	}
 	return nil
 }
 
-func markDownloaded() error {
+func markDownloaded(expected state.UpgradeTarget) error {
 	target, err := state.GetOlaresUpgradeTarget()
 	if err != nil {
 		return err
 	}
 	if target == nil {
 		return fmt.Errorf("no target found to mark downloaded, possibly upgrade cancelled")
+	}
+	if !target.SameRequest(expected) {
+		return fmt.Errorf("upgrade request changed while downloading")
 	}
 	if !target.Downloaded {
 		target.Downloaded = true

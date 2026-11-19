@@ -30,7 +30,6 @@ func (u upgrader_1_12_7_20260618) Version() *semver.Version {
 func (u upgrader_1_12_7_20260618) UpgradeSystemComponents() []task.Interface {
 	tasks := make([]task.Interface, 0)
 	tasks = append(tasks, upgradeNodeExporter()...)
-	tasks = append(tasks, retagLegacyAMDGPUImage()...)
 
 	tasks = append(tasks, u.upgraderBase.UpgradeSystemComponents()...)
 	tasks = append(tasks, &task.LocalTask{
@@ -40,6 +39,12 @@ func (u upgrader_1_12_7_20260618) UpgradeSystemComponents() []task.Interface {
 		Delay:  5 * time.Second,
 	})
 	return tasks
+}
+
+// PreUpgradeNode retags an orphaned image in this machine's own containerd.
+// Every machine holds its own copy, so every machine retags its own.
+func (u upgrader_1_12_7_20260618) PreUpgradeNode() []task.Interface {
+	return append(retagLegacyAMDGPUImage(), u.upgraderBase.PreUpgradeNode()...)
 }
 
 func init() {

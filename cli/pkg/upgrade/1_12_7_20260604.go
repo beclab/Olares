@@ -21,18 +21,17 @@ func (u upgrader_1_12_7_20260604) Version() *semver.Version {
 	return semver.MustParse("1.12.7-20260604")
 }
 
-func (u upgrader_1_12_7_20260604) PrepareForUpgrade() []task.Interface {
-	tasks := make([]task.Interface, 0)
-	tasks = append(tasks, &task.LocalTask{
-		Name:   "UpgradeCniPluginsBinary",
-		Action: new(upgradeCniPluginsBinary),
-	},
-	)
+// PreUpgradeNode replaces the CNI plugin binaries and writes the
+// NetworkManager drop-in. Both are files on the machine.
+func (u upgrader_1_12_7_20260604) PreUpgradeNode() []task.Interface {
+	tasks := []task.Interface{
+		&task.LocalTask{
+			Name:   "UpgradeCniPluginsBinary",
+			Action: new(upgradeCniPluginsBinary),
+		},
+	}
 	tasks = append(tasks, upgradeNetworkManagerConfig()...)
-
-	tasks = append(tasks, u.upgraderBase.PrepareForUpgrade()...)
-	return tasks
-
+	return append(tasks, u.upgraderBase.PreUpgradeNode()...)
 }
 
 func init() {

@@ -35,11 +35,6 @@ func (u upgrader_1_12_8) PrepareForUpgrade() []task.Interface {
 		Name:   "RestartNvidiaApplicationPods",
 		Action: new(restartNvidiaApplicationPods),
 	})
-	tasks = append(tasks, &task.LocalTask{
-		Name:    "CleanupK3sCertsRenewService",
-		Prepare: new(common.OnlyK3s),
-		Action:  new(certs.UninstallAutoRenewCerts),
-	})
 
 	tasks = append(tasks, &task.LocalTask{
 		Name:   "CopyEmbeddedKSManifests",
@@ -64,8 +59,30 @@ func refreshBackupETCDScript() []task.Interface {
 	}
 }
 
+// PreUpgradeNode rewrites the container runtime's configuration and restarts
+// it. Every machine has its own /etc/containerd and its own GPU, so every
+// machine migrates itself.
+func (u upgrader_1_12_8) PreUpgradeNode() []task.Interface {
+	tasks := append(migrateContainerdConfigV3(), &task.LocalTask{
+		Name: "CleanupK3sCertsRenewService", Prepare: new(common.OnlyK3s), Action: new(certs.UninstallAutoRenewCerts),
+	})
+	return append(tasks, u.upgraderBase.PreUpgradeNode()...)
+}
+
+// PostUpgradeNode regenerates the kubelet configuration, for the reasons
+// upgrader_1_12_7_20260824 gives at length: the reserve is computed from the
+// RAM of the machine the task runs on and rewrites that machine's service
+// file, so running it only on the control node would leave every other node on
+// the old reserve.
+func (u upgrader_1_12_8) PostUpgradeNode() []task.Interface {
+	tasks := append(regenerateKubeFilesOnNode(), amdMetricsNodeChecks()...)
+	return append(tasks, u.upgraderBase.PostUpgradeNode()...)
+}
+
+// PostUpgrade carries the kubeadm half, which only the control node may run.
+// See regenerateKubeFilesOnControlNode.
 func (u upgrader_1_12_8) PostUpgrade() []task.Interface {
-	return append(regenerateKubeFiles(), u.upgraderBase.PostUpgrade()...)
+	return append(regenerateKubeFilesOnControlNode(), u.upgraderBase.PostUpgrade()...)
 }
 
 func init() {

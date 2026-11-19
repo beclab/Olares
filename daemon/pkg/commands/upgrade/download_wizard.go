@@ -73,11 +73,12 @@ func (i *downloadWizard) Execute(ctx context.Context, p any) (res any, err error
 	if target.WizardURL != "" {
 		params = append(params, "--url-override", target.WizardURL)
 	}
-	if err = cmd.RunAsync_(ctx, cli.TERMINUS_CLI, params...); err != nil {
+	completion, err := cmd.RunAsyncWithResult_(ctx, cli.TERMINUS_CLI, params...)
+	if err != nil {
 		return nil, err
 	}
 
-	return newExecutionRes(false, progressChan), nil
+	return newExecutionResWithCompletion(progressChan, completion), nil
 }
 
 func (i *downloadWizard) watch(ctx context.Context) {

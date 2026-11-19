@@ -18,7 +18,7 @@ func (u upgrader_1_12_7_20260729) Version() *semver.Version {
 	return semver.MustParse("1.12.7-20260729")
 }
 
-func (u upgrader_1_12_7_20260729) PrepareForUpgrade() []task.Interface {
+func (u upgrader_1_12_7_20260729) PreUpgradeNode() []task.Interface {
 	tasks := []task.Interface{
 		&task.LocalTask{
 			Name:    "CleanupK3sCertsRenewService",
@@ -26,7 +26,7 @@ func (u upgrader_1_12_7_20260729) PrepareForUpgrade() []task.Interface {
 			Action:  new(certs.UninstallAutoRenewCerts),
 		},
 	}
-	return append(tasks, u.upgraderBase.PrepareForUpgrade()...)
+	return append(tasks, u.upgraderBase.PreUpgradeNode()...)
 }
 
 func init() {

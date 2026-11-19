@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 
 	"github.com/beclab/Olares/daemon/pkg/cluster/state"
@@ -46,10 +45,7 @@ func (i *preCheck) Execute(ctx context.Context, p any) (res any, err error) {
 	if !ok {
 		return nil, errors.New("invalid param")
 	}
-	arch := "amd64"
-	if runtime.GOARCH == "arm" {
-		arch = "arm64"
-	}
+	arch := releaseArch()
 	componentManifestFilePath := filepath.Join(commands.TERMINUS_BASE_DIR, "versions", "v"+target.Version.Original(), "images", "installation.manifest."+arch)
 	components, err := unmarshalComponentManifestFile(componentManifestFilePath)
 	if err != nil {
@@ -269,10 +265,7 @@ func (i *downloadSpaceCheck) Execute(ctx context.Context, p any) (res any, err e
 		return nil, errors.New("invalid param")
 	}
 	klog.Info("Starting download space check")
-	arch := "amd64"
-	if runtime.GOARCH == "arm" {
-		arch = "arm64"
-	}
+	arch := releaseArch()
 	componentManifestFilePath := filepath.Join(commands.TERMINUS_BASE_DIR, "versions", "v"+target.Version.Original(), "images", "installation.manifest."+arch)
 	components, err := unmarshalComponentManifestFile(componentManifestFilePath)
 	if err != nil {

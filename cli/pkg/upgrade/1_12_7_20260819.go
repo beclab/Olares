@@ -25,3 +25,7 @@ func (u upgrader_1_12_7_20260819) UpgradeSystemComponents() []task.Interface {
 func init() {
 	registerDailyUpgrader(upgrader_1_12_7_20260819{})
 }
+
+func (u upgrader_1_12_7_20260819) PostUpgradeNode() []task.Interface {
+	return append(amdMetricsNodeChecks(), u.upgraderBase.PostUpgradeNode()...)
+}

@@ -151,6 +151,7 @@ func TestCreateAcceptsExactlyWhatItsRegistryHolds(t *testing.T) {
 	if op.Type != fake.typ {
 		t.Errorf("Type = %q, want %q", op.Type, fake.typ)
 	}
+	awaitTerminal(t, m, op.ID)
 }
 
 // The module is asked before the operation exists. An operation the module
@@ -192,8 +193,11 @@ func TestCreateAsksTheModuleBeforeTheOperationExists(t *testing.T) {
 
 	// The lock is free, which is only true if the refusal left nothing active.
 	fake.validateErr = nil
-	if _, err := createFake(t, m, fake.typ, "client-2"); err != nil {
+	op, err := createFake(t, m, fake.typ, "client-2")
+	if err != nil {
 		t.Errorf("Create() after a refusal = %v, want the cluster still free", err)
+	} else {
+		awaitTerminal(t, m, op.ID)
 	}
 }
 

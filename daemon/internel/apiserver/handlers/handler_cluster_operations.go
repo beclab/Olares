@@ -82,6 +82,9 @@ func InitClusterOperations(dir string, deps clusterop.Deps) error {
 		return err
 	}
 	clusterOperations = m
+	// Also published for the upgrade watcher, which reaches the orchestrator
+	// from inside a command rather than from a route. See clusterop.Publish.
+	clusterop.Publish(m)
 	InstallPowerClaims(claims)
 	klog.Info("cluster operations recorded in ", store.Dir())
 	return nil
@@ -120,6 +123,12 @@ func (h *Handlers) PostClusterOperation(ctx *fiber.Ctx) error {
 	opType, err := clusterop.ParseType(strings.TrimSpace(req.Type))
 	if err != nil {
 		return h.ErrJSON(ctx, http.StatusBadRequest, err.Error())
+	}
+	// The upgrade watcher persists the signed target and its exact version.
+	// The generic operation route has no target-version binding, so admitting
+	// an upgrade here would bypass the plan/target consistency check.
+	if opType == clusterop.TypeUpgrade {
+		return h.ErrJSON(ctx, http.StatusBadRequest, "start upgrades through /command/upgrade")
 	}
 	if strings.TrimSpace(req.RequestID) == "" {
 		return h.ErrJSON(ctx, http.StatusBadRequest, clusterop.ErrRequestIDRequired.Error())

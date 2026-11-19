@@ -72,6 +72,19 @@ func (r *ModuleRegistry) Parse(value string) (Type, error) {
 	return "", fmt.Errorf("unsupported cluster operation type %q", value)
 }
 
+// Types lists what this registry holds. The order is not defined: it is for
+// asking a question about the whole set, not for iterating it in sequence.
+func (r *ModuleRegistry) Types() []Type {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	types := make([]Type, 0, len(r.modules))
+	for typ := range r.modules {
+		types = append(types, typ)
+	}
+	return types
+}
+
 func (r *ModuleRegistry) Freeze() {
 	r.mu.Lock()
 	defer r.mu.Unlock()
