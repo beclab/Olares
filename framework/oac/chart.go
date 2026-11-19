@@ -30,8 +30,9 @@ import (
 //     path, `type=app` workload naming, workloadReplicas <-> rendered
 //     workload exact match plus values.yaml replicaCount coverage,
 //     rendered spec.replicas actually tracking workloads.<name>.replicaCount
-//     so the platform can scale the app to zero, and overlayGateway entrance
-//     workload existence) - ALWAYS run; not governed by any Skip* option
+//     so the platform can scale the app to zero, hostNetwork/hostPID/hostIPC
+//     must not be true, and overlayGateway entrance workload existence) - ALWAYS
+//     run; not governed by any Skip* option
 //  6. HostPath + rolling-update incompatibility check - ON by default,
 //     turn off with SkipHostPathCheck()
 //  7. Rendered-resource namespace check (workloads in app-namespace;
@@ -150,6 +151,9 @@ func (c *OAC) lintRenderedScenario(oacPath string, m Manifest, sc ownerScenario)
 		return err
 	}
 	if err := resources.CheckDeploymentName(list, m.ConfigType(), m.AppName()); err != nil {
+		return err
+	}
+	if err := resources.CheckHostNetwork(list); err != nil {
 		return err
 	}
 

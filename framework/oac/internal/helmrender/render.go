@@ -48,6 +48,9 @@ const defaultReleaseName = "test-release"
 // io.EOF from the inner YAML decoder is treated as a clean termination by
 // the caller; the original legacy code did the same.
 func Render(oacPath string, values map[string]interface{}, releaseName, releaseNamespace string) (kube.ResourceList, error) {
+	if err := rejectTemplateRepeat(oacPath); err != nil {
+		return nil, err
+	}
 	instAction, err := newInstallAction()
 	if err != nil {
 		return nil, err
