@@ -60,6 +60,7 @@ func skillCommandPaths() []string {
 		"search sync",
 		"search knowledge",
 		"search app",
+		"search market",
 		"market",
 		"market list",
 		"market get",

@@ -11,7 +11,7 @@ import (
 )
 
 // TestRequireSessionAppBackendVersion pins the 1.12.7 fail-closed gate for
-// search knowledge. The gate reuses
+// search knowledge and search market. The gate reuses
 // cmdutil.RequireMinVersion, whose version resolution short-circuits on the
 // version override viper key (FlagOlaresVersion) BEFORE any profile /
 // network access — so a zero-value Factory plus a viper override is enough
@@ -27,6 +27,7 @@ func TestRequireSessionAppBackendVersion(t *testing.T) {
 		reason string
 	}{
 		{"search knowledge", "search3 app=knowledge index"},
+		{"search market", "search3 app=market source"},
 	}
 
 	for _, v := range verbs {
