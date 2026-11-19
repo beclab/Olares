@@ -752,7 +752,7 @@ spec:
               mountPath: /var/run/headscale
       containers:
         - name: headscale
-          image: headscale/headscale:0.29.3-debug
+          image: headscale/headscale:0.29.7-debug
           imagePullPolicy: IfNotPresent
           command: [/busybox/sh, -ec]
           args:
@@ -1176,7 +1176,7 @@ spec:
         # startup probe passes.
         - name: tailscale
           restartPolicy: Always
-          image: tailscale/tailscale:v1.94.2
+          image: tailscale/tailscale:v1.104.4
           imagePullPolicy: IfNotPresent
           command: [/bin/sh, -ec]
           args:
@@ -1342,7 +1342,7 @@ spec:
             timeoutSeconds: 5
       containers:
         - name: subnet-router-sync
-          image: tailscale/tailscale:v1.94.2
+          image: tailscale/tailscale:v1.104.4
           imagePullPolicy: IfNotPresent
           command: [/bin/sh, -ec]
           args:
