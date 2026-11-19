@@ -549,27 +549,22 @@ func (h *Handler) getGPUResourceTypeKey(gpuType string) string {
 }
 
 // resolveIntelDriverResource picks the correct Intel extended resource
-// (gpu.intel.com/i915 vs gpu.intel.com/xe) for the given compute mode by
+// (gpu.intel.com/i915 vs gpu.intel.com/xe) for the integrated Intel mode by
 // reading the real bound driver from the cluster's node register annotations
-// (bytetrade.io/node-intel-register), instead of assuming intel(igpu)->i915 /
-// intel-gpu(dgpu)->xe. iGPU and dGPU can each be bound to either driver, so the
-// hardcoded mapping is wrong.
+// (bytetrade.io/node-intel-register), because an iGPU can be bound to either
+// driver. Discrete Intel cards are scheduled by HAMi as intel.com/vgpu
+// regardless of the driver.
 //
-// For non-Intel modes it delegates to getGPUResourceTypeKey. When no matching
+// For other modes it delegates to getGPUResourceTypeKey. When no matching
 // card is found in the cluster, it falls back to the legacy mapping so
 // behaviour degrades gracefully rather than dropping the resource. Listing the
 // nodes is a hard dependency, so a list failure is returned as an error rather
 // than silently resolved to a possibly-wrong resource.
 func (h *Handler) resolveIntelDriverResource(ctx context.Context, mode string) (string, error) {
-	var wantKind string
-	switch mode {
-	case utils.IntelType:
-		wantKind = utils.IntelGPUKindIntegrated
-	case utils.IntelGPUType:
-		wantKind = utils.IntelGPUKindDiscrete
-	default:
+	if mode != utils.IntelType {
 		return h.getGPUResourceTypeKey(mode), nil
 	}
+	wantKind := utils.IntelGPUKindIntegrated
 
 	var nodes corev1.NodeList
 	if err := h.ctrlClient.List(ctx, &nodes); err != nil {

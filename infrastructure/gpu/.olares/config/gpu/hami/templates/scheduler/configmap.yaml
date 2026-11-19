@@ -49,6 +49,14 @@ data:
                     },
                     {{- end }}
                     {{- end }}
+                    {{- if .Values.devices.intel.enabled }}
+                    {{- range .Values.devices.intel.customresources }}
+                    {
+                      "name": "{{ . }}",
+                      "ignoredByScheduler": true
+                    },
+                    {{- end }}
+                    {{- end }}
                     {
                         "name": "{{ .Values.resourceName }}",
                         "ignoredByScheduler": true

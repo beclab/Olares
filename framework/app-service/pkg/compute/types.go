@@ -53,6 +53,9 @@ type Device struct {
 	SupportType           string       `json:"supportType"`
 	AvailableSupportTypes []string     `json:"availableSupportTypes,omitempty"`
 	Bindings              []Allocation `json:"bindings,omitempty"`
+	// Reserved is the memory the device runtime holds on top of the bindings'
+	// quotas (MemorySliceReserve per binding), in bytes.
+	Reserved int64 `json:"reserved,omitempty"`
 }
 
 // isReady reports whether the node's kubelet was still heartbeating when this

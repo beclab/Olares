@@ -2,6 +2,7 @@ package compute
 
 import (
 	"reflect"
+	"slices"
 	"testing"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
@@ -25,7 +26,7 @@ var allTestModes = []string{
 
 // TestModeCapabilities pins the scheduling and injection capabilities of each mode.
 func TestModeCapabilities(t *testing.T) {
-	nvidiaRegister := DeviceRegister{Annotation: constants.NodeNvidiaRegistryKey, Decoder: registerHAMI}
+	nvidiaRegister := DeviceRegister{Annotation: constants.NodeNvidiaRegistryKey, Decoder: registerHAMI, Handshake: constants.NodeHandshakeKey}
 	tests := []struct {
 		mode string
 		want ModeCapability
@@ -63,11 +64,19 @@ func TestModeCapabilities(t *testing.T) {
 			ExtendedResource: constants.AMDGPU,
 		}},
 		{utils.IntelGPUType, ModeCapability{
-			SupportTypes:     []string{SupportTypeExclusive},
-			ExtendedResource: constants.IntelGPU,
-			DedicatedVRAM:    true,
-			MultiCard:        true,
-			Register:         DeviceRegister{Annotation: constants.NodeIntelRegisterKey, Decoder: registerTuple},
+			SupportTypes:       []string{SupportTypeExclusive, SupportTypeMemorySlice},
+			HAMI:               true,
+			ExtendedResource:   constants.IntelVGPU,
+			MemoryResource:     constants.IntelVGPUMem,
+			DedicatedVRAM:      true,
+			MultiCard:          true,
+			MemorySliceReserve: 256 * mib,
+			Register: DeviceRegister{
+				Annotation: constants.NodeIntelHAMIRegisterKey,
+				Decoder:    registerHAMI,
+				Handshake:  constants.NodeIntelHandshakeKey,
+				Cards:      constants.NodeIntelCardsKey,
+			},
 		}},
 		{utils.AMDGPUType, ModeCapability{
 			SupportTypes:     []string{SupportTypeExclusive},
@@ -126,6 +135,12 @@ func TestModeCapabilityRowsAreConsistent(t *testing.T) {
 		if c.HAMI && c.Register.Decoder != registerHAMI {
 			t.Errorf("%s: HAMi mode must decode a HAMi register", mode)
 		}
+		if c.Register.Decoder == registerHAMI && c.Register.Handshake == "" {
+			t.Errorf("%s: a HAMi register needs its handshake annotation", mode)
+		}
+		if c.MemorySliceReserve != 0 && !slices.Contains(c.SupportTypes, SupportTypeMemorySlice) {
+			t.Errorf("%s: memory-slice reserve without MemorySlice", mode)
+		}
 		if c.Register.Decoder != registerNone && c.Register.Annotation == "" {
 			t.Errorf("%s: register decoder without an annotation", mode)
 		}
@@ -178,7 +193,9 @@ func TestCardSupportTypes(t *testing.T) {
 			[]string{SupportTypeMemorySlice, SupportTypeExclusive}},
 		{"card cannot add a type", utils.GB10ChipType, []string{SupportTypeTimeSlice, SupportTypeExclusive},
 			[]string{SupportTypeExclusive}},
-		{"nothing in common keeps the mode's", utils.IntelGPUType, []string{SupportTypeMemorySlice},
+		{"nothing in common keeps the mode's", utils.AMDGPUType, []string{SupportTypeMemorySlice},
+			[]string{SupportTypeExclusive}},
+		{"intel card without libvxpu", utils.IntelGPUType, []string{SupportTypeExclusive},
 			[]string{SupportTypeExclusive}},
 	}
 	for _, tt := range tests {
@@ -256,6 +273,57 @@ func TestAggregatesCards(t *testing.T) {
 	for _, tt := range tests {
 		if got := aggregatesCards(tt.req); got != tt.want {
 			t.Errorf("aggregatesCards(%+v) = %v, want %v", tt.req, got, tt.want)
+		}
+	}
+}
+
+func TestMemorySliceReserve(t *testing.T) {
+	card := func(mode string, bound ...int64) Device {
+		d := Device{ID: "card", Mode: mode, Memory: 32 * gi, SupportType: SupportTypeMemorySlice}
+		for _, memory := range bound {
+			d.Bindings = append(d.Bindings, Allocation{Memory: memory})
+		}
+		return d
+	}
+	reserve := int64(256 * mib)
+
+	if got, want := deviceAvailableMemory(card(utils.IntelGPUType, 8*gi)), 24*gi-2*reserve; got != want {
+		t.Errorf("intel card with one 8Gi binding: available %d, want %d", got, want)
+	}
+	if got := deviceAvailableMemory(card(utils.NvidiaCardType, 8*gi)); got != 24*gi {
+		t.Errorf("nvidia books no reserve: available %d, want %d", got, 24*gi)
+	}
+	if got := deviceAvailableMemory(card(utils.IntelGPUType, 16*gi, 16*gi)); got != 0 {
+		t.Errorf("full intel card: available %d, want 0", got)
+	}
+
+	nodes := []Node{{NodeName: "n", GPUTypes: []string{utils.IntelGPUType}, Devices: []Device{card(utils.IntelGPUType, 16*gi)}}}
+	req := Requirement{Mode: utils.IntelGPUType, RequiredGPU: 16 * gi, LimitedGPU: 16 * gi}
+	if res := ValidateBindingSelection(req, []BindingSelection{{NodeName: "n", DeviceID: "card", Memory: 16 * gi}}, nodes, PressureSnapshot{}); res.OK {
+		t.Errorf("a quota that only fits without the reserve was accepted: %+v", res)
+	}
+	req.RequiredGPU, req.LimitedGPU = 15*gi, 15*gi
+	if res := ValidateBindingSelection(req, []BindingSelection{{NodeName: "n", DeviceID: "card", Memory: 15 * gi}}, nodes, PressureSnapshot{}); !res.OK {
+		t.Errorf("a quota that fits with the reserve was rejected: %+v", res)
+	}
+}
+
+func TestAttachBindingsReportsReserve(t *testing.T) {
+	nodes := []Node{{NodeName: "n", Devices: []Device{
+		{ID: "intel-slice", Mode: utils.IntelGPUType, Memory: 32 * gi, SupportType: SupportTypeMemorySlice},
+		{ID: "intel-exclusive", Mode: utils.IntelGPUType, Memory: 32 * gi, SupportType: SupportTypeExclusive},
+		{ID: "nvidia-slice", Mode: utils.NvidiaCardType, Memory: 24 * gi, SupportType: SupportTypeMemorySlice},
+	}}}
+	attachBindings(nodes, []Allocation{
+		{NodeName: "n", DeviceID: "intel-slice", Memory: 8 * gi},
+		{NodeName: "n", DeviceID: "intel-slice", Memory: 4 * gi},
+		{NodeName: "n", DeviceID: "intel-exclusive"},
+		{NodeName: "n", DeviceID: "nvidia-slice", Memory: 8 * gi},
+	})
+	want := []int64{2 * 256 * mib, 0, 0}
+	for i, device := range nodes[0].Devices {
+		if device.Reserved != want[i] {
+			t.Errorf("%s reserved = %d, want %d", device.ID, device.Reserved, want[i])
 		}
 	}
 }

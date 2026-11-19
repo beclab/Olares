@@ -60,6 +60,13 @@ func TestAddGpuResourceLimits(t *testing.T) {
 			wantLimits:      map[string]string{"cpu": "2", constants.NvidiaGPU: "1", constants.NvidiaGPUMem: "8192"},
 			wantLimitsPatch: constants.PatchOpReplace,
 		},
+		{
+			name:            "keys of another mode are replaced",
+			gpu:             GPUResources{Resource: constants.IntelVGPU, MemoryResource: constants.IntelVGPUMem, Memory: mem},
+			existingLimits:  map[string]string{"cpu": "2", constants.IntelGPU: "1", constants.NvidiaGPUMem: "1024"},
+			wantLimits:      map[string]string{"cpu": "2", constants.IntelVGPU: "1", constants.IntelVGPUMem: "8192"},
+			wantLimitsPatch: constants.PatchOpReplace,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -105,5 +112,28 @@ func TestAddGpuResourceLimits(t *testing.T) {
 				t.Fatalf("limits = %v, want %v", got, tt.wantLimits)
 			}
 		})
+	}
+}
+
+func TestAddGpuResourceLimitsRemovesStaleRequests(t *testing.T) {
+	tpl := &corev1.PodTemplateSpec{Spec: corev1.PodSpec{Containers: []corev1.Container{
+		makeContainer("app", map[string]string{constants.IntelGPU: "1"}, map[string]string{"cpu": "1", constants.IntelGPU: "1"}),
+	}}}
+	patches, err := addGpuResourceLimits(tpl, true, nil, GPUResources{Resource: constants.IntelVGPU})
+	if err != nil {
+		t.Fatalf("addGpuResourceLimits: %v", err)
+	}
+	want := patchOp{Op: constants.PatchOpRemove, Path: "/spec/template/spec/containers/0/resources/requests/gpu.intel.com~1xe"}
+	removed := 0
+	for _, p := range patches {
+		if p.Op == constants.PatchOpRemove {
+			removed++
+			if !reflect.DeepEqual(p, want) {
+				t.Fatalf("unexpected remove patch %+v, want %+v", p, want)
+			}
+		}
+	}
+	if removed != 1 {
+		t.Fatalf("expected one request removal, got %d in %+v", removed, patches)
 	}
 }

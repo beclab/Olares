@@ -37,24 +37,24 @@ const (
 	// UserspaceUID / UserspaceGID are the ownership and access identity
 	// Olares fixes for everything under a user's space. Both the
 	// directories on disk and the app processes converge on this pair.
-	UserspaceUID int64 = 1000
-	UserspaceGID int64 = 1000
-	ApplicationVersionLabel       = "applications.app.bytetrade.io/version"
-	ApplicationSourceLabel        = "applications.app.bytetrade.io/source"
-	ApplicationTailScaleKey       = "applications.app.bytetrade.io/tailscale"
-	ApplicationRequiredGPU        = "applications.app.bytetrade.io/required_gpu"
-	AppPodGPUConsumePolicy        = "gpu.bytetrade.io/app-pod-consume-policy"
-	ApplicationPolicies           = "applications.app.bytetrade.io/policies"
-	ApplicationMobileSupported    = "applications.app.bytetrade.io/mobile_supported"
-	ApplicationClusterDep         = "applications.app.bytetrade.io/need_cluster_scoped_app"
-	ApplicationGroupClusterDep    = "applications.app.bytetrade.io/need_cluster_scoped_group"
-	UserContextAttribute          = "username"
-	KubeSphereClientAttribute     = "ksclient"
-	MarketSource                  = "X-Market-Source"
-	MarketUser                    = "X-Market-User"
-	StudioSource                  = "devbox"
-	ApplicationInstallUserLabel   = "applications.app.bytetrade.io/install_user"
-	BflUserKey                    = "X-Bfl-User"
+	UserspaceUID                int64 = 1000
+	UserspaceGID                int64 = 1000
+	ApplicationVersionLabel           = "applications.app.bytetrade.io/version"
+	ApplicationSourceLabel            = "applications.app.bytetrade.io/source"
+	ApplicationTailScaleKey           = "applications.app.bytetrade.io/tailscale"
+	ApplicationRequiredGPU            = "applications.app.bytetrade.io/required_gpu"
+	AppPodGPUConsumePolicy            = "gpu.bytetrade.io/app-pod-consume-policy"
+	ApplicationPolicies               = "applications.app.bytetrade.io/policies"
+	ApplicationMobileSupported        = "applications.app.bytetrade.io/mobile_supported"
+	ApplicationClusterDep             = "applications.app.bytetrade.io/need_cluster_scoped_app"
+	ApplicationGroupClusterDep        = "applications.app.bytetrade.io/need_cluster_scoped_group"
+	UserContextAttribute              = "username"
+	KubeSphereClientAttribute         = "ksclient"
+	MarketSource                      = "X-Market-Source"
+	MarketUser                        = "X-Market-User"
+	StudioSource                      = "devbox"
+	ApplicationInstallUserLabel       = "applications.app.bytetrade.io/install_user"
+	BflUserKey                        = "X-Bfl-User"
 
 	InstanceIDLabel         = "workflows.argoproj.io/controller-instanceid"
 	WorkflowOwnerLabel      = "workflows.app.bytetrade.io/owner"
@@ -139,6 +139,11 @@ const (
 	AMDGPU    = "amd.com/gpu"
 	IntelIGPU = "gpu.intel.com/i915"
 	IntelGPU  = "gpu.intel.com/xe"
+	// IntelVGPU / IntelVGPUMem are the HAMi-scheduled resources the Intel GPU
+	// plugin advertises for discrete cards from 1.12.8 on; IntelGPU is then
+	// only a legacy key the webhook strips.
+	IntelVGPU    = "intel.com/vgpu"
+	IntelVGPUMem = "intel.com/vgpumem"
 
 	// PodRequiredGPUMemory / PodLimitedGPUMemory are pod-template annotations a
 	// chart uses to declare its GPU-memory quota for the auto-resource ("-1")
@@ -249,6 +254,14 @@ const (
 	// annotation is never cleared once written, so the handshake is the only
 	// thing that says whether the cards it lists are still there.
 	NodeHandshakeKey = "hami.io/node-handshake"
+	// NodeIntelHAMIRegisterKey / NodeIntelHandshakeKey are the same pair for
+	// the Intel discrete cards the Intel GPU plugin publishes in HAMi mode.
+	NodeIntelHAMIRegisterKey = "hami.io/node-intel-register"
+	NodeIntelHandshakeKey    = "hami.io/node-handshake-intel"
+	// NodeIntelCardsKey sits next to NodeIntelHAMIRegisterKey and lists, per
+	// card ID, the DRM card name, PCI address and the support types the card
+	// offers: [{"uuid","card","bdf","supportTypes"}].
+	NodeIntelCardsKey = "gpu.bytetrade.io/node-intel-cards"
 )
 
 var (

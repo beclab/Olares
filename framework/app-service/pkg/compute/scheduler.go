@@ -581,8 +581,10 @@ func deviceAvailableMemory(device Device) int64 {
 	}
 }
 
+// remainingMemory is the quota a new memory-slice binding can still get, after
+// the reserve of every existing binding and of the new one.
 func remainingMemory(device Device) int64 {
-	remaining := device.Memory
+	remaining := device.Memory - CapabilityFor(device.Mode).MemorySliceReserve - bindingsReserve(device)
 	for _, binding := range device.Bindings {
 		remaining -= binding.Memory
 	}
@@ -590,6 +592,15 @@ func remainingMemory(device Device) int64 {
 		return 0
 	}
 	return remaining
+}
+
+// bindingsReserve is the reserve the existing bindings of a memory-slice
+// device hold on top of their quotas.
+func bindingsReserve(device Device) int64 {
+	if device.SupportType != SupportTypeMemorySlice {
+		return 0
+	}
+	return CapabilityFor(device.Mode).MemorySliceReserve * int64(len(device.Bindings))
 }
 
 func replaceAppAllocations(allocations []Allocation, replacements []Allocation) []Allocation {

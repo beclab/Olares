@@ -76,4 +76,10 @@ data:
         ignoredByScheduler: true
       {{- end }}
       {{- end }}
+      {{- if .Values.devices.intel.enabled }}
+      {{- range .Values.devices.intel.customresources }}
+      - name: {{ . }}
+        ignoredByScheduler: true
+      {{- end }}
+      {{- end }}
 {{- end }}

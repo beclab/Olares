@@ -269,7 +269,7 @@ func buildNodeResource(node *corev1.Node) Node {
 		register := CapabilityFor(mode).Register
 		switch register.Decoder {
 		case registerHAMI:
-			n.Devices = append(n.Devices, decodeHAMINvidiaDevices(node, mode)...)
+			n.Devices = append(n.Devices, decodeHAMIDevices(node, mode)...)
 		case registerTuple:
 			// Fall back to the single system-memory device when the register
 			// carries no usable discrete entry, so a node that advertises the
@@ -288,9 +288,9 @@ func buildNodeResource(node *corev1.Node) Node {
 }
 
 // registeredCard is one card as a device register publishes it. SupportTypes
-// narrows the mode's support types for this card (see cardSupportTypes); the
-// register formats decoded today carry no such field, so it stays empty and
-// every card offers its mode's full list.
+// narrows the mode's support types for this card (see cardSupportTypes); it
+// stays empty, and the card offers its mode's full list, unless the mode's
+// register names a Cards annotation listing the card.
 type registeredCard struct {
 	ID           string
 	CardModel    string
@@ -370,8 +370,9 @@ func nonHAMIDevice(node *corev1.Node, mode string, totalMemory int64) Device {
 	}
 }
 
-func decodeHAMINvidiaDevices(node *corev1.Node, mode string) []Device {
-	annotation := CapabilityFor(mode).Register.Annotation
+func decodeHAMIDevices(node *corev1.Node, mode string) []Device {
+	register := CapabilityFor(mode).Register
+	annotation := register.Annotation
 	raw := node.Annotations[annotation]
 	if !strings.Contains(raw, constants.OneContainerMultiDeviceSplitSymbol) {
 		// The node carries the GPU label but the device plugin has not
@@ -384,11 +385,12 @@ func decodeHAMINvidiaDevices(node *corev1.Node, mode string) []Device {
 	}
 	// A card's own health bit is only as fresh as the annotation carrying it,
 	// so it has to be read together with the node-level signals.
-	nodeUsable := hamiNodeHealth(node) == deviceHealthYes
+	nodeUsable := hamiNodeHealth(node, register.Handshake) == deviceHealthYes
 	if !nodeUsable {
 		klog.V(2).Infof("compute: every card on node %s is marked unhealthy by node-level signals: nodeReady=%s %s=%q",
-			node.Name, nodeHealth(node), constants.NodeHandshakeKey, node.Annotations[constants.NodeHandshakeKey])
+			node.Name, nodeHealth(node), register.Handshake, node.Annotations[register.Handshake])
 	}
+	cardSupport := decodeRegisteredCardInfo(node, register.Cards)
 
 	var devices []Device
 	for _, encoded := range strings.Split(raw, constants.OneContainerMultiDeviceSplitSymbol) {
@@ -404,10 +406,11 @@ func decodeHAMINvidiaDevices(node *corev1.Node, mode string) []Device {
 		devmem, _ := strconv.ParseInt(items[2], 10, 64)
 		healthy, _ := strconv.ParseBool(items[6])
 		devices = append(devices, registeredDevice(node, mode, registeredCard{
-			ID:        items[0],
-			CardModel: items[4],
-			Memory:    devmem * mib,
-			Health:    boolHealth(healthy && nodeUsable),
+			ID:           items[0],
+			CardModel:    items[4],
+			Memory:       devmem * mib,
+			Health:       boolHealth(healthy && nodeUsable),
+			SupportTypes: cardSupport[items[0]],
 		}))
 	}
 	return devices
@@ -423,7 +426,7 @@ func nodeHealth(node *corev1.Node) string {
 }
 
 // hamiNodeHealth reports whether the cards HAMi registered on a node can still
-// be trusted. decodeHAMINvidiaDevices folds it into every card's own health
+// be trusted. decodeHAMIDevices folds it into every card's own health
 // bit, because that bit cannot express the node being gone: it is parsed out of
 // the register annotation, which the device plugin writes while the node is up
 // and which nothing ever clears — not even HAMi's own cleanup path, which marks
@@ -435,11 +438,37 @@ func nodeHealth(node *corev1.Node) string {
 // The two signals combined here cover different failures and neither subsumes
 // the other: NodeReady catches a node that is gone, the handshake catches a
 // node that is up but whose GPU stack has died.
-func hamiNodeHealth(node *corev1.Node) string {
+func hamiNodeHealth(node *corev1.Node, handshake string) string {
 	if nodeHealth(node) != deviceHealthYes {
 		return deviceHealthNo
 	}
-	return hamiHandshakeHealth(node.Annotations[constants.NodeHandshakeKey])
+	return hamiHandshakeHealth(node.Annotations[handshake])
+}
+
+// registeredCardInfo is one entry of a register's Cards annotation.
+type registeredCardInfo struct {
+	UUID         string   `json:"uuid"`
+	Card         string   `json:"card"`
+	BDF          string   `json:"bdf"`
+	SupportTypes []string `json:"supportTypes"`
+}
+
+// decodeRegisteredCardInfo maps card ID to the support types its Cards
+// annotation lists. A missing or malformed annotation narrows nothing.
+func decodeRegisteredCardInfo(node *corev1.Node, annotation string) map[string][]string {
+	if annotation == "" || node.Annotations[annotation] == "" {
+		return nil
+	}
+	var infos []registeredCardInfo
+	if err := json.Unmarshal([]byte(node.Annotations[annotation]), &infos); err != nil {
+		klog.Warningf("compute: node %s has malformed %s annotation: %v", node.Name, annotation, err)
+		return nil
+	}
+	out := make(map[string][]string, len(infos))
+	for _, info := range infos {
+		out[info.UUID] = info.SupportTypes
+	}
+	return out
 }
 
 // hamiHandshakeHealth interprets HAMi's handshake annotation. The exchange it
@@ -521,6 +550,11 @@ func attachBindings(nodes []Node, allocations []Allocation) {
 					nodes[ni].Devices[di].Bindings = append(nodes[ni].Devices[di].Bindings, allocations[ai])
 				}
 			}
+		}
+	}
+	for ni := range nodes {
+		for di := range nodes[ni].Devices {
+			nodes[ni].Devices[di].Reserved = bindingsReserve(nodes[ni].Devices[di])
 		}
 	}
 }
