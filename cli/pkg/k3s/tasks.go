@@ -196,38 +196,9 @@ func (g *GenerateK3sService) Execute(runtime connector.Runtime) error {
 	runsControlPlane := utils.NodeRunsControlPlane(runtime)
 
 	defaultKubeletArs := map[string]string{
-		"kube-reserved":   fmt.Sprintf("cpu=200m,memory=%s,ephemeral-storage=1Gi", utils.KubeReservedMemory(runsControlPlane)),
-		"system-reserved": fmt.Sprintf("cpu=200m,memory=%s,ephemeral-storage=1Gi", utils.SystemReservedMemory(runtime, g.KubeConf.Arg.EnablePodSwap)),
-		// Soft eviction gives kubelet a runway. Reaching a hard threshold means
-		// reclaim has already failed, and terminating a pod from there takes long
-		// enough that the OOM killer can decide first — and it does not choose
-		// with the cluster in mind.
-		//
-		// The soft threshold is on allocatableMemory.available rather than
-		// memory.available because that is the signal that answers "have the pods
-		// used up what they were given", which is the condition worth reacting to
-		// early. kubelet will not create it: addAllocatableThresholds in
-		// pkg/kubelet/eviction/helpers.go copies only *hard* memory thresholds onto
-		// that signal. Its capacity is kubepods.slice's own allowance, so it is
-		// unaffected by the host releasing or taking page cache, and it moves with
-		// the reserve above rather than with the size of the machine.
-		//
-		// It has to stay a percentage, and above the 5% below. eviction-hard's
-		// memory.available<5% is copied onto the allocatable signal as 5% of that
-		// same allowance, so an absolute value here could not stay above it across
-		// machine sizes: whatever value sits above 5% on a small node sits below
-		// it on a large one, and there the hard copy fires first and the grace
-		// period below is never reached.
-		//
-		// Nothing is reserved for this. Only hard thresholds are subtracted from
-		// Node Allocatable (hardEvictionReservation in pkg/kubelet/cm/helpers.go,
-		// whose switch does not even have a case for the allocatable signal), so
-		// the cost of the 10% is that pods cannot sit above 90% of their allowance
-		// indefinitely, not that the 10% goes unscheduled.
+		"kube-reserved":                       fmt.Sprintf("cpu=200m,memory=%s,ephemeral-storage=1Gi", utils.KubeReservedMemory(runsControlPlane)),
+		"system-reserved":                     fmt.Sprintf("cpu=200m,memory=%s,ephemeral-storage=1Gi", utils.SystemReservedMemory(runtime, g.KubeConf.Arg.EnablePodSwap)),
 		"eviction-hard":                       "memory.available<5%,nodefs.available<5%,imagefs.available<5%,pid.available<10%",
-		"eviction-soft":                       "allocatableMemory.available<10%",
-		"eviction-soft-grace-period":          "allocatableMemory.available=1m",
-		"eviction-max-pod-grace-period":       "120",
 		"eviction-pressure-transition-period": "30s",
 		"config":                              "/etc/rancher/k3s/kubelet.config",
 		"containerd":                          container.DefaultContainerdCRISocket,
