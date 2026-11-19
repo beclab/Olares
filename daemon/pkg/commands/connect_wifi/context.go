@@ -1,6 +1,5 @@
 package connectwifi
 
-type Param struct {
-	SSID     string
-	Password string
-}
+import "github.com/beclab/Olares/daemon/internel/wifi"
+
+type Param = wifi.ConnectRequest

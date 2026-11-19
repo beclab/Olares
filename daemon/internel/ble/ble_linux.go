@@ -67,7 +67,7 @@ func NewBleService(ctx context.Context) (*service, error) {
 					bluetooth.CharacteristicNotifyPermission,
 				WriteEvent: func(client bluetooth.Connection, offset int, value []byte) {
 					if offset != 0 || len(value) == 0 {
-						klog.Info("ignore invalid write, ", offset, ", ", string(value))
+						klog.Info("ignore invalid wifi write at offset ", offset)
 						return
 					}
 
@@ -77,9 +77,7 @@ func NewBleService(ctx context.Context) (*service, error) {
 						return
 					}
 
-					writeData := string(value)
-
-					klog.Info("start to connect, ", writeData)
+					klog.Info("start to connect wifi")
 
 					// connect
 					if err := json.Unmarshal([]byte(s.wifiConnectState), &state); err == nil {

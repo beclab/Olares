@@ -9,10 +9,7 @@ import (
 	"k8s.io/klog/v2"
 )
 
-type ConnectWifiReq struct {
-	Password string `json:"password"`
-	SSID     string `json:"ssid"`
-}
+type ConnectWifiReq = connectwifi.Param
 
 func (h *Handlers) PostConnectWifi(ctx *fiber.Ctx, cmd commands.Interface) error {
 	var req ConnectWifiReq
@@ -21,10 +18,7 @@ func (h *Handlers) PostConnectWifi(ctx *fiber.Ctx, cmd commands.Interface) error
 		return h.ErrJSON(ctx, http.StatusBadRequest, err.Error())
 	}
 
-	if _, err := cmd.Execute(ctx.Context(), &connectwifi.Param{
-		SSID:     req.SSID,
-		Password: req.Password,
-	}); err != nil {
+	if _, err := cmd.Execute(ctx.Context(), &req); err != nil {
 		return h.ErrJSON(ctx, http.StatusBadRequest, err.Error())
 	}
 

@@ -82,9 +82,9 @@ func init() {
 	cmd.Post("/cluster-operation", handlers.RequireSignatureForRegisteredClusterOp(
 		handlers.RequireOwner(handlers.PostClusterOperationNode)))
 
-	cmd.Post("/connect-wifi", handlers.RequireSignature(
-		handlers.WaitServerRunning(
-			handlers.RunCommand(handlers.PostConnectWifi, connectwifi.New))))
+	// Wi-Fi setup is available without a signature, including before activation.
+	cmd.Post("/connect-wifi", handlers.WaitServerRunning(
+		handlers.RunCommand(handlers.PostConnectWifi, connectwifi.New)))
 
 	cmd.Post("/change-host", handlers.RequireSignature(
 		handlers.WaitServerRunning(
