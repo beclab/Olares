@@ -78,13 +78,17 @@ The device includes the following physical ports:
 
 ### How is Olares One different from DGX Spark, AI Max+ 395 and other AI PCs?
 
-Olares One functions as a personal cloud solution rather than a traditional personal computer.
+Olares One combines an x86 processor and NVIDIA CUDA GPU with Olares OS to host local AI models, agents, and apps. Market handles app installation and updates, Router connects apps to models, and LarePass provides access from your phone or computer.
 
-A personal cloud runs as a stable, external service accessible anytime from any device. A PC acts as client-based software designed for direct interaction via a monitor and keyboard.
+For a comparison of LLM performance and image and video generation times across Olares One, Mac Studio, DGX Spark, and AI Max+ 395 devices, see the [local AI benchmarks](https://www.olares.com/benchmarks/). Each result includes the model and software configuration used for the test.
 
-Olares One utilizes the NVIDIA CUDA stack on x86 architecture. This ensures broad compatibility with standard open-source AI applications, avoiding the adaptation challenges often found in ARM-based AI PCs or devices without CUDA support.
+### How does Olares One compare with building my own AI PC?
 
-Olares OS simplifies local AI with one-click deployment and workflow integration, distinct from the manual software management typical of standard PCs.
+A DIY build lets you choose components around your budget, GPU needs, and upgrade plans. You also select and assemble the hardware, install the operating system, and configure your AI software.
+
+Olares One provides a compact system designed for continuous operation. You can complete [initial setup from your phone](first-boot.md), install models and apps from Market, and access them remotely through LarePass.
+
+Olares OS is free and open source, so you can also [install it on compatible hardware you build or already own](../manual/get-started/install-olares.md). When comparing costs, consider GPU memory, power consumption, cooling, and the time you want to spend setting up and maintaining the system.
 
 ### Is it possible to upgrade or expand the hardware?
 
@@ -138,7 +142,7 @@ Olares Space offers optional paid plans for two services:
 - **Cloud backup**: Integrated cloud storage for your backups. You can also back up to your own external drive or S3-compatible storage.
 - **Remote access (FRP)**: Higher traffic allowances and faster connections through Olares-hosted relay servers. You can also access Olares remotely through [LarePass VPN](access-olares-via-vpn.md) or your own FRP server.
 
-Depending on your purchase channel, your Olares One may include a complimentary 2-year Olares Space Basic membership. When it expires, your account returns to the Free plan, and you can continue using Olares One and local AI without renewing. For included benefits and activation steps, see [Redeem Olares Space membership](redeem-membership.md).
+Every Olares One purchase includes a complimentary 2-year Olares Space Basic membership. When it expires, your account returns to the Free plan, and you can continue using Olares One and local AI without renewing. For included benefits and activation steps, see [Redeem Olares Space membership](redeem-membership.md).
 
 ### Can I use the device without an internet connection?
 
@@ -183,19 +187,17 @@ Yes. Agents hosted on Olares One can run around the clock, independently of your
 
 ### Which local LLMs can I run?
 
-You can install local large language models (LLMs) from Market, including:
+Olares Market provides ready-to-install LLM apps with model-and-engine combinations validated for Olares. The apps include a configured inference engine and download the required model files during setup.
 
-- **Qwen3.8-27B**, served by llama.cpp.
-- **Qwen3.6-35B-A3B**, served by llama.cpp.
-- **Gemma 4 26B**, served by Ollama.
-
-These model apps include a configured inference engine and download the model files during setup. Browse [Olares Market](https://market.olares.com) for the current selection, or follow [Run local LLMs](../use-cases/llm-base-apps.md) to get started.
+Choose a model by the task you want to perform, such as chat, coding, image understanding, or tool use, and check its memory requirements. Browse [Olares Market](https://market.olares.com) for the current models and supported capabilities, or follow [Run local LLMs](../use-cases/llm-base-apps.md) to get started.
 
 ### Can I install newer models or models that are not in Market?
 
 Yes. Install new model apps as they become available in Market. To run a model from Hugging Face or the Ollama library, create an instance from an Engine Base app. Olares provides llama.cpp, Ollama, vLLM, and SGLang Engine Base apps.
 
 Choose an engine that supports the model's architecture and file format, then set its memory and context limits for your device. The [local model guide](../use-cases/llm-base-apps.md) explains engine selection and configuration.
+
+For models tested on Olares One, the [benchmark results](https://www.olares.com/benchmarks/hardware/olares-one) include the quantization, inference engine, and test settings, so you can compare measured performance before choosing a setup.
 
 ### How do GPU memory and system memory affect model choice?
 
@@ -219,15 +221,9 @@ Language support depends on what you are using:
 
 ### Can local AI models understand images?
 
-Yes. A vision-capable model can analyze an uploaded image and answer questions about its contents. For example, Gemma 4 26B (Ollama) supports image input.
+Yes. A vision-capable model can analyze an uploaded image and answer questions about its contents. Choose a model that supports image input in Market.
 
 Connect the model to a chat app that accepts image attachments, then upload an image with your question. See [Run local LLMs](../use-cases/llm-base-apps.md) for model setup.
-
-### Does Olares One support the Kimi K2 model?
-
-Kimi K2 has around 1 trillion parameters and requires approximately 1024 GB of VRAM, making it unavailable in the Olares Market.
-
-We anticipate that a Kimi-K2-level model might run on Olares One in the future as AI model sizes continue to shrink.
 
 ### Can local AI models access the internet for research?
 
@@ -242,11 +238,11 @@ Connect these tools to an agent to build a research workflow. For a setup using 
 
 Yes, we highly recommend this workflow. You can mount your NAS to Olares One as an SMB share. Olares can then index, sort, and process the photos and videos stored on the NAS via apps like Immich.
 
-### Can I use Olares AI features on my iPhone or Mac?
+### Can I use local AI from my phone?
 
-Yes. Open an AI app hosted on Olares One from your phone or computer's browser. Local model inference runs on Olares One, so your phone or computer only needs to display the app and send your requests.
+Yes. You can use mobile-compatible AI apps hosted on Olares One from your phone's browser or the [Apps tab in LarePass](../manual/larepass/manage-apps-with-larepass.md). Local model inference runs on Olares One, while you interact with the app on your phone.
 
-For access away from home, keep Olares One powered on and connected to the internet, then enable [LarePass VPN](access-olares-via-vpn.md) on your phone or computer.
+For access away from home, keep Olares One powered on and connected to the internet, then enable [LarePass VPN](access-olares-via-vpn.md) on your phone.
 
 ### Can I use LM Studio to manage models on Olares?
 
@@ -321,6 +317,8 @@ Yes. Both the UEFI Boot Manager and GRUB support this configuration. You can set
 Yes. Olares OS is built on Kubernetes, which allows multiple Olares devices to form a cluster. The system automatically schedules applications within the cluster and loads models across multiple devices.
 
 Forming a cluster currently requires command-line operations. We plan to introduce a fully UI‑based experience to manage this process in future updates.
+
+See [Connect two Olares One devices](connect-two-olares-one.md) for requirements and setup steps.
 
 ### Does clustering make a single game or AI task run faster?
 
