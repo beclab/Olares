@@ -6,7 +6,7 @@ metadata:
     app.kubernetes.io/instance: k8s
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/part-of: kube-prometheus
-    app.kubernetes.io/version: 2.34.0
+    app.kubernetes.io/version: 2.54.0
   name: k8s
   namespace: kubesphere-monitoring-system
 spec:
@@ -40,7 +40,7 @@ spec:
       port: web
   evaluationInterval: 1m
   externalLabels: {}
-  image: prom/prometheus:v2.34.0
+  image: prom/prometheus:v2.54.0
   nodeSelector:
     kubernetes.io/os: linux
   podMetadata:
