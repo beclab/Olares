@@ -22,7 +22,7 @@ spec:
             description: |-
               The one system-wide RAG policy selected from Search3's controlled catalog.
 
-              Every field is required on the wire. Values are stable catalog keys, not free-form endpoints or tuning parameters. Search3 owns the corresponding model service address and the complete policy parameters.
+              The five catalog selections are required on the wire. Values are stable keys, not free-form endpoints. `retrieval_parameters` is the only optional object: it is required for `hybrid-weighted-v1`, forbidden for the default profile, and contains only the bounded query-time values accepted by ADR-0008.
             properties:
               chunkPolicy:
                 enum:
@@ -43,9 +43,27 @@ spec:
                 - rerank-disabled-v1
                 - bge-reranker-v2-m3-v1
                 type: string
+              retrievalParameters:
+                nullable: true
+                properties:
+                  scoreCalibration:
+                    description: Versioned calibration used before combining lexical and vector evidence. A new mathematical meaning requires a new enum value, not an in-place edit.
+                    enum:
+                    - rank-percentile-v1
+                    type: string
+                  vectorWeightPercent:
+                    format: uint8
+                    maximum: 100.0
+                    minimum: 0.0
+                    type: integer
+                required:
+                - scoreCalibration
+                - vectorWeightPercent
+                type: object
               retrievalProfile:
                 enum:
                 - vector-default-v1
+                - hybrid-weighted-v1
                 type: string
             required:
             - chunkPolicy

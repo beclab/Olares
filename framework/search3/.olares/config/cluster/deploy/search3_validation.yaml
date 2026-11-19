@@ -183,6 +183,7 @@ webhooks:
           - specializedmonitorsettings
           - sharedmonitorsettings
           - ragglobalsettings
+          - search3globalsettings
     admissionReviewVersions:
       - "v1"
       - "v1beta1"
