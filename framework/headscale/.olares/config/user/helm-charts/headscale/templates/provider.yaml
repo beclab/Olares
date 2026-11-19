@@ -43,7 +43,7 @@ metadata:
 rules:
 - nonResourceURLs: 
   - "/headscale/node"
-  - "/headscale/node/rename"
+  - "/headscale/node/*"
   - "/headscale/policy/exit-users"
   - "/headscale/policy/exit-users/*"
   - "/headscale/policy/subnet-router/routes"
