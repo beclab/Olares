@@ -10,8 +10,8 @@ head:
 
 Find answers to frequently asked questions about Olares One and system capabilities.
 
-:::tip Support for Olares One owners
-If you require assistance with product features, hardware warranty, or specific use cases, contact technical support directly via WhatsApp or email at hi@olares.com. We respond to inquiries within two business days.
+:::tip Olares One support
+If you can’t find the answer to your question below, email hi@olares.com for pre-sales inquiries. For after-sales support, [submit a ticket](../manual/help/request-technical-support.md#submit-a-ticket).
 :::
 
 ## Product & specifications
