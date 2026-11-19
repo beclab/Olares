@@ -82,3 +82,85 @@ func TestUnderlayMacvlanDefineStructureInvariants(t *testing.T) {
 		t.Fatalf("top-level fields changed: %v", conf)
 	}
 }
+
+// TestMultusMainContainerMemoryBudget pins the kube-multus container budget:
+// a 50Mi request with a 256Mi limit. The install init container stays at its
+// 15Mi request and has no limit.
+func TestMultusMainContainerMemoryBudget(t *testing.T) {
+	var buf bytes.Buffer
+	if err := Multus.Execute(&buf, map[string]string{
+		"MultusImage": "example.invalid/multus:test",
+	}); err != nil {
+		t.Fatalf("render Multus: %v", err)
+	}
+
+	var main, init map[string]interface{}
+	for _, doc := range bytes.Split(buf.Bytes(), []byte("\n---")) {
+		doc = bytes.TrimSpace(doc)
+		if len(doc) == 0 {
+			continue
+		}
+		var obj map[string]interface{}
+		if err := yaml.Unmarshal(doc, &obj); err != nil || obj == nil {
+			continue
+		}
+		if obj["kind"] != "DaemonSet" {
+			continue
+		}
+		meta, _ := obj["metadata"].(map[string]interface{})
+		if meta["name"] != "kube-multus-ds" {
+			t.Fatalf("daemonset name = %v", meta["name"])
+		}
+		podSpec := obj["spec"].(map[string]interface{})["template"].(map[string]interface{})["spec"].(map[string]interface{})
+		for _, c := range podSpec["containers"].([]interface{}) {
+			ctr := c.(map[string]interface{})
+			if ctr["name"] == "kube-multus" {
+				main = ctr
+			}
+		}
+		for _, c := range podSpec["initContainers"].([]interface{}) {
+			ctr := c.(map[string]interface{})
+			if ctr["name"] == "install-multus-binary" {
+				init = ctr
+			}
+		}
+	}
+	if main == nil || init == nil {
+		t.Fatal("kube-multus or install-multus-binary was not rendered")
+	}
+
+	req, lim := containerMemory(main)
+	if req != "50Mi" || lim != "256Mi" {
+		t.Fatalf("kube-multus memory request/limit = %s/%s, want 50Mi/256Mi", req, lim)
+	}
+	cpuReq, cpuLim := containerCPU(main)
+	if cpuReq != "100m" || cpuLim != "100m" {
+		t.Fatalf("kube-multus cpu request/limit = %s/%s, want 100m/100m", cpuReq, cpuLim)
+	}
+	ireq, ilim := containerMemory(init)
+	if ireq != "15Mi" || ilim != "" {
+		t.Fatalf("install-multus-binary memory request/limit = %s/%q, want 15Mi and no limit", ireq, ilim)
+	}
+}
+
+func containerMemory(c map[string]interface{}) (request, limit string) {
+	res, _ := c["resources"].(map[string]interface{})
+	if req, ok := res["requests"].(map[string]interface{}); ok {
+		request, _ = req["memory"].(string)
+	}
+	if lim, ok := res["limits"].(map[string]interface{}); ok {
+		limit, _ = lim["memory"].(string)
+	}
+	return request, limit
+}
+
+func containerCPU(c map[string]interface{}) (request, limit string) {
+	res, _ := c["resources"].(map[string]interface{})
+	if req, ok := res["requests"].(map[string]interface{}); ok {
+		request, _ = req["cpu"].(string)
+	}
+	if lim, ok := res["limits"].(map[string]interface{}); ok {
+		limit, _ = lim["cpu"].(string)
+	}
+	return request, limit
+}
