@@ -10,6 +10,8 @@ const (
 	AppTokenKey                      = "bytetrade.io/token"
 	AppRepoURLKey                    = "bytetrade.io/repo-url"
 	AppVersionKey                    = "bytetrade.io/chart-version"
+	AppTargetChartVersionKey         = "bytetrade.io/target-chart-version"
+	AppPreUpgradeConfigKey           = "bytetrade.io/pre-upgrade-config"
 	AppMarketSourceKey               = constants.AppMarketSourceKey
 	AppInstallSourceKey              = "bytetrade.io/install-source"
 	AppUninstallAllKey               = "bytetrade.io/uninstall-all"
@@ -17,6 +19,12 @@ const (
 	AppStopAllKey                    = "bytetrade.io/stop-all"
 	AppResumeAllKey                  = "bytetrade.io/resume-all"
 	AppStopByControllerDuePendingPod = "bytetrade.io/pending-pod"
+	// AppStopReasonKey and AppStopMessageKey carry a pod-abnormal
+	// suspend's reason onto the StopOp entry handler. The handler
+	// copies them onto Status and the state-change event, then
+	// deletes them so a later user stop stays StopRequested.
+	AppStopReasonKey  = "bytetrade.io/stop-reason"
+	AppStopMessageKey = "bytetrade.io/stop-message"
 	AppImagesKey                     = "bytetrade.io/images"
 	// AppPreUpgradeStateKey records the steady ApplicationManager intent
 	// (Running or Stopped) right before an UpgradeOp or ApplyEnvOp begins.
@@ -162,10 +170,6 @@ type Image struct {
 type UninstallRequest struct {
 	All        bool `json:"all"`
 	DeleteData bool `json:"deleteData"`
-	// Force bypasses the operation-state gate so an app stuck in a
-	// transitional state (e.g. initializing) can still be uninstalled. The
-	// controller cleans up any in-progress operation before uninstalling.
-	Force bool `json:"force"`
 }
 
 // StopRequest represents a request to stop an application.

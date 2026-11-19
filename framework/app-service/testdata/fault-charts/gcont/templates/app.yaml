@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gcont
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: {{ .Values.workloads.gcont.replicaCount }}
+  selector:
+    matchLabels:
+      app: gcont
+  template:
+    metadata:
+      labels:
+        app: gcont
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: nosuchnode
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/control-plane
+                operator: Exists
+      containers:
+        - name: gcont
+          image: docker.io/library/redis:7.4
+          args: ["--bind", "0.0.0.0", "--port", "80", "--protected-mode", "no"]
+          ports:
+            - name: http
+              containerPort: 80
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gcont-svc
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    app: gcont
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80

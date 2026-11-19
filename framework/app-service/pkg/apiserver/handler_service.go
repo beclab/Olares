@@ -8,7 +8,7 @@ import (
 
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
-	"github.com/beclab/Olares/framework/app-service/pkg/appstate"
+	"github.com/beclab/Olares/framework/app-service/pkg/applifecycle/domain"
 	"github.com/beclab/Olares/framework/app-service/pkg/client/clientset"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
@@ -110,7 +110,7 @@ func (h *Handler) listBackend(req *restful.Request, resp *restful.Response) {
 		ss = strings.Split(state, "|")
 	}
 	all := make([]string, 0)
-	for _, a := range appstate.All {
+	for _, a := range domain.AllStates {
 		all = append(all, a.String())
 	}
 	stateSet := sets.NewString(all...)

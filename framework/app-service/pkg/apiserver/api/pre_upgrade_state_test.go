@@ -80,6 +80,34 @@ func TestSnapshotPreUpgradeState(t *testing.T) {
 	}
 }
 
+func TestSnapshotPreUpgradeConfig(t *testing.T) {
+	annotations := map[string]string{}
+	SnapshotPreUpgradeConfig(annotations, `{"version":"1.0.0"}`)
+	if got := annotations[AppPreUpgradeConfigKey]; got != `{"version":"1.0.0"}` {
+		t.Fatalf("snapshot = %q, want original config", got)
+	}
+
+	SnapshotPreUpgradeConfig(annotations, `{"version":"2.0.0"}`)
+	if got := annotations[AppPreUpgradeConfigKey]; got != `{"version":"1.0.0"}` {
+		t.Fatalf("retry replaced snapshot with %q", got)
+	}
+}
+
+func TestPrepareUpgradeMetadataKeepsDeployedVersion(t *testing.T) {
+	annotations := map[string]string{AppVersionKey: "1.0.0"}
+	PrepareUpgradeMetadata(annotations, `{"version":"1.0.0"}`, "2.0.0")
+
+	if got := annotations[AppVersionKey]; got != "1.0.0" {
+		t.Fatalf("deployed version = %q, want unchanged", got)
+	}
+	if got := annotations[AppTargetChartVersionKey]; got != "2.0.0" {
+		t.Fatalf("target version = %q, want 2.0.0", got)
+	}
+	if got := annotations[AppPreUpgradeConfigKey]; got != `{"version":"1.0.0"}` {
+		t.Fatalf("pre-upgrade config = %q", got)
+	}
+}
+
 func TestSnapshotPreUpgradeStateNilAnnotations(t *testing.T) {
 	// Must not panic when callers have not yet allocated the map.
 	SnapshotPreUpgradeState(nil, appv1alpha1.Stopped)

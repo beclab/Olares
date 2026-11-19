@@ -1,0 +1,47 @@
+olaresManifest.version: '0.12.0'
+olaresManifest.type: app
+apiVersion: 'v3'
+workloadReplicas:
+  faultslowhelm: 1
+metadata:
+  name: faultslowhelm
+  description: pre-install hook sleeps past the installing deadline
+  icon: https://app.cdn.olares.com/appstore/adguard/icon.png
+  appid: faultslowhelm
+  version: '0.1.0'
+  title: faultslowhelm
+  categories:
+    - Utilities_v112
+permission:
+  appData: true
+  appCache: true
+spec:
+  versionName: '0.1.0'
+  fullDescription: A pre-install hook sleeps for 35 minutes, longer than the 30 minute installing deadline, so helm is still running when the state times out.
+  developer: test
+  website: https://example.com
+  submitter: test
+  locale:
+    - en-US
+  requiredMemory: 64Mi
+  limitedMemory: 512Mi
+  requiredDisk: 64Mi
+  limitedDisk: 256Mi
+  requiredCpu: 50m
+  limitedCpu: 1
+  supportArch:
+    - amd64
+    - arm64
+options:
+  dependencies:
+    - name: olares
+      type: system
+      version: '>=1.12.6-0'
+entrances:
+  - authLevel: internal
+    host: faultslowhelm-svc
+    icon: https://app.cdn.olares.com/appstore/adguard/icon.png
+    name: faultslowhelm
+    openMethod: window
+    port: 80
+    title: faultslowhelm

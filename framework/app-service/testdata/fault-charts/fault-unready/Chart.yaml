@@ -1,0 +1,6 @@
+apiVersion: v2
+name: faultunready
+description: Missing Secret volume keeps the pod Pending so wait-startup stops
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

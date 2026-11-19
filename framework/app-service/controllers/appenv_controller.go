@@ -4,20 +4,19 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
-	"github.com/beclab/Olares/framework/app-service/pkg/appstate"
+	"github.com/beclab/Olares/framework/app-service/pkg/applifecycle/domain"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	sysv1alpha1 "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
+	"github.com/google/uuid"
 
 	coordinationv1 "k8s.io/api/coordination/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
@@ -294,7 +293,19 @@ func (r *AppEnvController) triggerApplyEnv(ctx context.Context, appEnv *sysv1alp
 	}
 
 	state := targetAppMgr.Status.State
-	if !appstate.IsOperationAllowed(state, appv1alpha1.ApplyEnvOp) {
+	// Status stays on the previous operation until the Runner copies the
+	// request id, so AllowsOp can still see Running while Spec.OpType
+	// already holds Stop, Uninstall, or Upgrade. Leave that request in
+	// place. An unconsumed ApplyEnv is already the sync we want, so the
+	// caller may mark the env applied.
+	if op, pending := domain.UnconsumedOperation(&targetAppMgr); pending {
+		if op == appv1alpha1.ApplyEnvOp {
+			klog.Infof("ApplyEnv already requested for app: %s owner: %s", appEnv.AppName, appEnv.AppOwner)
+			return nil
+		}
+		return fmt.Errorf("app %s has unconsumed %s request, applyEnv deferred", appEnv.AppName, op)
+	}
+	if !domain.DefaultTable.AllowsOp(state, appv1alpha1.ApplyEnvOp) {
 		// trigger backoff retry and this is the expected behaviour
 		return fmt.Errorf("app %s is currently in state %s, applyEnv not allowed", appEnv.AppName, state)
 	}
@@ -308,26 +319,10 @@ func (r *AppEnvController) triggerApplyEnv(ctx context.Context, appEnv *sysv1alp
 		appMgrCopy.Annotations = make(map[string]string)
 	}
 	api.SnapshotPreUpgradeState(appMgrCopy.Annotations, state)
+	appMgrCopy.Annotations[domain.AnnotationOperationRequestID] = uuid.NewString()
 
 	if err := r.Patch(ctx, appMgrCopy, client.MergeFrom(&targetAppMgr)); err != nil {
 		return fmt.Errorf("failed to update ApplicationManager Spec.OpType: %v", err)
-	}
-
-	now := metav1.Now()
-	opID := strconv.FormatInt(time.Now().Unix(), 10)
-
-	status := appv1alpha1.ApplicationManagerStatus{
-		OpType:     appv1alpha1.ApplyEnvOp,
-		State:      appv1alpha1.ApplyingEnv,
-		OpID:       opID,
-		Message:    "waiting for applying env",
-		StatusTime: &now,
-		UpdateTime: &now,
-	}
-
-	_, err = apputils.UpdateAppMgrStatus(targetAppMgr.Name, status)
-	if err != nil {
-		return fmt.Errorf("failed to update ApplicationManager Status: %v", err)
 	}
 
 	klog.Infof("Successfully triggered ApplyEnv for app: %s owner: %s", appEnv.AppName, appEnv.AppOwner)
