@@ -12,6 +12,14 @@ head:
 
 Olares Router is the AI gateway built into Olares, shipping with v1.12.7. It exposes every AI capability on your Olares, local or cloud, through a single access layer. Clients never connect to local models or cloud vendors directly: they connect to Router, and Router routes every request to the right backend.
 
+## Learning objectives
+
+In this guide, you will learn how to:
+
+- Choose models and capabilities provided by Router.
+- Use default system names or full model names.
+- Get the address and authentication details for your app.
+
 ## What is Olares Router
 
 To understand how Router simplifies your AI workflows, it helps to look at where it sits within the platform and how it unifies different AI workloads into standard capabilities.
@@ -87,15 +95,37 @@ If a model name does not contain a slash, it does not point to a specific provid
 - **Model groups**: A unified name created for load balancing. For example, you might create a group named `DeepSeek-V4` that distributes requests across local models and remote services. The group name itself contains no slashes.
 - **Aliases**: Custom, user-defined short names created for convenience. For example, renaming a long model name to a simple one.
 
+### Choose a default system name
+
+On **Default models**, select a model or service for the capability you need and wait until its row shows **Callable**. Use the corresponding name in an app that supports Router's API for that capability:
+
+| Capability | Name |
+| :--- | :--- |
+| Chat | `default-chat` |
+| Embeddings | `default-embedding` |
+| Reranking | `default-rerank` |
+| Web search | `default-search` |
+| Page reading | `default-scrape` |
+| Text to speech | `default-tts` |
+| Speech to text | `default-stt` |
+
+These names follow the defaults selected in Router. After changing the default embedding model, reindex existing content in knowledge bases that use it.
+
+`default-search` is a Router route name. Use it only with an app that calls Router's search API. The SearXNG settings in Open WebUI and Vane still take a SearXNG entrance URL.
+
 ## Get connection details from Router
 
-Connecting to Router takes three parameters:
+For apps running in Olares, use the connection details below. Chat, embeddings, and other capabilities share the Router address, so you do not need to copy a URL for each model.
 
-- **Base URL**: Open a capability page such as **LLM**, find the model, and click the **View connection example** icon on the right.
+1. Open Router. <!--@include: ../reusables/ai-service-connections.md#router-openai-base-url-->
 
-  <!-- ![The View connection example icon on a model row](/images/manual/use-cases/router-view-connection-examp.png#bordered) -->
+   Use your own Router domain. Anthropic-compatible apps such as Claude Code add `/v1/messages` themselves, so their Base URL has no `/v1`:
 
-  <!-- ![The How to call this model window](/images/manual/use-cases/router-how-to-call-model.png#bordered) -->
+   ```text
+   https://router.laresprime.olares.com
+   ```
 
-- **Model name**: Copy the model name from the **How to call this model** window. Or set a default model for each capability on the **Default models** page, and use the system name like `default-chat` instead of a specific model name.
-- **API key**: Created on the **API keys** page. Required only for callers from the LAN or the internet. Apps in Olares do not need to enter API keys.
+2. For the model name, enter the default system name for the capability, such as `default-chat`. To use a specific model, find it on **LLM** or **Tools**, click **View connection example**, and copy the full **Model name** from **How to call this model**.
+3. Leave the API key empty. If the app requires a value, enter `olares`.
+
+For an app running on your computer, open **How to call this model**, select **Devices in LAN** or **Remote** for your network, and copy that Base URL. Use a key created on **API keys**. Remote access also requires LarePass VPN.

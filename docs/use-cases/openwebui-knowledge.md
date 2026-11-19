@@ -9,8 +9,8 @@ head:
     - name: keywords
       content: Olares, Open WebUI, knowledge base, RAG, document upload, PDF
 app_version: "1.0.38"
-doc_version: "2.0"
-doc_updated: "2026-09-23"
+doc_version: "2.1"
+doc_updated: "2026-11-18"
 ---
 
 # Chat with documents and knowledge bases in Open WebUI
@@ -43,15 +43,7 @@ Before you begin, ensure you have the following in place:
 
 ## Configure embedding model
 
-Document understanding requires an embedding model to convert text into vector data. To configure Open WebUI, you must first retrieve your embedding model details.
-
-### Get embedding model details
-
-<!--@include: ../reusables/ai-service-connections.md#get-embedding-model-connection-details-openai-->
-
-### Apply embedding settings in Open WebUI
-
-<!--@include: ./openwebui-search.md#configure-document-embeddings-->
+<!--@include: ../reusables/openwebui-embeddings.md#configure-embeddings-->
 
 ## Analyze individual documents
 

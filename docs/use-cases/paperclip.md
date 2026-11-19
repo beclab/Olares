@@ -8,8 +8,8 @@ head:
     - name: keywords
       content: Olares, Paperclip, AI agent, multi-agent, Claude Code, Codex, OpenCode, Cursor, self-hosted
 app_version: "1.0.34"
-doc_version: "1.2"
-doc_updated: "2026-10-08"
+doc_version: "1.3"
+doc_updated: "2026-11-18"
 ---
 
 # Coordinate multiple AI agents with Paperclip
@@ -19,15 +19,6 @@ doc_updated: "2026-10-08"
 Paperclip is an open-source platform for coordinating multiple AI agents under one unified workspace. By setting up a virtual company, you add AI agents powered by Claude Code, Codex, OpenCode, Cursor, or other providers, and assign them issues to work on. Whether the task involves coding, research, or content creation, Paperclip manages the workflow.
 
 Running Paperclip as a self-hosted app on Olares ensures that your API keys, task history, and agent outputs remain entirely private on your device.
-
-## Prerequisites
-
-Before you begin, you need:
-
-<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
-- Qwen3.8-27B (llama.cpp) installed from Market, if you plan to use a local model.
-
-<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## Learning objectives
 
@@ -190,9 +181,8 @@ OpenCode can call an OpenAI-compatible local model through Olares Router. This O
 
 Install and start Qwen3.8-27B (llama.cpp) from Market, then get its connection details from Router.
 
-<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
-
-<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
+1. Open Router from Launchpad. On **Default models**, set Qwen3.8-27B (llama.cpp) as the default chat model and wait until `default-chat` shows **Callable**.
+2. <!--@include: ../reusables/ai-service-connections.md#router-openai-base-url-->
 
 ### Configure OpenCode
 
@@ -220,14 +210,12 @@ Use this example for Router's default model. Replace the example `baseURL` with 
         }
       },
       "options": {
-        "baseURL": "https://router.your_olares_id.olares.com/v1"
+        "baseURL": "https://router.laresprime.olares.com/v1"
       }
     }
   }
 }
 ```
-
-Follow the Router connection instructions for authentication. If your endpoint requires a key, configure that endpoint's key; an OpenAI or OpenRouter cloud key is not a substitute. Do not publish credential files in support requests.
 
 ### Create an unbound OpenCode agent
 

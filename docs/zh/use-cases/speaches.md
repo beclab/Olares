@@ -8,8 +8,8 @@ head:
     - name: keywords
       content: Olares, Speaches, speech-to-text, text-to-speech, STT, TTS, voice chat, OpenAI-compatible, Whisper, Kokoro
 app_version: "1.0.7"
-doc_version: "1.0"
-doc_updated: "2026-09-23"
+doc_version: "1.1"
+doc_updated: "2026-11-18"
 ---
 
 :::warning
@@ -39,15 +39,12 @@ Speaches 是一个兼容 OpenAI API 的语音服务器，支持语音转文本�
 
 开始前，你需要：
 
-<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - Olares 运行在一台带有 NVIDIA GPU 的设备上。
 - 如需使用 Audio Chat，请安装以下聊天模型：
 
   | 模型类型 | 模型 | 获取方式 |
   | :--- | :--- | :--- |
   | 聊天 | Qwen3.8-27B (llama.cpp) | 从应用市场安装 |
-
-<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## 安装 Speaches
 
@@ -126,17 +123,16 @@ Speaches 可以自动检测音频语言并将其翻译为英文。
 
 #### 获取模型连接信息
 
-<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
-
 本指南使用 Qwen3.8-27B (llama.cpp) 作为 Audio Chat 的聊天模型，并使用 **OpenAI-Compatible** API 格式。
 
-<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
+1. 从启动台打开 Router。在 **LLM** 页面找到 Qwen3.8-27B (llama.cpp)，等待其显示 **Callable**。
+2. <!--@include: ../reusables/ai-service-connections.md#router-openai-base-url-->
 
 #### 配置 Speaches
 
 1. 前往 Olares **Settings** > **Applications** > **Speaches** > **Manage environment variables**。
 2. 点击 `CHAT_COMPLETION_BASE_URL` 旁边的 <i class="material-symbols-outlined">edit_square</i>。
-3. 将Router 中显示的 OpenAI-compatible **Base URL** 原样粘贴，包括末尾的 `/v1`，然后点击 **Confirm**。
+3. 粘贴 Router 的 OpenAI 兼容 **Base URL**，包括末尾的 `/v1`，然后点击 **Confirm**。
 4. 点击 **Apply** 保存更改。
 
 Speaches 会自动重启，并加载该 endpoint 提供的模型。

@@ -6,8 +6,8 @@ head:
     - name: keywords
       content: Olares, ComfyUI, Krita, AI art, digital painting, Krita AI Diffusion, image generation
 app_version: "1.0.21"
-doc_version: "1.1"
-doc_updated: "2026-07-28"
+doc_version: "1.2"
+doc_updated: "2026-11-18"
 ---
 
 :::warning
@@ -41,8 +41,6 @@ ComfyUI 提供强大的 AI 图像生成能力，但要让它真正有用，你�
 :::
 
 ## 获取 ComfyUI 连接信息
-
-<!--@include: ../reusables/ai-service-connections.md#app-endpoint-overview-->
 
 对于 ComfyUI：
 

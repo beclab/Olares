@@ -8,8 +8,8 @@ head:
     - name: keywords
       content: Olares, Vane, Perplexica, perplexity alternative, self-hosted perplexity, AI search, SearXNG, vane on olares
 app_version: "1.1.35"
-doc_version: "1.3"
-doc_updated: "2026-10-30"
+doc_version: "1.4"
+doc_updated: "2026-11-18"
 ---
 # Self-host a private AI search engine with Vane
 
@@ -31,7 +31,6 @@ In this guide, you will learn how to:
 
 Before you begin, you need:
 
-<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - [SearXNG](searxng.md) installed from Market and running.
 - The following models:
 
@@ -39,8 +38,6 @@ Before you begin, you need:
   | :--- | :--- | :--- |
   | Chat | Qwen3.8-27B (llama.cpp) | Install from Market |
   | Embedding | all-MiniLM-L6-v2 | Built into Vane |
-
-<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## Install Vane
 
@@ -51,34 +48,29 @@ Before you begin, you need:
 
 ## Configure models
 
-In Vane, connect to Olares Router for chat and select a built-in embedding model.
+Vane uses Router for chat and its built-in all-MiniLM-L6-v2 model for embeddings.
 
-### Get the Router connection
+1. Open Router from Launchpad. On **Default models**, set Qwen3.8-27B (llama.cpp) as the default chat model. Wait until the `default-chat` row on the same page shows **Callable**.
+2. <!--@include: ../reusables/ai-service-connections.md#router-openai-base-url-->
 
-<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
-
-Before continuing, confirm that the chat model shows **Callable** on Router's **LLM** page.
-
-### Select models in Vane
-
-1. Open Vane from Launchpad. Use the setup wizard on first launch, or open the bottom-left **Settings** > **Models** for an existing setup.
-2. Click **Add Connection**, select **OpenAI**, and enter the following values:
+3. Open Vane from Launchpad. Use the setup wizard on first launch, or open the bottom-left **Settings** > **Models** for an existing setup.
+4. Click **Add Connection**, select **OpenAI**, and enter the following values:
 
    | Field | Value |
    | :--- | :--- |
    | **Connection Name** | `Olares Router` |
    | **API Key** | `olares` |
-   | **Base URL** | The Router URL you copied, including `/v1` |
+   | **Base URL** | The Router address from step 2, including `/v1` |
 
-3. Click **Add Connection**. Under this connection's **CHAT MODELS**, click **Add**.
-4. Set **Model name** to `Router chat` and **Model key** to `default-chat`, then click **Add Model**.
-5. In the setup wizard, click **Next** to open **Select models**. In **Settings** > **Models**, use the **Select models** section on the same page.
-6. Under **Select Chat Model**, choose **Olares Router - Router chat**. Under **Select Embedding Model**, choose the built-in **Transformers - all-MiniLM-L6-v2** model.
-7. In the setup wizard, click **Finish**.
+5. Click **Add Connection**. Under this connection's **CHAT MODELS**, click **Add**.
+6. Set **Model name** to `Router chat` and **Model key** to `default-chat`, then click **Add Model**.
+7. In the setup wizard, click **Next** to open **Select models**. In **Settings** > **Models**, use the **Select models** section on the same page.
+8. Under **Select Chat Model**, choose **Olares Router - Router chat**. Under **Select Embedding Model**, choose the built-in **Transformers - all-MiniLM-L6-v2** model.
+9. In the setup wizard, click **Finish**.
 
 If the newly added model does not appear in **Select Chat Model**, refresh the page and reopen **Settings** > **Models** to select it.
 
-To change models or connections later, open Vane's **Settings** > **Models**.
+To use another chat model, select it on Router's **Default models** page. Vane follows this selection through `default-chat`, using the same Base URL. To change the connection or built-in embedding model, open Vane's **Settings** > **Models**.
 
 ## Connect SearXNG
 
@@ -104,9 +96,7 @@ Get the SearXNG address, then choose one of the two configuration methods below.
 Vane uses `SEARXNG_API_URL` only when its saved search address is empty. If an address is already saved, use Option 1 to change it. You do not need to configure both methods.
 :::
 
-:::info Can I use Router's default-search?
-Vane's current search integration connects directly to a SearXNG instance. Enter the SearXNG endpoint in **SearXNG URL**, not `default-search` or the Router Base URL. Configuring a search tool in Router does not connect it to Vane. For an app that uses Router's search tools, see [Run a deep research task with Lares](lares.md#run-a-deep-research-task).
-:::
+For search through Router, see [Research the web with Lares](lares-web-research.md). Vane's **SearXNG URL** uses the SearXNG entrance URL.
 
 ## Start asking questions
 

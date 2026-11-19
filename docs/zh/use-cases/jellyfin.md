@@ -6,8 +6,8 @@ head:
     - name: keywords
       content: Olares, Jellyfin, jellyfin vs plex, plex alternative, self-hosted media server, jellyfin remote access, DLNA, jellyfin on olares
 app_version: "1.0.35"
-doc_version: "1.4"
-doc_updated: "2026-11-06"
+doc_version: "1.5"
+doc_updated: "2026-11-18"
 ---
 # 使用 Jellyfin 构建你的私人媒体服务器
 
@@ -252,8 +252,6 @@ Overlay 网关会将 Jellyfin 直接暴露到当前局域网中。仅当需要�
 ### 获取 Jellyfin Endpoint
 
 Jellyfin 设置完成且媒体库准备就绪后，你可以从客户端设备连接并开始串流你的媒体。
-
-<!--@include: ../reusables/ai-service-connections.md#app-endpoint-overview-->
 
 对于 Jellyfin：
 

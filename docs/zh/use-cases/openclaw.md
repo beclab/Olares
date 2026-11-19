@@ -9,7 +9,7 @@ head:
     - name: keywords
       content: Olares, OpenClaw, self-hosted ai agent, personal ai agent, local ai agent, openclaw on olares
 app_version: "1.0.57"
-doc_version: "3.1"
+doc_version: "3.2"
 doc_updated: "2026-11-18"
 ---
 
@@ -39,7 +39,6 @@ OpenClaw 是一款专为本地设备设计的个人 AI 助手。它可以直接�
 
 开始前，你需要：
 
-<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - Discord 账号：用于创建机器人应用。
 - Discord 服务器：确保你在这个服务器上有添加机器人的权限。
 - 以下模型：
@@ -51,8 +50,6 @@ OpenClaw 是一款专为本地设备设计的个人 AI 助手。它可以直接�
   :::tip 模型提供方
   本教程通过 Router 的 OpenAI 兼容 API 使用 Qwen3.8-27B (llama.cpp)。如使用其他提供方或本地代理，请参阅 [OpenClaw 关于自定义模型提供方的文档](https://docs.openclaw.ai/concepts/model-providers#providers-via-models-providers-custom%2Fbase-url)。
   :::
-
-<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## 升级说明
 
@@ -86,11 +83,8 @@ Olares 支持应用克隆。如果你希望同时运行多个独立的 AI 助手
 OpenClaw 需要较大的"上下文窗口"（即 AI 的短期记忆）来处理复杂任务而不会忘记之前的指令。如使用本地模型，建议选择原生支持至少 64K token 上下文窗口的模型。
 :::
 
-<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
-
-<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
-
-配置 OpenClaw 时，请使用 `olares` 作为 API 密钥占位值。
+1. 从启动台打开 Router。在 **Default models** 页面将 Qwen3.8-27B (llama.cpp) 设为默认聊天模型，等待 `default-chat` 显示 **Callable**。
+2. <!--@include: ../reusables/ai-service-connections.md#router-openai-base-url-->
 
 ### 步骤 2：运行安装向导
 
@@ -116,7 +110,7 @@ OpenClaw 需要较大的"上下文窗口"（即 AI 的短期记忆）来处理�
     :::
 
     :::info OpenClaw 要求填写 API 密钥字段
-    在 API 密钥字段中填写 `olares`，即使向导提示可以留空。OpenClaw 2026.11.3 要求此连接填写非空值。Olares 内的应用无需 Router API 密钥。
+    在 API 密钥字段中填写 `olares`，即使向导提示可以留空。OpenClaw 2026.11.3 要求此连接填写非空值。
 
     如果实时对话测试提示 `No API key found for provider "router"`，选择 **Fix model/auth setup**，填写 `olares`，然后重新测试。
     :::
@@ -129,7 +123,7 @@ OpenClaw 需要较大的"上下文窗口"（即 AI 的短期记忆）来处理�
     | Model/auth provider | 选择 **Custom Provider**。 |
     | API Base URL | 粘贴步骤 1 中从 Router 复制的 Base URL，保留 `/v1`。 |
     | How do you want to provide this API key? | 如果出现此提示，选择 **Paste API key now**。 |
-    | API Key (leave blank if not required) | 填写非空占位值，例如 `olares`。 |
+    | API Key (leave blank if not required) | 填写 `olares`。 |
     | Endpoint compatibility | 选择 **OpenAI-compatible**。 |
     | Model ID | 填写 `default-chat`。向导可能先验证端点，再进入下一项。 |
     | Endpoint ID | 填写 `router`。模型引用为 `router/default-chat`。 |

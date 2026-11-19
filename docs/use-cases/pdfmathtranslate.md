@@ -28,14 +28,11 @@ By the end of this tutorial, you are able to:
 
 Before you begin, you need:
 
-<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - The following model:
 
   | Used for | Model | How to get it |
   | :--- | :--- | :--- |
   | Translation | Qwen3.8-27B (llama.cpp) | Install from Market |
-
-<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## Install PDFMathTranslate
 
@@ -69,11 +66,8 @@ In the **File** area, select your input **Type**:
 
 PDFMathTranslate connects to Qwen3.8-27B through its OpenAI-compatible API.
 
-<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
-
-For Qwen3.8-27B (llama.cpp):
-
-<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
+1. Open Router from Launchpad. On **Default models**, set Qwen3.8-27B (llama.cpp) as the default chat model and wait until `default-chat` shows **Callable**.
+2. <!--@include: ../reusables/ai-service-connections.md#router-openai-base-url-->
 
 ### Configure the translation service
 

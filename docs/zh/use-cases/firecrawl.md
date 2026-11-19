@@ -8,8 +8,8 @@ head:
     - name: keywords
       content: Olares, Firecrawl, web crawler, web scraping, Firecrawl v2, scrape API, crawl API, Open WebUI, web loader, self-hosted
 app_version: "1.0.21"
-doc_version: "1.1"
-doc_updated: "2026-09-23"
+doc_version: "1.2"
+doc_updated: "2026-11-18"
 ---
 
 :::warning
@@ -24,14 +24,13 @@ Firecrawl 是一个无头网页数据服务，可将网页转换为干净的 Mar
 
 你也可以直接调用 Firecrawl API 来测试抓取和爬取功能。
 
-## 前提条件
+## 学习目标
 
-开始前，你需要：
+本教程将介绍如何：
 
-<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
-- 如需使用本地模型，从应用市场安装 Qwen3.8-27B (llama.cpp)。
-
-<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
+- 将 Open WebUI 连接到 Firecrawl，以加载网页内容。
+- 通过 Firecrawl API 抓取网页和爬取网站。
+- 连接本地模型，生成摘要和结构化数据。
 
 ## 安装 Firecrawl
 
@@ -46,8 +45,6 @@ Firecrawl 是一个无头网页数据服务，可将网页转换为干净的 Mar
 Firecrawl 通常在后台运行。其他应用在需要获取和清理网页内容时，通过其端点 URL 调用它。
 
 ### 获取 Firecrawl 端点
-
-<!--@include: ../reusables/ai-service-connections.md#app-endpoint-overview-->
 
 对于 Firecrawl：
 
@@ -194,11 +191,8 @@ Firecrawl 可以使用配置的 LLM 来总结页面或返回结构化 JSON。
 
 本示例通过 OpenAI 兼容 API 使用 Qwen3.8-27B (llama.cpp)。从 Market 安装该模型，并等待模型就绪。
 
-<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
-
-对于 Qwen3.8-27B (llama.cpp)，使用 **OpenAI-Compatible** API 格式：
-
-<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
+1. 从启动台打开 Router。在 **Default models** 页面将 Qwen3.8-27B (llama.cpp) 设为默认聊天模型，等待 `default-chat` 显示 **Callable**。
+2. <!--@include: ../reusables/ai-service-connections.md#router-openai-base-url-->
 
 配置 Firecrawl：
 

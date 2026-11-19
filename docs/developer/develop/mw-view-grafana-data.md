@@ -46,8 +46,6 @@ To connect Grafana to Prometheus, first get the Prometheus API endpoint URL, the
 
 ### Get the Prometheus API endpoint URL
 
-<!--@include: ../../reusables/ai-service-connections.md#app-endpoint-overview-->
-
 For Prometheus:
 
 1. Go to Olares **Settings** > **Applications** > **Prometheus** > **Entrances**.

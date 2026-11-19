@@ -8,8 +8,8 @@ head:
     - name: keywords
       content: Olares, Open WebUI, web search, SearXNG, embedding, RAG
 app_version: "1.0.38"
-doc_version: "2.0"
-doc_updated: "2026-09-23"
+doc_version: "2.1"
+doc_updated: "2026-11-18"
 ---
 
 # Enable web search in Open WebUI
@@ -24,7 +24,7 @@ If you want Open WebUI to read full web page content instead of using search res
 
 In this guide, you will learn how to:
 
-- Retrieve the required endpoint URLs for your embedding model and SearXNG.
+- Use Router for embeddings and get the SearXNG endpoint.
 - Configure the document embedding and web search settings in Open WebUI.
 - Perform a web-assisted search during a chat session.
 
@@ -40,65 +40,42 @@ Before you begin, ensure you have the following in place:
    | :--- | :--- | :--- |
    | Embedding | EmbeddingGemma | Install from Market |
 
-## Retrieve service details
+## Configure embedding model
 
-To link Open WebUI with your background services, you need to locate the connection endpoints for both your embedding model and SearXNG.
+<!--@include: ../reusables/openwebui-embeddings.md#configure-embeddings-->
 
-### Get embedding model details
+## Connect SearXNG {#enable-web-search-1}
 
-<!--@include: ../reusables/ai-service-connections.md#get-embedding-model-connection-details-openai-->
+Open WebUI connects directly to SearXNG for search results. Use the SearXNG entrance URL here.
 
-### Get SearXNG endpoint
+1. Open Olares Settings and go to **Applications** > **SearXNG** > **Entrances**.
+2. Click **SearXNG** and copy the endpoint URL. For example:
 
-1. Open Olares Settings, and then go to **Applications** > **SearXNG**.
-2. Under **Entrances**, click **SearXNG**, and then copy the endpoint URL. For example, `https://84a93c3c.laresprime.olares.com`.
+   ```text
+   https://84a93c3c.laresprime.olares.com
+   ```
 
    ![SearXNG endpoint](/images/manual/use-cases/openwebui-searxng-shared-endpoint1.png#bordered){width=70%}
 
-## Configure Open WebUI
+3. In Open WebUI, open **Admin Panel** > **Settings**.
+4. On the left sidebar, find **Tools** and select **Web Search**.
+5. Set the following fields:
 
-Apply the details you retrieved to the Open WebUI configuration panel.
-
-### Set up document embeddings
-
-Configure the embedding model so Open WebUI can convert text into vector representations for retrieval.
-
-<!-- #region configure-document-embeddings -->
-1. In Open WebUI, select your profile icon, and then go to **Admin Panel** > **Settings**.
-2. On the left sidebar, locate the **Tools** section, and then select **Documents**.
-3. Under the **Embedding** section, specify the following settings:
-
-   - **Embedding Model Engine**: Select **OpenAI**.
-   - **API Base URL**: Enter the embedding model **Base URL** you copied from Router.
-   - **Embedding Model**: Enter the embedding **Model name** you copied from Router.
-
-4. Scroll down to the bottom of the page, and then click **Reindex** in the lower-right corner to apply the changes.
-5. Select **Save**.
-<!-- #endregion configure-document-embeddings -->
-
-### Enable web search
-
-Turn on web search and point it to your SearXNG endpoint.
-
-1. Go to **Admin Panel** > **Settings**.
-2. On the left sidebar, locate the **Tools** section, and then select **Web Search**.
-3. Specify the following settings:
-
-   - **Web Search**: Enable this setting.
+   - **Web Search**: Enable.
    - **Web Search Engine**: Select **SearXNG**.
-   - **Searxng Query URL**: Enter your SearXNG endpoint URL and append `/search?q=<query>` to the end.
+   - **Searxng Query URL**: Append `/search?q=<query>` to the SearXNG endpoint you copied. For example:
 
-      For example, `https://84a93c3c.laresprime.olares.com/search?q=<query>`.
-   - **Bypass Web Loader**: Enable this setting if you only need search result summaries. Leave it disabled if you want Open WebUI to fetch full page content through a web loader.
+     ```text
+     https://84a93c3c.laresprime.olares.com/search?q=<query>
+     ```
 
-      :::tip Full-text retrieval
-      For full-page retrieval, install Firecrawl and configure it as the web loader. See [Use Firecrawl as a web page loader](firecrawl.md#configure-open-webui).
-      :::
+   - **Bypass Web Loader**: Enable for search result summaries only. Disable to read full web page content.
 
-   ![SearXNG configurations in Open WebUI](/images/manual/use-cases/openwebui-searxng-config1.png#bordered)
+     To read full pages, first [configure Firecrawl as the web loader](firecrawl.md#configure-open-webui).
 
-4. Leave the other fields at their default values.
-5. Select **Save**.
+   ![SearXNG settings in Open WebUI](/images/manual/use-cases/openwebui-searxng-config1.png#bordered)
+
+6. Leave the other fields at their default values and click **Save**.
 
 ## Verify the configuration
 

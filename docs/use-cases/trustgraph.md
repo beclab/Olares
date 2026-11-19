@@ -6,8 +6,8 @@ head:
     - name: keywords
       content: Olares, TrustGraph, knowledge graph, Document RAG, Graph RAG, local models, document search
 app_version: "0.1.23"
-doc_version: "1.3"
-doc_updated: "2026-10-13"
+doc_version: "1.4"
+doc_updated: "2026-11-18"
 ---
 
 # Turn documents into searchable knowledge with TrustGraph
@@ -15,6 +15,14 @@ doc_updated: "2026-10-13"
 TrustGraph is an open-source platform for building and querying knowledge graphs from documents. You can ask questions about your files, inspect the retrieval steps behind an answer, and explore relationships between people, places, and topics.
 
 On Olares, TrustGraph connects to local models through Router. This guide uses three fictional project documents to look up a migration update and explore the events, people, and relationships extracted from the text.
+
+## Learning objectives
+
+In this guide, you will learn how to:
+
+- Prepare the models and install TrustGraph.
+- Upload documents and query them with Document RAG and Graph RAG.
+- Inspect source passages and relationships in the knowledge graph.
 
 ## Prerequisites
 
@@ -31,8 +39,6 @@ Before you begin, you need:
   | Chat | Qwen3.8-27B (llama.cpp) | Install from Market |
   | Embedding | EmbeddingGemma | Install from Market |
   | Reranking | BGE-Reranker-v2-m3 | Install from Market |
-
-<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## Check model availability
 

@@ -6,8 +6,8 @@ head:
     - name: keywords
       content: "Olares, Local Deep Research, AI 研究, AI Router, SearXNG, 来源引用, 研究报告, 本地模型"
 app_version: "0.0.12"
-doc_version: "1.0"
-doc_updated: "2026-10-16"
+doc_version: "1.1"
+doc_updated: "2026-11-18"
 ---
 
 :::warning
@@ -40,8 +40,6 @@ Local Deep Research 是一个结合网页搜索与语言模型的开源 AI 研�
   | 模型类型 | 模型 | 获取方式 |
   | :--- | :--- | :--- |
   | 聊天 | Qwen3.8-27B (llama.cpp) | 从 Market 安装 |
-
-<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## 检查模型是否可用
 

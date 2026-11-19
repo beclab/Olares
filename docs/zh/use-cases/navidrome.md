@@ -6,8 +6,8 @@ head:
     - name: keywords
       content: Olares, Navidrome, self-hosted spotify, home music server, self-hosted music server, Subsonic, navidrome on synology, navidrome on olares
 app_version: "1.0.0"
-doc_version: "1.1"
-doc_updated: "2026-07-29"
+doc_version: "1.2"
+doc_updated: "2026-11-18"
 ---
 
 :::warning
@@ -88,8 +88,6 @@ Navidrome 自动扫描音乐文件夹。如果新上传的歌曲没有出现，�
 要从手机流媒体播放，请获取 Navidrome Endpoint、启用 LarePass VPN，并从 Subsonic 兼容客户端登录。
 
 ### 获取 Navidrome Endpoint
-
-<!--@include: ../reusables/ai-service-connections.md#app-endpoint-overview-->
 
 对于 Navidrome：
 

@@ -9,8 +9,8 @@ head:
     - name: keywords
       content: Olares, NOFX, AI trading, autonomous agent, crypto, Hyperliquid, self-hosted
 app_version: "1.0.12"
-doc_version: "1.2"
-doc_updated: "2026-09-23"
+doc_version: "1.3"
+doc_updated: "2026-11-18"
 ---
 
 # Set up an autonomous AI trading agent with NOFX
@@ -213,19 +213,19 @@ Yes, you can use a local model, but ensure it meets the following requirements:
 
 Before connecting a local model, you need:
 
-<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - Qwen3.8-27B (llama.cpp) installed from Market.
 
-<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
-6. Open NOFX, and click **+ MODELS_CONFIG** on the **Config** page.
-7. Click **Other API Providers**, and then select **OpenAI**.
-8. Specify the following settings:
+1. Open Router from Launchpad. On **Default models**, set Qwen3.8-27B (llama.cpp) as the default chat model and wait until `default-chat` shows **Callable**.
+2. <!--@include: ../reusables/ai-service-connections.md#router-openai-base-url-->
+3. Open NOFX, and click **+ MODELS_CONFIG** on the **Config** page.
+4. Click **Other API Providers**, and then select **OpenAI**.
+5. Specify the following settings:
 
    - **API Key**: Enter `olares`.
    - **Base URL**: Enter the **Base URL** copied from Router. Ensure the URL ends with `/v1`.
    - **Model Name (Optional)**: Enter `default-chat`.
 
-9. Click **Save Configuration**.
+6. Click **Save Configuration**.
 
 ### Model didn't output structured JSON decision
 

@@ -8,8 +8,8 @@ head:
     - name: keywords
       content: Olares, NOFX, AI trading, autonomous agent, crypto, Hyperliquid, self-hosted
 app_version: "1.0.5"
-doc_version: "1.1"
-doc_updated: "2026-09-23"
+doc_version: "1.3"
+doc_updated: "2026-11-18"
 ---
 
 :::warning
@@ -216,19 +216,19 @@ NOFX 需要两个不同的钱包用于不同的目的：
 
 连接本地模型前，你需要：
 
-<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - 已从应用市场安装 Qwen3.8-27B (llama.cpp)。
 
-<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
-6. 打开 NOFX，然后点击 **Config** 页面上的 **+ MODELS_CONFIG**。
-7. 点击 **Other API Providers**，然后选择 **OpenAI**。
-8. 指定以下设置：
+1. 从启动台打开 Router。在 **Default models** 页面将 Qwen3.8-27B (llama.cpp) 设为默认聊天模型，等待 `default-chat` 显示 **Callable**。
+2. <!--@include: ../reusables/ai-service-connections.md#router-openai-base-url-->
+3. 打开 NOFX，然后点击 **Config** 页面上的 **+ MODELS_CONFIG**。
+4. 点击 **Other API Providers**，然后选择 **OpenAI**。
+5. 指定以下设置：
 
    - **API Key**：填写 `olares`。
    - **Base URL**：输入从 Router 复制的 **Base URL**。确保 URL 以 `/v1` 结尾。
    - **Model Name (Optional)**： 填写 `default-chat`。
 
-9. 点击 **Save Configuration**。
+6. 点击 **Save Configuration**。
 
 ### 模型未输出结构化 JSON 决策
 

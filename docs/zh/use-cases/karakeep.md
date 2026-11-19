@@ -8,8 +8,8 @@ head:
     - name: keywords
       content: Olares, Karakeep, Hoarder, bookmark manager, self-hosted, AI auto-tag, mobile app, Ollama, video download
 app_version: "1.0.4"
-doc_version: "1.1"
-doc_updated: "2026-09-23"
+doc_version: "1.2"
+doc_updated: "2026-11-18"
 ---
 
 :::warning
@@ -39,14 +39,11 @@ Karakeep（前身为 Hoarder）是一个自托管的书签和内容管理应用�
 
 开始前，你需要：
 
-<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - 完成 AI 自动标签步骤所需的模型：
 
   | 模型类型 | 模型 | 获取方式 |
   | :--- | :--- | :--- |
   | 聊天 | Qwen3.8-27B (llama.cpp) | 从 Market 安装 |
-
-<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## 安装 Karakeep
 
@@ -97,8 +94,6 @@ Karakeep 移动应用允许你直接从手机将图片和链接保存到你的 O
 
 ### 获取你的 Karakeep 端点 URL
 
-<!--@include: ../reusables/ai-service-connections.md#app-endpoint-overview-->
-
 在同一 **Entrances** 页面上，复制 Karakeep 显示的 **Endpoint** URL。
 
 在 Karakeep 移动应用中，将该 Endpoint 用作 **Server Address**。
@@ -138,13 +133,14 @@ Karakeep 可以使用 Olares 上托管的本地模型为保存的内容生成标
 
 ### 获取模型连接信息
 
-<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
+1. 从启动台打开 Router。在 **Default models** 页面将 Qwen3.8-27B (llama.cpp) 设为默认聊天模型，等待 `default-chat` 显示 **Callable**。
+2. <!--@include: ../reusables/ai-service-connections.md#router-openai-base-url-->
 
 ### 将 Karakeep 连接到本地模型
 
 1. 打开**设置** > **应用** > **Karakeep** > **管理环境变量**，配置以下值：
 
-   - **OPENAI_API_KEY**：填写 `olares`。Karakeep 需要非空值来启用此提供商。Router 通过平台识别 Olares 内应用。
+   - **OPENAI_API_KEY**：填写 `olares`。
    - **OLLAMA_BASE_URL**：清空，避免继续使用原来的 Ollama 连接。
    - **INFERENCE_TEXT_MODEL**：填写 `default-chat`。
    - **INFERENCE_IMAGE_MODEL**：仅做文本标签时留空。如需图像标签，填写 Router 中具有视觉能力的完整模型名称。

@@ -8,8 +8,8 @@ head:
     - name: keywords
       content: Olares, Open WebUI, self-hosted AI platform, local LLM, open webui on olares
 app_version: "1.0.38"
-doc_version: "3.0"
-doc_updated: "2026-09-23"
+doc_version: "3.1"
+doc_updated: "2026-11-18"
 ---
 
 # Set up Open WebUI for local AI chat
@@ -33,13 +33,10 @@ In this guide, you will learn how to:
 
 Before you begin, you need:
 
-<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - The following model:
    | Model type | Model | How to get it |
    | :--- | :--- | :--- |
    | Chat | Qwen3.8-27B (llama.cpp) | Install from Market |
-
-<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## Install Open WebUI
 
@@ -63,7 +60,8 @@ The first time you launch Open WebUI, you need to create a local administrator a
 
 To connect Open WebUI to a model, you first need to collect the model's connection information from Router.
 
-<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
+1. Open Router from Launchpad. On **Default models**, set Qwen3.8-27B (llama.cpp) as the default chat model and wait until `default-chat` shows **Callable**.
+2. <!--@include: ../reusables/ai-service-connections.md#router-openai-base-url-->
 
 ## Configure the connection in Open WebUI
 
@@ -72,16 +70,12 @@ With the connection details ready, add the model as an OpenAI-compatible provide
 1. In Open WebUI, click your profile icon and select **Admin Panel**.
 2. Select the **Settings** tab, and then choose **Connections** from the left sidebar.
 3. To the right of **Manage OpenAI API Connections**, click <span class="material-symbols-outlined">add</span> to add a new connection.
-4. In the **API Base URL** field, enter the **Base URL** you copied from Router. For example, `https://router.<your-olares-domain>/v1`.
+4. In the **API Base URL** field, enter the **Base URL** you copied from Router.
 
 5. Expand **Advanced**, use **Add a Model ID** to add `default-chat`, and set **Auth** to **None** for this Olares app.
 6. Click **Save**. Open WebUI verifies the connection automatically.
 
-   <!--
-   TODO: 素材清单 14，待补 Router 截图：openwebui-connection-router.png；替换下方旧图后再取消注释。
-   ![Connection established](/images/manual/use-cases/open-webui-connection-established1.png#bordered)
-   -->
-
+   <!-- ![Connection established](/images/manual/use-cases/open-webui-connection-established1.png#bordered) -->
 
    When you see the "OpenAI API settings updated" message, the connection is established.
 

@@ -8,8 +8,8 @@ head:
     - name: keywords
       content: Olares, Open Notebook, AI notebook, research assistant, NotebookLLM alternative, RAG, knowledge base, podcast, transformations
 app_version: "1.0.4"
-doc_version: "2.1"
-doc_updated: "2026-09-23"
+doc_version: "2.2"
+doc_updated: "2026-11-18"
 ---
 
 # Build a research notebook with Open Notebook
@@ -34,7 +34,6 @@ In this guide, you will learn how to:
 
 Before you begin, you need:
 
-<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - The following models:
 
   | Model type | Model | How to get it |
@@ -43,8 +42,6 @@ Before you begin, you need:
   | Embedding | EmbeddingGemma | Install from Market |
   | TTS | `speaches-ai/Kokoro-82M-v1.0-ONNX` | Install [Speaches](speaches.md) from Market |
   | STT | `Systran/faster-whisper-small` | Install Speaches from Market. Optional if you will not process audio or video sources |
-
-<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## How Open Notebook works
 
@@ -75,30 +72,10 @@ Open Notebook uses AI models for summaries, chat, retrieval, and podcast generat
 
 ### Get model connection details
 
-#### Standalone models
+1. Open Router from Launchpad. On **Default models**, set Qwen3.8-27B (llama.cpp) as the default chat model and EmbeddingGemma as the default embedding model. Wait until both `default-chat` and `default-embedding` show **Callable**.
+2. <!--@include: ../reusables/ai-service-connections.md#router-openai-base-url-->
 
-<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
-
-For the chat model:
-
-<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
-
-For the embedding model:
-
-<!--@include: ../reusables/ai-service-connections.md#get-embedding-model-connection-details-openai-->
-
-Replace `<embedding-model-name>` in the following settings with the full model name copied from Router.
-
-Both models use the **OpenAI-Compatible** API format.
-
-#### Speaches
-
-<!--@include: ../reusables/ai-service-connections.md#app-endpoint-overview-->
-
-For Speaches:
-
-1. Go to Olares **Settings** > **Applications** > **Speaches** > **Entrances**.
-2. Select **Speaches API**, then copy the **Endpoint** URL.
+3. Open Olares **Settings** > **Applications** > **Speaches** > **Entrances**. Select **Speaches API** and copy its **Endpoint** URL for the speech models.
 
 ### Add provider configurations
 
@@ -106,9 +83,11 @@ On Open Notebook, go to **Manage** > **Models**. For each service, find the matc
 
 | Service | Provider | Configuration name | Base URL |
 | :-- | :-- | :-- | :-- |
-| Qwen3.8-27B (llama.cpp) | **OpenAI Compatible** | Any recognizable name, e.g. `Qwen3.8-27B` | From Router |
-| EmbeddingGemma | **OpenAI Compatible** | Any recognizable name, e.g. `EmbeddingGemma` | From Router |
+| Qwen3.8-27B (llama.cpp) | **OpenAI Compatible** | Any recognizable name, e.g. `Qwen3.8-27B` | The same Router Base URL, including `/v1` |
+| EmbeddingGemma | **OpenAI Compatible** | Any recognizable name, e.g. `EmbeddingGemma` | The same Router Base URL, including `/v1` |
 | Speaches | **OpenAI Compatible** | Any recognizable name, e.g. `Speaches` | Speaches API endpoint with `/v1` appended |
+
+For the two Router connections, enter `olares` if the API key field requires a value.
 
 ### Add models
 
@@ -117,9 +96,11 @@ In each configuration, click **Models** and add the following models:
 | Configuration | Type | Model ID |
 | :-- | :-- | :-- |
 | Qwen3.8-27B (llama.cpp) | **Language** | `default-chat` |
-| EmbeddingGemma | **Embedding** | `<embedding-model-name>` |
+| EmbeddingGemma | **Embedding** | `default-embedding` |
 | Speaches | **TTS** | `speaches-ai/Kokoro-82M-v1.0-ONNX` |
 | Speaches | **STT** | `Systran/faster-whisper-small` |
+
+If you change Router's default embedding model later, regenerate embeddings for existing sources before searching them.
 
 ### Assign default models
 
@@ -128,7 +109,7 @@ Under **Default Model Assignments**, assign the models as follows:
 | Slot | Model |
 | :-- | :-- |
 | Chat Model | `default-chat` |
-| Embedding Model | `<embedding-model-name>` |
+| Embedding Model | `default-embedding` |
 | Text-to-Speech Model | `speaches-ai/Kokoro-82M-v1.0-ONNX` |
 | Speech-to-Text Model | `Systran/faster-whisper-small` |
 | Transformation Model | `default-chat` |
@@ -137,10 +118,7 @@ Under **Default Model Assignments**, assign the models as follows:
 
 If **Auto-assign Defaults** is available, you can use it to fill the slots automatically, then review the selections.
 
-<!--
-TODO: 素材清单 09，待补 Router 截图：open-notebook-default-models-router.png；替换下方旧图后再取消注释。
-![Model assignments](/images/manual/use-cases/open-notebook-set-models-result1.png#bordered)
--->
+<!-- ![Model assignments](/images/manual/use-cases/open-notebook-set-models-result1.png#bordered) -->
 
 
 ## Create your first research notebook

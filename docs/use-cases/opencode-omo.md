@@ -9,8 +9,8 @@ head:
     - name: keywords
       content: Olares, OpenCode, oh-my-openagent, OMO, multi-agent, AI coding agent, ultrawork, MCP, self-hosted
 app_version: "1.0.10"
-doc_version: "1.1"
-doc_updated: "2026-09-23"
+doc_version: "1.2"
+doc_updated: "2026-11-18"
 ---
 
 # Orchestrate multi-agent workflows with oh-my-openagent
@@ -36,7 +36,6 @@ By the end of this tutorial, you will learn how to:
 
 Before you begin, you need:
 
-<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - Internet access for your Olares device.
 - [OpenCode installed](opencode.md) on Olares, chart version 1.0.6 or later.
 - The following models:
@@ -51,8 +50,6 @@ Before configuring OMO, [connect both models to OpenCode](opencode.md#connect-to
 On Router's **Default models** page, set Qwen3.8-27B (llama.cpp) as the default chat model. Use one OpenCode provider with ID `olares` and the Router Base URL. Add `default-chat` for core agents. For lightweight tasks, find Qwen3.5-9B in Router, copy its full **Model name**, and add that name as a second model under the same provider.
 
 In every example below, replace `<lightweight-model-name>` with that full Router model name, including its `Olares/` prefix. This pins lightweight tasks to Qwen3.5-9B while core agents follow the default chat model.
-
-<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 :::info Model capability requirements
 - Local models with fewer than 7B parameters usually can't handle `tool_use` or structured output correctly. Avoid them for any agent.

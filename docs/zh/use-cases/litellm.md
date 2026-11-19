@@ -6,8 +6,8 @@ head:
     - name: keywords
       content: Olares, LiteLLM, AI gateway, model proxy, OpenAI-compatible, Ollama, Open WebUI, self-hosted
 app_version: "1.0.8"
-doc_version: "1.1"
-doc_updated: "2026-07-29"
+doc_version: "1.2"
+doc_updated: "2026-11-18"
 ---
 
 :::warning
@@ -139,8 +139,6 @@ LiteLLM 位于你的应用和模型提供商之间，充当代理层：
    ![复制虚拟密钥](/images/manual/use-cases/litellm-copy-key.png#bordered){width=60%}
 
 ### 获取 LiteLLM API Endpoint
-
-<!--@include: ../reusables/ai-service-connections.md#app-endpoint-overview-->
 
 对于 LiteLLM：
 

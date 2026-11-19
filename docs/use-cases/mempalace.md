@@ -6,8 +6,8 @@ head:
     - name: keywords
       content: Olares, MemPalace, AI memory, MCP, Hermes Agent, OpenClaw, semantic search, local memory
 app_version: "0.0.12"
-doc_version: "1.0"
-doc_updated: "2026-10-28"
+doc_version: "1.1"
+doc_updated: "2026-11-18"
 ---
 
 # Share project memory across AI agents with MemPalace
@@ -258,8 +258,6 @@ The scorecard rates how well your memory is organized, not search accuracy. Chec
 As a project accumulates records, you can group them into rooms by topic. MemPalace can use a model through Olares Router to suggest rooms for a wing. Review the suggestions and preview where records would move before applying the changes.
 
 The Lakeview example has only one imported brief, so the proposal may include rooms with no records. A wing with several notes on different topics gives MemPalace more records to classify.
-
-<!--@include: ../reusables/ai-service-connections.md#app-endpoint-overview-->
 
 1. Get the Router endpoint. Go to Olares **Settings** > **Applications** > **Router** > **Entrances**. Select **Router**, then copy the **Endpoint** URL.
 

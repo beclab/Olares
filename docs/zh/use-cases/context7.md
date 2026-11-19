@@ -6,8 +6,8 @@ head:
     - name: keywords
       content: Olares, Context7, MCP, Model Context Protocol, AI coding assistant, documentation, Cursor, Agent Zero, LibreChat, OpenCode
 app_version: "1.0.0"
-doc_version: "1.1"
-doc_updated: "2026-07-28"
+doc_version: "1.2"
+doc_updated: "2026-11-18"
 ---
 
 :::warning
@@ -132,8 +132,6 @@ Context7 支持匿名和认证使用：
 开始前，请确保你已在每个代理应用中配置了必要的设置，如模型提供商、模型名称和基础 URL。
 
 ### 获取 Context7 MCP 端点
-
-<!--@include: ../reusables/ai-service-connections.md#app-endpoint-overview-->
 
 对于 Context7：
 

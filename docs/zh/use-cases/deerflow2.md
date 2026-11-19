@@ -7,9 +7,9 @@ head:
   - - meta
     - name: keywords
       content: Olares, DeerFlow, AI agent, deep research, multi-agent, self-hosted, LLM
-doc_version: "1.2"
+doc_version: "1.3"
 app_version: "1.0.6"
-doc_updated: "2026-09-23"
+doc_updated: "2026-11-18"
 ---
 
 :::warning
@@ -34,14 +34,11 @@ DeerFlow 2.0 是原版 [DeerFlow](https://github.com/bytedance/deer-flow) 的彻
 
 开始前，你需要：
 
-<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - 以下模型：
 
   | 模型类型 | 模型 | 获取方式 |
   | :--- | :--- | :--- |
   | 聊天 | Qwen3.8-27B (llama.cpp) | 从 Market 安装 |
-
-<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## 安装 DeerFlow 2.0
 
@@ -56,11 +53,8 @@ DeerFlow 2.0 使用 `config.yaml` 文件作为核心配置。要将其连接到�
 
 ### 获取模型连接信息
 
-<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
-
-对于 Qwen3.8-27B (llama.cpp)：
-
-<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
+1. 从启动台打开 Router。在 **Default models** 页面将 Qwen3.8-27B (llama.cpp) 设为默认聊天模型，等待 `default-chat` 显示 **Callable**。
+2. <!--@include: ../reusables/ai-service-connections.md#router-openai-base-url-->
 
 ### 编辑 config.yaml
 
@@ -79,11 +73,7 @@ DeerFlow 2.0 使用 `config.yaml` 文件作为核心配置。要将其连接到�
        supports_thinking: true      # 如果模型支持扩展思考，则设为 true
    ```
 
-   <!--
-   TODO: 素材清单 04，待补 Router 截图：deerflow2-config-router.png；替换下方旧图后再取消注释。
-   ![编辑 config.yaml](/images/manual/use-cases/deerflow2-edit-config-yaml1.png#bordered)
-   -->
-
+   <!-- ![Edit config.yaml](/images/manual/use-cases/deerflow2-edit-config-yaml1.png#bordered) -->
 
 4. 点击 <span class="material-symbols-outlined">save</span> 保存更改。
 

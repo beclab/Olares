@@ -17,4 +17,5 @@ region 名称应稳定且具备描述性，避免源文件行号变化后影响�
 - **sync-files.md**：同步文件至本地（引言与提示、创建库、开启同步、管理同步）。被 `manual/larepass/manage-files.md`、`manual/olares/files/sync-files.md` 引用。
 - **export-system-logs.md**：通过设置 > 高级 > 日志导出系统日志的步骤。被 `manual/help/request-technical-support.md` 引用。
 - **custom-domain.md**：自定义域名设置流程（创建 DID、添加域名并验证 TXT/NS、创建组织、添加用户、加入组织）。被 `manual/best-practices/set-custom-domain.md`、`manual/larepass/create-org-account.md`、`manual/space/host-domain.md`、`manual/space/manage-domain.md` 引用。
-- **ai-service-connections.md**：AI 客户端连接模型或应用时可复用的说明和步骤。连接 Olares 上的独立模型时使用 `model-connection-overview` 和 `get-model-connection-details`。通过端点连接另一个 Olares 应用时使用 `app-endpoint-overview`。
+- **openwebui-embeddings.md**：Open WebUI 知识库和网页搜索共用的嵌入配置步骤，使用 `configure-embeddings` 区域。
+- **ai-service-connections.md**：仅复用 `router-openai-base-url`（Olares 内应用的 OpenAI 兼容 Base URL）和 `model-context-window`（查看实际上下文大小）。模型选择、模型 ID 和 API 密钥字段写在各篇教程中。Claude Code 使用不带 `/v1` 的地址，外部客户端另按其连接方式配置。URL 片段可紧接有序列表的编号引用，续行使用三个空格缩进。

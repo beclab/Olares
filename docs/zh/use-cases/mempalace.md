@@ -6,8 +6,8 @@ head:
     - name: keywords
       content: Olares, MemPalace, AI 记忆, MCP, Hermes Agent, OpenClaw, 语义搜索, 本地记忆
 app_version: "0.0.12"
-doc_version: "1.0"
-doc_updated: "2026-10-30"
+doc_version: "1.1"
+doc_updated: "2026-11-18"
 ---
 
 # 使用 MemPalace 在不同 AI Agent 之间共享项目记忆
@@ -256,8 +256,6 @@ mempalace audit
 随着项目记录增多，你可以按主题将它们归入不同 Room。MemPalace 可以通过 Olares Router 调用模型，为指定 Wing 建议 Room。应用更改前，请查看建议并预览记录将移动到哪里。
 
 Lakeview 示例只导入了一份简报，因此建议中可能包含没有记录的 Room。如果一个 Wing 中有多个不同主题的笔记，MemPalace 就有更多记录可供分类。
-
-<!--@include: ../../reusables/ai-service-connections.md#app-endpoint-overview-->
 
 1. 获取 Router Endpoint。打开 Olares **Settings** > **Applications** > **Router** > **Entrances**。选择 **Router**，然后复制 **Endpoint** URL。
 

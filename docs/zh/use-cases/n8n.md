@@ -6,8 +6,8 @@ head:
     - name: keywords
       content: Olares, n8n, 工作流自动化, 自托管, 无代码, 低代码, NocoDB, Webhook, 集成
 app_version: "1.0.16"
-doc_version: "2.0"
-doc_updated: "2026-07-31"
+doc_version: "2.1"
+doc_updated: "2026-11-18"
 ---
 
 :::warning
@@ -139,8 +139,6 @@ n8n 会将凭证与工作流逻辑分开保存，因此同一个 NocoDB API toke
 
 ### 获取 NocoDB 连接信息
 
-<!--@include: ../reusables/ai-service-connections.md#app-endpoint-overview-->
-
 1. 前往 Olares **设置** > **应用** > **NocoDB** > **入口**。
 2. 选择 **NocoDB**。
 3. 复制 **Endpoint** URL。
@@ -266,7 +264,7 @@ GitHub 首次发送的 `ping` 事件不包含 release 对象。n8n 收到版本�
 4. 返回 GitHub Webhook 设置，将测试 URL 替换为 HTTPS 生产 URL。
 5. 保存 GitHub Webhook 设置。
 
-   <!-- ![在 n8n 中设置 Webhook 触发器](/images/manual/use-cases/n8n-webhook-trigger.png#bordered) -->
+   <!-- ![Configure a webhook trigger in n8n](/images/manual/use-cases/n8n-webhook-trigger.png#bordered) -->
 
 ## 管理工作流
 

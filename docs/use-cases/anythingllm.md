@@ -8,8 +8,8 @@ head:
     - name: keywords
       content: Olares, AnythingLLM, self-hosted rag, private knowledge base, anythingllm ollama, local LLM, embedding, anythingllm on olares
 app_version: "1.0.13"
-doc_version: "2.0"
-doc_updated: "2026-09-23"
+doc_version: "2.1"
+doc_updated: "2026-11-18"
 ---
 
 # Build a local knowledge base with AnythingLLM
@@ -30,7 +30,6 @@ In this guide, you will learn how to:
 
 Before you begin, you need:
 
-<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - Admin privileges to install apps from Market.
 - The following models:
 
@@ -38,8 +37,6 @@ Before you begin, you need:
   | :--- | :--- | :--- |
   | Chat | Qwen3.8-27B (llama.cpp) | Install from Market |
   | Embedding | all-MiniLM-L6-v2 | The built-in embedder from AnythingLLM |
-
-<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## Install AnythingLLM
 
@@ -51,10 +48,8 @@ Before you begin, you need:
 
 ## Get model connection details
 
-<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
-
-For Qwen3.8-27B (llama.cpp):
-<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
+1. Open Router from Launchpad. On **Default models**, set Qwen3.8-27B (llama.cpp) as the default chat model and wait until `default-chat` shows **Callable**.
+2. <!--@include: ../reusables/ai-service-connections.md#router-openai-base-url-->
 
 ## Configure AnythingLLM
 
@@ -65,14 +60,10 @@ Configure the chat model and embedding provider. These settings become the syste
 1. Open AnythingLLM from Launchpad.
 2. On the home page, click the **Open settings** icon in the bottom-left.
 3. In the left sidebar, select **AI Providers** > **LLM**, and then select **Generic OpenAI** as the LLM provider.
-4. In **Base URL**, paste the Base URL from Router.
+4. In **Base URL**, enter the Router Base URL. If the API key field requires a value, enter `olares`.
 5. In **Selected Model**, enter `default-chat` manually.
 
-   <!--
-   TODO: 素材清单 01，待补 Router 截图：anythingllm-chat-model-router.png；替换下方旧图后再取消注释。
-   ![Configure chat model](/images/manual/use-cases/anythingllm-configure-chat-model.png#bordered)
-   -->
-
+   <!-- ![Configure chat model](/images/manual/use-cases/anythingllm-configure-chat-model.png#bordered) -->
 
 6. Click **Save changes**. The "LLM preferences saved successfully" message is displayed.
 

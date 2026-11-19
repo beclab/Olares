@@ -8,8 +8,8 @@ head:
     - name: keywords
       content: Olares, Open WebUI, self-hosted AI platform, local LLM, open webui on olares
 app_version: "1.0.38"
-doc_version: "3.0"
-doc_updated: "2026-09-23"
+doc_version: "3.1"
+doc_updated: "2026-11-18"
 ---
 
 :::warning
@@ -37,14 +37,11 @@ Open WebUI 是一个自托管的聊天界面，让你在 Olares 设备上与本�
 
 开始前，你需要：
 
-<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - 以下模型：
 
    | 模型类型 | 模型 | 获取方式 |
    | :--- | :--- | :--- |
    | 聊天 | Qwen3.8-27B (llama.cpp) | 从应用市场安装 |
-
-<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## 安装 Open WebUI
 
@@ -68,7 +65,8 @@ Open WebUI 是一个自托管的聊天界面，让你在 Olares 设备上与本�
 
 要将 Open WebUI 连接到模型，你需要先从 Router 获取连接信息。
 
-<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
+1. 从启动台打开 Router。在 **Default models** 页面将 Qwen3.8-27B (llama.cpp) 设为默认聊天模型，等待 `default-chat` 显示 **Callable**。
+2. <!--@include: ../reusables/ai-service-connections.md#router-openai-base-url-->
 
 ## 在 Open WebUI 中配置连接
 
@@ -77,16 +75,12 @@ Open WebUI 是一个自托管的聊天界面，让你在 Olares 设备上与本�
 1. 在 Open WebUI 中，点击你的头像图标，选择 **Admin Panel**。
 2. 选择 **Settings** 标签页，然后从左侧边栏选择 **Connections**。
 3. 在 **Manage OpenAI API Connections** 右侧，点击 <span class="material-symbols-outlined">add</span> 添加新连接。
-4. 在 **API Base URL** 字段中，输入你从 Router 复制的 **Base URL**。例如，`https://router.<your-olares-domain>/v1`。
+4. 在 **API Base URL** 字段中，输入你从 Router 复制的 **Base URL**。
 
 5. 展开 **Advanced**，通过 **Add a Model ID** 添加 `default-chat`，将 Olares 内应用的 **Auth** 设为 **None**。
 6. 点击 **Save**。Open WebUI 会自动验证连接。当看到 "OpenAI API settings updated" 消息时，表示连接已建立。
 
-   <!--
-   TODO: 素材清单 14，待补 Router 截图：openwebui-connection-router.png；替换下方旧图后再取消注释。
-   ![Connection established](/images/manual/use-cases/open-webui-connection-established1.png#bordered)
-   -->
-
+   <!-- ![Connection established](/images/manual/use-cases/open-webui-connection-established1.png#bordered) -->
 
 ## 开始聊天
 

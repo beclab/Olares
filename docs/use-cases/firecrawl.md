@@ -8,8 +8,8 @@ head:
     - name: keywords
       content: Olares, Firecrawl, web crawler, web scraping, Firecrawl v2, scrape API, crawl API, Open WebUI, web loader, self-hosted
 app_version: "1.0.21"
-doc_version: "1.1"
-doc_updated: "2026-09-23"
+doc_version: "1.2"
+doc_updated: "2026-11-18"
 ---
 
 # Use Firecrawl as a web page loader
@@ -20,14 +20,13 @@ Firecrawl is a headless web data service that turns web pages into clean Markdow
 
 You can also call the Firecrawl API directly to test scraping and crawling.
 
-## Prerequisites
+## Learning objectives
 
-Before you begin, you need:
+In this guide, you will learn how to:
 
-<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
-- Qwen3.8-27B (llama.cpp) installed from Market, if you plan to use a local model.
-
-<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
+- Connect Open WebUI to Firecrawl for page loading.
+- Use the Firecrawl API to scrape pages and crawl websites.
+- Connect a local model to generate summaries and structured data.
 
 ## Install Firecrawl
 
@@ -42,8 +41,6 @@ Before you begin, you need:
 Firecrawl usually runs in the background. Other apps call it through its endpoint URL when they need to fetch and clean web page content.
 
 ### Get the Firecrawl endpoint
-
-<!--@include: ../reusables/ai-service-connections.md#app-endpoint-overview-->
 
 For Firecrawl:
 
@@ -190,11 +187,8 @@ Structured JSON and summary output require a configured LLM provider. Local Olla
 
 This example uses Qwen3.8-27B (llama.cpp) through its OpenAI-compatible API. Install the model from Market and wait until it is ready.
 
-<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
-
-For Qwen3.8-27B (llama.cpp), use the **OpenAI-Compatible** API format:
-
-<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
+1. Open Router from Launchpad. On **Default models**, set Qwen3.8-27B (llama.cpp) as the default chat model and wait until `default-chat` shows **Callable**.
+2. <!--@include: ../reusables/ai-service-connections.md#router-openai-base-url-->
 
 To configure Firecrawl:
 

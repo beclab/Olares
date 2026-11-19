@@ -8,8 +8,8 @@ head:
     - name: keywords
       content: Olares, Codex CLI, OpenAI, AI 编程智能体, 浏览器终端, ChatGPT, 本地大语言模型, Qwen3.8, 自托管
 app_version: "1.0.18"
-doc_version: "1.0"
-doc_updated: "2026-09-23"
+doc_version: "1.1"
+doc_updated: "2026-11-18"
 ---
 
 :::warning
@@ -38,15 +38,11 @@ Codex CLI 是 OpenAI 开源的终端编程智能体。你可以使用自然语�
 
 开始前，你需要：
 
-<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
-
 根据连接方式，准备以下其中一项：
 
 - **ChatGPT**：具有 Codex 使用权限的 ChatGPT 账户。
 - **OpenAI Platform**：OpenAI API 密钥。
 - **本地模型**：从应用市场安装 Qwen3.8-27B (llama.cpp)。
-
-<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## 安装 Codex CLI
 
@@ -114,7 +110,8 @@ Codex 的标准浏览器登录流程会将凭据返回到 `localhost:1455` 上�
 
 #### 获取模型连接信息
 
-<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
+1. 从启动台打开 Router。在 **Default models** 页面将 Qwen3.8-27B (llama.cpp) 设为默认聊天模型，等待 `default-chat` 显示 **Callable**。
+2. <!--@include: ../reusables/ai-service-connections.md#router-openai-base-url-->
 
 #### 配置 Codex CLI
 
@@ -122,14 +119,10 @@ Codex 的标准浏览器登录流程会将凭据返回到 `localhost:1455` 上�
 2. 配置以下环境变量：
 
    - **OPENAI_BASE_URL**：粘贴从 Router 复制的 Base URL，包括末尾的 `/v1`。
-   - **OPENAI_API_KEY**：输入一个非空占位值，例如 `olares`。Router 通过平台识别 Olares 内应用，Codex CLI 要求此字段非空。
+   - **OPENAI_API_KEY**：填写 `olares`。
    - **CODEX_MODEL**：填写 `default-chat`。
 
-   <!--
-   TODO: 素材清单 03，待补 Router 截图：codex-cli-env-router.png；替换下方旧图后再取消注释。
-   ![配置 Codex CLI 本地模型环境变量](/images/manual/use-cases/codex-cli-local-model-env.png#bordered)
-   -->
-
+   <!-- ![Codex CLI local model environment variables](/images/manual/use-cases/codex-cli-local-model-env.png#bordered) -->
 
 3. 点击 **Apply**，等待 Codex CLI 重启。
 4. 从 Launchpad 打开 Codex CLI，然后运行：
@@ -220,7 +213,7 @@ olares-cli profile login --olares-id <your-olares-id>
 
 ### 为什么本地模型返回 404？
 
-从 Router 的 **How to call this model** 窗口重新复制 **Apps in Olares** 下的 Base URL，保留 `/v1`。在 **LLM** 页面确认默认聊天模型显示 **Callable**。
+确认 Router Base URL 以 `/v1` 结尾，并在 Router 的 **Default models** 页面检查 `default-chat` 是否显示 **Callable**。
 
 ### 为什么 Codex 报告 `model not found`？
 

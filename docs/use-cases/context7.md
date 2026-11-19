@@ -7,8 +7,8 @@ head:
     - name: keywords
       content: Olares, Context7, MCP, Model Context Protocol, AI coding assistant, documentation, Cursor, Agent Zero, LibreChat, OpenCode
 app_version: "1.0.0"
-doc_version: "1.1"
-doc_updated: "2026-07-28"
+doc_version: "1.2"
+doc_updated: "2026-11-18"
 ---
 
 # Connect AI coding assistants to up-to-date docs with Context7
@@ -129,8 +129,6 @@ To configure an API key:
 Before proceeding, ensure that you have configured the necessary settings within each agent app, such as the model provider, model name, and base URL.
 
 ### Get Context7 MCP endpoint
-
-<!--@include: ../reusables/ai-service-connections.md#app-endpoint-overview-->
 
 For Context7:
 

@@ -6,8 +6,8 @@ head:
     - name: keywords
       content: Olares, Hindsight, Hermes Agent, 长期记忆, 自托管, 记忆库, 保存记忆, 检索记忆
 app_version: "0.0.17"
-doc_version: "1.0"
-doc_updated: "2026-10-09"
+doc_version: "1.1"
+doc_updated: "2026-11-18"
 ---
 
 :::warning
@@ -20,6 +20,14 @@ Hindsight 是开源的智能体记忆服务，让 AI 在不同对话中记住并
 
 本文以 Hermes Agent 为例，介绍如何保存信息、在新对话中检索记忆，以及控制何时保存记忆。
 
+## 学习目标
+
+本教程将介绍如何：
+
+- 为 Hindsight 准备聊天和嵌入模型。
+- 将 Hermes Agent 连接到 Hindsight 记忆库。
+- 跨对话保存、检索和管理记忆。
+
 ## 前提条件
 
 - 一台运行 Olares 1.12.7 或更高版本、具有足够磁盘空间和内存的 Olares 设备。
@@ -31,8 +39,6 @@ Hindsight 是开源的智能体记忆服务，让 AI 在不同对话中记住并
   | :--- | :--- | :--- |
   | 聊天 | Qwen3.8-27B (llama.cpp) | 从市场安装 |
   | 嵌入 | EmbeddingGemma | 从市场安装 |
-
-<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## 检查模型是否可用
 

@@ -9,8 +9,8 @@ head:
     - name: keywords
       content: Olares, LobeHub, LobeChat, self-hosted lobechat, AI agent, lobechat on olares
 app_version: "1.0.14"
-doc_version: "2.0"
-doc_updated: "2026-09-23"
+doc_version: "2.1"
+doc_updated: "2026-11-18"
 ---
 
 # Build your local AI agent with LobeHub
@@ -36,14 +36,11 @@ LobeHub is the official platform name, but the application is currently listed a
 
 Before you begin, you need:
 
-<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - The following model:
 
   | Model type | Model | How to get it |
   | :--- | :--- | :--- |
   | Chat | Qwen3.8-27B (llama.cpp) | Install from Market |
-
-<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## Install LobeHub
 
@@ -66,7 +63,8 @@ Connect LobeHub to your local model to make the chat interface work.
 
 ### Get model connection details
 
-<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
+1. Open Router from Launchpad. On **Default models**, set Qwen3.8-27B (llama.cpp) as the default chat model and wait until `default-chat` shows **Callable**.
+2. <!--@include: ../reusables/ai-service-connections.md#router-openai-base-url-->
 
 ### Configure the connection in LobeHub
 
@@ -77,7 +75,7 @@ Connect LobeHub to your local model to make the chat interface work.
 2. Configure the following settings:
 
    - **API Key**: Enter `olares`.
-   - **API Proxy URL**: Enter the **Base URL** you copied from Router. For example, `https://router.<your-olares-domain>/v1`.
+   - **API Proxy URL**: Enter the **Base URL** you copied from Router.
    - **Use Responses API Specification**: Ensure this option is disabled.
    - **Use Client Request Mode**: Ensure this option is disabled.
 
@@ -87,22 +85,14 @@ Connect LobeHub to your local model to make the chat interface work.
 
 3. In **Model List**, add a custom model with the ID `default-chat`. **Fetch models** only returns individual models, so add this routing name manually.
 
-   <!--
-   TODO: 素材清单 06，待补 Router 截图：lobehub-add-model-router.png；替换下方旧图后再取消注释。
-   ![Fetch model list and enable models](/images/manual/use-cases/lobehub-fetch-enable-model1.png#bordered)
-   -->
-
+   <!-- ![Fetch model list and enable models](/images/manual/use-cases/lobehub-fetch-enable-model1.png#bordered) -->
 
 4. Click <i class="material-symbols-outlined">toggle_off</i> to enable it.
 5. In the **Connectivity Check** section, select the model you just enabled from the list, and then click **Check** to verify the connection. If the model is large, it might take a little longer to load.
 
    The button changes to **Check Passed**, indicating that the connection is established. 
 
-   <!--
-   TODO: 素材清单 07，待补 Router 截图：lobehub-connection-check-router.png；替换下方旧图后再取消注释。
-   ![Connectivity check success](/images/manual/use-cases/lobehub-checkpass2.png#bordered)
-   -->
-
+   <!-- ![Connectivity check success](/images/manual/use-cases/lobehub-checkpass2.png#bordered) -->
 
 6. Click the home icon at the upper-left corner to return to the LobeHub home page.
 

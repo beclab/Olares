@@ -6,8 +6,8 @@ head:
     - name: keywords
       content: Olares, n8n, workflow automation, self-hosted, no-code, low-code, NocoDB, webhooks, integrations
 app_version: "1.0.16"
-doc_version: "2.0"
-doc_updated: "2026-07-31"
+doc_version: "2.1"
+doc_updated: "2026-11-18"
 ---
 
 # Automate workflows with n8n
@@ -134,8 +134,6 @@ If you have not created a NocoDB base and table yet, follow [Build a self-hosted
    | `is_prerelease` | Single line text |
 
 ### Get NocoDB connection details
-
-<!--@include: ../reusables/ai-service-connections.md#app-endpoint-overview-->
 
 1. Go to Olares **Settings** > **Applications** > **NocoDB** > **Entrances**.
 2. Select **NocoDB**.

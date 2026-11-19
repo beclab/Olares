@@ -46,8 +46,6 @@ Prometheus 安装完成后，再通过应用市场安装 Grafana。
 
 ### 获取 Prometheus API 端点 URL
 
-<!--@include: ../../reusables/ai-service-connections.md#app-endpoint-overview-->
-
 对于 Prometheus：
 
 1. 前往 Olares **Settings** > **Applications** > **Prometheus** > **Entrances**。

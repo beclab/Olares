@@ -8,8 +8,8 @@ head:
     - name: keywords
       content: Olares, Open Design, AI 设计工作室, AI 原型, 落地页生成, 演示文稿生成, OpenAI 兼容, 本地大模型, Qwen3.8, 自托管
 app_version: "0.22.1"
-doc_version: "1.0"
-doc_updated: "2026-09-23"
+doc_version: "1.1"
+doc_updated: "2026-11-18"
 ---
 
 :::warning
@@ -41,14 +41,11 @@ Olares 上的 Open Design 0.22.1 暂不支持通过文本直接生成独立图�
 
 开始前，你需要：
 
-<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - 以下模型：
 
   | 模型类型 | 模型 | 获取方式 |
   | :--- | :--- | :--- |
   | 对话 | Qwen3.8-27B (llama.cpp) | 从 Market 安装 |
-
-<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## 安装 Open Design
 
@@ -59,11 +56,10 @@ Olares 上的 Open Design 0.22.1 暂不支持通过文本直接生成独立图�
 
 ### 获取模型连接信息
 
-<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
-
 本指南使用 **OpenAI-Compatible** API 格式，将 Open Design 连接到 Qwen3.8-27B (llama.cpp)：
 
-<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
+1. 从启动台打开 Router。在 **Default models** 页面将 Qwen3.8-27B (llama.cpp) 设为默认聊天模型，等待 `default-chat` 显示 **Callable**。
+2. <!--@include: ../reusables/ai-service-connections.md#router-openai-base-url-->
 
 ### 在 Open Design 中添加模型
 
@@ -77,7 +73,7 @@ Olares 上的 Open Design 0.22.1 暂不支持通过文本直接生成独立图�
    - **Model**：填写 `default-chat`。
    - **Max tokens（可选）**：输入 `65536`。如需使用更小的上下文窗口，可改为 `32768`。
 
-   <!-- ![在 Open Design 中配置 API 提供方](/images/manual/use-cases/open-design-api-provider.png#bordered) -->
+   <!-- ![Configure an API provider in Open Design](/images/manual/use-cases/open-design-api-provider.png#bordered) -->
 
 5. 点击 **Test** 检查连接。显示绿色的 **Connected** 状态表示连接成功。修改会自动保存。
 
@@ -98,12 +94,12 @@ Olares 上的 Open Design 0.22.1 暂不支持通过文本直接生成独立图�
    产品名称为“Northstar”，副标题为“Find your next move.”。
    ```
 
-   <!-- ![选择项目类型和设计系统](/images/manual/use-cases/open-design-create-project.png#bordered) -->
+   <!-- ![Select a project type and design system](/images/manual/use-cases/open-design-create-project.png#bordered) -->
 
 5. 确认已选择目标模型，然后点击箭头开始生成。
 6. 等待工作区打开并显示预览。
 
-   <!-- ![Open Design 工作区和预览](/images/manual/use-cases/open-design-workspace-preview.png#bordered) -->
+   <!-- ![Open Design workspace and preview](/images/manual/use-cases/open-design-workspace-preview.png#bordered) -->
 
 7. 在对话中继续调整结果。你可以拖入参考图片，或输入 `@` 添加项目文件，然后说明要修改的部分。
 8. 完成后打开导出菜单，根据项目类型下载 ZIP、PDF 或 PPTX 文件。
@@ -128,7 +124,7 @@ Olares 上的 Open Design 0.22.1 暂不支持通过文本直接生成独立图�
 
 ### 连接测试失败或返回 404
 
-从 Router 的 **How to call this model** 窗口重新复制 **Apps in Olares** 下的 Base URL，保留 `/v1`。在 **LLM** 页面确认默认聊天模型显示 **Callable**。
+确认 Router Base URL 以 `/v1` 结尾，并在 Router 的 **Default models** 页面检查 `default-chat` 是否显示 **Callable**。
 
 ### 设计尚未生成完成便停止
 

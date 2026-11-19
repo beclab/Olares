@@ -8,8 +8,8 @@ head:
     - name: keywords
       content: Olares, Hermes, Hermes Agent, Webapp, delegation, local models, Discord bot, self-hosted
 app_version: "1.3.51"
-doc_version: "3.3"
-doc_updated: "2026-11-05"
+doc_version: "3.4"
+doc_updated: "2026-11-18"
 ---
 
 # Set up a self-directed AI agent with Hermes
@@ -39,7 +39,6 @@ In this guide, you will learn how to:
 
 Before you begin, you need:
 
-<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - Discord account: Required to create the bot application.
 - Discord server: A server where you have permissions to add bots.
 - The following model:
@@ -51,8 +50,6 @@ Before you begin, you need:
     :::tip
     Hermes Agent requires a model with a context window of at least 64K tokens.
     :::
-
-<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## Install Hermes Agent
 
@@ -82,11 +79,10 @@ Run a quick setup to connect Hermes Agent to your local model.
 
 ### Step 1: Get model connection details
 
-<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
+1. Open Router from Launchpad. On **Default models**, set Qwen3.8-27B (llama.cpp) as the default chat model and wait until `default-chat` shows **Callable**.
+2. <!--@include: ../reusables/ai-service-connections.md#router-openai-base-url-->
 
-<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
-
-6. In Router, open **LLM** and click the information icon on the Qwen3.8-27B (llama.cpp) row to open **Model card**. Under **Engine args**, read the number after `-c`. For example, `-c 104448` means you should enter `104448` in the next step. See [Check the configured context size](llm-base-apps.md#view-model-details-in-router) for screenshots.
+3. In Router, open **LLM** and click the information icon on the Qwen3.8-27B (llama.cpp) row to open **Model card**. Under **Engine args**, read the number after `-c`. For example, `-c 104448` means you should enter `104448` in the next step. See [Check the configured context size](llm-base-apps.md#view-model-details-in-router) for screenshots.
 
 ### Step 2: Run the setup wizard
 
@@ -105,7 +101,7 @@ Run a quick setup to connect Hermes Agent to your local model.
     |:-----------|:---------|
     | How would you like to set up Hermes | Select **Full setup — configure every provider, tool & option yourself (bring your own keys)**. |
     | Select provider | Select **Custom endpoint (enter URL manually)**.  |
-    | API base URL  | Enter the **Base URL** you copied from Router.<br>For example, `https://router.<your-olares-domain>/v1`.  |
+    | API base URL  | Enter the **Base URL** you copied from Router.  |
     | API key  | Enter `olares`.<br>The input remains hidden for security. |
     | Select API compatibility mode | Enter `1` to select **Auto-detect**. |
     | Use this model? [Y/n] — only when one model is detected | Enter `n`. At the following **Model name** prompt, enter `default-chat`. This confirmation accepts yes/no, not a model name. |

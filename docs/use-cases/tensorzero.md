@@ -9,8 +9,8 @@ head:
     - name: keywords
       content: Olares, TensorZero, LLMOps, AI gateway, observability, evaluation, MCP, self-hosted
 app_version: "1.0.5"
-doc_version: "1.0"
-doc_updated: "2026-09-23"
+doc_version: "1.1"
+doc_updated: "2026-11-18"
 ---
 
 # Use TensorZero as an AI model gateway and observability platform
@@ -34,17 +34,13 @@ In this guide, you will learn how to:
 
 Before you begin, you need:
 
-<!--@include: ../reusables/ai-service-connections.md#router-prerequisite-->
 - Install the following models:
 
   | Model type | Model | How to get it |
   | :--- | :--- | :--- |
   | Chat | Qwen3.8-27B (llama.cpp) | Install from Market |
-  | Embedding | EmbeddingGemma | Install from Market. Optional if your client apps do not need embeddings |
 
 - Ensure your client applications, such as OpenCode and AgentZero, are already installed and fully functional. This guide covers only the specific settings required to connect them to TensorZero.
-
-<!--@include: ../reusables/ai-service-connections.md#use-different-model-->
 
 ## Install TensorZero
 
@@ -68,19 +64,12 @@ Before you edit the file, review the following rules to avoid errors:
 
 - **Formatting rules**: The configuration file uses the TOML text format. You must maintain at least one empty line between different sections, for example, between `[models]` and `[functions]`. If you remove the empty lines, the application might fail to start.
 
-## Get model connection details
+## Get the Router address
 
-<!--@include: ../reusables/ai-service-connections.md#model-connection-overview-->
+1. Open Router from Launchpad. On **Default models**, set Qwen3.8-27B (llama.cpp) as the default chat model and wait until `default-chat` shows **Callable**.
+2. <!--@include: ../reusables/ai-service-connections.md#router-openai-base-url-->
 
-For the chat model:
-
-<!--@include: ../reusables/ai-service-connections.md#get-model-connection-details-->
-
-For the embedding model:
-
-<!--@include: ../reusables/ai-service-connections.md#get-embedding-model-connection-details-openai-->
-
-Replace `<embedding-model-name>` in the following settings with the full model name copied from Router.
+Use this address for `<router-base-url>` in both the chat and embedding configurations below.
 
 ## Configure a chat model and function
 
@@ -92,7 +81,7 @@ This example connects Qwen3.8-27B (llama.cpp).
 
 1. Open Files, and then go to **Data** > **tensorzero** > **config**.
 2. Right-click `tensorzero.toml`, and then click <i class="material-symbols-outlined">edit_square</i>.
-3. In the editor, add the following snippet. Replace `<qwen-base-url>` with the Router Base URL.
+3. In the editor, add the following snippet. Replace `<router-base-url>` with the Router Base URL.
 
     This configuration registers the model under the alias `router_chat`, and creates a client-facing function named `general_chat` that routes incoming app requests to that model.
 
@@ -102,7 +91,7 @@ This example connects Qwen3.8-27B (llama.cpp).
     routing = ["qwen"]
     [models.router_chat.providers.qwen]
     type = "openai"
-    api_base = "<qwen-base-url>"
+    api_base = "<router-base-url>"
     model_name = "default-chat"
     api_key_location = "none"
 
@@ -123,9 +112,11 @@ This example connects Qwen3.8-27B (llama.cpp).
 
 Some apps require embedding models to search through documents or build memory features. TensorZero treats embedding models  separately from chat models. You must define a dedicated embedding model. Do not use a chat function for memory tasks.
 
+Install EmbeddingGemma from Market. On Router's **Default models** page, set it as the default embedding model and wait until `default-embedding` shows **Callable**. If you change this default later, reindex existing documents in the knowledge-base app using TensorZero.
+
 1. Add the following snippet in `tensorzero.toml` to define an embedding model:
 
-    Replace `<embedding-base-url>` with the embedding Base URL copied from Router. This configuration registers the model under the alias `embeddinggemma`.
+    Replace `<router-base-url>` with the same Router Base URL used for chat. This configuration registers the model under the alias `embeddinggemma`.
 
     ```toml
     # embedding_models
@@ -133,8 +124,8 @@ Some apps require embedding models to search through documents or build memory f
     routing = ["embeddinggemma"]
     [embedding_models.embeddinggemma.providers.embeddinggemma]
     type = "openai"
-    api_base = "<embedding-base-url>"
-    model_name = "<embedding-model-name>"
+    api_base = "<router-base-url>"
+    model_name = "default-embedding"
     api_key_location = "none"
     ```
 
@@ -166,8 +157,6 @@ The Playground requires at least one test case, called a Datapoint, to display t
     ![Verify connection](/images/manual/use-cases/tensorzero-playground.png#bordered)   
 
 ## Get the TensorZero endpoint
-
-<!--@include: ../reusables/ai-service-connections.md#app-endpoint-overview-->
 
 For TensorZero:
 

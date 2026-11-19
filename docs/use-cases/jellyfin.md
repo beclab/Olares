@@ -6,8 +6,8 @@ head:
     - name: keywords
       content: Olares, Jellyfin, jellyfin vs plex, plex alternative, self-hosted media server, jellyfin remote access, DLNA, jellyfin on olares
 app_version: "1.0.35"
-doc_version: "1.4"
-doc_updated: "2026-11-06"
+doc_version: "1.5"
+doc_updated: "2026-11-18"
 ---
 
 # Build your private media server with Jellyfin
@@ -254,8 +254,6 @@ Start a video in Jellyfin on Olares, then send it to a DLNA-capable TV. You do n
 ### Get the Jellyfin endpoint
 
 After Jellyfin is set up and your libraries are ready, you can connect from your client devices and start streaming your media.
-
-<!--@include: ../reusables/ai-service-connections.md#app-endpoint-overview-->
 
 For Jellyfin:
 
