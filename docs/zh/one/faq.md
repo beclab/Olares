@@ -15,8 +15,8 @@ head:
 
 查找关于 Olares One 和系统功能的常见问题解答。
 
-:::tip Olares One 用户支持
-如果你需要产品功能、硬件保修或特定使用场景方面的帮助，请通过电子邮件 hi@olares.com 直接联系技术支持。我们将在两个工作日内回复。
+:::tip Olares One 咨询与支持
+如果以下常见问题未能解答你的疑问，售前咨询请发送邮件至 hi@olares.com。售后支持请[提交工单](../manual/help/request-technical-support.md#提交工单)。
 :::
 
 ## 产品与规格
