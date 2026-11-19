@@ -571,6 +571,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               text: "JupyterHub",
               link: "/use-cases/jupyterhub",
             },
+            {
+              text: "Supabase",
+              link: "/use-cases/supabase",
+            },
           ]
         },
         {
