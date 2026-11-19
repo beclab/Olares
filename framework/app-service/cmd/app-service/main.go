@@ -241,12 +241,6 @@ func main() {
 		setupLog.Error(err, "Unable to create controller", "controller", "tailScaleACL manager")
 		os.Exit(1)
 	}
-	if err = (&controllers.TailScaleACLConfigMapController{
-		Client: mgr.GetClient(),
-	}).SetUpWithManager(mgr); err != nil {
-		setupLog.Error(err, "Unable to create controller", "controller", "tailScaleACL configmap manager")
-		os.Exit(1)
-	}
 
 	if err = (&controllers.UserController{
 		Client:     mgr.GetClient(),

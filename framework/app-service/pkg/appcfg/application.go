@@ -215,7 +215,7 @@ func (c *ApplicationConfig) HasWorkloadReplicas() bool {
 // EffectiveWorkloadReplicas returns the schema-independent replica view used
 // by install, scale, suspend, and resume. workloadOptions is authoritative
 // when present; legacy workloadReplicas remains the fallback for manifests
-// older than 0.13.0.
+// older than 0.16.0.
 func (c *ApplicationConfig) EffectiveWorkloadReplicas() WorkloadReplicas {
 	if len(c.WorkloadOptions) > 0 {
 		result := make(WorkloadReplicas, len(c.WorkloadOptions))

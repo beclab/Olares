@@ -641,6 +641,13 @@ func parseDestination(dest string) (string, string, error) {
 	return alias, tokens[len(tokens)-1], nil
 }
 
+// ACLDestinationPort returns the port token of a headscale ACL destination.
+// "*:443" yields "443". "tag:api-server:80,443" yields "80,443".
+func ACLDestinationPort(dest string) (string, error) {
+	_, port, err := parseDestination(dest)
+	return port, err
+}
+
 func TryToGetAppdataDirFromDeployment(ctx context.Context, namespace, name, owner string, appData bool) (appCacheDirs []string, appDataDirs []string, err error) {
 	userspaceNs := utils.UserspaceName(owner)
 	config, err := ctrl.GetConfig()
