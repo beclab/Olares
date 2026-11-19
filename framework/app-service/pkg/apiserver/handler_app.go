@@ -900,6 +900,7 @@ func (h *Handler) oamValues(req *restful.Request, resp *restful.Response) {
 		"databases": map[string]interface{}{},
 	}
 	values["svcs"] = map[string]interface{}{}
+	values["exposePorts"] = map[string]interface{}{}
 	values["nats"] = map[string]interface{}{
 		"subjects": map[string]interface{}{},
 		"refs":     map[string]interface{}{},

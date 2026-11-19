@@ -1,7 +1,9 @@
 package helmrender
 
 import (
+	"io"
 	"testing"
+	"text/template"
 
 	olm "github.com/beclab/Olares/framework/oac/internal/manifest"
 )
@@ -178,5 +180,22 @@ func TestBuildValues_HasStableScaffold(t *testing.T) {
 		if _, ok := v[k]; !ok {
 			t.Errorf("missing key %q from helm values scaffold", k)
 		}
+	}
+}
+
+// app-service injects .Values.exposePorts.<port-name> at install time. Lint
+// renders without a cluster, so the map must exist for a chart that reads it.
+func TestBuildValues_ExposePortsPlaceholder(t *testing.T) {
+	v := BuildValues("alice", "root", nil)
+	ports, ok := v["exposePorts"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("exposePorts missing or wrong type: %T", v["exposePorts"])
+	}
+	tpl := template.Must(template.New("t").Parse(`{{ .Values.exposePorts.rtc }}`))
+	if err := tpl.Execute(io.Discard, map[string]interface{}{"Values": v}); err != nil {
+		t.Fatalf("chart reading an unallocated port failed to render: %v", err)
+	}
+	if len(ports) != 0 {
+		t.Fatalf("lint placeholder should be empty, got %v", ports)
 	}
 }
