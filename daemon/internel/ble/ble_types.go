@@ -14,18 +14,45 @@ type service struct {
 	cancel context.CancelFunc
 
 	wifiConnectState string
-	apList           string
+	apPages          [bleAPPageCount]string
 	terminusInfo     string
 
-	update func()
+	update             func()
+	notifyConnectState func()
 
 	updateApListCB func([]AccessPoint)
 }
 
-var OlaersServiceUUID = bluetooth.New16BitUUID(0x2345)
+var OlaresServiceUUID = bluetooth.New16BitUUID(0x2345)
 var ConnectWifiUUID = bluetooth.New16BitUUID(0x1201)
 var ListAPUUID = bluetooth.New16BitUUID(0x1200)
 var TerminusInfoUUID = bluetooth.New16BitUUID(0x1199)
+var ListAPPage2UUID = bluetooth.New16BitUUID(0x1202)
+var ListAPPage3UUID = bluetooth.New16BitUUID(0x1203)
+var ListAPPage4UUID = bluetooth.New16BitUUID(0x1204)
+var ListAPPage5UUID = bluetooth.New16BitUUID(0x1205)
+
+const (
+	// bleAPPageCount is the number of ListAP characteristics; each carries one page.
+	bleAPPageCount = 5
+	// bleAPPageSize is the maximum serialized size of a single page.
+	bleAPPageSize = 512
+)
+
+// ListAPPageUUIDs maps page index to its characteristic. Page 1 is the
+// original ListAPUUID for compatibility with existing clients; pages 2-5 use
+// ListAPPage2UUID through ListAPPage5UUID.
+var ListAPPageUUIDs = [bleAPPageCount]bluetooth.UUID{
+	ListAPUUID, ListAPPage2UUID, ListAPPage3UUID, ListAPPage4UUID, ListAPPage5UUID,
+}
+
+func emptyAPPages() [bleAPPageCount]string {
+	var pages [bleAPPageCount]string
+	for i := range pages {
+		pages[i] = "[]"
+	}
+	return pages
+}
 
 type ExecState int
 

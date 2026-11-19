@@ -40,7 +40,7 @@ func NewBleService(ctx context.Context) (*service, error) {
 	adv := adapter.DefaultAdvertisement()
 	adv.Configure(bluetooth.AdvertisementOptions{
 		LocalName:    localName,
-		ServiceUUIDs: []bluetooth.UUID{OlaersServiceUUID},
+		ServiceUUIDs: []bluetooth.UUID{OlaresServiceUUID},
 	})
 
 	klog.Info("starting adapter")
@@ -48,76 +48,90 @@ func NewBleService(ctx context.Context) (*service, error) {
 
 	// create a service
 	c, cancel := context.WithCancel(ctx)
-	s := &service{ctx: c, cancel: cancel}
+	s := &service{ctx: c, cancel: cancel, apPages: emptyAPPages()}
 
 	var connectWifi bluetooth.Characteristic
-	var listAp bluetooth.Characteristic
+	var listAp [bleAPPageCount]bluetooth.Characteristic
 	var terminusInfo bluetooth.Characteristic
 
-	adapter.AddService(&bluetooth.Service{
-		UUID: OlaersServiceUUID,
-		Characteristics: []bluetooth.CharacteristicConfig{
-			{
-				Handle: &connectWifi,
-				UUID:   ConnectWifiUUID,
-				Value:  []byte(s.wifiConnectState),
-				Flags: bluetooth.CharacteristicReadPermission |
-					bluetooth.CharacteristicWritePermission |
-					bluetooth.CharacteristicWriteWithoutResponsePermission |
-					bluetooth.CharacteristicNotifyPermission,
-				WriteEvent: func(client bluetooth.Connection, offset int, value []byte) {
-					if offset != 0 || len(value) == 0 {
-						klog.Info("ignore invalid wifi write at offset ", offset)
+	characteristics := []bluetooth.CharacteristicConfig{
+		{
+			Handle: &connectWifi,
+			UUID:   ConnectWifiUUID,
+			Value:  []byte(s.wifiConnectState),
+			Flags: bluetooth.CharacteristicReadPermission |
+				bluetooth.CharacteristicWritePermission |
+				bluetooth.CharacteristicWriteWithoutResponsePermission |
+				bluetooth.CharacteristicNotifyPermission,
+			WriteEvent: func(client bluetooth.Connection, offset int, value []byte) {
+				if offset != 0 || len(value) == 0 {
+					klog.Info("ignore invalid wifi write at offset ", offset)
+					return
+				}
+
+				var state ConnectState
+				if err := json.Unmarshal(value, &state); err == nil && state.State != nil {
+					// write state value
+					return
+				}
+
+				klog.Info("start to connect wifi")
+
+				// connect
+				if err := json.Unmarshal([]byte(s.wifiConnectState), &state); err == nil {
+					if *state.State == Connecting {
+						// ignore redo connecting
 						return
 					}
+				}
 
-					var state ConnectState
-					if err := json.Unmarshal(value, &state); err == nil && state.State != nil {
-						// write state value
-						return
-					}
+				s.setConnectState(ConnectState{
+					State:  ptr.To(Connecting),
+					ErrMsg: ptr.To(fmt.Sprintf("start to connect wifi")),
+				})
 
-					klog.Info("start to connect wifi")
-
-					// connect
-					if err := json.Unmarshal([]byte(s.wifiConnectState), &state); err == nil {
-						if *state.State == Connecting {
-							// ignore redo connecting
-							return
-						}
-					}
-
-					state = ConnectState{
-						State:  ptr.To(Connecting),
-						ErrMsg: ptr.To(fmt.Sprintf("start to connect wifi")),
-					}
-
-					s.wifiConnectState = state.String()
-					connectWifi.Write([]byte(s.wifiConnectState))
-
-					// connect wifi
-					go s.connectWifi(value)
-				},
-			},
-			{
-				Handle: &listAp,
-				UUID:   ListAPUUID,
-				Value:  []byte(s.apList),
-				Flags: bluetooth.CharacteristicReadPermission |
-					bluetooth.CharacteristicNotifyPermission,
-			},
-			{
-				Handle: &terminusInfo,
-				UUID:   TerminusInfoUUID,
-				Value:  []byte(s.wifiConnectState),
-				Flags: bluetooth.CharacteristicReadPermission |
-					bluetooth.CharacteristicNotifyPermission,
+				// connect wifi
+				go s.connectWifi(value)
 			},
 		},
+		{
+			Handle: &listAp[0],
+			UUID:   ListAPUUID,
+			Value:  []byte(s.apPages[0]),
+			Flags: bluetooth.CharacteristicReadPermission |
+				bluetooth.CharacteristicNotifyPermission,
+		},
+		{
+			Handle: &terminusInfo,
+			UUID:   TerminusInfoUUID,
+			Value:  []byte(s.wifiConnectState),
+			Flags: bluetooth.CharacteristicReadPermission |
+				bluetooth.CharacteristicNotifyPermission,
+		},
+	}
+	for i := 1; i < bleAPPageCount; i++ {
+		characteristics = append(characteristics, bluetooth.CharacteristicConfig{
+			Handle: &listAp[i],
+			UUID:   ListAPPageUUIDs[i],
+			Value:  []byte(s.apPages[i]),
+			Flags: bluetooth.CharacteristicReadPermission |
+				bluetooth.CharacteristicNotifyPermission,
+		})
+	}
+
+	adapter.AddService(&bluetooth.Service{
+		UUID:            OlaresServiceUUID,
+		Characteristics: characteristics,
 	})
 
+	s.notifyConnectState = func() {
+		connectWifi.Write([]byte(s.wifiConnectState))
+	}
+
 	s.update = func() {
-		listAp.Write([]byte(s.apList))
+		for i := range listAp {
+			listAp[i].Write([]byte(s.apPages[i]))
+		}
 		terminusInfo.Write([]byte(s.terminusInfo))
 		connectWifi.Write([]byte(s.wifiConnectState))
 	}

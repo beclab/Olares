@@ -10,9 +10,11 @@ import (
 )
 
 func TestUUID(t *testing.T) {
-	fmt.Printf("Service UUID: %s\n", OlaersServiceUUID.String())
+	fmt.Printf("Service UUID: %s\n", OlaresServiceUUID.String())
 	fmt.Printf("Connect Characteristic UUID: %s\n", ConnectWifiUUID.String())
-	fmt.Printf("ListAP Characteristic UUID: %s\n", ListAPUUID.String())
+	for i, uuid := range ListAPPageUUIDs {
+		fmt.Printf("ListAP Page %d Characteristic UUID: %s\n", i+1, uuid.String())
+	}
 	fmt.Printf("TerminusInfo Characteristic UUID: %s\n", TerminusInfoUUID.String())
 }
 
@@ -26,7 +28,7 @@ func TestScan(t *testing.T) {
 	println("scanning....")
 	var deviceUUID bluetooth.Address
 	err := adapter.Scan(func(adapter *bluetooth.Adapter, device bluetooth.ScanResult) {
-		if device.HasServiceUUID(OlaersServiceUUID) {
+		if device.HasServiceUUID(OlaresServiceUUID) {
 			// if device.LocalName() == "olares2" {
 			//if device.Address.String() == "46f0ed5c-8fd5-408d-b7c5-d4c2b43fec43" {
 			println("found device:", device.Address.String(), device.RSSI, device.LocalName())
@@ -44,7 +46,7 @@ func TestScan(t *testing.T) {
 	println("connected to ", deviceUUID.String())
 
 	println("discovering services/characteristics")
-	//srvcs, err := device.DiscoverServices([]bluetooth.UUID{OlaersServiceUUID})
+	//srvcs, err := device.DiscoverServices([]bluetooth.UUID{OlaresServiceUUID})
 	srvcs, err := device.DiscoverServices(nil)
 	must("discover services", err)
 
