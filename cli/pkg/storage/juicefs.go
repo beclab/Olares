@@ -240,7 +240,7 @@ type CleanupStaleJuiceFSMount struct {
 }
 
 func (t *CleanupStaleJuiceFSMount) Execute(runtime connector.Runtime) error {
-	mounted, err := isJuiceFSMounted(runtime, OlaresJuiceFSRootDir)
+	mounted, err := isMounted(OlaresJuiceFSRootDir, juiceFSMountType)
 	if err != nil {
 		return errors.Wrap(err, "failed to read the mount table")
 	}

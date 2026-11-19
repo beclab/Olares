@@ -222,20 +222,37 @@ func (t *UnMountCOS) Execute(runtime connector.Runtime) error {
 	return nil
 }
 
-type StopJuiceFS struct {
+type UninstallJuiceFS struct {
 	common.KubeAction
 }
 
-func (t *StopJuiceFS) Execute(runtime connector.Runtime) error {
-	_, _ = runtime.GetRunner().SudoCmd("systemctl stop juicefs; systemctl disable juicefs", false, false)
+func (t *UninstallJuiceFS) Execute(runtime connector.Runtime) error {
+	runner := runtime.GetRunner()
+	installed, err := runner.FileExist(JuiceFsServiceFile)
+	if err != nil {
+		return errors.Wrap(err, "check JuiceFS service file")
+	}
+	if installed {
+		if _, err := runner.SudoCmd("systemctl stop juicefs && systemctl disable juicefs", false, false); err != nil {
+			return errors.Wrap(err, "stop and disable JuiceFS")
+		}
+	}
 
-	_, _ = runtime.GetRunner().SudoCmd(fmt.Sprintf("rm -rf /var/jfsCache %s", JuiceFsCacheDir), false, false)
+	if err := new(CleanupStaleJuiceFSMount).Execute(runtime); err != nil {
+		return err
+	}
 
-	_, _ = runtime.GetRunner().SudoCmd(fmt.Sprintf("umount %s", OlaresJuiceFSRootDir), false, false)
+	// Only remove the rootfs directory after its mount has been detached.
+	mounted, err := isMounted(OlaresJuiceFSRootDir, "")
+	if err != nil {
+		return errors.Wrap(err, "verify the JuiceFS mount point is detached")
+	}
+	if mounted {
+		return errors.Errorf("refusing to remove %s while it is still mounted", OlaresJuiceFSRootDir)
+	}
 
-	_, _ = runtime.GetRunner().SudoCmd(fmt.Sprintf("rm -rf %s", OlaresJuiceFSRootDir), false, false)
-
-	return nil
+	_, err = runner.SudoCmd(fmt.Sprintf("rm -rf -- /var/jfsCache %s %s", JuiceFsCacheDir, OlaresJuiceFSRootDir), false, false)
+	return errors.Wrap(err, "remove JuiceFS cache and mount point")
 }
 
 type StopMinio struct {
@@ -371,18 +388,8 @@ func (t *DeleteTerminusUserData) Execute(runtime connector.Runtime) error {
 		logger.Errorf("remove %s failed %v", OlaresUserDataDir, err)
 	}
 
-	userdataDirs := []string{JuiceFsCacheDir}
-
-	if util.IsExist(RedisServiceFile) {
-		userdataDirs = append(userdataDirs, OlaresJuiceFSRootDir)
-	}
-
-	for _, d := range userdataDirs {
-		if util.IsExist(d) {
-			if err := util.RemoveDir(d); err != nil {
-				logger.Errorf("remove %s failed %v", d, err)
-			}
-		}
+	if err := util.RemoveDir(JuiceFsCacheDir); err != nil {
+		logger.Errorf("remove %s failed %v", JuiceFsCacheDir, err)
 	}
 
 	return nil
