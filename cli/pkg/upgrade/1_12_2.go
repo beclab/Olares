@@ -1,9 +1,7 @@
 package upgrade
 
 import (
-	"fmt"
 	"os/exec"
-	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -43,31 +41,9 @@ func nvidiactkNeedsMigration() (bool, error) {
 	if err != nil {
 		return false, nil
 	}
-	out, err := exec.Command("nvidia-ctk", "-v").Output()
-	if err != nil {
-		return false, err
-	}
-	lines := strings.Split(string(out), "\n")
-	var version *semver.Version
-	for _, line := range lines {
-		var versionStr string
-		if n, err := fmt.Sscanf(line, "NVIDIA Container Toolkit CLI version %s", &versionStr); n == 1 && err == nil {
-			versionStr = strings.TrimSpace(versionStr)
-			version, err = semver.NewVersion(versionStr)
-			if err != nil {
-				continue
-			}
-			break
-		}
-	}
-	if version == nil {
-		return false, fmt.Errorf("failed to parse nvidia-ctk version")
-	}
-	minVer := semver.MustParse("1.18.0")
-	if version.GreaterThanEqual(minVer) {
-		return true, nil
-	}
-	return false, nil
+	// Both the old 1.17.x packages and full 1.19.x installations must migrate
+	// to the base-only package set, even if their CLI version is already current.
+	return true, nil
 }
 
 func (u upgrader_1_12_2) PrepareForUpgrade() []task.Interface {
@@ -76,16 +52,18 @@ func (u upgrader_1_12_2) PrepareForUpgrade() []task.Interface {
 	if err != nil || needsMigration {
 		preTasks = append(preTasks,
 			&task.LocalTask{
-				Name:   "InstallNvidiaContainerToolkit",
-				Action: new(gpu.InstallNvidiaContainerToolkit),
-				Retry:  5,
-				Delay:  10 * time.Second,
+				Name:    "InstallNvidiaContainerToolkit",
+				Action:  new(gpu.InstallNvidiaContainerToolkit),
+				Prepare: new(gpu.CudaInstalled),
+				Retry:   5,
+				Delay:   10 * time.Second,
 			},
 			&task.LocalTask{
-				Name:   "ConfigureContainerdRuntime",
-				Action: new(gpu.ConfigureContainerdRuntime),
-				Retry:  5,
-				Delay:  10 * time.Second,
+				Name:    "ConfigureContainerdRuntime",
+				Action:  new(gpu.ConfigureContainerdRuntime),
+				Prepare: new(gpu.CudaInstalled),
+				Retry:   5,
+				Delay:   10 * time.Second,
 			},
 		)
 	}

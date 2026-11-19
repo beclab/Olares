@@ -2,7 +2,6 @@ package upgrade
 
 import (
 	"github.com/beclab/Olares/cli/pkg/bootstrap/precheck"
-	"github.com/beclab/Olares/cli/pkg/manifest"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/beclab/Olares/cli/pkg/common"
@@ -12,7 +11,6 @@ import (
 
 type Module struct {
 	common.KubeModule
-	manifest.ManifestModule
 	TargetVersion *semver.Version
 
 	// Stage restricts this run to one stage of the flow. Empty runs every stage

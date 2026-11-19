@@ -72,7 +72,7 @@ type upgradeK3sBinary struct {
 }
 
 func (u *upgradeK3sBinary) Execute(runtime connector.Runtime) error {
-	m, err := manifest.ReadAll(u.KubeConf.Arg.Manifest)
+	m, err := manifest.FromCache(u.PipelineCache)
 	if err != nil {
 		return err
 	}

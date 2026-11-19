@@ -7,17 +7,8 @@ output:
       name: cuda-driver-595.84.run
       amd64: https://us.download.nvidia.com/XFree86/Linux-x86_64/595.84/NVIDIA-Linux-x86_64-595.84.run
       arm64: https://us.download.nvidia.com/XFree86/aarch64/595.84/NVIDIA-Linux-aarch64-595.84.run
-    - 
-      id: libnvidia-gpgkey 
-      name: libnvidia-gpgkey
-      amd64: https://nvidia.github.io/libnvidia-container/gpgkey
-      arm64: https://nvidia.github.io/libnvidia-container/gpgkey
-    - 
-      id: libnvidia-container.list
-      name:  libnvidia-container.list
-      amd64: https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list
-      arm64: https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list
-
-
-
-      
+    -
+      id: nvidia-container-toolkit-base
+      name: nvidia-container-toolkit-base_1.19.1-1.deb
+      amd64: https://nvidia.github.io/libnvidia-container/stable/deb/amd64/nvidia-container-toolkit-base_1.19.1-1_amd64.deb
+      arm64: https://nvidia.github.io/libnvidia-container/stable/deb/arm64/nvidia-container-toolkit-base_1.19.1-1_arm64.deb
