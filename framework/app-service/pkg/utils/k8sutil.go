@@ -4,19 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net"
 	"net/http"
-	"net/url"
 	"os"
-	"sort"
 	"strconv"
 	"strings"
-	"time"
 
 	"k8s.io/apimachinery/pkg/fields"
 
 	"github.com/go-resty/resty/v2"
-	"github.com/pelletier/go-toml"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/client/clientset"
@@ -44,7 +39,6 @@ import (
 const (
 	// CalicoTunnelAddrAnnotation annotation key for calico tunnel address.
 	CalicoTunnelAddrAnnotation = "projectcalico.org/IPv4IPIPTunnelAddr"
-	DefaultRegistry            = "https://registry-1.docker.io"
 
 	minikubeLabelPrefix = "minikube.k8s.io/"
 	// docker or  podman driver's providerID prefix
@@ -163,94 +157,6 @@ func IsNodeReady(node *corev1.Node) bool {
 	}
 	return false
 }
-
-// dockerHostsTOMLPath is containerd's registry hosts config for docker.io under
-// config_path (/etc/containerd/certs.d). Registry mirrors moved here in the
-// containerd v3 config; the inline registry.mirrors in config.toml is deprecated
-// and ignored by containerd 2.x once config_path is set.
-const dockerHostsTOMLPath = "/etc/containerd/certs.d/docker.io/hosts.toml"
-
-// GetMirrorsEndpoint returns the docker.io pull-through mirror endpoints
-// configured for containerd, in priority (file) order. They are read from
-// containerd's certs.d hosts.toml `[host."<url>"]` entries, the containerd v3
-// replacement for the deprecated inline registry.mirrors config.
-func GetMirrorsEndpoint() (ep []string) {
-	data, err := os.ReadFile(dockerHostsTOMLPath)
-	if err != nil {
-		klog.Infof("load mirrors endpoint from %s failed err=%v", dockerHostsTOMLPath, err)
-		return
-	}
-	tree, err := toml.LoadBytes(data)
-	if err != nil {
-		klog.Infof("parse %s failed err=%v", dockerHostsTOMLPath, err)
-		return
-	}
-	hostTree, ok := tree.Get("host").(*toml.Tree)
-	if !ok {
-		return
-	}
-	// TOML tables are unordered; recover mirror precedence from source line number,
-	// the same way containerd's own resolver orders hosts.
-	hosts := hostTree.Keys()
-	// Note: use GetPath (single path element), not Get — Get treats the key as a
-	// dot-separated path, which would mangle host URLs that contain dots/colons.
-	sort.SliceStable(hosts, func(i, j int) bool {
-		ti, _ := hostTree.GetPath([]string{hosts[i]}).(*toml.Tree)
-		tj, _ := hostTree.GetPath([]string{hosts[j]}).(*toml.Tree)
-		if ti == nil || tj == nil {
-			return false
-		}
-		return ti.Position().Line < tj.Position().Line
-	})
-	return hosts
-}
-
-// ReplacedImageRef return replaced image ref and true if mirror is support http
-func ReplacedImageRef(mirrorsEndpoint []string, oldImageRef string, checkConnection bool) (string, bool) {
-	if len(mirrorsEndpoint) == 0 {
-		return oldImageRef, false
-	}
-	plainHTTP := false
-	for _, ep := range mirrorsEndpoint {
-		if ep != "" && ep != DefaultRegistry {
-			url, err := url.Parse(ep)
-			if err != nil {
-				continue
-			}
-			if url.Scheme == "http" {
-				plainHTTP = true
-			}
-			if checkConnection {
-				host := url.Host
-				if !hasPort(url.Host) {
-					if url.Scheme == "https" {
-						host = net.JoinHostPort(url.Host, "443")
-					} else {
-						host = net.JoinHostPort(url.Host, "80")
-					}
-				}
-				conn, err := net.DialTimeout("tcp", host, 2*time.Second)
-				if err != nil {
-					continue
-				}
-				if conn != nil {
-					conn.Close()
-				}
-			}
-
-			parts := strings.Split(oldImageRef, "/")
-			klog.Infof("parts: %s", parts)
-			if parts[0] == "docker.io" {
-				parts[0] = url.Host
-			}
-			klog.Infof("parts2: %s", parts)
-			return strings.Join(parts, "/"), plainHTTP
-		}
-	}
-	return oldImageRef, false
-}
-
-func hasPort(s string) bool { return strings.LastIndex(s, ":") > strings.LastIndex(s, "]") }
 
 func FindOwnerUser(ctrlClient client.Client, user *iamv1alpha2.User) (*iamv1alpha2.User, error) {
 	creator := user.Annotations[users.AnnotationUserCreator]

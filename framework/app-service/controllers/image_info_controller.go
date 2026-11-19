@@ -4,22 +4,18 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"os"
 	"runtime"
 	"sync"
 	"time"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
-	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils/registry"
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/errdefs"
 	refdocker "github.com/containerd/containerd/reference/docker"
-	"github.com/containers/image/v5/image"
-	"github.com/containers/image/v5/transports/alltransports"
 	imagetypes "github.com/containers/image/v5/types"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -221,15 +217,6 @@ func areAllNodesCompleted(spec appv1alpha1.ImageSpec, conditions []appv1alpha1.C
 	return true
 }
 
-func parseImageSource(ctx context.Context, name string) (imagetypes.ImageSource, error) {
-	ref, err := alltransports.ParseImageName(name)
-	if err != nil {
-		return nil, err
-	}
-	sys := newSystemContext()
-	return ref.NewImageSource(ctx, sys)
-}
-
 func (r *AppImageInfoController) GetManifest(ctx context.Context, instance *appv1alpha1.AppImage, imageName string) (*imagetypes.ImageInspectInfo, error) {
 	if instance.Annotations == nil || instance.Annotations[api.AppImagesKey] == "" {
 		return r.getManifestViaNetwork(ctx, imageName)
@@ -267,10 +254,6 @@ func (r *AppImageInfoController) GetManifest(ctx context.Context, instance *appv
 	}
 	klog.Infof("get app %s image manifest from annotations", imageName)
 	return r.buildImageInspectFromManifest(manifest), nil
-}
-
-func newSystemContext() *imagetypes.SystemContext {
-	return &imagetypes.SystemContext{}
 }
 
 type imageInfoResult struct {
@@ -386,41 +369,23 @@ func (r *AppImageInfoController) buildImageInspectFromManifest(manifest *api.Ima
 }
 
 func (r *AppImageInfoController) getManifestViaNetwork(ctx context.Context, originRef string) (*imagetypes.ImageInspectInfo, error) {
-
 	name, err := refdocker.ParseDockerRef(originRef)
 	if err != nil {
 		return nil, err
 	}
-	replacedRef, _ := utils.ReplacedImageRef(registry.GetMirrors(), name.String(), false)
-
-	var src imagetypes.ImageSource
-	srcImageName := "docker://" + replacedRef
-	sysCtx := newSystemContext()
-	fmt.Printf("imageName: %s\n", replacedRef)
-	src, err = parseImageSource(ctx, srcImageName)
+	config, layers, err := registry.Inspect(ctx, name.String())
 	if err != nil {
-		klog.Infof("parse Image Source: %v", err)
 		return nil, err
 	}
-	unparsedInstance := image.UnparsedInstance(src, nil)
-	_, _, err = unparsedInstance.Manifest(ctx)
-	if err != nil {
-		klog.Infof("parse manifest: %v", err)
-
-		return nil, err
+	info := &imagetypes.ImageInspectInfo{
+		Created: config.Created, Architecture: config.Architecture, Variant: config.Variant,
+		Os: config.OS, Author: config.Author, Labels: config.Config.Labels, Env: config.Config.Env,
 	}
-	img, err := image.FromUnparsedImage(ctx, sysCtx, unparsedInstance)
-	if err != nil {
-		klog.Infof("from unparsed image: %v", err)
-
-		return nil, err
+	for _, layer := range layers {
+		info.Layers = append(info.Layers, layer.Digest.String())
+		info.LayersData = append(info.LayersData, imagetypes.ImageInspectLayer{
+			MIMEType: layer.MediaType, Digest: layer.Digest, Size: layer.Size, Annotations: layer.Annotations,
+		})
 	}
-	imgInspect, err := img.Inspect(ctx)
-	if err != nil {
-		klog.Infof("inspect image failed: %v", err)
-
-		return nil, err
-	}
-
-	return imgInspect, err
+	return info, nil
 }

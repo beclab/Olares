@@ -17,7 +17,6 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
-	"github.com/beclab/Olares/framework/app-service/pkg/utils/registry"
 	"github.com/beclab/Olares/framework/app-service/pkg/webhook"
 	"github.com/beclab/Olares/framework/app-service/pkg/webhook/clicredential"
 	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
@@ -904,8 +903,9 @@ func (h *Handler) cronWorkflowMutate(ctx context.Context, req *admissionv1.Admis
 		if err != nil {
 			continue
 		}
-		newImage, _ := utils.ReplacedImageRef(registry.GetMirrors(), ref.String(), false)
-		wf.Spec.WorkflowSpec.Templates[i].Container.Image = newImage
+		// Keep the registry namespace so the scheduled node's containerd can
+		// apply that registry's mirrors, credentials, TLS and fallback settings.
+		wf.Spec.WorkflowSpec.Templates[i].Container.Image = ref.String()
 	}
 	original := req.Object.Raw
 	current, err := json.Marshal(wf)
