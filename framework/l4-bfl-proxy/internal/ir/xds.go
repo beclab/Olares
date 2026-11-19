@@ -69,6 +69,7 @@ type HTTPRouteIR struct {
 	DirectResponse   *DirectResponseIR
 	ExtAuth          *ExtAuthConfigIR
 	WebSocketUpgrade bool
+	BypassSourceCIDR bool
 }
 
 // HeaderMatchIR is an AND-ed request header condition on a route match.
