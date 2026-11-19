@@ -193,6 +193,16 @@ func AddToContainer(c *restful.Container, k8sClient kubernetes.Interface, monito
 		Returns(http.StatusOK, respOK, model.Metrics{})).
 		Produces(restful.MIME_JSON)
 
+	ws.Route(ws.POST("/namespaces").
+		To(h.handleNamespaceMetricsQueryPost).
+		Doc("Get namespace-level metric data of all namespaces. Query parameters are passed in the JSON request body.").
+		Consumes(restful.MIME_JSON).
+		Reads(NamespaceMetricsRequest{}).
+		Metadata(restfulspec.KeyOpenAPITags, []string{constants.NamespaceMetricsTag}).
+		Writes(model.Metrics{}).
+		Returns(http.StatusOK, respOK, model.Metrics{})).
+		Produces(restful.MIME_JSON)
+
 	ws.Route(ws.GET("/namespaces/{namespace}/workloads/{kind}/{workload}/pods").
 		To(h.handlePodMetricsQuery).
 		Doc("Get pod-level metric data of a specific workload's pods. Navigate to the workload by the namespace.").

@@ -125,6 +125,49 @@ func (q queryOptions) shouldSort() bool {
 	return q.target != "" && q.identifier != ""
 }
 
+// NamespaceMetricsRequest is the JSON body accepted by the POST
+// `/namespaces` endpoint. It carries the same information that used to
+// be passed as query parameters on the GET version of the route.
+type NamespaceMetricsRequest struct {
+	MetricsFilter   string `json:"metrics_filter,omitempty"`
+	ResourcesFilter string `json:"resources_filter,omitempty"`
+	Start           string `json:"start,omitempty"`
+	End             string `json:"end,omitempty"`
+	Step            string `json:"step,omitempty"`
+	Time            string `json:"time,omitempty"`
+	SortMetric      string `json:"sort_metric,omitempty"`
+	SortType        string `json:"sort_type,omitempty"`
+	Page            string `json:"page,omitempty"`
+	Limit           string `json:"limit,omitempty"`
+}
+
+// parseNamespaceMetricsRequest reads the POST body of the namespace metrics
+// endpoint and merges it with the path parameters extracted from the URL.
+// An empty body is tolerated so that callers can rely on defaults.
+func parseNamespaceMetricsRequest(req *restful.Request) (reqParams, error) {
+	var body NamespaceMetricsRequest
+	if req.Request != nil && req.Request.ContentLength != 0 {
+		if err := req.ReadEntity(&body); err != nil && err != io.EOF {
+			return reqParams{}, err
+		}
+	}
+
+	r := reqParams{
+		time:           body.Time,
+		start:          body.Start,
+		end:            body.End,
+		step:           body.Step,
+		target:         body.SortMetric,
+		order:          body.SortType,
+		page:           body.Page,
+		limit:          body.Limit,
+		metricFilter:   body.MetricsFilter,
+		resourceFilter: body.ResourcesFilter,
+		namespaceName:  req.PathParameter("namespace"),
+	}
+	return r, nil
+}
+
 func parseRequestParams(req *restful.Request) reqParams {
 	var r reqParams
 	r.time = req.QueryParameter("time")

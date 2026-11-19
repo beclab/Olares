@@ -261,3 +261,23 @@ func (h handler) handleNamespaceMetricsQuery(req *restful.Request, resp *restful
 	}
 	h.handleNamedMetricsQuery(resp, opt)
 }
+
+func (h handler) handleNamespaceMetricsQueryPost(req *restful.Request, resp *restful.Response) {
+	params, err := parseNamespaceMetricsRequest(req)
+	if err != nil {
+		api.HandleBadRequest(resp, nil, err)
+		return
+	}
+	opt, err := h.makeQueryOptions(params, monitoring.LevelNamespace)
+	if err != nil {
+		if err.Error() == ErrNoHit {
+			res := handleNoHit(opt.namedMetrics)
+			resp.WriteAsJson(res)
+			return
+		}
+
+		api.HandleBadRequest(resp, nil, err)
+		return
+	}
+	h.handleNamedMetricsQuery(resp, opt)
+}
