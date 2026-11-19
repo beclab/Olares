@@ -23,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/proxy"
 	"k8s.io/apiserver/pkg/endpoints/handlers/responsewriters"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/transport"
 	"k8s.io/klog"
 
 	"kubesphere.io/kubesphere/pkg/apiserver/request"
@@ -35,6 +36,11 @@ func WithKubeAPIServer(handler http.Handler, config *rest.Config, failed proxy.E
 	defaultTransport, err := rest.TransportFor(config)
 	if err != nil {
 		klog.Errorf("Unable to create transport from rest.Config: %v", err)
+		return handler
+	}
+	upgradeTransport, err := upgradeRequestTransport(config, defaultTransport)
+	if err != nil {
+		klog.Errorf("Unable to create upgrade transport from rest.Config: %v", err)
 		return handler
 	}
 
@@ -54,11 +60,27 @@ func WithKubeAPIServer(handler http.Handler, config *rest.Config, failed proxy.E
 			// make sure we don't override kubernetes's authorization
 			req.Header.Del("Authorization")
 			httpProxy := proxy.NewUpgradeAwareHandler(&s, defaultTransport, true, false, failed)
-			httpProxy.UpgradeTransport = proxy.NewUpgradeRequestRoundTripper(defaultTransport, defaultTransport)
+			httpProxy.UpgradeTransport = upgradeTransport
 			httpProxy.ServeHTTP(w, req)
 			return
 		}
 
 		handler.ServeHTTP(w, req)
 	})
+}
+
+// upgradeRequestTransport dials upgrades over connection and only decorates the
+// request with credentials. The request round tripper must end in
+// proxy.MirrorRequest: WrapRequest calls its RoundTrip, so a real transport
+// there sends the upgrade to kube-apiserver once more and every exec runs twice.
+func upgradeRequestTransport(config *rest.Config, connection http.RoundTripper) (proxy.UpgradeRequestRoundTripper, error) {
+	transportConfig, err := config.TransportConfig()
+	if err != nil {
+		return nil, err
+	}
+	upgrader, err := transport.HTTPWrappersForConfig(transportConfig, proxy.MirrorRequest)
+	if err != nil {
+		return nil, err
+	}
+	return proxy.NewUpgradeRequestRoundTripper(connection, upgrader), nil
 }
