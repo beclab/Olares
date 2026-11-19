@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -316,12 +317,6 @@ func IsIpChanged(ctx context.Context, installed bool) bool {
 		return false
 	}
 
-	masterIpFromETCD, err := MasterNodeIp(installed)
-	if err != nil {
-		klog.Error("get master node ip error, ", err)
-		return false
-	}
-
 	// Compare the explicitly selected address, not cached hostname results.
 	hostIp, err := nets.GetHostIp()
 	if err != nil {
@@ -332,6 +327,27 @@ func IsIpChanged(ctx context.Context, installed bool) bool {
 	for _, ip := range ips {
 		if hostIp == ip.IP {
 			klog.V(8).Info("host ip is the same as internal ip of interface, ", hostIp, ", ", ip.IP)
+
+			var backupIP string
+			if installed {
+				backupIP = etcdBackupEndpointIP()
+			}
+			masterIpFromETCD, err := MasterNodeIp(installed)
+			if backupIP != "" {
+				if backupIP != hostIp || (masterIpFromETCD != "" && masterIpFromETCD != hostIp) {
+					klog.Infof("IP change incomplete: backup endpoint %s, etcd IP %s, selected IP %s", backupIP, masterIpFromETCD, hostIp)
+					return true
+				}
+				if masterIpFromETCD != "" {
+					return false
+				}
+			}
+			if err != nil {
+				klog.Error("get master node ip error, ", err)
+				if backupIP == "" {
+					return false
+				}
+			}
 
 			if !installed {
 				// terminus not installed
@@ -385,6 +401,28 @@ func IsIpChanged(ctx context.Context, installed bool) bool {
 
 	klog.Info("no host ip is the same as internal ip of interface, ", ips)
 	return true
+}
+
+func etcdBackupEndpointIP() string {
+	if _, err := os.Stat("/etc/systemd/system/etcd.service"); err != nil {
+		return ""
+	}
+	script, err := os.ReadFile("/usr/local/bin/kube-scripts/etcd-backup.sh")
+	if err != nil {
+		return ""
+	}
+	for line := range strings.SplitSeq(string(script), "\n") {
+		value, ok := strings.CutPrefix(line, "ENDPOINTS=")
+		if !ok {
+			continue
+		}
+		endpoint, err := url.Parse(strings.Trim(strings.TrimSpace(value), "'\""))
+		if err == nil && endpoint.Scheme == "https" && endpoint.Port() == "2379" && net.ParseIP(endpoint.Hostname()) != nil {
+			return endpoint.Hostname()
+		}
+		break
+	}
+	return ""
 }
 
 func MasterNodeIp(installed bool) (addr string, err error) {

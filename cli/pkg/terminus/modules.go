@@ -438,6 +438,7 @@ type ChangeIPModule struct {
 
 func (m *ChangeIPModule) Init() {
 	m.Name = "ChangeIP"
+	hasLocalETCD := util.IsExist("/etc/systemd/system/etcd.service")
 
 	prepared, _ := m.PipelineCache.GetMustBool(common.CachePreparedState)
 	if !prepared {
@@ -472,7 +473,7 @@ func (m *ChangeIPModule) Init() {
 		} else {
 			stopKubeAction.UnitNames = []string{"kubelet"}
 		}
-		if util.IsExist("/etc/systemd/system/etcd.service") {
+		if hasLocalETCD {
 			stopKubeAction.UnitNames = append(stopKubeAction.UnitNames, "etcd", "backup-etcd")
 		}
 		stopKubeTask.Action = stopKubeAction
@@ -499,6 +500,16 @@ func (m *ChangeIPModule) Init() {
 			Name:   "RewriteFileAttributes",
 			Action: new(precheck.AddWSLChattr),
 		})
+
+	if installed && hasLocalETCD {
+		// The backup endpoint records the last IP whose entire change
+		// completed. Keep this write after all other change-ip tasks.
+		m.Tasks = append(m.Tasks, &task.RemoteTask{
+			Name:   "RefreshBackupETCDScript",
+			Action: new(etcd.BackupETCD),
+			Hosts:  m.Runtime.GetHostsByRole(common.ETCD),
+		})
+	}
 }
 
 func (m *ChangeIPModule) addStorageTasks() {
@@ -638,11 +649,7 @@ func (m *ChangeIPModule) addEtcdTasks() {
 			Hosts:  m.Runtime.GetHostsByRole(common.ETCD),
 			Retry:  20,
 		},
-		&task.RemoteTask{
-			Name:   "RefreshBackupETCDScript",
-			Action: new(etcd.BackupETCD),
-			Hosts:  m.Runtime.GetHostsByRole(common.ETCD),
-		})
+	)
 }
 
 func (m *ChangeIPModule) addKubernetesTasks() {
