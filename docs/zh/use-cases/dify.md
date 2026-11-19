@@ -59,10 +59,7 @@ Dify 是一个 AI 应用开发平台。它是 Olares 集成的关键开源项目
 1. 切换至 Dify 的**工作室**选项，并进入 **Ashia** 应用。
 2. 从右侧模型列表中选择刚刚配置的 `default-chat` 模型。
 
-   <!--
-   TODO: 素材清单 05，待补 Router 截图：dify-model-router.png；替换下方旧图后再取消注释。
-   ![选择模型](/images/zh/manual/use-cases/dify-select-model.png#bordered)
-   -->
+   <!-- ![Select model](/images/zh/manual/use-cases/dify-select-model.png#bordered) -->
 
 3. 点击**发布**。现在可以在**调试与预览**窗口与 Ashia 聊天了。
 

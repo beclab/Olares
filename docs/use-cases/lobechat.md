@@ -85,20 +85,14 @@ Connect LobeHub to your local model to make the chat interface work.
 
 3. In **Model List**, add a custom model with the ID `default-chat`. **Fetch models** only returns individual models, so add this routing name manually.
 
-   <!--
-   TODO: 素材清单 06，待补 Router 截图：lobehub-add-model-router.png；替换下方旧图后再取消注释。
-   ![Fetch model list and enable models](/images/manual/use-cases/lobehub-fetch-enable-model1.png#bordered)
-   -->
+   <!-- ![Fetch model list and enable models](/images/manual/use-cases/lobehub-fetch-enable-model1.png#bordered) -->
 
 4. Click <i class="material-symbols-outlined">toggle_off</i> to enable it.
 5. In the **Connectivity Check** section, select the model you just enabled from the list, and then click **Check** to verify the connection. If the model is large, it might take a little longer to load.
 
    The button changes to **Check Passed**, indicating that the connection is established. 
 
-   <!--
-   TODO: 素材清单 07，待补 Router 截图：lobehub-connection-check-router.png；替换下方旧图后再取消注释。
-   ![Connectivity check success](/images/manual/use-cases/lobehub-checkpass2.png#bordered)
-   -->
+   <!-- ![Connectivity check success](/images/manual/use-cases/lobehub-checkpass2.png#bordered) -->
 
 6. Click the home icon at the upper-left corner to return to the LobeHub home page.
 

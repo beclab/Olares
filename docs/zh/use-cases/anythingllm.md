@@ -67,10 +67,7 @@ AnythingLLM 是一个开源的一体化 AI 应用，让你可以使用检索增�
 4. 在 **Base URL** 中填写 Router Base URL。如果 API 密钥字段要求必填，填写 `olares`。
 5. 在 **Selected Model** 中手动填写 `default-chat`。
 
-   <!--
-   TODO: 素材清单 01，待补 Router 截图：anythingllm-chat-model-router.png；替换下方旧图后再取消注释。
-   ![配置聊天模型](/images/manual/use-cases/anythingllm-configure-chat-model.png#bordered)
-   -->
+   <!-- ![Configure chat model](/images/manual/use-cases/anythingllm-configure-chat-model.png#bordered) -->
 
 6. 点击 **Save changes**。显示 "LLM preferences saved successfully" 消息。
 

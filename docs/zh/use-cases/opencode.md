@@ -92,10 +92,7 @@ OpenCode 是一个 AI 驱动的编码代理，允许你通过自然语言编写�
 
 4. 点击 **Submit** 保存配置。你新添加的提供方将出现在提供方列表中。
 
-   <!--
-   TODO: 素材清单 10，待补 Router 截图：opencode-provider-router.png；替换下方旧图后再取消注释。
-   ![Provider list](/images/manual/use-cases/opencode-provider-list.png#bordered)
-   -->
+   <!-- ![Provider list](/images/manual/use-cases/opencode-provider-list.png#bordered) -->
 
 ### 连接到 OpenAI
 
@@ -222,10 +219,7 @@ OpenCode 还提供基于终端的 UI（TUI）。你可以通过两种方式启�
 
 3. 使用 `/models` 命令切换到 **Router chat**。
 
-   <!--
-   TODO: 素材清单 11，待补 Router 截图：opencode-web-tui-model-router.png；替换下方旧图后再取消注释。
-   ![Select model in TUI](/images/manual/use-cases/opencode-web-tui-select-model.png#bordered)
-   -->
+   <!-- ![Select model in TUI](/images/manual/use-cases/opencode-web-tui-select-model.png#bordered) -->
 
 4. 直接输入你的提示。例如，要求 OpenCode 改进代码。
    ![Chat in TUI](/images/manual/use-cases/opencode-web-tui-chat.png#bordered)
@@ -240,10 +234,7 @@ OpenCode 还提供基于终端的 UI（TUI）。你可以通过两种方式启�
 
 3. 使用 `/models` 命令切换到 **Router chat**。
 
-   <!--
-   TODO: 素材清单 12，待补 Router 截图：opencode-terminal-model-router.png；替换下方旧图后再取消注释。
-   ![Select model in OpenCode Terminal](/images/manual/use-cases/opencode-terminal-select-model.png#bordered)
-   -->
+   <!-- ![Select model in OpenCode Terminal](/images/manual/use-cases/opencode-terminal-select-model.png#bordered) -->
 
 4. 直接输入你的提示。例如，使用 `@` 提及文件并向 OpenCode 询问它。
    ![Chat in OpenCode Terminal](/images/manual/use-cases/opencode-terminal-mention.png#bordered)
@@ -338,10 +329,7 @@ OpenCode 还提供基于终端的 UI（TUI）。你可以通过两种方式启�
 
 2. 使用 `/models` 命令切换到 **Router chat**。
 
-   <!--
-   TODO: 素材清单 13，待补 Router 截图：opencode-local-tui-model-router.png；替换下方旧图后再取消注释。
-   ![Select model in terminal TUI](/images/manual/use-cases/opencode-terminal-tui-select-model.png#bordered)
-   -->
+   <!-- ![Select model in terminal TUI](/images/manual/use-cases/opencode-terminal-tui-select-model.png#bordered) -->
 
 3. 开始与你的自托管模型聊天。
    ![Chat in terminal TUI](/images/manual/use-cases/router-client-connect-opencode.png#bordered)

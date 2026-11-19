@@ -59,10 +59,7 @@ Starting from Olares 1.11.6, if "Dify For Cluster" or "Dify" was previously inst
 1. Navigate to Dify's **Studio** tab and enter Ashia.  
 2. From the model list on the right, select the `default-chat` model you just configured.
 
-   <!--
-   TODO: 素材清单 05，待补 Router 截图：dify-model-router.png；替换下方旧图后再取消注释。
-   ![Select model](/images/manual/use-cases/dify-select-model.png#bordered)
-   -->
+   <!-- ![Select model](/images/manual/use-cases/dify-select-model.png#bordered) -->
 
 3. Click **Publish**. Now you can chat with Ashia in the **Debug & Preview** window. 
 

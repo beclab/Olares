@@ -75,10 +75,7 @@ With the connection details ready, add the model as an OpenAI-compatible provide
 5. Expand **Advanced**, use **Add a Model ID** to add `default-chat`, and set **Auth** to **None** for this Olares app.
 6. Click **Save**. Open WebUI verifies the connection automatically.
 
-   <!--
-   TODO: 素材清单 14，待补 Router 截图：openwebui-connection-router.png；替换下方旧图后再取消注释。
-   ![Connection established](/images/manual/use-cases/open-webui-connection-established1.png#bordered)
-   -->
+   <!-- ![Connection established](/images/manual/use-cases/open-webui-connection-established1.png#bordered) -->
 
    When you see the "OpenAI API settings updated" message, the connection is established.
 

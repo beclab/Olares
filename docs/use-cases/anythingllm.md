@@ -63,10 +63,7 @@ Configure the chat model and embedding provider. These settings become the syste
 4. In **Base URL**, enter the Router Base URL. If the API key field requires a value, enter `olares`.
 5. In **Selected Model**, enter `default-chat` manually.
 
-   <!--
-   TODO: 素材清单 01，待补 Router 截图：anythingllm-chat-model-router.png；替换下方旧图后再取消注释。
-   ![Configure chat model](/images/manual/use-cases/anythingllm-configure-chat-model.png#bordered)
-   -->
+   <!-- ![Configure chat model](/images/manual/use-cases/anythingllm-configure-chat-model.png#bordered) -->
 
 6. Click **Save changes**. The "LLM preferences saved successfully" message is displayed.
 

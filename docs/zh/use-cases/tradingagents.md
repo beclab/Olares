@@ -74,10 +74,7 @@ TradingAgents 项目开发者、贡献者和 Olares 对因使用本项目而导�
 
 3. 输入从 Router 复制的 **Base URL**，保留末尾的 `/v1`。
 
-   <!--
-   TODO: 素材清单 16，待补 Router 截图：tradingagents-env-router.png；替换下方旧图后再取消注释。
-   ![Configure environment variables](/images/manual/use-cases/tradingagents-env-vars1.png#bordered){width=70%}
-   -->
+   <!-- ![Configure environment variables](/images/manual/use-cases/tradingagents-env-vars1.png#bordered){width=70%} -->
 
 4. 点击 **Confirm**，然后点击 **Apply**。
 

@@ -122,10 +122,7 @@ Open Notebook 使用 AI 模型进行摘要、聊天、检索和播客生成。�
 
 如果 **Auto-assign Defaults** 可用，可以用它自动填充插槽，然后检查选择。
 
-<!--
-TODO: 素材清单 09，待补 Router 截图：open-notebook-default-models-router.png；替换下方旧图后再取消注释。
-![Model assignments](/images/manual/use-cases/open-notebook-set-models-result1.png#bordered)
--->
+<!-- ![Model assignments](/images/manual/use-cases/open-notebook-set-models-result1.png#bordered) -->
 
 
 ## 创建你的第一个研究笔记

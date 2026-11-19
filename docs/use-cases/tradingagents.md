@@ -70,10 +70,7 @@ To power your AI agents, connect TradingAgents to a local model.
 
 3. Enter the **Base URL** copied from Router including the trailing `/v1`.
 
-   <!--
-   TODO: 素材清单 16，待补 Router 截图：tradingagents-env-router.png；替换下方旧图后再取消注释。
-   ![Configure environment variables](/images/manual/use-cases/tradingagents-env-vars1.png#bordered){width=70%}
-   -->
+   <!-- ![Configure environment variables](/images/manual/use-cases/tradingagents-env-vars1.png#bordered){width=70%} -->
 
 4. Click **Confirm**, and then click **Apply**.
 

@@ -88,10 +88,7 @@ Add Qwen3.8-27B as a custom provider in OpenCode.
 
 4. Click **Submit** to save the configuration. Your newly added provider will appear in the provider list.
 
-   <!--
-   TODO: 素材清单 10，待补 Router 截图：opencode-provider-router.png；替换下方旧图后再取消注释。
-   ![Provider list](/images/manual/use-cases/opencode-provider-list.png#bordered)
-   -->
+   <!-- ![Provider list](/images/manual/use-cases/opencode-provider-list.png#bordered) -->
 
 ### Connect to OpenAI
 
@@ -218,10 +215,7 @@ OpenCode also offers a terminal-based UI (TUI). You can launch it in two ways:
 
 3. Use the `/models` command to switch to **Router chat**.
 
-   <!--
-   TODO: 素材清单 11，待补 Router 截图：opencode-web-tui-model-router.png；替换下方旧图后再取消注释。
-   ![Select model in TUI](/images/manual/use-cases/opencode-web-tui-select-model.png#bordered)
-   -->
+   <!-- ![Select model in TUI](/images/manual/use-cases/opencode-web-tui-select-model.png#bordered) -->
 
 4. Type your prompt directly. For example, ask OpenCode to improve the code.
    ![Chat in TUI](/images/manual/use-cases/opencode-web-tui-chat.png#bordered)
@@ -236,10 +230,7 @@ OpenCode also offers a terminal-based UI (TUI). You can launch it in two ways:
 
 3. Use the `/models` command to switch to **Router chat**.
 
-   <!--
-   TODO: 素材清单 12，待补 Router 截图：opencode-terminal-model-router.png；替换下方旧图后再取消注释。
-   ![Select model in OpenCode Terminal](/images/manual/use-cases/opencode-terminal-select-model.png#bordered)
-   -->
+   <!-- ![Select model in OpenCode Terminal](/images/manual/use-cases/opencode-terminal-select-model.png#bordered) -->
 
 4. Type your prompt directly. For example, use `@` to mention a file and ask OpenCode about it.
    ![Chat in OpenCode Terminal](/images/manual/use-cases/opencode-terminal-mention.png#bordered)
@@ -334,10 +325,7 @@ This optional workflow installs OpenCode CLI on your computer and connects it to
 
 2. Use the `/models` command to switch to **Router chat**.
 
-   <!--
-   TODO: 素材清单 13，待补 Router 截图：opencode-local-tui-model-router.png；替换下方旧图后再取消注释。
-   ![Select model in terminal TUI](/images/manual/use-cases/opencode-terminal-tui-select-model.png#bordered)
-   -->
+   <!-- ![Select model in terminal TUI](/images/manual/use-cases/opencode-terminal-tui-select-model.png#bordered) -->
 
 3. Start chatting with your self-hosted models.
    ![Chat in terminal TUI](/images/manual/use-cases/router-client-connect-opencode.png#bordered)

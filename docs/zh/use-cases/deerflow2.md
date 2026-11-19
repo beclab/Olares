@@ -73,10 +73,7 @@ DeerFlow 2.0 使用 `config.yaml` 文件作为核心配置。要将其连接到�
        supports_thinking: true      # 如果模型支持扩展思考，则设为 true
    ```
 
-   <!--
-   TODO: 素材清单 04，待补 Router 截图：deerflow2-config-router.png；替换下方旧图后再取消注释。
-   ![编辑 config.yaml](/images/manual/use-cases/deerflow2-edit-config-yaml1.png#bordered)
-   -->
+   <!-- ![Edit config.yaml](/images/manual/use-cases/deerflow2-edit-config-yaml1.png#bordered) -->
 
 4. 点击 <span class="material-symbols-outlined">save</span> 保存更改。
 

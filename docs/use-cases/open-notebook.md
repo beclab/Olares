@@ -118,10 +118,7 @@ Under **Default Model Assignments**, assign the models as follows:
 
 If **Auto-assign Defaults** is available, you can use it to fill the slots automatically, then review the selections.
 
-<!--
-TODO: 素材清单 09，待补 Router 截图：open-notebook-default-models-router.png；替换下方旧图后再取消注释。
-![Model assignments](/images/manual/use-cases/open-notebook-set-models-result1.png#bordered)
--->
+<!-- ![Model assignments](/images/manual/use-cases/open-notebook-set-models-result1.png#bordered) -->
 
 
 ## Create your first research notebook

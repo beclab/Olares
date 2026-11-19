@@ -88,20 +88,14 @@ LobeHub 是官方平台名称，但应用目前在 Olares Market 中列为 "Lobe
 
 3. 在 **Model List** 中添加自定义模型，模型 ID 填写 `default-chat`。**Fetch models** 只返回具体模型，因此需要手动添加这个路由名称。
 
-   <!--
-   TODO: 素材清单 06，待补 Router 截图：lobehub-add-model-router.png；替换下方旧图后再取消注释。
-   ![获取模型列表并启用模型](/images/manual/use-cases/lobehub-fetch-enable-model1.png#bordered)
-   -->
+   <!-- ![Fetch model list and enable models](/images/manual/use-cases/lobehub-fetch-enable-model1.png#bordered) -->
 
 4. 点击 <i class="material-symbols-outlined">toggle_off</i> 启用它。
 5. 在**连接检查**部分，从列表中选择你刚刚启用的模型，然后点击**检查**以验证连接。如果模型较大，加载可能需要更长时间。
 
    按钮变为**检查通过**，表示连接已建立。
 
-   <!--
-   TODO: 素材清单 07，待补 Router 截图：lobehub-connection-check-router.png；替换下方旧图后再取消注释。
-   ![连接检查成功](/images/manual/use-cases/lobehub-checkpass2.png#bordered)
-   -->
+   <!-- ![Connectivity check success](/images/manual/use-cases/lobehub-checkpass2.png#bordered) -->
 
 6. 点击左上角的 Home 图标返回 LobeHub 主页。
 

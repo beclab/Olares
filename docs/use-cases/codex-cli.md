@@ -118,10 +118,7 @@ This example connects Codex CLI to Qwen3.8-27B (llama.cpp) through its OpenAI-co
    - **OPENAI_API_KEY**: Enter `olares`.
    - **CODEX_MODEL**: Enter `default-chat`.
 
-   <!--
-   TODO: 素材清单 03，待补 Router 截图：codex-cli-env-router.png；替换下方旧图后再取消注释。
-   ![Codex CLI local model environment variables](/images/manual/use-cases/codex-cli-local-model-env.png#bordered)
-   -->
+   <!-- ![Codex CLI local model environment variables](/images/manual/use-cases/codex-cli-local-model-env.png#bordered) -->
 
 3. Click **Apply** and wait for Codex CLI to restart.
 4. Open Codex CLI from Launchpad and run:

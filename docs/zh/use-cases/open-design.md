@@ -73,7 +73,7 @@ Olares 上的 Open Design 0.22.1 暂不支持通过文本直接生成独立图�
    - **Model**：填写 `default-chat`。
    - **Max tokens（可选）**：输入 `65536`。如需使用更小的上下文窗口，可改为 `32768`。
 
-   <!-- ![在 Open Design 中配置 API 提供方](/images/manual/use-cases/open-design-api-provider.png#bordered) -->
+   <!-- ![Configure an API provider in Open Design](/images/manual/use-cases/open-design-api-provider.png#bordered) -->
 
 5. 点击 **Test** 检查连接。显示绿色的 **Connected** 状态表示连接成功。修改会自动保存。
 
@@ -94,12 +94,12 @@ Olares 上的 Open Design 0.22.1 暂不支持通过文本直接生成独立图�
    产品名称为“Northstar”，副标题为“Find your next move.”。
    ```
 
-   <!-- ![选择项目类型和设计系统](/images/manual/use-cases/open-design-create-project.png#bordered) -->
+   <!-- ![Select a project type and design system](/images/manual/use-cases/open-design-create-project.png#bordered) -->
 
 5. 确认已选择目标模型，然后点击箭头开始生成。
 6. 等待工作区打开并显示预览。
 
-   <!-- ![Open Design 工作区和预览](/images/manual/use-cases/open-design-workspace-preview.png#bordered) -->
+   <!-- ![Open Design workspace and preview](/images/manual/use-cases/open-design-workspace-preview.png#bordered) -->
 
 7. 在对话中继续调整结果。你可以拖入参考图片，或输入 `@` 添加项目文件，然后说明要修改的部分。
 8. 完成后打开导出菜单，根据项目类型下载 ZIP、PDF 或 PPTX 文件。

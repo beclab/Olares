@@ -264,7 +264,7 @@ GitHub 首次发送的 `ping` 事件不包含 release 对象。n8n 收到版本�
 4. 返回 GitHub Webhook 设置，将测试 URL 替换为 HTTPS 生产 URL。
 5. 保存 GitHub Webhook 设置。
 
-   <!-- ![在 n8n 中设置 Webhook 触发器](/images/manual/use-cases/n8n-webhook-trigger.png#bordered) -->
+   <!-- ![Configure a webhook trigger in n8n](/images/manual/use-cases/n8n-webhook-trigger.png#bordered) -->
 
 ## 管理工作流
 

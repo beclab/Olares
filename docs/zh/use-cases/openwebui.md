@@ -80,10 +80,7 @@ Open WebUI 是一个自托管的聊天界面，让你在 Olares 设备上与本�
 5. 展开 **Advanced**，通过 **Add a Model ID** 添加 `default-chat`，将 Olares 内应用的 **Auth** 设为 **None**。
 6. 点击 **Save**。Open WebUI 会自动验证连接。当看到 "OpenAI API settings updated" 消息时，表示连接已建立。
 
-   <!--
-   TODO: 素材清单 14，待补 Router 截图：openwebui-connection-router.png；替换下方旧图后再取消注释。
-   ![Connection established](/images/manual/use-cases/open-webui-connection-established1.png#bordered)
-   -->
+   <!-- ![Connection established](/images/manual/use-cases/open-webui-connection-established1.png#bordered) -->
 
 ## 开始聊天
 

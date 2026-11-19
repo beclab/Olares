@@ -122,10 +122,7 @@ Codex 的标准浏览器登录流程会将凭据返回到 `localhost:1455` 上�
    - **OPENAI_API_KEY**：填写 `olares`。
    - **CODEX_MODEL**：填写 `default-chat`。
 
-   <!--
-   TODO: 素材清单 03，待补 Router 截图：codex-cli-env-router.png；替换下方旧图后再取消注释。
-   ![配置 Codex CLI 本地模型环境变量](/images/manual/use-cases/codex-cli-local-model-env.png#bordered)
-   -->
+   <!-- ![Codex CLI local model environment variables](/images/manual/use-cases/codex-cli-local-model-env.png#bordered) -->
 
 3. 点击 **Apply**，等待 Codex CLI 重启。
 4. 从 Launchpad 打开 Codex CLI，然后运行：
