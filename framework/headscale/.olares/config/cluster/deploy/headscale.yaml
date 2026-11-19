@@ -21,7 +21,8 @@
 # Membership starts empty and is maintained only by the authenticated control
 # path; deployment must not create users or infer authorization from IAM data.
 # Shared-node state and the bootstrap handoff use control-plane-node storage so
-# Pod replacement preserves the Tailscale identity and startup credentials.
+# Pod replacement preserves the Tailscale identity and route configuration.
+# Enrollment keys are fetched on startup and are never stored in this directory.
 # PostgreSQL is provisioned through the existing Olares middleware controller.
 # Helm generates the password on first install and reuses the existing Secret on
 # upgrades, matching the previous per-user Headscale chart.
@@ -59,6 +60,15 @@ metadata:
 automountServiceAccountToken: true
 
 ---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: tailscale
+  namespace: os-network
+  labels:
+    app: tailscale
+
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -71,8 +81,8 @@ rules:
   - apiGroups: ["iam.kubesphere.io"]
     resources: ["users"]
     verbs: ["get", "list"]
-  # The API wrapper authenticates the app-service service-account token before
-  # allowing it to read or replace the application-owned policy ports.
+  # The API wrapper authenticates app-service policy requests and Tailscale
+  # bootstrap requests using separate service accounts and audiences.
   - apiGroups: ["authentication.k8s.io"]
     resources: ["tokenreviews"]
     verbs: ["create"]
@@ -634,8 +644,8 @@ spec:
               mkdir -p /var/lib/headscale/bootstrap /var/run/headscale
               chown -R 1000:1000 /var/lib/headscale /var/run/headscale
               # Tailscale runs as uid 0 without CAP_DAC_OVERRIDE. Its pod
-              # fsGroup is 1000, so group write is enough for it to publish
-              # tailscale.ip, and group read is enough to load the authkey.
+              # fsGroup is 1000, so group write is enough to publish tailscale.ip
+              # and group read is enough to load subnet routes.
               chmod 0770 /var/lib/headscale/bootstrap
           securityContext:
             runAsNonRoot: false
@@ -785,22 +795,6 @@ spec:
                       mv /var/run/headscale-auth/headscale.apikey.tmp \
                         /var/run/headscale-auth/headscale.apikey
 
-                      # Refresh the enrollment key on every Headscale start so
-                      # it remains valid after a database rebuild. Existing
-                      # Tailscale state keeps the infrastructure node identity.
-                      umask 077
-                      rm -f /var/lib/headscale/bootstrap/tailscale.authkey.tmp
-                      /ko-app/headscale preauthkeys create \
-                        --expiration 87600h \
-                        --reusable \
-                        --tags tag:olares \
-                        > /var/lib/headscale/bootstrap/tailscale.authkey.tmp
-                      test -s /var/lib/headscale/bootstrap/tailscale.authkey.tmp
-                      mv /var/lib/headscale/bootstrap/tailscale.authkey.tmp \
-                        /var/lib/headscale/bootstrap/tailscale.authkey
-                      # umask 077 creates this mode 0600. Group 1000 must be
-                      # able to read it from the Tailscale container.
-                      chmod 0640 /var/lib/headscale/bootstrap/tailscale.authkey
                     ) > /var/lib/headscale/bootstrap/bootstrap.log 2>&1
           ports:
             - name: http
@@ -873,7 +867,7 @@ spec:
               mountPath: /etc/nginx/conf.d
               readOnly: true
         - name: headscale-api-wrapper
-          image: beclab/headscale-api-wrapper:v0.2.3
+          image: beclab/headscale-api-wrapper:v0.2.4
           imagePullPolicy: IfNotPresent
           command: [/bin/sh, -ec]
           args:
@@ -1021,6 +1015,7 @@ spec:
       priorityClassName: system-cluster-critical
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
+      serviceAccountName: tailscale
       securityContext:
         fsGroup: 1000
         fsGroupChangePolicy: OnRootMismatch
@@ -1068,16 +1063,40 @@ spec:
           command: [/bin/sh, -ec]
           args:
             - |
+              # emptyDir survives container restarts; discard any previous key first.
+              rm -f /var/run/tailscale-auth/authkey
               until test -s /certs/ca.crt; do
                 echo "waiting for the Headscale TLS CA"
                 sleep 1
               done
               cp /certs/ca.crt /usr/local/share/ca-certificates/headscale-ca.crt
               update-ca-certificates
-              until test -s /etc/headscale-bootstrap/tailscale.authkey; do
-                echo "waiting for the Headscale bootstrap key"
-                sleep 1
+              bootstrap_timeout=30
+              if ! grep -q '"_current-profile"[[:space:]]*:' /var/lib/tailscale/tailscaled.state 2>/dev/null; then
+                # A state file alone does not imply enrollment; allow longer without a profile.
+                bootstrap_timeout=120
+              fi
+              # Requests may overrun the deadline. Never log credentials or response bodies.
+              deadline=$(( $(date +%s) + bootstrap_timeout ))
+              while test "$(date +%s)" -lt "${deadline}"; do
+                if authkey="$(wget -q -T 5 -O - --post-data="" \
+                  --header="Authorization: Bearer $(cat /var/run/secrets/tokens/bootstrap)" \
+                  http://headscale-server-svc.os-network.svc.cluster.local:8000/bootstrap/tailscale-authkey 2>/dev/null)" &&
+                  test -n "${authkey}"; then
+                  break
+                fi
+                # A failed transfer may leave partial output.
+                authkey=""
+                sleep 2
               done
+              if test -n "${authkey}"; then
+                # Keep the secret out of argv and the exported environment.
+                (umask 077; printf '%s' "${authkey}" > /var/run/tailscale-auth/authkey)
+                export TS_AUTHKEY=file:/var/run/tailscale-auth/authkey
+              else
+                echo "bootstrap key unavailable (wait limit ${bootstrap_timeout}s); trying persisted Tailscale login"
+              fi
+              unset authkey
               exec /usr/local/bin/containerboot
           lifecycle:
             postStart:
@@ -1087,9 +1106,15 @@ spec:
                   - -ec
                   - |
                     dns_ip=""
-                    for i in $(seq 1 120); do
-                      dns_ip="$(tailscale --socket=/var/run/tailscale/tailscaled.sock ip -4 2>/dev/null | head -n 1 || true)"
-                      test -n "${dns_ip}" && break
+                    # Covers key retrieval (up to 120s) plus containerboot login (up to 60s).
+                    deadline=$(( $(date +%s) + 240 ))
+                    while test "$(date +%s)" -lt "${deadline}"; do
+                      if status="$(tailscale status --json 2>/dev/null)" &&
+                        printf '%s\n' "${status}" | grep -q '"BackendState"[[:space:]]*:[[:space:]]*"Running"'; then
+                        rm -f /var/run/tailscale-auth/authkey
+                        dns_ip="$(tailscale ip -4 2>/dev/null | head -n 1 || true)"
+                        test -n "${dns_ip}" && break
+                      fi
                       sleep 1
                     done
                     test -n "${dns_ip}"
@@ -1099,7 +1124,7 @@ spec:
                     # boot. Enforce exit-node advertisement through the local
                     # API after tailscaled is online; this is idempotent for
                     # both fresh installs and upgrades.
-                    tailscale --socket=/var/run/tailscale/tailscaled.sock set \
+                    tailscale set \
                       --advertise-exit-node=true
 
                     sed "s/__TAILSCALE_DNS_IP__/${dns_ip}/g" \
@@ -1134,8 +1159,6 @@ spec:
               value: "false"
             - name: TS_AUTH_ONCE
               value: "true"
-            - name: TS_AUTHKEY
-              value: file:/etc/headscale-bootstrap/tailscale.authkey
             - name: TS_KUBE_SECRET
               value: ""
             - name: TS_TAILSCALED_EXTRA_ARGS
@@ -1158,6 +1181,11 @@ spec:
               drop: [ALL]
               add: [NET_ADMIN, NET_RAW]
           volumeMounts:
+            - name: bootstrap-token
+              mountPath: /var/run/secrets/tokens
+              readOnly: true
+            - name: bootstrap-authkey
+              mountPath: /var/run/tailscale-auth
             - name: headscale-bootstrap
               mountPath: /etc/headscale-bootstrap
             - name: tailscale-data
@@ -1175,8 +1203,8 @@ spec:
               mountPath: /certs
               readOnly: true
           # Hold dns-proxy until tailscaled has created ts-olares. The entrypoint
-          # can sit in the authkey wait for several minutes before that device
-          # exists; keep the failure window longer than Headscale's own bootstrap.
+          # can wait for the CA and bootstrap API before that device exists;
+          # keep the failure window longer than Headscale's own bootstrap.
           startupProbe:
             exec:
               command: ["/sbin/ip", "link", "show", "ts-olares"]
@@ -1193,6 +1221,7 @@ spec:
                   test -n "$(tailscale ip -4 | head -n 1)"
             initialDelaySeconds: 5
             periodSeconds: 5
+            timeoutSeconds: 5
       containers:
         - name: subnet-router-sync
           image: tailscale/tailscale:v1.94.2
@@ -1244,7 +1273,7 @@ spec:
                 if test -n "${configured}"; then
                   desired="${desired},${configured}"
                 fi
-                if prefs="$(timeout -k 2 10 tailscale --socket=/var/run/tailscale/tailscaled.sock debug prefs 2>/dev/null)" &&
+                if prefs="$(tailscale debug prefs 2>/dev/null)" &&
                   actual="$(printf '%s\n' "${prefs}" | actual_routes)"; then
                   prefs_failures=0
                 else
@@ -1262,7 +1291,7 @@ spec:
                   sleep 2
                   continue
                 fi
-                if set_output="$(timeout -k 2 10 tailscale --socket=/var/run/tailscale/tailscaled.sock set \
+                if set_output="$(tailscale set \
                   --advertise-routes="${desired}" 2>&1)"; then
                   failures=0
                 else
@@ -1321,6 +1350,18 @@ spec:
               mountPath: /etc/coredns
               readOnly: true
       volumes:
+        - name: bootstrap-authkey
+          emptyDir:
+            medium: Memory
+            sizeLimit: 1Mi
+        - name: bootstrap-token
+          projected:
+            defaultMode: 0400
+            sources:
+              - serviceAccountToken:
+                  path: bootstrap
+                  audience: headscale-bootstrap
+                  expirationSeconds: 600
         - name: headscale-bootstrap
           hostPath:
             path: /var/lib/olares/headscale/bootstrap

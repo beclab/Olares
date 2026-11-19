@@ -52,3 +52,6 @@ rules:
   - "/headscale/policy/lan-groups"
   - "/headscale/policy/lan-groups/*"
   verbs: ["*"]
+- nonResourceURLs:
+  - "/headscale/policy/self-mesh"
+  verbs: ["get", "update"]
