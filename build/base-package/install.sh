@@ -7,6 +7,28 @@ function command_exists() {
 	  command -v "$@" > /dev/null 2>&1
 }
 
+function installed_cli_matches() {
+    local version_output current_version current_commit
+    command_exists olares-cli || return 1
+    version_output=$(olares-cli --version) || return 1
+    current_version=$(awk 'NR==1{print $3}' <<< "$version_output")
+    [[ "$current_version" == "$VERSION" ]] || return 1
+    [[ "$(olares-cli --vendor)" == "$expected_vendor" ]] || return 1
+
+    if [[ -n "$RELEASE_ID_SUFFIX" ]]; then
+        current_commit=$(awk '/^Git commit: /{print $3; exit}' <<< "$version_output")
+        # Older or unstamped binaries can still be reused by version/vendor.
+        if [[ -z "$current_commit" || "$current_commit" == "unknown" ]]; then
+            return 0
+        fi
+        # Release workflows use git rev-parse --short=7 (at least 7 digits),
+        # while GoReleaser stamps GitCommit with .FullCommit.
+        [[ "$RELEASE_ID" =~ ^[0-9a-f]{7,40}$ ]] || return 1
+        [[ "$current_commit" =~ ^[0-9a-f]{40}$ ]] || return 1
+        [[ "$current_commit" == "$RELEASE_ID"* ]] || return 1
+    fi
+}
+
 if [[ x"$REPO_PATH" == x"" ]]; then
     export REPO_PATH="#__REPO_PATH__"
 fi
@@ -100,9 +122,9 @@ else
     if [[ "$(basename "$REPO_PATH")" == "olares-one" ]]; then
         expected_vendor="OlaresOne"
     fi
-    if command_exists olares-cli && [[ "$(olares-cli -v | awk 'NR==1{print $3}')" == "$VERSION" ]] && [[ "$(olares-cli --vendor)" == "$expected_vendor" ]]; then
+    if installed_cli_matches; then
         INSTALL_OLARES_CLI=$(which olares-cli)
-        echo "olares-cli already installed and is the expected version"
+        echo "olares-cli already installed and matches the expected version, vendor and release"
         echo ""
     else
         if [[ ! -f ${CLI_FILE} ]] || ! gzip -t ${CLI_FILE} 2>/dev/null; then
