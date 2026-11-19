@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/beclab/Olares/cli/pkg/aptsource"
 	"github.com/beclab/Olares/cli/pkg/utils"
 	"github.com/pkg/errors"
 
@@ -63,34 +64,11 @@ func (t *PatchTask) Execute(runtime connector.Runtime) error {
 
 	var systemInfo = runtime.GetSystemInfo()
 	var platformFamily = systemInfo.GetOsPlatformFamily()
-	var aptToolAvailable bool
-	if _, err := util.GetCommand("add-apt-repository"); err == nil {
-		aptToolAvailable = true
-	} else {
-		if _, err := runtime.GetRunner().SudoCmd("apt install -y software-properties-common", false, true); err == nil {
-			aptToolAvailable = true
-		} else {
-			logger.Infof("software-properties-common not available, try to update apt sources ourself")
-		}
-	}
 	var pkgManager = systemInfo.GetPkgManager()
 	switch platformFamily {
 	case common.Debian:
-		sourceType := "deb"
-		repoURL := "https://deb.debian.org/debian"
-		suite := systemInfo.GetDebianVersionCode()
-		components := []string{"contrib", "non-free"}
-
-		if aptToolAvailable {
-			cmd := fmt.Sprintf("add-apt-repository '%s %s %s %s' -y", sourceType, repoURL, suite, strings.Join(components, " "))
-			if _, err := runtime.GetRunner().SudoCmd(cmd, false, true); err != nil {
-				return err
-			}
-		} else {
-			err := utils.AddAptSource(sourceType, repoURL, suite, components)
-			if err != nil {
-				return err
-			}
+		if err := aptsource.EnsureDebianComponents(); err != nil {
+			return err
 		}
 
 		if systemInfo.IsDebianVersionEqual(connector.Debian13) {
@@ -103,6 +81,11 @@ func (t *PatchTask) Execute(runtime connector.Runtime) error {
 	case common.Ubuntu:
 		if systemInfo.IsUbuntu() {
 			if !systemInfo.IsPveOrPveLxc() && !systemInfo.IsRaspbian() {
+				if _, err := util.GetCommand("add-apt-repository"); err != nil {
+					if _, err := runtime.GetRunner().SudoCmd("apt-get update -qq && apt-get install -y software-properties-common", false, true); err != nil {
+						return err
+					}
+				}
 				if _, err := runtime.GetRunner().SudoCmd("add-apt-repository universe -y", false, true); err != nil {
 					logger.Errorf("add os repo error %v", err)
 					return err

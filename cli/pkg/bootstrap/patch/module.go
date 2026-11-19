@@ -57,9 +57,9 @@ func (m *InstallDepsModule) Init() {
 		Retry:    0,
 	}
 
-	patchOs := &task.RemoteTask{
+	// OS preparation modifies the local machine, including its APT sources.
+	patchOs := &task.LocalTask{
 		Name:   "PatchOs",
-		Hosts:  m.Runtime.GetAllHosts(),
 		Action: new(PatchTask),
 		Retry:  0,
 	}
