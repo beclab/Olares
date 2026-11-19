@@ -185,12 +185,14 @@ jobs:
           OLARES_RELEASE_ID: ${{ inputs.release-id }}
           BINARY_VERSION: ${{ needs.resolve-versions.outputs.binary_version }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GOPRIVATE: github.com/beclab/oac
+          GOPRIVATE: github.com/beclab/oac,github.com/Above-Os/backups-sdk
           GONOSUMDB: github.com/beclab/oac
           GONOPROXY: github.com/beclab/oac
-          GIT_CONFIG_COUNT: "1"
+          GIT_CONFIG_COUNT: "2"
           GIT_CONFIG_KEY_0: "url.https://x-access-token:${{ secrets.GO_PRIVATE_TOKEN }}@github.com/.insteadof"
-          GIT_CONFIG_VALUE_0: "https://github.com/"
+          GIT_CONFIG_VALUE_0: "https://github.com/beclab/"
+          GIT_CONFIG_KEY_1: "url.https://x-access-token:${{ secrets.GO_ABOVEOS_TOKEN }}@github.com/.insteadof"
+          GIT_CONFIG_VALUE_1: "https://github.com/Above-Os/"
 
       - name: Assert binary version was injected
         working-directory: cli
