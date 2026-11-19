@@ -121,7 +121,7 @@ func TestValidateKnownAPIVersion(t *testing.T) {
 
 func newWorkloadOptionsBaseline() *AppConfiguration {
 	c := newValidConfig()
-	c.ConfigVersion = "0.13.0"
+	c.ConfigVersion = "0.16.0"
 	replicas := int32(1)
 	c.WorkloadOptions = WorkloadOptions{
 		c.Metadata.Name: {
@@ -138,7 +138,7 @@ func newWorkloadOptionsBaseline() *AppConfiguration {
 	return c
 }
 
-func TestWorkloadOptions_ValidAt013(t *testing.T) {
+func TestWorkloadOptions_ValidAt016(t *testing.T) {
 	if err := ValidateAppConfiguration(newWorkloadOptionsBaseline()); err != nil {
 		t.Fatalf("valid workloadOptions failed: %v", err)
 	}
@@ -146,18 +146,55 @@ func TestWorkloadOptions_ValidAt013(t *testing.T) {
 
 func TestWorkloadOptions_VersionBoundary(t *testing.T) {
 	c := newWorkloadOptionsBaseline()
-	c.ConfigVersion = "0.12.0"
+	c.ConfigVersion = "0.15.0"
 	err := ValidateAppConfiguration(c)
 	if err == nil || !strings.Contains(err.Error(), "workloadOptions requires") {
-		t.Fatalf("0.12 workloadOptions should fail, got: %v", err)
+		t.Fatalf("0.15 workloadOptions should fail, got: %v", err)
+	}
+
+	c = newValidConfig()
+	c.ConfigVersion = "0.15.0"
+	c.Options.Dependencies = []Dependency{newOlaresSystemDep(c)}
+	legacy := WorkloadReplicas{c.Metadata.Name: 1}
+	c.WorkloadReplicas = &legacy
+	if err := ValidateAppConfiguration(c); err != nil {
+		t.Fatalf("0.15 workloadReplicas should still validate: %v", err)
 	}
 
 	c = newWorkloadOptionsBaseline()
-	legacy := WorkloadReplicas{c.Metadata.Name: 1}
+	legacy = WorkloadReplicas{c.Metadata.Name: 1}
 	c.WorkloadReplicas = &legacy
 	err = ValidateAppConfiguration(c)
 	if err == nil || !strings.Contains(err.Error(), "workloadReplicas is not supported") {
-		t.Fatalf("0.13 legacy workloadReplicas should fail, got: %v", err)
+		t.Fatalf("0.16 legacy workloadReplicas should fail, got: %v", err)
+	}
+}
+
+func TestOlaresManifestVersion_Max(t *testing.T) {
+	for _, version := range []string{"0.16.1", "0.17.0", "1.0.0", "v0.16.1"} {
+		c := newWorkloadOptionsBaseline()
+		c.ConfigVersion = version
+		err := ValidateAppConfiguration(c)
+		if err == nil || !strings.Contains(err.Error(), "olaresManifest.version must be <= 0.16.0") {
+			t.Fatalf("version %s should exceed the maximum, got: %v", version, err)
+		}
+	}
+
+	c := newWorkloadOptionsBaseline()
+	c.ConfigVersion = "0.16.0"
+	if err := ValidateAppConfiguration(c); err != nil {
+		t.Fatalf("0.16.0 is the maximum and must validate: %v", err)
+	}
+}
+
+func TestOlaresManifestVersion_Invalid(t *testing.T) {
+	for _, version := range []string{"not-a-version", "latest", "   "} {
+		c := newValidConfig()
+		c.ConfigVersion = version
+		err := ValidateAppConfiguration(c)
+		if err == nil || !strings.Contains(err.Error(), `olaresManifest.version is invalid: "`) {
+			t.Fatalf("version %q should be rejected as invalid, got: %v", version, err)
+		}
 	}
 }
 
@@ -751,15 +788,13 @@ func TestValidateAppSpec_ModernAcceptsLegacyFlatEnvelope(t *testing.T) {
 	})
 
 	t.Run("complete_flat_envelope_valid_above_boundary", func(t *testing.T) {
-		// 0.13.0 sits well above the gate. The closure must take the
-		// same branch as the 0.12.0 boundary and accept the flat shape.
+		// 0.15.0 sits above the 0.12.0 resources gate and below the
+		// 0.16.0 workloadOptions gate, so the flat envelope keeps
+		// workloadReplicas.
 		c := populated()
-		c.ConfigVersion = "0.13.0"
-		replicas := int32(1)
-		c.WorkloadOptions = WorkloadOptions{c.Metadata.Name: {Replicas: &replicas}}
-		c.WorkloadReplicas = nil
+		c.ConfigVersion = "0.15.0"
 		if err := ValidateAppConfiguration(c); err != nil {
-			t.Fatalf("modern manifest at 0.13.0 using the legacy flat envelope must validate: %v", err)
+			t.Fatalf("modern manifest at 0.15.0 using the legacy flat envelope must validate: %v", err)
 		}
 	})
 
