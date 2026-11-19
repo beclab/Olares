@@ -26,7 +26,7 @@ const (
 	DefaultRegistryName = "docker.io"
 )
 
-func registryDir(registry string) string { return filepath.Join(CertsDDir, registry) }
+func registryDir(registry string) string { return filepath.Join(certsDDir, registry) }
 
 func registryHostsPath(registry string) string {
 	return filepath.Join(registryDir(registry), "hosts.toml")
@@ -86,25 +86,35 @@ func parseHostsTOMLMirrors(data []byte) ([]string, error) {
 }
 
 // writeRegistryMirror writes certs.d/<registry>/hosts.toml with the given ordered
-// endpoints as [host] entries (highest priority first) and the canonical upstream
-// as `server`. Empty endpoints removes the hosts.toml so default resolution
-// applies. hosts.toml is consulted per-pull, so no containerd restart is needed.
+// endpoints as [host] entries (highest priority first), preserving upstream
+// auth/TLS settings and settings on retained hosts. Empty endpoints removes a
+// mirror-only file, but preserves a separately configured upstream. hosts.toml
+// is consulted per-pull, so no containerd restart is needed.
 func writeRegistryMirror(registry string, endpoints []string) error {
-	if len(endpoints) == 0 {
+	registry, err := normalizeRegistryName(registry)
+	if err != nil {
+		return err
+	}
+	registryConfigMu.Lock()
+	defer registryConfigMu.Unlock()
+	return writeRegistryMirrorLocked(registry, endpoints)
+}
+
+func writeRegistryMirrorLocked(registry string, endpoints []string) error {
+	tree, err := readRegistryTree(registry)
+	if err != nil {
+		return err
+	}
+	if len(endpoints) == 0 && len(tree.Keys()) <= 2 && !tree.Has("header") && !tree.Has("skip_verify") {
 		if err := os.Remove(registryHostsPath(registry)); err != nil && !os.IsNotExist(err) {
 			return err
 		}
 		return nil
 	}
-	if err := os.MkdirAll(registryDir(registry), 0o755); err != nil {
-		return err
+	if !tree.Has("server") {
+		tree.Set("server", canonicalServer(registry))
 	}
-	var b strings.Builder
-	fmt.Fprintf(&b, "server = %q\n", canonicalServer(registry))
-	for _, ep := range endpoints {
-		fmt.Fprintf(&b, "\n[host.%q]\n  capabilities = [\"pull\", \"resolve\"]\n", ep)
-	}
-	return os.WriteFile(registryHostsPath(registry), []byte(b.String()), 0o644)
+	return saveRegistryTree(registry, tree, endpoints)
 }
 
 func normalizeEndpoint(endpoint string) (string, error) {
@@ -122,7 +132,7 @@ func normalizeEndpoint(endpoint string) (string, error) {
 // GetRegistryMirrors returns all configured registry mirrors keyed by registry
 // namespace (from every certs.d/<registry>/hosts.toml).
 func GetRegistryMirrors(ctx *fiber.Ctx) (map[string]Mirror, error) {
-	entries, err := os.ReadDir(CertsDDir)
+	entries, err := os.ReadDir(certsDDir)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return map[string]Mirror{}, nil
@@ -145,54 +155,6 @@ func GetRegistryMirrors(ctx *fiber.Ctx) (map[string]Mirror, error) {
 		mirrors[e.Name()] = Mirror{Endpoints: eps}
 	}
 	return mirrors, nil
-}
-
-// GetRegistryMirror returns the mirror config for a single registry (defaulting
-// to docker.io).
-func GetRegistryMirror(ctx *fiber.Ctx) (*Mirror, error) {
-	registry := ctx.Params(ParamRegistryName)
-	if registry == "" {
-		registry = DefaultRegistryName
-	}
-	eps, err := readRegistryMirror(registry)
-	if err != nil {
-		return nil, err
-	}
-	return &Mirror{Endpoints: eps}, nil
-}
-
-// UpdateRegistryMirror replaces the mirror host list for a registry. The request
-// body is a Mirror ({"endpoint": [...]}), matching the previous interface.
-func UpdateRegistryMirror(ctx *fiber.Ctx) (*Mirror, error) {
-	registry := ctx.Params(ParamRegistryName)
-	if registry == "" {
-		return nil, fiber.NewError(fiber.StatusBadRequest, "registry name is required")
-	}
-	var mirror Mirror
-	if err := ctx.BodyParser(&mirror); err != nil {
-		return nil, fiber.NewError(fiber.StatusBadRequest, "invalid request body")
-	}
-	normalized := make([]string, 0, len(mirror.Endpoints))
-	for _, ep := range mirror.Endpoints {
-		n, err := normalizeEndpoint(ep)
-		if err != nil {
-			return nil, fiber.NewError(fiber.StatusBadRequest, err.Error())
-		}
-		normalized = append(normalized, n)
-	}
-	if err := writeRegistryMirror(registry, normalized); err != nil {
-		return nil, err
-	}
-	return &Mirror{Endpoints: normalized}, nil
-}
-
-// DeleteRegistryMirror removes a registry's mirror config (its certs.d subdir).
-func DeleteRegistryMirror(ctx *fiber.Ctx) error {
-	registry := ctx.Params(ParamRegistryName)
-	if registry == "" {
-		return fiber.NewError(fiber.StatusBadRequest, "registry name is required")
-	}
-	return os.RemoveAll(registryDir(registry))
 }
 
 // EnsureRegistryMirror ensures endpoint is configured as a mirror host for
@@ -218,6 +180,12 @@ func ReconcileMirrorEndpoint(ctx context.Context, registry, endpoint string, pre
 	if err != nil {
 		return false, err
 	}
+	registry, err = normalizeRegistryName(registry)
+	if err != nil {
+		return false, err
+	}
+	registryConfigMu.Lock()
+	defer registryConfigMu.Unlock()
 	existing, err := readRegistryMirror(registry)
 	if err != nil {
 		return false, err
@@ -249,7 +217,7 @@ func ReconcileMirrorEndpoint(ctx context.Context, registry, endpoint string, pre
 			}
 		}
 	}
-	return true, writeRegistryMirror(registry, next)
+	return true, writeRegistryMirrorLocked(registry, next)
 }
 
 // ListRegistries merges configured mirrors with registries discovered from
@@ -277,8 +245,27 @@ func ListRegistries(ctx *fiber.Ctx) ([]*Registry, error) {
 			}
 		}
 	}
+	entries, err := os.ReadDir(certsDDir)
+	if err != nil && !os.IsNotExist(err) {
+		return nil, err
+	}
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		if _, err := os.Stat(registryHostsPath(entry.Name())); err == nil {
+			if _, exists := nameToRegistries[entry.Name()]; !exists {
+				nameToRegistries[entry.Name()] = &Registry{Name: entry.Name()}
+			}
+		}
+	}
 	for host := range mirrorEndpointHosts {
-		delete(nameToRegistries, host)
+		if _, configured := nameToRegistries[host]; !configured {
+			continue
+		}
+		if _, err := os.Stat(registryHostsPath(host)); os.IsNotExist(err) {
+			delete(nameToRegistries, host)
+		}
 	}
 	images, err := ListImages(ctx, "")
 	if err != nil {
@@ -293,7 +280,9 @@ func ListRegistries(ctx *fiber.Ctx) ([]*Registry, error) {
 			}
 			host := refspec.Hostname()
 			if _, isMirrorEndpoint := mirrorEndpointHosts[host]; isMirrorEndpoint {
-				continue
+				if _, configured := nameToRegistries[host]; !configured {
+					continue
+				}
 			}
 			if host == "" {
 				klog.Errorf("failed to parse image tag %s: empty host", tag)
