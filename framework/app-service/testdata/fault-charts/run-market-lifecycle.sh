@@ -413,10 +413,10 @@ pendingCancelFailed|T50 cancel timed out|pendingCanceling
 downloadingCancelFailed|T51|downloadingCanceling
 installingCancelFailed|T49|installingCanceling; uninstalling
 initializingCancelFailed|T52|initializingCanceling; uninstalling
-resumingCancelFailed|T53|stay; resumingCanceling
+resumingCancelFailed|T53|stay; resumingCanceling; uninstalling
 applyingEnvCancelFailed|T54|applyingEnvCanceling; uninstalling
-upgradePendingCancelFailed|T55|upgradePendingCanceling
-upgradeDownloadingCancelFailed|T43 or S1|upgradeDownloadingCanceling
+upgradePendingCancelFailed|T55|upgradePendingCanceling; uninstalling
+upgradeDownloadingCancelFailed|T43 or S1|upgradeDownloadingCanceling; uninstalling
 upgradingCancelFailed|T56|upgradingCanceling; uninstalling
 EOF
 }

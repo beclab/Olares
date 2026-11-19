@@ -31,7 +31,7 @@
 //   - InitializingCancelFailed   (ops: CancelOp, UninstallOp)
 //   - UpgradingCancelFailed      (ops: CancelOp, UninstallOp)
 //   - ApplyingEnvCancelFailed (ops: CancelOp, UninstallOp)
-//   - ResumingCancelFailed    (op: CancelOp; Tick stays put)
+//   - ResumingCancelFailed    (ops: CancelOp, UninstallOp; Tick stays put)
 //
 // Each handler is a Tick no-op plus one op-driven transition per
 // legal op. The op transitions are all "flip state to the canonical
@@ -798,14 +798,16 @@ func OnApplyingEnvCancelFailedUninstall(_ context.Context, w domain.World) domai
 // ResumingCancelFailed
 // -----------------------------------------------------------------
 //
-// Kept for ApplicationManagers already persisted in this state.
-// ResumingCanceling does not write it. Tick stays here; CancelOp
+// Timeout terminal of ResumingCanceling. Tick stays here. CancelOp
 // re-enters ResumingCanceling, which then hands off to Stopping.
-// UninstallOp is not allowed, matching OperationAllowedInState.
+// UninstallOp abandons through Uninstalling: the release is still
+// installed, and a wedged cancel retry would otherwise leave no
+// way to remove it.
 func registerResumingCancelFailed(t *domain.TransitionTable) {
 	t.AddReachable(appv1.ResumingCancelFailed, appv1.ResumingCancelFailed)
 	t.SetOrAddHandler(appv1.ResumingCancelFailed, domain.Tick{}, OnResumingCancelFailedTick)
 	t.SetOrAddHandler(appv1.ResumingCancelFailed, domain.TriggerOp{Op: appv1.CancelOp}, OnResumingCancelFailedCancel)
+	t.SetOrAddHandler(appv1.ResumingCancelFailed, domain.TriggerOp{Op: appv1.UninstallOp}, OnResumingCancelFailedUninstall)
 }
 
 // OnResumingCancelFailedTick is a no-op — see noopTerminalTick.
@@ -816,4 +818,9 @@ func OnResumingCancelFailedTick(ctx context.Context, w domain.World) domain.Resu
 // OnResumingCancelFailedCancel retries the failed resume-cancel.
 func OnResumingCancelFailedCancel(_ context.Context, w domain.World) domain.Result {
 	return terminalOpTransition(w, appv1.ResumingCanceling, terminalReasonCancelRetry, terminalMsgCancelRetryResuming)
+}
+
+// OnResumingCancelFailedUninstall abandons the failed resume-cancel.
+func OnResumingCancelFailedUninstall(_ context.Context, w domain.World) domain.Result {
+	return terminalOpTransition(w, appv1.Uninstalling, terminalReasonUninstall, terminalMsgUninstall)
 }
