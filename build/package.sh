@@ -76,6 +76,9 @@ run_cmd "cp -rf framework/bfl/.olares/config/launcher ${DIST}/wizard/config/"
 echo "packaging gpu ..."
 run_cmd "cp -rf infrastructure/gpu/.olares/config/gpu ${DIST}/wizard/config/"
 
+echo "packaging generic-device-plugin ..."
+run_cmd "mkdir -p ${DIST}/wizard/config/generic-device-plugin"
+run_cmd "cp -rf infrastructure/generic-device-plugin/.olares/generic-device-plugin.yaml ${DIST}/wizard/config/generic-device-plugin/generic-device-plugin.yaml"
 
 echo "packaging env config ..."
 run_cmd "cp -rf build/system-env.yaml ${DIST}/system-env.yaml"

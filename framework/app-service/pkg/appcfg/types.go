@@ -41,13 +41,20 @@ type (
 	Middleware              = manifest.Middleware
 	Application             = appv1alpha1.Application
 	ApplicationSpec         = appv1alpha1.ApplicationSpec
+	Attachment              = appv1alpha1.Attachment
 	AppEnvVar               = manifestsysv1alpha1.AppEnvVar
 	ACL                     = appv1alpha1.ACL
 	ApplicationManager      = appv1alpha1.ApplicationManager
 	ApplicationManagerState = appv1alpha1.ApplicationManagerState
 	OpRecord                = appv1alpha1.OpRecord
 	OverlayGateway          = manifest.OverlayGateway
+	OverlayEntrance         = manifest.OverlayEntrance
 	WorkloadReplicas        = manifest.WorkloadReplicas
+	WorkloadOptions         = manifest.WorkloadOptions
+	WorkloadOption          = manifest.WorkloadOption
+	WorkloadCapability      = manifest.WorkloadCapability
+	WorkloadOverlayGateway  = manifest.WorkloadOverlayGateway
+	WorkloadOverlayEntrance = manifest.WorkloadOverlayEntrance
 )
 
 func ChartNamespace(c *Chart, owner string) string {

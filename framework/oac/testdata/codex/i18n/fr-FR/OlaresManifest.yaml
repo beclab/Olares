@@ -1,0 +1,55 @@
+metadata:
+  title: Codex CLI
+  description: L'agent de coding léger d'OpenAI qui s'exécute dans votre terminal
+spec:
+  fullDescription: |
+    **Aperçu**
+    Codex CLI est l'agent de coding léger et open source d'OpenAI qui s'exécute localement dans votre terminal. Il comprend votre base de code, exécute des tâches de routine via le langage naturel et vous aide à livrer plus vite tout en restant dans le flux.
+
+    **Fonctionnalités clés**
+    - TUI native du terminal avec sortie d'outils en streaming, commandes slash, interrupt-and-redirect et revue riche des diffs.
+    - Modifications réelles de fichiers, exécution shell, workflows git et exécution de tests pilotés par le langage naturel.
+    - Appels d'outils compatibles MCP et instructions d'agent réutilisables via AGENTS.md / `.codex/skills`.
+    - Fonctionne avec un forfait ChatGPT Plus / Pro / Business / Edu / Enterprise (OAuth) ou une clé API OpenAI.
+    - L'image workspace inclut des runtimes de langages courants et des toolchains de build (Python, Node.js, Go, Rust, OpenJDK 21, Ruby, PHP, Lua) plus des clients de base de données (PostgreSQL, MySQL/MariaDB, Redis), git-lfs, compilateur protobuf, Gradle, tmux, dig/ss/nc, shellcheck, clang-format/tidy, graphviz et des en-têtes -dev supplémentaires (libpq, client MySQL, curl, ICU, LDAP) pour que les agents puissent exécuter des commandes de développement typiques sans root.
+    - DinD optionnel (`ENABLE_DIND`, activé par défaut) : `docker` / `docker compose` dans le terminal (sidecar privilégié).
+
+    **Configuration initiale**
+    Ouvrez l'entrance `Codex CLI` et exécutez `codex` pour lancer le flux de connexion OAuth (« Sign in with ChatGPT »), ou définissez `OPENAI_API_KEY` dans les variables d'environnement de l'app et redémarrez.
+
+    **Utiliser un modèle local (Ollama / passerelle compatible OpenAI)**
+    Pour diriger Codex vers un Ollama local, Olares Router ou tout proxy `/v1` compatible OpenAI, définissez ces variables d'environnement de l'app — pas de `export`/`unset` par session. Les valeurs vides sont omises du conteneur et le bloc géré de `~/.codex/config.toml` est supprimé, de sorte que Codex revient à ChatGPT OAuth / l'API officielle.
+
+    - `OPENAI_BASE_URL` = `http://<your-shared-domain>/v1` (entrance partagée d'une app Ollama / Router / vLLM)
+    - `OPENAI_API_KEY` = clé factice ou réelle attendue par la passerelle (p. ex. `ollama` pour de nombreux proxys Ollama)
+    - `CODEX_MODEL` = `qwen3-coder:30b` (ou le modèle exposé par cette passerelle)
+
+    **Revenir au cloud**
+    Videz `OPENAI_BASE_URL` et `CODEX_MODEL`, conservez ou définissez un vrai `OPENAI_API_KEY` (ou laissez-le vide et exécutez `codex login`), puis redémarrez. Le prochain démarrage du pod supprime le bloc de routage local géré.
+
+    **Si Codex indique qu'il manque de capacités d'exécution agentique**
+    Dans le terminal Codex, avant d'exécuter `codex`, réinstallez la CLI standalone officielle dans le bin du workspace :
+
+    `curl -fsSL https://chatgpt.com/codex/install.sh | CODEX_INSTALL_DIR=/opt/data/.local/bin sh`
+
+    Cela installe le dernier paquet complet (y compris l'hôte code-mode et d'autres dépendances) sur le volume persistant et répare une installation binaire seule.
+  upgradeDescription: |
+    **v1.0.17**
+
+    **Codex CLI**
+    - Épingler la version d'installation de **0.147.0** à **0.149.1**.
+    - Passer `init-install-codex` du tarball binaire musl GitHub à l'installeur standalone officiel d'OpenAI (`https://chatgpt.com/codex/install.sh`). Les installations existantes qui n'avaient que `codex` (et signalaient des capacités d'exécution agentique manquantes) sont réparées à la mise à niveau.
+
+    **Image de base (`beclab/harveyff-codex-base:0.5.9`, était 0.5.8)**
+    - Tag d'image workspace / init porté à **0.5.9**.
+
+    **Routage modèle local / cloud**
+    - Les env d'app `OPENAI_BASE_URL` + `CODEX_MODEL` écrivent un bloc géré en **haut** de `~/.codex/config.toml` (les clés racine doivent précéder les tables TOML). Laissez-les vides pour revenir à ChatGPT OAuth / l'API officielle.
+
+    **v1.0.12**
+
+    **Codex CLI**
+    - Épingler la version d'installation de **0.146.0** à **0.147.0** (`init-install-codex` utilise `appVersion` du chart).
+
+    **Image de base (`beclab/harveyff-codex-base:0.5.8`, était 0.5.7)**
+    - `@olares/cli` intégré mis à niveau vers **1.12.7-cli.0** (depuis 1.12.6-cli.2).

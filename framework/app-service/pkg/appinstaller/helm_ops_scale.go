@@ -43,7 +43,8 @@ func (h *HelmOps) Scale(replicas int32) error {
 		return nil
 	}
 	values := make(map[string]interface{})
-	values["workloads"] = buildWorkloadsValues(h.app.WorkloadReplicas, replicas)
+	effectiveReplicas := h.app.EffectiveWorkloadReplicas()
+	values["workloads"] = buildWorkloadsValues(&effectiveReplicas, replicas)
 
 	if err := helm.UpgradeCharts(h.ctx, h.actionConfig, h.settings,
 		h.app.AppName, h.app.ChartsName, h.app.RepoURL, h.app.Namespace,

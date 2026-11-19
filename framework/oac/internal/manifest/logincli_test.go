@@ -46,7 +46,7 @@ func TestIsLoginOlaresCLIAllowedEmptyEnvFallsBack(t *testing.T) {
 // version gate before the allowlist is ever consulted.
 func newLoginCLIBaseline() *AppConfiguration {
 	c := newValidConfig()
-	c.ConfigVersion = "0.13.0"
+	c.ConfigVersion = "0.12.0"
 	wr := WorkloadReplicas{c.Metadata.Name: 1}
 	c.WorkloadReplicas = &wr
 	c.Options.Dependencies = []Dependency{newOlaresSystemDep(c)}

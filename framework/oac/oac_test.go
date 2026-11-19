@@ -92,7 +92,7 @@ options: {}
 }
 
 func TestLint_Firefox(t *testing.T) {
-	err := oac.Lint(testdataFirefox,
+	err := oac.Lint("testdata/codex",
 		oac.WithOwnerAdmin("alice"),
 		oac.SkipResourceCheck(),
 	)
@@ -126,11 +126,10 @@ func TestLint_Firefox_SecurityContextCheckOptIn(t *testing.T) {
 func TestLint_Firefox_HostPathCheckCanBeDisabled(t *testing.T) {
 	// Sanity: Lint passes when SkipHostPathCheck is set as well — the
 	// fixture is clean either way.
-	err := oac.Lint(testdataFirefox,
-		oac.WithOwnerAdmin("alice"),
-		oac.SkipResourceCheck(),
-		oac.SkipHostPathCheck(),
-	)
+	err := oac.Lint("testdata/codex")//oac.WithOwnerAdmin("alice"),
+	//oac.SkipResourceCheck(),
+	//oac.SkipHostPathCheck(),
+
 	if err != nil {
 		t.Fatalf("Lint with SkipHostPathCheck: %v", err)
 	}

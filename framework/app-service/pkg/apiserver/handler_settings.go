@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -47,6 +48,7 @@ import (
 var appLevelSettingKeys = map[string]struct{}{
 	"enableOverlayGateway": {},
 	"enableLLMGateway":     {},
+	"bluetooth":            {},
 }
 
 // isAppLevelSettingKey reports whether the given Spec.Settings key is
@@ -83,7 +85,7 @@ func overridePatch(app *v1alpha1.Application, caller string, kv map[string]strin
 func (h *Handler) setupApp(req *restful.Request, resp *restful.Response) {
 	app, err := getAppByName(req, resp)
 	if err != nil {
-		klog.Errorf("Failed to get app name=%s err=%v", app.Spec.Name, err)
+		klog.Errorf("Failed to get app name=%s err=%v", req.PathParameter(ParamAppName), err)
 		// if error, response in function. Do nothing
 		return
 	}
@@ -107,9 +109,49 @@ func (h *Handler) setupApp(req *restful.Request, resp *restful.Response) {
 	appCopy := app.DeepCopy()
 	caller := req.Attribute(constants.UserContextAttribute).(string)
 	shared := v1alpha1.IsShared(appCopy)
+	var bluetoothWorkloads []string
+	client := req.Attribute(constants.KubeSphereClientAttribute).(*clientset.ClientSet)
 
 	// TODO: validate settings keys
 	for k, v := range settings {
+		if k == "bluetooth" {
+			value, ok := v.(string)
+			if !ok {
+				api.HandleBadRequest(resp, req, fmt.Errorf("bluetooth must be a string boolean"))
+				return
+			}
+			enabled, parseErr := strconv.ParseBool(value)
+			if parseErr != nil {
+				api.HandleBadRequest(resp, req, fmt.Errorf("bluetooth must be a string boolean: %w", parseErr))
+				return
+			}
+			_, appConfig, _, _, configErr := h.sidecarWebhook.GetAppConfig(app.Spec.Namespace)
+			if configErr != nil {
+				api.HandleError(resp, req, configErr)
+				return
+			}
+			if appConfig == nil {
+				api.HandleBadRequest(resp, req, fmt.Errorf("application manifest is unavailable"))
+				return
+			}
+			declared := false
+			for workload, option := range appConfig.WorkloadOptions {
+				if allowsCapability(option, "bluetooth") {
+					declared = true
+					bluetoothWorkloads = append(bluetoothWorkloads, workload)
+				}
+			}
+			if !declared {
+				api.HandleBadRequest(resp, req, fmt.Errorf("application does not declare bluetooth capability"))
+				return
+			}
+			if enabled {
+				if validateErr := validateBluetoothAttachmentNodes(req.Request.Context(), client, app.Spec.Attachments, bluetoothWorkloadSet(appConfig)); validateErr != nil {
+					api.HandleUnprocessableEntity(resp, req, validateErr)
+					return
+				}
+			}
+		}
 		var str []byte
 		switch v.(type) {
 		case map[string]interface{}:
@@ -140,12 +182,17 @@ func (h *Handler) setupApp(req *restful.Request, resp *restful.Response) {
 		}
 		appCopy.Spec.Settings[k] = string(str)
 	}
-	client := req.Attribute(constants.KubeSphereClientAttribute).(*clientset.ClientSet)
-
 	appUpdated, err := client.AppClient.AppV1alpha1().Applications().Update(req.Request.Context(), appCopy, metav1.UpdateOptions{})
 	if err != nil {
 		api.HandleError(resp, req, err)
 		return
+	}
+	if bluetoothWorkloads != nil {
+		sort.Strings(bluetoothWorkloads)
+		if restartErr := restartAttachmentWorkloads(req.Request.Context(), client, app.Spec.Namespace, bluetoothWorkloads); restartErr != nil {
+			api.HandleError(resp, req, restartErr)
+			return
+		}
 	}
 	// Respond with the caller's effective view so the response reflects
 	// both the global Spec.Settings and any per-user overlay just

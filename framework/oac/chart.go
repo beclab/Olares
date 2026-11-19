@@ -527,7 +527,20 @@ func (c *OAC) checkManifestWorkloadRefs(oacPath string, m Manifest, list kube.Re
 		return nil
 	}
 	var errs []error
-	if cfg.WorkloadReplicas != nil {
+	if len(cfg.WorkloadOptions) > 0 {
+		if err := resources.CheckWorkloadOptions(list, cfg.WorkloadOptions); err != nil {
+			errs = append(errs, err)
+		}
+		replicas := make(map[string]int32, len(cfg.WorkloadOptions))
+		for name, option := range cfg.WorkloadOptions {
+			if option.Replicas != nil {
+				replicas[name] = *option.Replicas
+			}
+		}
+		if err := checkWorkloadReplicaValues(oacPath, replicas); err != nil {
+			errs = append(errs, err)
+		}
+	} else if cfg.WorkloadReplicas != nil {
 		replicas := map[string]int32(*cfg.WorkloadReplicas)
 		//if err := resources.CheckWorkloadReplicas(list, replicas); err != nil {
 		//	errs = append(errs, err)

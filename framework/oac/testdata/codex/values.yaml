@@ -1,0 +1,5 @@
+workloads:
+  terminal:
+    replicaCount: 1
+  codex:
+    replicaCount: 1

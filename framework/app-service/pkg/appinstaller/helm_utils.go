@@ -126,7 +126,8 @@ func BuildBaseHelmValues(ctx context.Context, kubeConfig *rest.Config, appConfig
 	// manifest-declared values so Helm template rendering matches what the
 	// final cluster will see.
 	if appConfig.HasWorkloadReplicas() {
-		values["workloads"] = buildWorkloadsValues(appConfig.WorkloadReplicas, -1)
+		replicas := appConfig.EffectiveWorkloadReplicas()
+		values["workloads"] = buildWorkloadsValues(&replicas, -1)
 	}
 
 	if dryRun {
@@ -215,10 +216,11 @@ func (h *HelmOps) SetValues(isInstallOp bool) (values map[string]interface{}, er
 	// Apps without WorkloadReplicas leave this key unset and follow the
 	// legacy single-phase flow.
 	if h.app.HasWorkloadReplicas() {
+		replicas := h.app.EffectiveWorkloadReplicas()
 		if isInstallOp || h.options.SkipWaitForStartUp {
-			values["workloads"] = buildWorkloadsValues(h.app.WorkloadReplicas, 0)
+			values["workloads"] = buildWorkloadsValues(&replicas, 0)
 		} else {
-			values["workloads"] = buildWorkloadsValues(h.app.WorkloadReplicas, -1)
+			values["workloads"] = buildWorkloadsValues(&replicas, -1)
 		}
 	}
 	err = h.AddEnvironmentVariables(values, false)

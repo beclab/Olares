@@ -63,7 +63,8 @@ func getAppByName(req *restful.Request, resp *restful.Response) (*v1alpha1.Appli
 	}
 
 	if applist.Items == nil || len(applist.Items) == 0 {
-		api.HandleNotFound(resp, req, errors.New("there is not any application"))
+		err = errors.New("there is not any application")
+		api.HandleNotFound(resp, req, err)
 		return nil, err
 	}
 

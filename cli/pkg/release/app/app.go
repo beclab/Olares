@@ -58,6 +58,10 @@ func (m *Manager) Package() error {
 		return err
 	}
 
+	if err := m.packageGenericDevicePlugin(); err != nil {
+		return err
+	}
+
 	if err := m.packageEnvConfig(); err != nil {
 		return err
 	}
@@ -124,6 +128,14 @@ func (m *Manager) packageGPU() error {
 	return util.CopyDirectory(
 		filepath.Join(m.olaresRepoRoot, "infrastructure/gpu/.olares/config/gpu"),
 		filepath.Join(m.distPath, "wizard/config/gpu"),
+	)
+}
+
+func (m *Manager) packageGenericDevicePlugin() error {
+	fmt.Println("packaging generic-device-plugin ...")
+	return util.CopyFile(
+		filepath.Join(m.olaresRepoRoot, "infrastructure/generic-device-plugin/.olares/generic-device-plugin.yaml"),
+		filepath.Join(m.distPath, "wizard/config/generic-device-plugin/generic-device-plugin.yaml"),
 	)
 }
 

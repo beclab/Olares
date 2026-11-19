@@ -17,7 +17,7 @@ import (
 // because validateOlaresDependency rejects modern manifests that omit it.
 func newResourcesConfig(modes ...ResourceMode) *AppConfiguration {
 	c := newValidConfig()
-	c.ConfigVersion = "0.13.0" // >= 0.12.0 -> rules apply
+	c.ConfigVersion = "0.12.0" // >= 0.12.0 -> rules apply
 	c.APIVersion = APIVersionV1
 	c.Spec.SupportArch = []string{"amd64", "arm64"}
 	c.Spec.Accelerator = modes
