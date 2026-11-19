@@ -28,8 +28,8 @@ In this guide, you will learn how to:
 
 ## Prerequisites
 
-- Lares with a working model selected. See [Get started with Lares](lares.md#get-started).
-- Code Server installed from Market for the notes application.
+- Lares configured with a model that supports tool calls. Follow [Get started with Lares](lares.md) to complete the setup.
+- Code Server installed from Market. You will use its editor and terminal to create and run the notes application.
 - Metabase installed from Market for reporting.
 
 ## Install Supabase
@@ -49,7 +49,7 @@ Lares connects through Olares authentication on the same instance, so you do not
 2. Copy the **Endpoint** address, and append `/api/mcp` to the end. For example:
 
    ```text
-   https://304244530.laresprime.olares.com/api/mcp
+   https://<studio-host>/api/mcp
    ```
 
 3. Open Lares, go to **Settings** > **MCP**, and click **Add server**.
@@ -198,7 +198,7 @@ Create a user account in Supabase to sign in to the notes application. This acco
    nvm install 22
    ```
 
-7. Run `node -v` and `npm -v` to confirm that both commands display version numbers before continuing. If you installed Node.js in the previous step, `node -v` should show `v22.x.x`.
+7. Run `npm -v` to confirm that npm displays a version number. If you installed Node.js in the previous step, also run `node -v` again and check that it shows `v22.x.x`.
 8. In the Code Server terminal, switch to the project folder and install the Supabase JavaScript SDK:
 
    ```bash
