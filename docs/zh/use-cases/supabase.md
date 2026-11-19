@@ -32,8 +32,8 @@ Supabase 在你的 Olares 设备上为应用提供 PostgreSQL 数据库、用户
 
 ## 前置条件
 
-- Lares 中已选择可用的模型。参阅 [Lares 入门](lares.md#开始使用)。
-- 已从应用市场安装 Code Server，用于运行笔记应用。
+- Lares 已配置支持工具调用的模型。按照 [Lares 入门](lares.md)完成设置。
+- 已从应用市场安装 Code Server。你将使用其编辑器和终端创建并运行笔记应用。
 - 已从应用市场安装 Metabase，用于生成报表。
 
 ## 安装 Supabase
@@ -53,7 +53,7 @@ Lares 通过同一实例上的 Olares 身份认证进行连接，因此不需要
 2. 复制 **Endpoint** 地址，并在末尾添加 `/api/mcp`。例如：
 
    ```text
-   https://304244530.laresprime.olares.com/api/mcp
+   https://<studio-host>/api/mcp
    ```
 
 3. 打开 Lares，进入 **Settings** > **MCP**，点击 **Add server**。
@@ -198,7 +198,7 @@ with check (auth.uid() = owner_id);
    nvm install 22
    ```
 
-7. 运行 `node -v` 和 `npm -v`，确认两条命令都显示版本号后再继续。如果在上一步安装了 Node.js，`node -v` 应显示 `v22.x.x`。
+7. 运行 `npm -v`，确认 npm 显示版本号。如果在上一步安装了 Node.js，还需再次运行 `node -v`，检查是否显示 `v22.x.x`。
 8. 在 Code Server 终端中，切换到项目文件夹并安装 Supabase JavaScript SDK：
 
    ```bash
