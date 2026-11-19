@@ -8,7 +8,7 @@
 #   dataType: headscale
 #   deployment: headscale
 #   description: headscale provider
-#   endpoint: headscale-server-svc.{{ .Release.Namespace }}:8000
+#   endpoint: headscale-server-svc.os-network:8000
 #   group: service.headscale
 #   kind: provider
 #   namespace: {{ .Release.Namespace }}
@@ -39,11 +39,9 @@ metadata:
   name: {{ .Values.bfl.username }}:headscale-svc
   annotations:
     provider-registry-ref: user-system-{{ .Values.bfl.username }}/headscale
-    provider-service-ref: headscale-server-svc.{{ .Release.Namespace }}:8000
+    provider-service-ref: headscale-server-svc.os-network:8000
 rules:
 - nonResourceURLs: 
   - "/headscale/node"
   - "/headscale/node/rename"
-  - "/headscale/node/approve_routes"
-  - "/headscale/node/tags"
   verbs: ["*"]

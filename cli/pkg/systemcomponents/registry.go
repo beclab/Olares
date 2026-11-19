@@ -188,12 +188,16 @@ func mesh(namespace string) []Component {
 	}
 }
 
+// Headscale and Tailscale are applied with the system before the install gate,
+// so they are required.
 // network holds the edge proxy BFL applies once the user completes the network
 // wizard, into constants.OSSystemNamespace unless L4_PROXY_NAMESPACE overrides
 // it. It cannot be required, or the install gate would wait for a step the user
 // has not taken yet.
 func network() []Component {
 	return []Component{
+		{Namespace: NamespaceOsNetwork, Kind: Deployment, Name: "headscale"},
+		{Namespace: NamespaceOsNetwork, Kind: Deployment, Name: "tailscale"},
 		{Namespace: NamespaceOsNetwork, Kind: Deployment, Name: "l4-bfl-proxy", Presence: Optional},
 	}
 }
@@ -214,8 +218,6 @@ func perUser() []Component {
 	return []Component{
 		{Namespace: space, Kind: StatefulSet, Name: LauncherName},
 		{Namespace: space, Kind: Deployment, Name: "authelia-deployment"},
-		{Namespace: space, Kind: Deployment, Name: "headscale"},
-		{Namespace: space, Kind: Deployment, Name: "tailscale"},
 		{Namespace: space, Kind: Deployment, Name: "olares-app-deployment"},
 
 		{Namespace: space, Kind: Deployment, Name: "wizard", Presence: Optional},
