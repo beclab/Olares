@@ -271,27 +271,16 @@ func AddedResourcesFromAppConfig(appConfig *appcfg.ApplicationConfig) AddedResou
 }
 
 func IsHAMIMode(mode string) bool {
-	switch mode {
-	case utils.NvidiaCardType, utils.GB10ChipType:
-		return true
-	default:
-		return false
-	}
+	return CapabilityFor(mode).HAMI
 }
 
 // UsesGPUExtendedResource reports whether pods in this GPU mode are scheduled
-// onto GPU nodes via a Kubernetes extended resource (nvidia.com/gpu or
-// amd.com/gpu). For these modes the kube-scheduler already picks a matching
-// node from resources.limits, so the gpu-limit webhook must NOT additionally
-// pin the pod with a nodeSelector — doing so can create an unschedulable
-// combination when the allocation's node no longer advertises the resource.
-// All other GPU modes (intel/apple-m/moore-soc/…) have no extended resource
+// onto GPU nodes via a Kubernetes extended resource. For these modes the
+// kube-scheduler already picks a matching node from resources.limits, so the
+// gpu-limit webhook must NOT additionally pin the pod with a nodeSelector —
+// doing so can create an unschedulable combination when the allocation's node
+// no longer advertises the resource. The other modes have no extended resource
 // and rely on nodeSelector to reach the correct node.
 func UsesGPUExtendedResource(mode string) bool {
-	switch mode {
-	case utils.NvidiaCardType, utils.GB10ChipType, utils.AMDType, utils.AMDGPUType, utils.IntelType, utils.IntelGPUType:
-		return true
-	default:
-		return false
-	}
+	return CapabilityFor(mode).ExtendedResource != ""
 }

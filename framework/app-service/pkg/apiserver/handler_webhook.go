@@ -484,8 +484,9 @@ func (h *Handler) gpuLimitMutate(ctx context.Context, req *admissionv1.Admission
 		},
 	}
 
+	capability := compute.CapabilityFor(GPUType)
 	var hamiGpuMemory *string
-	if compute.IsHAMIMode(GPUType) && computeReq.RequiredGPU > 0 {
+	if capability.HAMI && computeReq.RequiredGPU > 0 {
 		gpuRequiredValue := computeReq.RequiredGPU / 1024 / 1024 // HAMi gpu memory format
 		hamiFormatGpuRequired := resource.NewQuantity(gpuRequiredValue, resource.DecimalSI)
 		hamiGpuMemory = ptr.To(hamiFormatGpuRequired.String())
@@ -499,8 +500,12 @@ func (h *Handler) gpuLimitMutate(ctx context.Context, req *admissionv1.Admission
 		tpl,
 		injectAll,
 		injectContainer,
-		gpuResourceKey,
-		hamiGpuMemory,
+		webhook.GPUResources{
+			Resource:       gpuResourceKey,
+			MemoryResource: capability.MemoryResource,
+			Memory:         hamiGpuMemory,
+			RuntimeClass:   capability.RuntimeClass,
+		},
 		envs,
 	)
 	if err != nil {
@@ -536,25 +541,11 @@ func (h *Handler) gpuLimitMutate(ctx context.Context, req *admissionv1.Admission
 	return resp
 }
 
-// FIXME: should not hardcode
 func (h *Handler) getGPUResourceTypeKey(gpuType string) string {
-	switch gpuType {
-	case utils.NvidiaCardType:
-		return constants.NvidiaGPU
-	case utils.GB10ChipType:
-		return constants.NvidiaGPU
-	case utils.AMDType, utils.AMDGPUType:
-		return constants.AMDGPU
-	case utils.IntelType:
-		return constants.IntelIGPU
-	case utils.IntelGPUType:
-		return constants.IntelGPU
-	case utils.CPUType:
+	if gpuType == utils.CPUType {
 		klog.Info("CPU type is selected, no GPU resource will be injected")
-		return ""
-	default:
-		return ""
 	}
+	return compute.CapabilityFor(gpuType).ExtendedResource
 }
 
 // resolveIntelDriverResource picks the correct Intel extended resource

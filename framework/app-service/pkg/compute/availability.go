@@ -88,18 +88,18 @@ func classifyLaunchNodes(req Requirement, nodes []Node, pressure PressureSnapsho
 		}
 		view := node.viewForMode(req.Mode)
 		var option NodeOption
-		if req.Mode == utils.NvidiaCardType {
-			option = classifyNvidiaNode(req, view, pressure, opts)
+		if CapabilityFor(req.Mode).MultiCard {
+			option = classifyMultiCardNode(req, view, pressure, opts)
 		} else {
-			option = classifyNonNvidiaNode(req, view, pressure, opts)
+			option = classifySingleCardNode(req, view, pressure, opts)
 		}
 		out = append(out, option)
 	}
 	return out
 }
 
-func classifyNvidiaNode(req Requirement, node Node, pressure PressureSnapshot, opts allocationOptions) NodeOption {
-	summary := summarizeNvidiaNode(req, node, pressure, opts)
+func classifyMultiCardNode(req Requirement, node Node, pressure PressureSnapshot, opts allocationOptions) NodeOption {
+	summary := summarizeMultiCardNode(req, node, pressure, opts)
 	option := NodeOption{
 		NodeName: node.NodeName,
 		GPUType:  req.Mode,
@@ -107,23 +107,29 @@ func classifyNvidiaNode(req Requirement, node Node, pressure PressureSnapshot, o
 	}
 	if req.SupportMultiCards || req.SupportMultiNodes {
 		option.Status = nodeStatusFromCapacity(req.RequiredGPU, summary.totalCapacity, summary.totalAvailable)
-		return option
+	} else {
+		option.Status = nodeStatusFromCapacity(req.RequiredGPU, summary.maxCapacity, summary.maxAvailable)
 	}
-	option.Status = nodeStatusFromCapacity(req.RequiredGPU, summary.maxCapacity, summary.maxAvailable)
+	// Cross-node availability reports raw cluster VRAM. A request confined to
+	// one node must also fit its CPU/memory pressure budget, matching the
+	// auto-picker and manual binding validation.
+	if !req.SupportMultiNodes && option.Status == NodeStatusAvailable && nodeWouldPressure(req, node, pressure, opts) {
+		option.Status = NodeStatusNotAvailable
+	}
 	return option
 }
 
-// classifyNonNvidiaNode classifies every device a node exposes for a non-nvidia
-// mode. Most such modes are unified memory and model the whole node as a single
-// device, but nvidia-gb10 and discrete Intel GPUs can expose several cards on
-// one node, so the node's status is taken from its best card the way
-// classifyNvidiaNode does — listing only the first one would hide the rest from
-// both the resume picker and install's auto-pick.
+// classifySingleCardNode classifies every device a node exposes for a mode
+// without MultiCard. Most such modes are unified memory and model the whole
+// node as a single device, but some (HAMi or tuple-register cards) can expose
+// several cards on one node, so the node's status is taken from its best card
+// the way classifyMultiCardNode does — listing only the first one would hide
+// the rest from both the resume picker and install's auto-pick.
 //
 // The capacity a card is judged against comes from requiredTargetForMode, so a
-// discrete Intel/AMD card is compared with the app's GPU-memory quota while the
+// DedicatedVRAM card is compared with the app's GPU-memory quota while the
 // unified-memory modes keep being compared with the pod memory request.
-func classifyNonNvidiaNode(req Requirement, node Node, pressure PressureSnapshot, opts allocationOptions) NodeOption {
+func classifySingleCardNode(req Requirement, node Node, pressure PressureSnapshot, opts allocationOptions) NodeOption {
 	option := NodeOption{NodeName: node.NodeName, GPUType: req.Mode}
 	if len(node.Devices) == 0 {
 		option.Status = NodeStatusNotAvailable
@@ -171,7 +177,7 @@ func nodeWouldPressure(req Requirement, node Node, pressure PressureSnapshot, op
 	return pressure.WouldPressure(node, added)
 }
 
-type nvidiaNodeSummary struct {
+type multiCardNodeSummary struct {
 	devices        []DeviceOption
 	totalCapacity  int64
 	totalAvailable int64
@@ -179,8 +185,8 @@ type nvidiaNodeSummary struct {
 	maxAvailable   int64
 }
 
-func summarizeNvidiaNode(req Requirement, node Node, pressure PressureSnapshot, opts allocationOptions) nvidiaNodeSummary {
-	summary := nvidiaNodeSummary{devices: make([]DeviceOption, 0, len(node.Devices))}
+func summarizeMultiCardNode(req Requirement, node Node, pressure PressureSnapshot, opts allocationOptions) multiCardNodeSummary {
+	summary := multiCardNodeSummary{devices: make([]DeviceOption, 0, len(node.Devices))}
 	for _, device := range node.Devices {
 		devOpt := makeDeviceOption(req, node, device, pressure, opts)
 		summary.devices = append(summary.devices, devOpt)
@@ -268,15 +274,14 @@ func (o DeviceOption) asNodeDevice(mode string) (Node, Device) {
 }
 
 func availabilityScope(req Requirement) string {
-	if req.Mode == utils.NvidiaCardType && req.SupportMultiNodes {
+	multiCard := CapabilityFor(req.Mode).MultiCard
+	if multiCard && req.SupportMultiNodes {
 		return AvailabilityScopeCrossNode
 	}
-	if req.Mode == utils.NvidiaCardType && req.SupportMultiCards {
+	if multiCard && req.SupportMultiCards {
 		return AvailabilityScopeSingleNode
 	}
-	// Single-nvidia-card and every non-nvidia mode (cpu / amd / intel /
-	// apple-m / moore-soc — each modeled as one node-level device) share the
-	// per-card scope: the unit of scheduling is a single device.
+	// Every other request is placed on a single device.
 	return AvailabilityScopeCard
 }
 
@@ -301,8 +306,8 @@ func markOperable(result *AvailabilityResult) {
 
 // availabilitySummary decides whether the request is schedulable across the
 // already-classified nodes. By the time we get here, NotMatch nodes have been
-// filtered out by listAvailableForLaunch, and classifyNvidiaNode /
-// classifyNonNvidiaNode have already folded pressure + capacity into
+// filtered out by listAvailableForLaunch, and classifyMultiCardNode /
+// classifySingleCardNode have already folded pressure + capacity into
 // node.Status. So:
 //   - CrossNode: sum raw `device.Available` across healthy devices, per PDF.
 //   - Everything else: any node already marked NodeStatusAvailable is enough,
@@ -559,7 +564,8 @@ func validateResolvedBindingSelection(req Requirement, resolved []resolvedSelect
 	for _, item := range resolved {
 		selectedNodes[item.node.NodeName] = struct{}{}
 	}
-	if req.Mode == utils.NvidiaCardType {
+	capability := CapabilityFor(req.Mode)
+	if capability.MultiCard {
 		if !req.SupportMultiCards && len(resolved) != 1 {
 			return invalidBinding("multi-card-not-supported")
 		}
@@ -586,11 +592,16 @@ func validateResolvedBindingSelection(req Requirement, resolved []resolvedSelect
 		if item.device.SupportType == SupportTypeExclusive && len(item.device.Bindings) > 0 {
 			return invalidBinding("exclusive-already-bound:" + item.device.ID)
 		}
-		if req.Mode == utils.NvidiaCardType && item.device.SupportType == SupportTypeMemorySlice {
+		// Every memory-slice allocation uses the submitted quota, including
+		// unified-memory devices. Validate the amount that will be allocated.
+		if item.device.SupportType == SupportTypeMemorySlice {
 			if item.memory <= 0 {
 				return invalidBinding("memory-required:" + item.device.ID)
 			}
 			if item.memory > available {
+				if !capability.DedicatedVRAM {
+					return invalidBinding("device-memory-insufficient")
+				}
 				return invalidBinding("device-vram-insufficient:" + item.device.ID)
 			}
 			totalAssignable += item.memory
@@ -598,15 +609,15 @@ func validateResolvedBindingSelection(req Requirement, resolved []resolvedSelect
 		}
 		totalAssignable += available
 	}
-	if req.Mode == utils.NvidiaCardType && req.SupportMultiCards {
+	if capability.MultiCard && req.SupportMultiCards {
 		if totalAssignable < req.RequiredGPU {
 			return invalidBinding("aggregate-vram-insufficient")
 		}
-	} else if utils.HasDedicatedGPUMemory(req.Mode) {
+	} else if capability.DedicatedVRAM {
 		if totalAssignable < req.RequiredGPU {
 			return invalidBinding("device-vram-insufficient")
 		}
-	} else if deviceAvailableMemory(resolved[0].device) < req.RequiredMemory {
+	} else if totalAssignable < req.RequiredMemory {
 		return invalidBinding("device-memory-insufficient")
 	}
 	for nodeName := range selectedNodes {

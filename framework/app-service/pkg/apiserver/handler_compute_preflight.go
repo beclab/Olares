@@ -156,8 +156,9 @@ func (d ComputePreflightDemand) toCompute() (compute.PreflightDemand, error) {
 	if limitedMemory != 0 && limitedMemory < requiredMemory {
 		return compute.PreflightDemand{}, fmt.Errorf("limitedMemory must be zero or at least requiredMemory")
 	}
-	supportMultiNodes := d.Mode == utils.NvidiaCardType && d.SupportMultiNodes
-	supportMultiCards := d.Mode == utils.NvidiaCardType && (d.SupportMultiCards || supportMultiNodes)
+	multiCard := compute.CapabilityFor(d.Mode).MultiCard
+	supportMultiNodes := multiCard && d.SupportMultiNodes
+	supportMultiCards := multiCard && (d.SupportMultiCards || supportMultiNodes)
 	return compute.PreflightDemand{
 		ID:          d.ID,
 		AppID:       d.AppID,
