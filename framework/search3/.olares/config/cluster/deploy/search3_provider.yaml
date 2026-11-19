@@ -30,6 +30,10 @@ rules:
       - "/document"
       - "/task/*"
       - "/search/*"
+      # Dedicated service-to-service RAG evidence API. The system-provider
+      # authenticates the caller and injects Terminus-Nonce/X-BFL-USER;
+      # Search3 additionally requires trusted_owner to match that user.
+      - "/v1/retrieval/*"
       - "/image/*"
     verbs: ["*"]
 
