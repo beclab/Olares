@@ -252,7 +252,7 @@ spec:
             value: os_framework_search3
       containers:
       - name: search3
-        image: beclab/search3:v0.4.5
+        image: beclab/search3:v0.4.7
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
