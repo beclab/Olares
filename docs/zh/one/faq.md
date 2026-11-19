@@ -83,13 +83,17 @@ Olares One 即使在负载下也能安静运行。在实验室测试中，设备
 
 ### Olares One 与 DGX Spark、AI Max+ 395 和其他 AI PC 有何不同？
 
-Olares One 作为个人云解决方案运行，而非传统的个人电脑。
+Olares One 将 x86 处理器、支持 CUDA 的 NVIDIA GPU 与 Olares OS 结合，用于托管本地 AI 模型、Agent 和应用。Market 负责安装和更新应用，Router 将应用连接到模型，LarePass 则让你从手机或电脑访问这些服务。
 
-个人云作为稳定的外部服务运行，可随时从任何设备访问。PC 是作为客户端软件设计的，通过显示器和键盘直接交互。
+如果想比较 Olares One、Mac Studio、DGX Spark 和 AI Max+ 395 设备的大语言模型性能及图像、视频生成耗时，请查看[本地 AI 性能测试](https://www.olares.com/benchmarks/)。各项结果都附有测试使用的模型和软件配置。
 
-Olares One 在 x86 架构上利用 NVIDIA CUDA 技术栈。这确保了对标准开源 AI 应用的广泛兼容性，避免了基于 ARM 的 AI PC 或没有 CUDA 支持的设备中常见的适配挑战。
+### 购买 Olares One 和自己组装 AI 电脑有什么区别？
 
-Olares OS 通过一键部署和工作流集成简化了本地 AI，这与标准 PC 典型的手动软件管理不同。
+自己装机可以按预算、GPU 需求和升级计划选择组件，也需要自己完成硬件组装、操作系统安装和 AI 软件配置。
+
+Olares One 提供适合持续运行的紧凑整机。你可以[通过手机完成首次设置](first-boot.md)，从 Market 安装模型和应用，再通过 LarePass 远程访问。
+
+Olares OS 免费开源，也可以[安装在自己组装或已有的兼容硬件上](../manual/get-started/install-olares.md)。比较成本时，可以一起考虑显存容量、功耗、散热，以及自己愿意投入多少设置和维护时间。
 
 ### 是否可以升级或扩展硬件？
 
@@ -143,7 +147,7 @@ Olares Space 提供可选的付费计划，包含两类服务：
 - **云备份**：提供集成的云端备份存储。你也可以将数据备份到自己的外置硬盘或兼容 S3 的存储。
 - **远程访问（FRP）**：通过 Olares 托管的中转服务器，提供更高的流量额度和连接速度。你也可以通过 [LarePass VPN](access-olares-via-vpn.md) 或自建 FRP 服务器远程访问 Olares。
 
-根据购买渠道，Olares One 可能附赠 2 年 Olares Space Basic 会员。到期后，账号会恢复为 Free 计划，无需续订也可以继续使用 Olares One 和本地 AI。会员权益及激活步骤请参阅[兑换 Olares Space 会员](redeem-membership.md)。
+购买 Olares One 均附赠 2 年 Olares Space Basic 会员。到期后，账号会恢复为 Free 计划，无需续订也可以继续使用 Olares One 和本地 AI。会员权益及激活步骤请参阅[兑换 Olares Space 会员](redeem-membership.md)。
 
 ### 我可以在没有互联网连接的情况下使用该设备吗？
 
@@ -188,19 +192,17 @@ Olares OS 还包含内置的自动备份机制，用于定期将加密备份到�
 
 ### 可以运行哪些本地大语言模型？
 
-你可以从 Market 安装本地大语言模型，例如：
+Olares Market 提供可直接安装的大语言模型应用，其中的模型与推理引擎组合已在 Olares 上验证。应用已配置好引擎，并会在安装设置时下载所需模型文件。
 
-- **Qwen3.8-27B**：使用 llama.cpp 推理引擎。
-- **Qwen3.6-35B-A3B**：使用 llama.cpp 推理引擎。
-- **Gemma 4 26B**：使用 Ollama 推理引擎。
-
-这些模型应用已配置好推理引擎，并在安装设置时下载模型文件。最新列表请查看 [Olares Market](https://market.olares.com)，使用方法请参阅[运行本地大语言模型](../use-cases/llm-base-apps.md)。
+你可以按对话、编程、图片理解或工具调用等用途选择模型，并检查其内存需求。当前可用模型及能力请查看 [Olares Market](https://market.olares.com)，使用方法请参阅[运行本地大语言模型](../use-cases/llm-base-apps.md)。
 
 ### 可以安装新模型或 Market 中没有的模型吗？
 
 可以。Market 上架新模型应用后，你可以直接安装。如果想运行 Hugging Face 或 Ollama 模型库中的模型，可以通过 Engine Base 应用创建实例。Olares 提供 llama.cpp、Ollama、vLLM 和 SGLang 四种 Engine Base 应用。
 
 选择支持该模型架构和文件格式的引擎，再按设备资源设置内存和上下文上限。[本地模型指南](../use-cases/llm-base-apps.md)介绍了引擎选择和配置方法。
+
+对于已在 Olares One 上测试的模型，[性能测试页面](https://www.olares.com/benchmarks/hardware/olares-one)列出了量化方式、推理引擎和测试配置，方便你在选择方案前比较实测表现。
 
 ### 显存和系统内存会怎样影响模型选择？
 
@@ -224,15 +226,9 @@ Olares One 配备 24 GB 显存（VRAM）和 96 GB 系统内存（RAM），两者
 
 ### 本地 AI 模型可以理解图片吗？
 
-可以。支持视觉的模型能够分析上传的图片，并回答有关图片内容的问题。例如，Gemma 4 26B (Ollama) 支持图片输入。
+可以。支持视觉的模型能够分析上传的图片，并回答有关图片内容的问题。请在 Market 中选择支持图片输入的模型。
 
 将模型连接到支持图片附件的聊天应用，再上传图片并提问。模型设置请参阅[运行本地大语言模型](../use-cases/llm-base-apps.md)。
-
-### Olares One 是否支持 Kimi K2 模型？
-
-Kimi K2 约有 1 万亿参数，需要大约 1024 GB 显存，因此无法在 Olares Market 中使用。
-
-我们预计，随着 AI 模型尺寸持续缩小，未来可能会在 Olares One 上运行 Kimi-K2 级别的模型。
 
 ### 本地 AI 模型能否访问互联网进行研究？
 
@@ -247,11 +243,11 @@ Kimi K2 约有 1 万亿参数，需要大约 1024 GB 显存，因此无法在 Ol
 
 是的，我们强烈推荐这种工作流。你可以将 NAS 作为 SMB 共享挂载到 Olares One 上。然后 Olares 可以通过 Immich 等应用对 NAS 上存储的照片和视频进行索引、排序和处理。
 
-### 我可以在 iPhone 或 Mac 上使用 Olares AI 功能吗？
+### 可以在手机上使用本地 AI 吗？
 
-可以。在手机或电脑的浏览器中打开托管在 Olares One 上的 AI 应用。本地模型推理由 Olares One 完成，手机或电脑负责显示界面和发送请求。
+可以。对于支持移动端的 AI 应用，你可以通过手机浏览器或 [LarePass 的 Apps 标签页](../manual/larepass/manage-apps-with-larepass.md)打开并使用。模型推理在 Olares One 上完成，你在手机上与应用交互。
 
-外出访问时，保持 Olares One 开机并连接互联网，然后在手机或电脑上开启 [LarePass VPN](access-olares-via-vpn.md)。
+外出访问时，保持 Olares One 开机并连接互联网，然后在手机上开启 [LarePass VPN](access-olares-via-vpn.md)。
 
 ### 我可以使用 LM Studio 管理 Olares 上的模型吗？
 
@@ -326,6 +322,8 @@ Windows 虚拟机使用集成的 Intel 显卡，可有效处理轻量级任务�
 可以。Olares OS 基于 Kubernetes 构建，允许多台 Olares 设备组成集群。系统会自动在集群内调度应用，并在多个设备间加载模型。
 
 目前组建集群需要命令行操作。我们计划在未来的更新中引入完全基于 UI 的体验来管理此过程。
+
+准备条件和操作步骤请参阅[连接两台 Olares One 设备](connect-two-olares-one.md)。
 
 ### 集群化能让单个游戏或 AI 任务运行得更快吗？
 
