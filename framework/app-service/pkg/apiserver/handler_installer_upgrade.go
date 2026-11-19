@@ -11,7 +11,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils/config"
-	"github.com/beclab/Olares/framework/oac"
+	"github.com/beclab/oac"
 
 	"github.com/emicklei/go-restful/v3"
 	"k8s.io/klog/v2"

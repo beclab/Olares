@@ -28,7 +28,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils/files"
-	"github.com/beclab/Olares/framework/oac"
+	"github.com/beclab/oac"
 	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	"github.com/Masterminds/semver/v3"

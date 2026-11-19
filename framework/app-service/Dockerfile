@@ -6,8 +6,18 @@ WORKDIR /workspace
 COPY go.mod github.com/beclab/Olares/framework/app-service/go.mod
 COPY go.sum github.com/beclab/Olares/framework/app-service/go.sum
 
+ENV GOPRIVATE=github.com/beclab/oac \
+    GONOSUMDB=github.com/beclab/oac \
+    GONOPROXY=github.com/beclab/oac
 
-RUN cd github.com/beclab/Olares/framework/app-service && \
+# Prefer GIT_CONFIG_* over `git config --global` so the PAT never lands in
+# /root/.gitconfig (and thus never in builder image layers / cache).
+RUN --mount=type=secret,id=github_token \
+    TOKEN="$(cat /run/secrets/github_token)" && \
+    cd github.com/beclab/Olares/framework/app-service && \
+    GIT_CONFIG_COUNT=1 \
+    GIT_CONFIG_KEY_0="url.https://x-access-token:${TOKEN}@github.com/.insteadof" \
+    GIT_CONFIG_VALUE_0="https://github.com/" \
     go mod download
 
 # Copy the go source

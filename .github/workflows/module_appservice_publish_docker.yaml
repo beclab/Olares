@@ -25,6 +25,8 @@ jobs:
           context: framework/app-service
           file: framework/app-service/Dockerfile
           platforms: linux/amd64
+          secrets: |
+            github_token=${{ secrets.GO_PRIVATE_TOKEN }}
   publish_dockerhub_arm64:
     runs-on: self-hosted
     steps:
@@ -43,6 +45,8 @@ jobs:
           context: framework/app-service
           file: framework/app-service/Dockerfile
           platforms: linux/arm64
+          secrets: |
+            github_token=${{ secrets.GO_PRIVATE_TOKEN }}
 
   publish_manifest:
     needs:

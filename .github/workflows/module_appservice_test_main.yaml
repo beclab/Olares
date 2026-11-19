@@ -17,6 +17,15 @@ on:
 jobs:
   test-unit:
     runs-on: ubuntu-latest
+    env:
+      GOPRIVATE: github.com/beclab/oac
+      GONOSUMDB: github.com/beclab/oac
+      GONOPROXY: github.com/beclab/oac
+      # Prefer GIT_CONFIG_* over `git config --global` so the PAT is never
+      # written to ~/.gitconfig on the runner.
+      GIT_CONFIG_COUNT: "1"
+      GIT_CONFIG_KEY_0: "url.https://x-access-token:${{ secrets.GO_PRIVATE_TOKEN }}@github.com/.insteadof"
+      GIT_CONFIG_VALUE_0: "https://github.com/"
     steps:
       - name: Install dependencies
         run: |

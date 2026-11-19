@@ -8,7 +8,7 @@ import (
 	"sort"
 	"strings"
 
-	oac "github.com/beclab/Olares/framework/oac"
+	oac "github.com/beclab/oac"
 	appv1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/api/manifest"
 	"github.com/kubernetes/kompose/pkg/kobject"
