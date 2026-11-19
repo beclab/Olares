@@ -57,9 +57,9 @@ func (h *Handlers) EnableOverlayGateway(ctx *fiber.Ctx, cmd commands.Interface) 
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		// CreateBridgeConnection is atomic: a nil error means the bridge is up
-		// with an IPv4 address, a non-nil error means it has been rolled back to
-		// the original network. Surface the failure so the UI stops spinning.
+		// The enable command only registers the overlay parent and the desired
+		// state; a non-nil error means nothing was changed. Surface the failure
+		// so the UI stops spinning.
 		_, err := cmd.Execute(ctx, nil)
 		if err != nil {
 			klog.Errorf("overlay gateway enable: execute failed: %v", err)

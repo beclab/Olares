@@ -436,9 +436,22 @@ func (m *RemoveOverlayGateway) Init() {
 		Retry:    0,
 	}
 
+	removeOverlayAltname := &task.RemoteTask{
+		Name:  "RemoveOverlayAltname",
+		Desc:  "Remove the overlay parent alternative name",
+		Hosts: m.Runtime.GetHostsByRole(common.Master),
+		Prepare: &prepare.PrepareCollection{
+			new(common.OnlyFirstMaster),
+		},
+		Action:   new(RemoveOverlayAltname),
+		Parallel: false,
+		Retry:    0,
+	}
+
 	m.Tasks = []task.Interface{
 		stopCniDhcp,
 		removeCniDhcpService,
 		removeBridgeConnection,
+		removeOverlayAltname,
 	}
 }

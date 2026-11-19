@@ -1,0 +1,328 @@
+package webhook
+
+import (
+	"encoding/json"
+	"strings"
+	"testing"
+
+	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/utils/maclease"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	k8sruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes"
+	k8sfake "k8s.io/client-go/kubernetes/fake"
+)
+
+func macvlanPod() *corev1.Pod {
+	return &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            "jellyfin-pod",
+			Namespace:       "app-space",
+			OwnerReferences: []metav1.OwnerReference{testDeploymentOwner("jellyfin")},
+			Labels: map[string]string{
+				constants.ApplicationNameLabel: "jellyfin",
+			},
+		},
+		Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "jellyfin"}}},
+	}
+}
+
+func TestGenerateOverlayMACIsLocalUnicast(t *testing.T) {
+	mac, err := generateOverlayMAC()
+	if err != nil {
+		t.Fatalf("generateOverlayMAC: %v", err)
+	}
+	if err := validateOverlayMAC(mac); err != nil {
+		t.Fatalf("validateOverlayMAC(%q): %v", mac, err)
+	}
+}
+
+func TestCreateMacvlanInitPatchPersistsAndReusesMAC(t *testing.T) {
+	wh := testMacvlanWebhook()
+	first := macvlanPod()
+	req := macvlanBypassAdmissionRequest(t, first)
+	if _, err := wh.CreateMacvlanInitPatch(req, first); err != nil {
+		t.Fatalf("first patch: %v", err)
+	}
+
+	var firstNetworks []map[string]interface{}
+	if err := json.Unmarshal([]byte(first.Annotations["k8s.v1.cni.cncf.io/networks"]), &firstNetworks); err != nil {
+		t.Fatalf("decode first networks annotation: %v", err)
+	}
+	if len(firstNetworks) != 1 {
+		t.Fatalf("unexpected first network selection: %#v", firstNetworks)
+	}
+	firstMAC, _ := firstNetworks[0]["mac"].(string)
+	if !strings.HasPrefix(firstMAC, "02:") {
+		t.Fatalf("unexpected first network MAC: %#v", firstNetworks[0])
+	}
+
+	recordDeletedMacvlanPod(t, wh, first)
+	second := macvlanPod()
+	second.Name = "jellyfin-recreated"
+	if _, err := wh.CreateMacvlanInitPatch(macvlanBypassAdmissionRequest(t, second), second); err != nil {
+		t.Fatalf("second patch: %v", err)
+	}
+	var secondNetworks []map[string]interface{}
+	if err := json.Unmarshal([]byte(second.Annotations["k8s.v1.cni.cncf.io/networks"]), &secondNetworks); err != nil {
+		t.Fatalf("decode second networks annotation: %v", err)
+	}
+	if len(secondNetworks) != 1 {
+		t.Fatalf("unexpected second network selection: %#v", secondNetworks)
+	}
+	secondMAC, _ := secondNetworks[0]["mac"].(string)
+	if got, want := secondMAC, firstMAC; got != want {
+		t.Fatalf("recreated pod MAC = %q, want %q", got, want)
+	}
+}
+
+func TestCreateMacvlanInitPatchDryRunHasNoAllocationSideEffect(t *testing.T) {
+	wh := testMacvlanWebhook()
+	pod := macvlanPod()
+	dryRun := true
+	req := macvlanBypassAdmissionRequest(t, pod)
+	req.DryRun = &dryRun
+	if _, err := wh.CreateMacvlanInitPatch(req, pod); err != nil {
+		t.Fatalf("dry-run patch: %v", err)
+	}
+
+	app, err := wh.dynamicClient.AppV1alpha1().Applications().Get(t.Context(), "app-space-jellyfin", metav1.GetOptions{})
+	if err != nil {
+		t.Fatalf("get application: %v", err)
+	}
+	if app.Spec.Settings[overlayMACSetting] != "" {
+		t.Fatalf("dry-run persisted MAC %q", app.Spec.Settings[overlayMACSetting])
+	}
+	if _, err := wh.allocationClient.Resource(overlayMACAllocationGVR).Get(t.Context(), "does-not-exist", metav1.GetOptions{}); err == nil {
+		t.Fatal("dry-run unexpectedly created an allocation")
+	}
+}
+
+func TestPlatformMACSelectionIsCanonical(t *testing.T) {
+	raw := platformMacvlanSelection("02:00:00:00:00:01")
+	var selections []map[string]interface{}
+	if err := json.Unmarshal([]byte(raw), &selections); err != nil {
+		t.Fatal(err)
+	}
+	if len(selections) != 1 || selections[0]["mac"] != "02:00:00:00:00:01" || selections[0]["interface"] != "net1" {
+		t.Fatalf("selection: %s", raw)
+	}
+}
+
+func TestCreateMacvlanInitPatchAddsMasterPlacement(t *testing.T) {
+	wh := testMacvlanWebhook()
+	pod := macvlanPod()
+	if _, err := wh.CreateMacvlanInitPatch(macvlanBypassAdmissionRequest(t, pod), pod); err != nil {
+		t.Fatalf("patch: %v", err)
+	}
+	required := pod.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution
+	if required == nil {
+		t.Fatal("expected required node affinity")
+	}
+	found := false
+	for _, requirement := range required.NodeSelectorTerms[0].MatchExpressions {
+		if requirement.Key == overlayMACMasterNodeLabel && requirement.Operator == corev1.NodeSelectorOpExists {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("master placement requirement missing: %#v", required.NodeSelectorTerms)
+	}
+}
+
+func TestOverlayMACRejectsMultiReplicaDeployment(t *testing.T) {
+	wh := testMacvlanWebhook()
+	controller := true
+	replicas := int32(2)
+	wh.kubeClient = fakeKubeClient(
+		&appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{Name: "jellyfin", Namespace: "app-space", UID: "deployment-jellyfin"},
+			Spec:       appsv1.DeploymentSpec{Replicas: &replicas},
+		},
+		&appsv1.ReplicaSet{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "jellyfin-rs", UID: "rs-jellyfin",
+				Namespace: "app-space",
+				OwnerReferences: []metav1.OwnerReference{{
+					APIVersion: "apps/v1",
+					Kind:       "Deployment",
+					Name:       "jellyfin", UID: "deployment-jellyfin",
+					Controller: &controller,
+				}},
+			},
+		},
+	)
+	pod := macvlanPod()
+	pod.OwnerReferences = []metav1.OwnerReference{{
+		APIVersion: "apps/v1",
+		Kind:       "ReplicaSet",
+		Name:       "jellyfin-rs", UID: "rs-jellyfin",
+		Controller: &controller,
+	}}
+	_, err := wh.CreateMacvlanInitPatch(macvlanBypassAdmissionRequest(t, pod), pod)
+	if err == nil || !strings.Contains(err.Error(), "requires one replica") {
+		t.Fatalf("expected multi-replica rejection, got %v", err)
+	}
+}
+
+func TestOverlayMACRejectsConflictingAllocationOwner(t *testing.T) {
+	wh := testMacvlanWebhook()
+	app, err := wh.dynamicClient.AppV1alpha1().Applications().Get(t.Context(), "app-space-jellyfin", metav1.GetOptions{})
+	if err != nil {
+		t.Fatalf("get application: %v", err)
+	}
+	mac := "02:00:00:00:00:01"
+	app.Spec.Settings[overlayMACByInstanceSetting] = `{"app-space/jellyfin/Deployment/jellyfin/singleton":"` + mac + `"}`
+	if _, err := wh.dynamicClient.AppV1alpha1().Applications().Update(t.Context(), app, metav1.UpdateOptions{}); err != nil {
+		t.Fatalf("update application: %v", err)
+	}
+	_, err = wh.allocationClient.Resource(overlayMACAllocationGVR).Create(t.Context(), &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "app.bytetrade.io/v1alpha1",
+			"kind":       "OverlayMACAllocation",
+			"metadata":   map[string]interface{}{"name": overlayMACKey(mac)},
+			"spec": map[string]interface{}{
+				"mac":            mac,
+				"instanceKey":    "other/instance",
+				"applicationUID": "other-uid",
+				"applicationRef": "other-app",
+				"phase":          overlayMACAllocationPhase,
+			},
+		},
+	}, metav1.CreateOptions{})
+	if err != nil {
+		t.Fatalf("create conflicting allocation: %v", err)
+	}
+	_, err = wh.CreateMacvlanInitPatch(macvlanBypassAdmissionRequest(t, macvlanPod()), macvlanPod())
+	if err == nil || !strings.Contains(err.Error(), "owned by another instance") {
+		t.Fatalf("expected allocation owner rejection, got %v", err)
+	}
+}
+
+func TestOverlayMACRejectsInvalidPersistedValue(t *testing.T) {
+	wh := testMacvlanWebhook()
+	app, err := wh.dynamicClient.AppV1alpha1().Applications().Get(t.Context(), "app-space-jellyfin", metav1.GetOptions{})
+	if err != nil {
+		t.Fatalf("get application: %v", err)
+	}
+	app.Spec.Settings[overlayMACByInstanceSetting] = `{"app-space/jellyfin/Deployment/jellyfin/singleton":"02:not-a-mac"}`
+	if _, err := wh.dynamicClient.AppV1alpha1().Applications().Update(t.Context(), app, metav1.UpdateOptions{}); err != nil {
+		t.Fatalf("update application: %v", err)
+	}
+	_, err = wh.CreateMacvlanInitPatch(macvlanBypassAdmissionRequest(t, macvlanPod()), macvlanPod())
+	if err == nil || !strings.Contains(err.Error(), "invalid overlay MAC") {
+		t.Fatalf("expected invalid persisted MAC rejection, got %v", err)
+	}
+}
+
+func TestOverlayMACRejectsApplicationWithoutUID(t *testing.T) {
+	wh := testMacvlanWebhook()
+	app, err := wh.dynamicClient.AppV1alpha1().Applications().Get(t.Context(), "app-space-jellyfin", metav1.GetOptions{})
+	if err != nil {
+		t.Fatalf("get application: %v", err)
+	}
+	app.UID = ""
+	if _, err := wh.dynamicClient.AppV1alpha1().Applications().Update(t.Context(), app, metav1.UpdateOptions{}); err != nil {
+		t.Fatalf("update application: %v", err)
+	}
+	_, err = wh.CreateMacvlanInitPatch(macvlanBypassAdmissionRequest(t, macvlanPod()), macvlanPod())
+	if err == nil || !strings.Contains(err.Error(), "has no UID") {
+		t.Fatalf("expected missing UID rejection, got %v", err)
+	}
+}
+
+func TestCleanupOverlayMACAllocationDeletesOnlyUnpersistedOwnedClaim(t *testing.T) {
+	wh := testMacvlanWebhook()
+	app, err := wh.dynamicClient.AppV1alpha1().Applications().Get(t.Context(), "app-space-jellyfin", metav1.GetOptions{})
+	if err != nil {
+		t.Fatalf("get application: %v", err)
+	}
+	mac := "02:00:00:00:00:02"
+	if _, err := wh.createOverlayMACAllocation(t.Context(), app, "app-space/jellyfin", mac); err != nil {
+		t.Fatalf("create allocation: %v", err)
+	}
+	if err := wh.cleanupOverlayMACAllocation(t.Context(), app, "app-space/jellyfin", "", false, mac); err != nil {
+		t.Fatalf("cleanup allocation: %v", err)
+	}
+	if _, err := wh.allocationClient.Resource(overlayMACAllocationGVR).Get(t.Context(), overlayMACKey(mac), metav1.GetOptions{}); !apierrors.IsNotFound(err) {
+		t.Fatalf("allocation still exists or unexpected error: %v", err)
+	}
+}
+
+func TestOverlayMACRejectsNonBoundAllocation(t *testing.T) {
+	wh := testMacvlanWebhook()
+	app, err := wh.dynamicClient.AppV1alpha1().Applications().Get(t.Context(), "app-space-jellyfin", metav1.GetOptions{})
+	if err != nil {
+		t.Fatalf("get application: %v", err)
+	}
+	mac := "02:00:00:00:00:03"
+	controller := true
+	blockOwnerDeletion := true
+	_, err = wh.allocationClient.Resource(overlayMACAllocationGVR).Create(t.Context(), &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "app.bytetrade.io/v1alpha1",
+			"kind":       "OverlayMACAllocation",
+			"metadata": map[string]interface{}{
+				"name": "020000000003",
+				"ownerReferences": []interface{}{map[string]interface{}{
+					"apiVersion":         "app.bytetrade.io/v1alpha1",
+					"kind":               "Application",
+					"name":               app.Name,
+					"uid":                string(app.UID),
+					"controller":         controller,
+					"blockOwnerDeletion": blockOwnerDeletion,
+				}},
+			},
+			"spec": map[string]interface{}{
+				"mac":            mac,
+				"instanceKey":    "app-space/jellyfin",
+				"applicationUID": string(app.UID),
+				"applicationRef": app.Name,
+				"phase":          "Releasing",
+			},
+		},
+	}, metav1.CreateOptions{})
+	if err != nil {
+		t.Fatalf("create releasing allocation: %v", err)
+	}
+	allocation, err := wh.allocationClient.Resource(overlayMACAllocationGVR).Get(t.Context(), "020000000003", metav1.GetOptions{})
+	if err != nil {
+		t.Fatalf("get allocation: %v", err)
+	}
+	if err := validateOverlayMACAllocation(allocation, app, "app-space/jellyfin", mac); err == nil {
+		t.Fatal("expected Releasing allocation to be rejected")
+	}
+}
+
+func fakeKubeClient(objects ...k8sruntime.Object) kubernetes.Interface {
+	return k8sfake.NewSimpleClientset(objects...)
+}
+
+// Model a committed Pod followed by its deletion, not two in-flight admissions.
+func recordDeletedMacvlanPod(t *testing.T, wh *Webhook, pod *corev1.Pod) {
+	t.Helper()
+	pod = pod.DeepCopy()
+	pod.UID = types.UID(pod.Name)
+	if _, err := wh.kubeClient.CoreV1().Pods(pod.Namespace).Create(t.Context(), pod, metav1.CreateOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	leases, err := wh.kubeClient.CoordinationV1().Leases(maclease.Namespace).List(t.Context(), metav1.ListOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, l := range leases.Items {
+		if l.Spec.HolderIdentity != nil && *l.Spec.HolderIdentity == pod.Namespace+"/"+pod.Name {
+			if err := maclease.Reconcile(t.Context(), wh.kubeClient, types.UID(l.Labels[maclease.ApplicationUIDLabel])); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	if err := wh.kubeClient.CoreV1().Pods(pod.Namespace).Delete(t.Context(), pod.Name, metav1.DeleteOptions{}); err != nil {
+		t.Fatal(err)
+	}
+}
