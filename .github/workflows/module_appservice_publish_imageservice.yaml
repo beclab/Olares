@@ -25,6 +25,8 @@ jobs:
           context: framework/app-service
           file: framework/app-service/Dockerfile.image
           platforms: linux/amd64
+          provenance: false
+          sbom: false
           secrets: |
             github_token=${{ secrets.GO_PRIVATE_TOKEN }}
   publish_dockerhub_arm64:
@@ -47,6 +49,8 @@ jobs:
           platforms: linux/arm64
           secrets: |
             github_token=${{ secrets.GO_PRIVATE_TOKEN }}
+          provenance: false
+          sbom: false
 
   publish_manifest:
     needs:
