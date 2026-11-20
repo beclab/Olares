@@ -12,6 +12,7 @@ import (
 	"github.com/beclab/Olares/cli/pkg/k3s"
 	"github.com/beclab/Olares/cli/pkg/kubernetes"
 	"github.com/beclab/Olares/cli/pkg/kubesphere"
+	"github.com/beclab/Olares/cli/pkg/phase/lifecycle"
 	"github.com/beclab/Olares/cli/pkg/plugins/network"
 	"github.com/beclab/Olares/cli/pkg/storage"
 	"github.com/beclab/Olares/cli/pkg/terminus"
@@ -85,6 +86,7 @@ func (p *phaseBuilder) phaseInstall() *phaseBuilder {
 			p.modules = append(p.modules, &precheck.RemoveChattrModule{})
 		}
 
+		p.modules = append(p.modules, lifecycle.BeforeClusterRemoval.Modules()...)
 		if p.runtime.Arg.Storage.StorageType == common.S3 || p.runtime.Arg.Storage.StorageType == common.OSS || p.runtime.Arg.Storage.StorageType == common.COS {
 			p.modules = append(p.modules,
 				&precheck.GetStorageKeyModule{},
@@ -130,6 +132,7 @@ func (p *phaseBuilder) phaseStorage() *phaseBuilder {
 
 func (p *phaseBuilder) phasePrepare() *phaseBuilder {
 	if p.convert() >= PhasePrepare {
+		p.modules = append(p.modules, lifecycle.BeforePrepareCleanup.Modules()...)
 		p.modules = append(p.modules,
 			&container.DeleteZfsMountModule{},
 			&container.UninstallContainerModule{Skip: p.runtime.Arg.IsCloudInstance},
