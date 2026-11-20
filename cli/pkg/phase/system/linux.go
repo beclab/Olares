@@ -15,6 +15,7 @@ import (
 	"github.com/beclab/Olares/cli/pkg/images"
 	"github.com/beclab/Olares/cli/pkg/k3s"
 	"github.com/beclab/Olares/cli/pkg/manifest"
+	"github.com/beclab/Olares/cli/pkg/phase/lifecycle"
 	"github.com/beclab/Olares/cli/pkg/storage"
 	"github.com/beclab/Olares/cli/pkg/terminus"
 )
@@ -132,5 +133,6 @@ func (l *linuxPhaseBuilder) build() []module.Module {
 				},
 			}
 		}).inBox(l.runtime)...).
+		addModule(lifecycle.BeforePrepared.Modules()...).
 		addModule(&terminus.PreparedModule{})
 }
