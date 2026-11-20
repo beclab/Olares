@@ -117,6 +117,14 @@ func Check(base *semver.Version, target *semver.Version) error {
 }
 
 func getUpgraderByVersion(target *semver.Version) upgrader {
+	base := upstreamUpgraderByVersion(target)
+	if ext := extensionFor(target); ext != nil {
+		return extendedUpgrader{upgrader: base, ext: ext}
+	}
+	return base
+}
+
+func upstreamUpgraderByVersion(target *semver.Version) upgrader {
 	for _, upgraders := range [][]breakingUpgrader{
 		dailyUpgraders,
 		mainUpgraders,
@@ -213,19 +221,24 @@ func CurrentVersionSpec() (spec *VersionSpec, err error) {
 }
 
 func getLastBreakingVersion(upgraders []breakingUpgrader, current *semver.Version) *semver.Version {
-	sort.Slice(upgraders, func(i, j int) bool {
-		return upgraders[i].Version().LessThan(upgraders[j].Version())
-	})
-	for i := len(upgraders) - 1; i >= 0; i-- {
-		if !upgraders[i].AddedBreakingChange() {
-			continue
+	var last *semver.Version
+	consider := func(v *semver.Version) {
+		if v.LessThan(current) && (last == nil || v.GreaterThan(last)) {
+			last = v
 		}
-		if upgraders[i].Version().GreaterThanEqual(current) {
-			continue
-		}
-		return upgraders[i].Version()
 	}
-	return nil
+	for _, u := range upgraders {
+		if u.AddedBreakingChange() {
+			consider(u.Version())
+		}
+	}
+	line := getReleaseLineOfVersion(current)
+	for _, ext := range upgradeExtensions {
+		if ext.Breaking && getReleaseLineOfVersion(ext.Target) == line {
+			consider(ext.Target)
+		}
+	}
+	return last
 }
 
 func samePatchLevelVersion(a, b *semver.Version) bool {
