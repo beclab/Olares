@@ -44,6 +44,82 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
           ],
         },
         {
+          text: "Creative media",
+          collapsed: false,
+          items: [
+            {
+              text: "Blender",
+              link: "/use-cases/blender",
+            },
+            {
+              text: "ComfyUI",
+              link: "/use-cases/comfyui",
+              collapsed: true,
+              items: [
+                {
+                  text: "Manage ComfyUI",
+                  link: "/use-cases/comfyui-launcher",
+                },
+                {
+                  text: "Use ComfyUI in Krita",
+                  link: "/use-cases/comfyui-for-krita",
+                },
+                {
+                  text: "Common issues",
+                  link: "/use-cases/comfyui-common-issues",
+                },
+              ]
+            },
+            {
+              text: "Concat",
+              link: "/use-cases/concat",
+            },
+            {
+              text: "Music Studio",
+              link: "/use-cases/music-studio",
+            },
+            {
+              text: "Open Design",
+              link: "/use-cases/open-design",
+            },
+            {
+              text: "Qwen Image 2.1",
+              link: "/use-cases/qwen-image-2.1",
+            },
+            /*{
+              text: "Duix.Avatar",
+              link: "/use-cases/duix-avatar",
+            },*/
+            // {
+            //   text: "Stable Diffusion",
+            //   link: "/use-cases/stable-diffusion",
+            // },
+            {
+              text: "Whisper-WebUI",
+              link: "/use-cases/whisper-webui",
+            },
+            {
+              text: "Speaches",
+              link: "/use-cases/speaches",
+            },
+            {
+              text: "IndexTTS2",
+              link: "/use-cases/indextts2",
+            },
+            {
+              text: "YuE2 Studio",
+              link: "/use-cases/yue2-studio",
+              collapsed: true,
+              items: [
+                {
+                  text: "Protect the MCP connection",
+                  link: "/use-cases/yue2-studio-mcp-auth",
+                },
+              ],
+            },
+          ],
+        },
+        {
           text: "AI",
           collapsed: false,
           items: [
@@ -249,78 +325,6 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                 {
                   text: "Unsloth",
                   link: "/use-cases/unsloth",
-                },
-              ],
-            },
-            {
-              text: "Creative media",
-              collapsed: true,
-              items: [
-                {
-                  text: "Blender",
-                  link: "/use-cases/blender",
-                },
-                {
-                  text: "ComfyUI",
-                  link: "/use-cases/comfyui",
-                  collapsed: true,
-                  items: [
-                    {
-                      text: "Manage ComfyUI",
-                      link: "/use-cases/comfyui-launcher",
-                    },
-                    {
-                      text: "Use ComfyUI in Krita",
-                      link: "/use-cases/comfyui-for-krita",
-                    },
-                    {
-                      text: "Common issues",
-                      link: "/use-cases/comfyui-common-issues",
-                    },
-                  ]
-                },
-                {
-                  text: "Concat",
-                  link: "/use-cases/concat",
-                },
-                {
-                  text: "Music Studio",
-                  link: "/use-cases/music-studio",
-                },
-                {
-                  text: "Open Design",
-                  link: "/use-cases/open-design",
-                },
-                /*{
-                  text: "Duix.Avatar",
-                  link: "/use-cases/duix-avatar",
-                },*/
-                // {
-                //   text: "Stable Diffusion",
-                //   link: "/use-cases/stable-diffusion",
-                // },
-                {
-                  text: "Whisper-WebUI",
-                  link: "/use-cases/whisper-webui",
-                },
-                {
-                  text: "Speaches",
-                  link: "/use-cases/speaches",
-                },
-                {
-                  text: "IndexTTS2",
-                  link: "/use-cases/indextts2",
-                },
-                {
-                  text: "YuE2 Studio",
-                  link: "/use-cases/yue2-studio",
-                  collapsed: true,
-                  items: [
-                    {
-                      text: "Protect the MCP connection",
-                      link: "/use-cases/yue2-studio-mcp-auth",
-                    },
-                  ],
                 },
               ],
             },
