@@ -26,7 +26,7 @@ func newDirsListCommand(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			response, err := call(cmd.Context(), pc.doer, http.MethodGet, "/api/rag/directories", nil)
+			response, err := callAllowCodes(cmd.Context(), pc.doer, http.MethodGet, "/api/rag/directories", nil, -2)
 			if err != nil {
 				return err
 			}

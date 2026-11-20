@@ -46,6 +46,20 @@ func TestCallReturnsServiceCodeAndMessage(t *testing.T) {
 	}
 }
 
+func TestCallAllowsDirectoryEmptyStateOnlyWhenRequested(t *testing.T) {
+	d := &fakeDoer{result: `{"code":-2,"message":"no RAG monitor setting","data":[]}`}
+	if _, err := call(context.Background(), d, "GET", "/api/rag/directories", nil); err == nil {
+		t.Fatal("generic call unexpectedly accepted NotFound")
+	}
+	response, err := callAllowCodes(context.Background(), d, "GET", "/api/rag/directories", nil, -2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(response.Data) != `[]` {
+		t.Fatalf("data = %s", response.Data)
+	}
+}
+
 func TestValidateRootNormalizesAndRejectsTrustedFields(t *testing.T) {
 	root, err := validateRoot("/drive/Home/Documents")
 	if err != nil {

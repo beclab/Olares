@@ -47,11 +47,23 @@ func prepare(ctx context.Context, f *cmdutil.Factory) (*preparedClient, error) {
 }
 
 func call(ctx context.Context, d doer, method, path string, body interface{}) (envelope, error) {
+	return callAllowCodes(ctx, d, method, path, body)
+}
+
+// callAllowCodes keeps transport handling in one place while allowing an
+// endpoint-specific empty-state code. Search3 returns NotFound (-2) with an
+// empty array when a user has never configured RAG directories; for `dirs
+// list` that is a valid empty result, not an operational failure.
+func callAllowCodes(ctx context.Context, d doer, method, path string, body interface{}, allowed ...int) (envelope, error) {
 	var response envelope
 	if err := d.DoJSON(ctx, method, path, body, &response); err != nil {
 		return response, err
 	}
-	if response.Code != 0 {
+	accepted := response.Code == 0
+	for _, code := range allowed {
+		accepted = accepted || response.Code == code
+	}
+	if !accepted {
 		message := envelopeMessage(response.Message)
 		if message == "" {
 			message = "request was not accepted"
