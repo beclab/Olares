@@ -7,8 +7,15 @@ import { redirects, temporaryRedirects } from "./theme/redirects";
 import fs from 'node:fs';
 import path from 'node:path';
 import { createSocialImages } from './og/generate.mjs';
+import { createContentDates } from './lastmod/content-dates.mjs';
 
 const socialImages = createSocialImages(path.resolve(__dirname, 'og'));
+
+// "Last updated" from content changes (snippets included, metadata-only
+// commits ignored); see lastmod/content-dates.mjs. Kept per route so the
+// sitemap's <lastmod> uses the same date as the page footer.
+const contentDates = createContentDates({ srcDir: path.resolve(__dirname, '..') });
+const contentDateByRoute = new Map<string, number>();
 //import defaultConfig from 'vitepress-versioning-plugin';
 
 // Paths collected during transformPageData so sitemap.transformItems can
@@ -241,6 +248,18 @@ export default defineVersionedConfig2(withMermaid({
   },
 
   transformPageData(pageData) {
+    // A `lastUpdated` set in frontmatter (a date, or false) still wins, as in VitePress.
+    if (pageData.frontmatter?.lastUpdated === undefined) {
+      const updated = contentDates.forPage(pageData.relativePath);
+      if (updated) {
+        pageData.lastUpdated = updated;
+        contentDateByRoute.set(
+          pageData.relativePath.replace(/(^|\/)index\.md$/, '$1').replace(/\.md$/, ''),
+          updated
+        );
+      }
+    }
+
     // Opt a page out of Google/Bing/Algolia indexing by adding `noindex: true`
     // to its frontmatter. Implemented here (rather than per-file `head`) so
     // we don't shift source line numbers, which would break `@include` ranges
@@ -325,10 +344,15 @@ export default defineVersionedConfig2(withMermaid({
   sitemap: isArchivedVersionBuild ? undefined : {
     hostname: SITEMAP_HOSTNAME,
     transformItems: (items) =>
+      items.map((item) => {
+        // VitePress re-reads the page file's own git date here; use the content date instead.
+        const updated = contentDateByRoute.get(item.url.replace(/^\/+/, '').replace(/\.html$/, ''));
+        return updated ? { ...item, lastmod: updated } : item;
+      })
       // Drop noindex pages from sitemap.xml so crawlers don't even discover
       // them via the sitemap. The meta tag above is what ultimately removes
       // them from search engine indexes; this just avoids the extra hit.
-      items.filter((item) => {
+      .filter((item) => {
         // Normalize to the extensionless route so the comparison holds whether
         // or not cleanUrls is enabled.
         const p = item.url.replace(/^\/+/, '').replace(/\.html$/, '');
