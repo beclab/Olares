@@ -90,6 +90,13 @@ type DeviceInventoryEvent struct {
 	Changes          []DeviceInventoryChange `json:"changes"`
 }
 
+type deviceEventRecipient struct {
+	Username         string
+	Privileged       bool
+	PublisherVisible bool
+	DeviceKeys       map[string]struct{}
+}
+
 type deviceSnapshot struct {
 	Type         string
 	UID          string
@@ -184,7 +191,7 @@ func (r *DeviceInventoryController) Reconcile(ctx context.Context, req ctrl.Requ
 	changes := diffSnapshots(previous, parsed)
 	r.mu.Unlock()
 
-	if err := r.enrichRemovedBindings(ctx, node.Name, changes); err != nil {
+	if err := r.enrichDeviceBindings(ctx, node.Name, changes); err != nil {
 		return ctrl.Result{}, err
 	}
 	if len(changes) > 0 {
@@ -200,26 +207,26 @@ func (r *DeviceInventoryController) Reconcile(ctx context.Context, req ctrl.Requ
 	return ctrl.Result{RequeueAfter: requeueAfter}, nil
 }
 
-func (r *DeviceInventoryController) enrichRemovedBindings(ctx context.Context, nodeName string, changes []DeviceInventoryChange) error {
-	removed := make(map[string][]int)
+func (r *DeviceInventoryController) enrichDeviceBindings(ctx context.Context, nodeName string, changes []DeviceInventoryChange) error {
+	affected := make(map[string][]int)
 	for i := range changes {
 		change := &changes[i]
-		if change.Kind == "device" && change.Action == "removed" {
+		if changeNeedsBindings(change) {
 			key := changeBindingKey(change.Type, change.ResourceName)
-			removed[key] = append(removed[key], i)
+			affected[key] = append(affected[key], i)
 		}
 	}
-	if len(removed) == 0 {
+	if len(affected) == 0 {
 		return nil
 	}
 
 	var applications appv1alpha1.ApplicationList
 	if err := r.List(ctx, &applications); err != nil {
-		return fmt.Errorf("list applications for removed device bindings: %w", err)
+		return fmt.Errorf("list applications for device bindings: %w", err)
 	}
 	var managers appv1alpha1.ApplicationManagerList
 	if err := r.List(ctx, &managers); err != nil {
-		klog.Warningf("list application managers for removed device containers: %v", err)
+		klog.Warningf("list application managers for device binding containers: %v", err)
 	}
 	managerByName := make(map[string]*appv1alpha1.ApplicationManager, len(managers.Items))
 	managerByApp := make(map[string]*appv1alpha1.ApplicationManager, len(managers.Items))
@@ -234,7 +241,7 @@ func (r *DeviceInventoryController) enrichRemovedBindings(ctx context.Context, n
 		application := &applications.Items[i]
 		var containersByCapability map[string][]string
 		for _, attachment := range application.Spec.Attachments {
-			indexes := removed[changeBindingKey(attachment.Type, attachment.Ref)]
+			indexes := affected[changeBindingKey(attachment.Type, attachment.Ref)]
 			if len(indexes) == 0 || attachment.Node != nodeName {
 				continue
 			}
@@ -244,7 +251,7 @@ func (r *DeviceInventoryController) enrichRemovedBindings(ctx context.Context, n
 					manager = managerByApp[applicationIdentity(application.Spec.Name, application.Spec.Namespace, application.Spec.Owner)]
 				}
 				if manager == nil {
-					klog.Warningf("application manager config unavailable for removed device binding application=%s", application.Name)
+					klog.Warningf("application manager config unavailable for device binding application=%s", application.Name)
 				}
 				containersByCapability = workloadContainers(manager)
 			}
@@ -279,6 +286,20 @@ func (r *DeviceInventoryController) enrichRemovedBindings(ctx context.Context, n
 		changes[index].Bindings = ordered
 	}
 	return nil
+}
+
+func changeNeedsBindings(change *DeviceInventoryChange) bool {
+	if change == nil || change.Kind != "device" {
+		return false
+	}
+	switch change.Action {
+	case "added", "removed":
+		return true
+	case "updated":
+		return change.Previous != nil && change.Current != nil && change.Previous.Online != change.Current.Online
+	default:
+		return false
+	}
 }
 
 func changeBindingKey(deviceType, resourceName string) string {
@@ -386,15 +407,18 @@ func (r *DeviceInventoryController) publishToRecipients(ctx context.Context, eve
 		return nil
 	}
 	for _, recipient := range recipients {
-		recipientEvent := event
-		recipientEvent.EventID = event.EventID + ":" + recipient
-		r.Publish(deviceInventorySubject+"."+recipient, recipientEvent.EventID, recipientEvent)
+		recipientEvent := eventForRecipient(event, recipient)
+		if len(recipientEvent.Changes) == 0 {
+			continue
+		}
+		recipientEvent.EventID = event.EventID + ":" + recipient.Username
+		r.Publish(deviceInventorySubject+"."+recipient.Username, recipientEvent.EventID, recipientEvent)
 	}
 	return nil
 }
 
-func (r *DeviceInventoryController) eventRecipients(ctx context.Context, nodeName string, changes []DeviceInventoryChange) ([]string, error) {
-	recipients := make(map[string]struct{})
+func (r *DeviceInventoryController) eventRecipients(ctx context.Context, nodeName string, changes []DeviceInventoryChange) ([]deviceEventRecipient, error) {
+	recipients := make(map[string]*deviceEventRecipient)
 	var userList iamv1alpha2.UserList
 	if err := r.List(ctx, &userList); err != nil {
 		return nil, fmt.Errorf("list owner/admin users for device inventory event: %w", err)
@@ -403,7 +427,10 @@ func (r *DeviceInventoryController) eventRecipients(ctx context.Context, nodeNam
 		user := &userList.Items[i]
 		role := user.Annotations[users.UserAnnotationOwnerRole]
 		if role == "owner" || role == "admin" {
-			addDeviceEventRecipient(recipients, user.Name)
+			recipient := ensureDeviceEventRecipient(recipients, user.Name)
+			if recipient != nil {
+				recipient.Privileged = true
+			}
 		}
 	}
 
@@ -433,29 +460,79 @@ func (r *DeviceInventoryController) eventRecipients(ctx context.Context, nodeNam
 			if attachment.Node != nodeName {
 				continue
 			}
-			if _, affected := deviceKeys[changeBindingKey(attachment.Type, attachment.Ref)]; !publisherChanged && !affected {
+			key := changeBindingKey(attachment.Type, attachment.Ref)
+			_, deviceAffected := deviceKeys[key]
+			if !publisherChanged && !deviceAffected {
 				continue
 			}
-			addDeviceEventRecipient(recipients, application.Spec.Owner)
-			break
+			recipient := ensureDeviceEventRecipient(recipients, application.Spec.Owner)
+			if recipient == nil {
+				continue
+			}
+			if publisherChanged {
+				recipient.PublisherVisible = true
+			}
+			if deviceAffected {
+				recipient.DeviceKeys[key] = struct{}{}
+			}
 		}
 	}
 	return sortedDeviceEventRecipients(recipients), nil
 }
 
-func addDeviceEventRecipient(recipients map[string]struct{}, username string) {
+func ensureDeviceEventRecipient(recipients map[string]*deviceEventRecipient, username string) *deviceEventRecipient {
 	username = strings.TrimSpace(username)
-	if username != "" {
-		recipients[username] = struct{}{}
+	if username == "" {
+		return nil
 	}
+	recipient := recipients[username]
+	if recipient == nil {
+		recipient = &deviceEventRecipient{Username: username, DeviceKeys: make(map[string]struct{})}
+		recipients[username] = recipient
+	}
+	return recipient
 }
 
-func sortedDeviceEventRecipients(recipients map[string]struct{}) []string {
-	result := make([]string, 0, len(recipients))
+func sortedDeviceEventRecipients(recipients map[string]*deviceEventRecipient) []deviceEventRecipient {
+	result := make([]deviceEventRecipient, 0, len(recipients))
 	for recipient := range recipients {
-		result = append(result, recipient)
+		result = append(result, *recipients[recipient])
 	}
-	sort.Strings(result)
+	sort.Slice(result, func(i, j int) bool { return result[i].Username < result[j].Username })
+	return result
+}
+
+func eventForRecipient(event DeviceInventoryEvent, recipient deviceEventRecipient) DeviceInventoryEvent {
+	if recipient.Privileged {
+		return event
+	}
+	result := event
+	result.Changes = make([]DeviceInventoryChange, 0, len(event.Changes))
+	for i := range event.Changes {
+		change := event.Changes[i]
+		switch change.Kind {
+		case "publisher":
+			if !recipient.PublisherVisible {
+				continue
+			}
+		case "device":
+			if _, visible := recipient.DeviceKeys[changeBindingKey(change.Type, change.ResourceName)]; !visible {
+				continue
+			}
+			if len(change.Bindings) > 0 {
+				bindings := make([]DeviceBinding, 0, len(change.Bindings))
+				for _, binding := range change.Bindings {
+					if binding.AppOwner == recipient.Username {
+						bindings = append(bindings, binding)
+					}
+				}
+				change.Bindings = bindings
+			}
+		default:
+			continue
+		}
+		result.Changes = append(result.Changes, change)
+	}
 	return result
 }
 

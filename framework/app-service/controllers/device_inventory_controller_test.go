@@ -131,7 +131,7 @@ func TestDeviceInventoryControllerInitialObservationIsBaselineOnly(t *testing.T)
 	}
 }
 
-func TestEnrichRemovedBindingsIncludesApplicationsWorkloadsAndContainers(t *testing.T) {
+func TestEnrichDeviceBindingsIncludesApplicationsWorkloadsAndContainers(t *testing.T) {
 	scheme := runtime.NewScheme()
 	if err := appv1alpha1.AddToScheme(scheme); err != nil {
 		t.Fatal(err)
@@ -146,7 +146,7 @@ func TestEnrichRemovedBindingsIncludesApplicationsWorkloadsAndContainers(t *test
 		Kind: "device", Action: "removed", Type: "device.bluetooth", ResourceName: ref,
 		Previous: &DeviceState{Online: true, Selectable: true},
 	}}
-	if err := r.enrichRemovedBindings(context.Background(), "node-a", changes); err != nil {
+	if err := r.enrichDeviceBindings(context.Background(), "node-a", changes); err != nil {
 		t.Fatal(err)
 	}
 	bindings := changes[0].Bindings
@@ -161,7 +161,7 @@ func TestEnrichRemovedBindingsIncludesApplicationsWorkloadsAndContainers(t *test
 	}
 }
 
-func TestEnrichRemovedBindingsKeepsBindingWhenConfigUnavailable(t *testing.T) {
+func TestEnrichDeviceBindingsKeepsBindingWhenConfigUnavailable(t *testing.T) {
 	scheme := runtime.NewScheme()
 	if err := appv1alpha1.AddToScheme(scheme); err != nil {
 		t.Fatal(err)
@@ -176,11 +176,62 @@ func TestEnrichRemovedBindingsKeepsBindingWhenConfigUnavailable(t *testing.T) {
 	}
 	r := &DeviceInventoryController{Client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(application).Build()}
 	changes := []DeviceInventoryChange{{Kind: "device", Action: "removed", Type: "device.serial", ResourceName: ref}}
-	if err := r.enrichRemovedBindings(context.Background(), "node-a", changes); err != nil {
+	if err := r.enrichDeviceBindings(context.Background(), "node-a", changes); err != nil {
 		t.Fatal(err)
 	}
 	if len(changes[0].Bindings) != 1 || changes[0].Bindings[0].Containers == nil || len(changes[0].Bindings[0].Containers) != 0 {
 		t.Fatalf("binding without config = %#v", changes[0].Bindings)
+	}
+}
+
+func TestEnrichDeviceBindingsForAddedAndOnlineTransitions(t *testing.T) {
+	scheme := runtime.NewScheme()
+	if err := appv1alpha1.AddToScheme(scheme); err != nil {
+		t.Fatal(err)
+	}
+	ref := "devices.bytetrade.io/serial-s-1"
+	application, manager := boundApplicationForTest(t, "homeassistant", "homeassistant-alice", "alice", "homeassistant", "device.serial", ref, []string{"homeassistant"})
+	r := &DeviceInventoryController{Client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(application, manager).Build()}
+	tests := []struct {
+		name        string
+		change      DeviceInventoryChange
+		wantBinding bool
+	}{
+		{
+			name: "added",
+			change: DeviceInventoryChange{Kind: "device", Action: "added", Type: "device.serial", ResourceName: ref,
+				Current: &DeviceState{Online: true}},
+			wantBinding: true,
+		},
+		{
+			name: "updated offline to online",
+			change: DeviceInventoryChange{Kind: "device", Action: "updated", Type: "device.serial", ResourceName: ref,
+				Previous: &DeviceState{Online: false}, Current: &DeviceState{Online: true}},
+			wantBinding: true,
+		},
+		{
+			name: "updated online to offline",
+			change: DeviceInventoryChange{Kind: "device", Action: "updated", Type: "device.serial", ResourceName: ref,
+				Previous: &DeviceState{Online: true}, Current: &DeviceState{Online: false}},
+			wantBinding: true,
+		},
+		{
+			name: "updated without online transition",
+			change: DeviceInventoryChange{Kind: "device", Action: "updated", Type: "device.serial", ResourceName: ref,
+				Previous: &DeviceState{Online: true, DisplayName: "old"}, Current: &DeviceState{Online: true, DisplayName: "new"}},
+			wantBinding: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			changes := []DeviceInventoryChange{tt.change}
+			if err := r.enrichDeviceBindings(context.Background(), "node-a", changes); err != nil {
+				t.Fatal(err)
+			}
+			if got := len(changes[0].Bindings) > 0; got != tt.wantBinding {
+				t.Fatalf("bindings = %#v, wantBinding=%t", changes[0].Bindings, tt.wantBinding)
+			}
+		})
 	}
 }
 
@@ -260,8 +311,37 @@ func TestPublisherEventIncludesOwnersOfAllAttachmentsOnNode(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(recipients) != 1 || recipients[0] != "bob" {
+	if len(recipients) != 1 || recipients[0].Username != "bob" || !recipients[0].PublisherVisible {
 		t.Fatalf("recipients = %#v", recipients)
+	}
+}
+
+func TestDeviceInventoryEventIsFilteredForNormalRecipients(t *testing.T) {
+	aliceBinding := DeviceBinding{AppName: "alice-app", AppOwner: "alice", Workload: "server", Containers: []string{"server"}}
+	bobBinding := DeviceBinding{AppName: "bob-app", AppOwner: "bob", Workload: "worker", Containers: []string{"worker"}}
+	aliceRef := "devices.bytetrade.io/serial-s-alice"
+	bobRef := "devices.bytetrade.io/serial-s-bob"
+	event := DeviceInventoryEvent{Changes: []DeviceInventoryChange{
+		{Kind: "device", Action: "added", Type: "device.serial", ResourceName: aliceRef, Bindings: []DeviceBinding{aliceBinding}},
+		{Kind: "device", Action: "removed", Type: "device.serial", ResourceName: bobRef, Bindings: []DeviceBinding{aliceBinding, bobBinding}},
+	}}
+	recipient := deviceEventRecipient{
+		Username: "bob",
+		DeviceKeys: map[string]struct{}{
+			changeBindingKey("device.serial", bobRef): {},
+		},
+	}
+	filtered := eventForRecipient(event, recipient)
+	if len(filtered.Changes) != 1 || filtered.Changes[0].ResourceName != bobRef {
+		t.Fatalf("changes = %#v", filtered.Changes)
+	}
+	if len(filtered.Changes[0].Bindings) != 1 || filtered.Changes[0].Bindings[0].AppOwner != "bob" {
+		t.Fatalf("bindings = %#v", filtered.Changes[0].Bindings)
+	}
+
+	privileged := eventForRecipient(event, deviceEventRecipient{Username: "admin", Privileged: true})
+	if len(privileged.Changes) != 2 || len(privileged.Changes[1].Bindings) != 2 {
+		t.Fatalf("privileged event = %#v", privileged)
 	}
 }
 
