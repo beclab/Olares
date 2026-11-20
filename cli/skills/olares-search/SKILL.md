@@ -60,20 +60,14 @@ olares-cli search rag "Which component owns retry backoff?" \
   -o json
 ```
 
-The command calls user-service, which derives the current user and authorized
-directory roots. Never invent or pass an owner, Search3 service-protocol URI,
-or another user's path. `--root` accepts a frontend path such as
-`drive/Home/Documents/Project/` and may only narrow the server-authorized set.
+The command calls user-service, which derives the current user and authorized directory roots. Never invent or pass an owner, Search3 service-protocol URI, or another user's path.
+`--root` accepts a frontend path such as `drive/Home/Documents/Project/` and may only narrow the server-authorized set.
 
-JSON output preserves `resource_uri`, `chunk_key`, typed `locator`, scores,
-provenance, content/source highlights, degraded channels, and trace id. Keep
-these fields when citing a result; do not reduce a citation to untraceable
-generated prose.
+JSON output preserves `resource_uri`, `chunk_key`, typed `locator`, scores, provenance, content/source highlights, degraded channels, and trace id.
+Keep these fields when citing a result; do not reduce a citation to untraceable generated prose.
 
-An empty hit list means no relevant chunk was returned from the current indexed
-and authorized scope. It does not prove that the file does not exist. Check RAG
-status/directories through the settings skill or verify a known path with
-`olares-cli files ls`.
+An empty hit list means no relevant chunk was returned from the current indexed and authorized scope; it does not prove that the file does not exist.
+Check RAG status/directories through the settings skill or verify a known path with `olares-cli files ls`.
 
 Cloud result locations such as `google/<account>/...` and `dropbox/<account>/...` are valid files paths for `files ls`, `files cat`, or `files download`. A Sync location reads `/sync/<repo_id>/...` and is annotated with the library's display name — `files ls sync/<repo_id>/` takes the id, not the name.
 
