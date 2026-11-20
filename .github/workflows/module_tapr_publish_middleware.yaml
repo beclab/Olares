@@ -25,6 +25,8 @@ jobs:
           file: platform/tapr/docker/middleware/Dockerfile
           context: platform/tapr
           platforms: linux/amd64
+          provenance: false
+          sbom: false
   publish_dockerhub_arm64:
     runs-on: self-hosted
     steps:
@@ -43,6 +45,8 @@ jobs:
           file: platform/tapr/docker/middleware/Dockerfile
           context: platform/tapr
           platforms: linux/arm64
+          provenance: false
+          sbom: false
 
   publish_manifest:
     needs:

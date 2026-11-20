@@ -27,6 +27,8 @@ jobs:
                 file: framework/l4-bfl-proxy/Dockerfile.openresty
                 platforms: linux/amd64
                 context: framework/l4-bfl-proxy
+                provenance: false
+                sbom: false
 
     publish_dockerhub_arm64:
         runs-on: self-hosted
@@ -48,6 +50,8 @@ jobs:
                 file: framework/l4-bfl-proxy/Dockerfile.openresty
                 platforms: linux/arm64
                 context: framework/l4-bfl-proxy
+                provenance: false
+                sbom: false
 
     publish_manifest:
         needs:
