@@ -14,11 +14,11 @@ export interface UseCase {
 
 // Display order of the category filter pills (canonical English keys).
 export const useCaseCategories: string[] = [
-  "Creative media",
   "AI agent",
   "AI workbench",
   "Model services",
   "Embodied AI",
+  "Creative media",
   "Virtual machine",
   "Entertainment",
   "Games",

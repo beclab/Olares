@@ -32,20 +32,11 @@ AI prompt enhancement uses a chat model connected through Router to help refine 
 ## Install the app and prepare the image models
 
 1. Open Market and search for "Qwen Image 2.1".
-2. Click **Get**, then **Install**. When asked to configure the environment, keep **PRECISION** set to `int8` for this guide.
+2. Click **Get**, then **Install**, and wait for installation to complete.
+3. Open Qwen Image 2.1 from Launchpad. On first start, the app downloads the INT8 image models by default. Wait for the download screen to finish and the workspace to open.
+4. In **Settings** > **Models**, check that the INT8 weights show **Installed**. Click **Open the Model Console** to view file download progress and checksums. Once the models have downloaded and the generation service is ready, you can submit your first task.
 
-   | Option | Download | Use |
-   | --- | --- | --- |
-   | INT8 | About 25 GB | Default weights from the official release. |
-   | NVFP4 | About 27 GB | An alternative third-party conversion. |
-
-   Leave **STUDIO_LLM_BASE_URL** and **STUDIO_LLM_API_KEY** empty, and keep **STUDIO_LLM_MODEL** as `default-chat`. These defaults connect prompt enhancement to Router on your Olares.
-
-3. Confirm the configuration and wait for installation to complete.
-4. Open Qwen Image 2.1 from Launchpad. On first start, the app downloads the selected image models. Wait for the download screen to finish and the workspace to open.
-5. In **Settings** > **Models**, check that the INT8 weights show **Installed**. Click **Open the Model Console** to view file download progress and checksums. Once the models have downloaded and the generation service is ready, you can submit your first task.
-
-The examples below use INT8. You can download another precision later in **Settings** and select an installed precision for each generation.
+The examples below use INT8. To try NVFP4, download its weights in **Settings** > **Models**, then select that precision when generating an image.
 
 ## Configure a chat model for AI enhancement
 
@@ -63,7 +54,7 @@ This guide uses Qwen3.8-27B (llama.cpp), a local chat model that can also receiv
 
    Models marked **sees images** can use your reference images when rewriting the prompt. With a text-only model, enhancement uses the text alone. A specific model selection applies independently of Router's default.
 
-With the default environment settings, the app connects to Router automatically.
+The app connects to Router automatically.
 
 ## Create and refine images
 
