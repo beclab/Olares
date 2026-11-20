@@ -153,13 +153,13 @@ type RemoveJuiceFSModule struct {
 func (m *RemoveJuiceFSModule) Init() {
 	m.Name = "RemoveJuiceFS"
 
-	stopJuiceFS := &task.RemoteTask{
-		Name:  "StopJuiceFS",
+	uninstallJuiceFS := &task.RemoteTask{
+		Name:  "UninstallJuiceFS",
 		Hosts: m.Runtime.GetHostsByRole(common.Master),
 		Prepare: &prepare.PrepareCollection{
 			new(common.OnlyFirstMaster),
 		},
-		Action:   new(StopJuiceFS),
+		Action:   new(UninstallJuiceFS),
 		Parallel: false,
 		Retry:    0,
 	}
@@ -186,7 +186,7 @@ func (m *RemoveJuiceFSModule) Init() {
 		Retry:    0,
 	}
 	m.Tasks = []task.Interface{
-		stopJuiceFS,
+		uninstallJuiceFS,
 		stopRedis,
 		removeJuiceFSFiles,
 	}

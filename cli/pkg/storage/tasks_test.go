@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestDeleteTerminusUserDataPreservesMarketPreinstall(t *testing.T) {
+func TestDeleteTerminusUserDataPreservesRootFSAndMarketPreinstall(t *testing.T) {
 	root := t.TempDir()
 	oldUserDataDir := OlaresUserDataDir
 	oldJuiceFsCacheDir := JuiceFsCacheDir
@@ -26,7 +26,8 @@ func TestDeleteTerminusUserDataPreservesMarketPreinstall(t *testing.T) {
 
 	preinstallFile := filepath.Join(OlaresUserDataDir, "Cache", "market-preinstall", "bundle.json")
 	removedFile := filepath.Join(OlaresUserDataDir, "Home", "user-data")
-	for _, file := range []string{preinstallFile, removedFile, filepath.Join(JuiceFsCacheDir, "cache")} {
+	rootFSFile := filepath.Join(OlaresJuiceFSRootDir, "data")
+	for _, file := range []string{preinstallFile, removedFile, rootFSFile, RedisServiceFile, filepath.Join(JuiceFsCacheDir, "cache")} {
 		if err := os.MkdirAll(filepath.Dir(file), 0o755); err != nil {
 			t.Fatal(err)
 		}
@@ -41,6 +42,9 @@ func TestDeleteTerminusUserDataPreservesMarketPreinstall(t *testing.T) {
 
 	if _, err := os.Stat(preinstallFile); err != nil {
 		t.Errorf("market preinstall file was not preserved: %v", err)
+	}
+	if _, err := os.Stat(rootFSFile); err != nil {
+		t.Errorf("JuiceFS rootfs file was not preserved: %v", err)
 	}
 	if _, err := os.Stat(removedFile); !os.IsNotExist(err) {
 		t.Errorf("regular userdata still exists, stat error = %v", err)

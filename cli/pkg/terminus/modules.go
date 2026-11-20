@@ -538,6 +538,10 @@ func (m *ChangeIPModule) addStorageTasks() {
 			},
 			Retry: 3,
 		},
+		&task.LocalTask{
+			Name:   "CleanupStaleJuiceFSMount",
+			Action: new(storage.CleanupStaleJuiceFSMount),
+		},
 
 		&task.RemoteTask{
 			Name:   "GetRedisConfig",

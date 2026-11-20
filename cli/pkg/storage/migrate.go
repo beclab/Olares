@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -177,22 +178,6 @@ func (t *CheckOlaresStopped) Execute(runtime connector.Runtime) error {
 	return nil
 }
 
-// isPathMounted returns whether the given absolute path is currently a mount
-// point (of any filesystem type) by consulting /proc/self/mounts on the node.
-func isPathMounted(runtime connector.Runtime, target string) (bool, error) {
-	out, err := runtime.GetRunner().SudoCmd("cat /proc/self/mounts", false, false)
-	if err != nil {
-		return false, err
-	}
-	for _, line := range strings.Split(out, "\n") {
-		fields := strings.Fields(line)
-		if len(fields) >= 2 && fields[1] == target {
-			return true, nil
-		}
-	}
-	return false, nil
-}
-
 // isDirEmpty reports whether dir contains no entries at all (including
 // dotfiles). It is used as a defensive guard so we never run a destructive
 // --delete sync from, or a swap of, an unexpectedly empty rootfs.
@@ -305,7 +290,7 @@ type MountJuiceFSForMigration struct {
 }
 
 func (t *MountJuiceFSForMigration) Execute(runtime connector.Runtime) error {
-	mounted, err := isPathMounted(runtime, MigrationTempMountPoint)
+	mounted, err := isMounted(MigrationTempMountPoint, "")
 	if err != nil {
 		return err
 	}
@@ -355,14 +340,14 @@ func (t *SyncRootFSData) Execute(runtime connector.Runtime) error {
 
 	// Safety: the source must be the real local rootfs, never a JuiceFS mount.
 	// Otherwise a --delete sync from an (empty) JuiceFS into JuiceFS could wipe data.
-	srcMounted, err := isJuiceFSMounted(runtime, OlaresJuiceFSRootDir)
+	srcMounted, err := isMounted(OlaresJuiceFSRootDir, juiceFSMountType)
 	if err != nil {
 		return err
 	}
 	if srcMounted {
 		return fmt.Errorf("refusing to sync: source %s is already a JuiceFS mount", OlaresJuiceFSRootDir)
 	}
-	dstMounted, err := isPathMounted(runtime, MigrationTempMountPoint)
+	dstMounted, err := isMounted(MigrationTempMountPoint, "")
 	if err != nil {
 		return err
 	}
@@ -421,7 +406,7 @@ type UnmountJuiceFSMigration struct {
 }
 
 func (t *UnmountJuiceFSMigration) Execute(runtime connector.Runtime) error {
-	mounted, err := isPathMounted(runtime, MigrationTempMountPoint)
+	mounted, err := isMounted(MigrationTempMountPoint, "")
 	if err != nil {
 		return err
 	}
@@ -451,7 +436,7 @@ func (t *BackupAndSwapRootFS) Execute(runtime connector.Runtime) error {
 		logger.Info("JuiceFS is already enabled, skipping rootfs backup and swap")
 		return nil
 	}
-	mounted, err := isJuiceFSMounted(runtime, OlaresJuiceFSRootDir)
+	mounted, err := isMounted(OlaresJuiceFSRootDir, juiceFSMountType)
 	if err != nil {
 		return err
 	}
@@ -488,14 +473,29 @@ func (t *BackupAndSwapRootFS) Execute(runtime connector.Runtime) error {
 	return nil
 }
 
-func isJuiceFSMounted(runtime connector.Runtime, target string) (bool, error) {
-	out, err := runtime.GetRunner().SudoCmd("cat /proc/self/mounts", false, false)
+const juiceFSMountType = "fuse.juicefs"
+
+// isMounted looks up an exact mount point in /proc/self/mounts. An empty
+// fsTypePrefix matches any filesystem type.
+func isMounted(target, fsTypePrefix string) (bool, error) {
+	target = filepath.Clean(target)
+	parent := filepath.Dir(target)
+	// /olares can point to /osdata/olares. Resolve the parent without
+	// accessing the mount itself, which may have become disconnected.
+	resolvedParent, err := filepath.EvalSymlinks(parent)
+	if os.IsNotExist(err) {
+		resolvedParent = parent
+	} else if err != nil {
+		return false, err
+	}
+	resolvedTarget := filepath.Join(resolvedParent, filepath.Base(target))
+	mounts, err := os.ReadFile("/proc/self/mounts")
 	if err != nil {
 		return false, err
 	}
-	for _, line := range strings.Split(out, "\n") {
+	for _, line := range strings.Split(string(mounts), "\n") {
 		fields := strings.Fields(line)
-		if len(fields) >= 3 && fields[1] == target && strings.HasPrefix(fields[2], "fuse.juicefs") {
+		if len(fields) >= 3 && (fields[1] == target || fields[1] == resolvedTarget) && strings.HasPrefix(fields[2], fsTypePrefix) {
 			return true, nil
 		}
 	}
