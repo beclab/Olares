@@ -63,16 +63,12 @@ If you prefer to prepare Olares One remotely, you can use SSH to download and in
 2. After the download finishes, install the package:
 
    ```bash
-   sudo bash -c 'apt update && DEBIAN_FRONTEND=noninteractive apt-get install -y -f ./olares-desktop_0.1.0_20260928_amd64.deb'
+   sudo bash -c 'apt update && DEBIAN_FRONTEND=noninteractive apt-get install -y -f -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" ./olares-desktop_0.1.0_20260928_amd64.deb'
    ```
 
-3. If prompted about the configuration file `/etc/default/apport`, press **Enter** to accept the default option `N` and keep the existing configuration.
+   The `--force-confdef` and `--force-confold` options handle configuration file conflicts automatically: use the default action when available, or keep the existing configuration when no default is available.
 
-   ```text
-   *** apport (Y/I/N/O/D/Z) [default=N] ?
-   ```
-
-4. Wait for the installation to finish and the terminal prompt to return.
+3. Wait for the installation to finish and the terminal prompt to return.
 
    ```text
    olares@olares:/tmp$

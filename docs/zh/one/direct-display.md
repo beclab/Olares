@@ -67,16 +67,12 @@ head:
 2. 下载完成后，安装软件包：
 
    ```bash
-   sudo bash -c 'apt update && DEBIAN_FRONTEND=noninteractive apt-get install -y -f ./olares-desktop_0.1.0_20260928_amd64.deb'
+   sudo bash -c 'apt update && DEBIAN_FRONTEND=noninteractive apt-get install -y -f -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" ./olares-desktop_0.1.0_20260928_amd64.deb'
    ```
 
-3. 如果出现关于配置文件 `/etc/default/apport` 的提示，按 **Enter** 接受默认选项 `N`，保留现有配置。
+   `--force-confdef` 和 `--force-confold` 参数会自动处理配置文件冲突：有默认处理方式时采用默认方式，没有时保留现有配置。
 
-   ```text
-   *** apport (Y/I/N/O/D/Z) [default=N] ?
-   ```
-
-4. 等待安装完成，直到终端重新显示命令提示符。
+3. 等待安装完成，直到终端重新显示命令提示符。
 
    ```text
    olares@olares:/tmp$
