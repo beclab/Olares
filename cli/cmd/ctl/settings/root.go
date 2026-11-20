@@ -25,6 +25,7 @@ import (
 	"github.com/beclab/Olares/cli/cmd/ctl/settings/integration"
 	"github.com/beclab/Olares/cli/cmd/ctl/settings/me"
 	"github.com/beclab/Olares/cli/cmd/ctl/settings/network"
+	"github.com/beclab/Olares/cli/cmd/ctl/settings/rag"
 	"github.com/beclab/Olares/cli/cmd/ctl/settings/restore"
 	"github.com/beclab/Olares/cli/cmd/ctl/settings/search"
 	"github.com/beclab/Olares/cli/cmd/ctl/settings/users"
@@ -81,6 +82,7 @@ https://desktop.<terminus>; backup / restore use the same origin with a
 		compute.NewComputeCommand(f),
 		video.NewVideoCommand(f),
 		search.NewSearchCommand(f),
+		rag.NewRAGCommand(f),
 		backup.NewBackupCommand(f),
 		restore.NewRestoreCommand(f),
 		advanced.NewAdvancedCommand(f),
