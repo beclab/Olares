@@ -16,9 +16,9 @@ export interface UseCase {
 export const useCaseCategories: string[] = [
   "AI agent",
   "AI workbench",
-  "Creative media",
   "Model services",
   "Embodied AI",
+  "Creative media",
   "Virtual machine",
   "Entertainment",
   "Games",
@@ -72,6 +72,7 @@ export const useCases: UseCase[] = [
   { title: "FlowStudio", link: "/use-cases/flowstudio", category: "Creative media", description: "Generate images and videos with reusable AI workflows", descriptionZh: "使用可复用的 AI 工作流生成图像和视频" },
   { title: "Music Studio", link: "/use-cases/music-studio", category: "Creative media", description: "Create songs from lyrics and musical ideas", descriptionZh: "将歌词和音乐灵感变成歌曲" },
   { title: "Open Design", link: "/use-cases/open-design", category: "Creative media", description: "Turn prompts into prototypes, pages, and slide decks", descriptionZh: "将提示词转化为原型、页面和幻灯片" },
+  { title: "Qwen Image 2.1", link: "/use-cases/qwen-image-2.1", category: "Creative media", description: "Generate and edit images locally with text and references", descriptionZh: "通过文字和参考图，在本地生成与编辑图片" },
   { title: "Whisper-WebUI", link: "/use-cases/whisper-webui", category: "Creative media", description: "Speech-to-text, subtitles, and translation", descriptionZh: "语音转文字、字幕生成与翻译" },
   { title: "Speaches", link: "/use-cases/speaches", category: "Creative media", description: "Speech-to-text, text-to-speech, and voice chat", descriptionZh: "语音转文字、文字转语音与语音对话" },
   { title: "IndexTTS2", link: "/use-cases/indextts2", category: "Creative media", description: "Text-to-speech with zero-shot voice cloning", descriptionZh: "支持零样本声音克隆的文字转语音" },

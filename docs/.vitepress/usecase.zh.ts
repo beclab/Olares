@@ -253,78 +253,6 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               ],
             },
             {
-              text: "创意媒体",
-              collapsed: true,
-              items: [
-                {
-                  text: "Blender",
-                  link: "/zh/use-cases/blender",
-                },
-                {
-                  text: "ComfyUI",
-                  link: "/zh/use-cases/comfyui",
-                  collapsed: true,
-                  items: [
-                    {
-                      text: "管理 ComfyUI",
-                      link: "/zh/use-cases/comfyui-launcher",
-                    },
-                    {
-                      text: "在 Krita 中使用 ComfyUI",
-                      link: "/zh/use-cases/comfyui-for-krita",
-                    },
-                    {
-                      text: "常见问题",
-                      link: "/zh/use-cases/comfyui-common-issues",
-                    },
-                  ]
-                },
-                {
-                  text: "Concat",
-                  link: "/zh/use-cases/concat",
-                },
-                {
-                  text: "Music Studio",
-                  link: "/zh/use-cases/music-studio",
-                },
-                {
-                  text: "Open Design",
-                  link: "/zh/use-cases/open-design",
-                },
-                /*{
-                  text: "Duix.Avatar",
-                  link: "/zh/use-cases/duix-avatar",
-                },*/
-                // {
-                //   text: "Stable Diffusion",
-                //   link: "/zh/use-cases/stable-diffusion",
-                // },
-                {
-                  text: "Whisper-WebUI",
-                  link: "/zh/use-cases/whisper-webui",
-                },
-                {
-                  text: "Speaches",
-                  link: "/zh/use-cases/speaches",
-                },
-                {
-                  text: "IndexTTS2",
-                  link: "/zh/use-cases/indextts2",
-                },
-                {
-                  text: "YuE2 Studio",
-                  link: "/zh/use-cases/yue2-studio",
-                  collapsed: true,
-                  items: [
-                    {
-                      text: "启用 MCP 令牌认证",
-                      link: "/zh/use-cases/yue2-studio-mcp-auth",
-                    },
-                  ],
-                },
-              ],
-            },
-            {
               text: "模型服务",
               collapsed: true,
               items: [
@@ -365,6 +293,82 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
                 {
                   text: "Isaac Lab",
                   link: "/zh/use-cases/isaac-lab",
+                },
+              ],
+            },
+          ],
+        },
+        {
+          text: "创意媒体",
+          collapsed: false,
+          items: [
+            {
+              text: "Blender",
+              link: "/zh/use-cases/blender",
+            },
+            {
+              text: "ComfyUI",
+              link: "/zh/use-cases/comfyui",
+              collapsed: true,
+              items: [
+                {
+                  text: "管理 ComfyUI",
+                  link: "/zh/use-cases/comfyui-launcher",
+                },
+                {
+                  text: "在 Krita 中使用 ComfyUI",
+                  link: "/zh/use-cases/comfyui-for-krita",
+                },
+                {
+                  text: "常见问题",
+                  link: "/zh/use-cases/comfyui-common-issues",
+                },
+              ]
+            },
+            {
+              text: "Concat",
+              link: "/zh/use-cases/concat",
+            },
+            {
+              text: "Music Studio",
+              link: "/zh/use-cases/music-studio",
+            },
+            {
+              text: "Open Design",
+              link: "/zh/use-cases/open-design",
+            },
+            {
+              text: "Qwen Image 2.1",
+              link: "/zh/use-cases/qwen-image-2.1",
+            },
+            /*{
+              text: "Duix.Avatar",
+              link: "/zh/use-cases/duix-avatar",
+            },*/
+            // {
+            //   text: "Stable Diffusion",
+            //   link: "/zh/use-cases/stable-diffusion",
+            // },
+            {
+              text: "Whisper-WebUI",
+              link: "/zh/use-cases/whisper-webui",
+            },
+            {
+              text: "Speaches",
+              link: "/zh/use-cases/speaches",
+            },
+            {
+              text: "IndexTTS2",
+              link: "/zh/use-cases/indextts2",
+            },
+            {
+              text: "YuE2 Studio",
+              link: "/zh/use-cases/yue2-studio",
+              collapsed: true,
+              items: [
+                {
+                  text: "启用 MCP 令牌认证",
+                  link: "/zh/use-cases/yue2-studio-mcp-auth",
                 },
               ],
             },
