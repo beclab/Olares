@@ -97,6 +97,10 @@ spec:
         permission:
           pub: deny
           sub: allow
+      - name: "device.inventory.*"
+        permission:
+          pub: deny
+          sub: allow
     user: notification-server
 
 ---
@@ -190,6 +194,8 @@ spec:
           value: "os.application.*"
         - name: NATS_SUBJECT_SYSTEM_VAULT
           value: "os.vault.*"
+        - name: NATS_SUBJECT_DEVICE_INVENTORY
+          value: "os.device.inventory.*"
         livenessProbe:
           tcpSocket:
             port: 3010
