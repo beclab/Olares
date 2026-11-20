@@ -38,52 +38,52 @@ AI prompt enhancement uses a chat model connected through Router to help refine 
 
 The examples below use INT8. To try NVFP4, download its weights in **Settings** > **Models**, then select that precision when generating an image.
 
+::: tip INT8 and NVFP4
+INT8 and NVFP4 are two formats of the model weights. INT8 is the default and balances image quality, generation speed, and GPU memory use. NVFP4 is a third-party format that needs less GPU memory and generates faster, with some loss of image quality.
+:::
+
 ## Configure a chat model for AI enhancement
 
 Use your own prompts directly to generate and edit pictures, or connect a chat model to refine your descriptions with **AI enhance**.
 
 This guide uses Qwen3.8-27B (llama.cpp), a local chat model that can also receive reference images.
 
-1. Make the chat model available on Olares. If it is not installed, search for "Qwen3.8-27B (llama.cpp)" in Market, click **Get**, then **Install**, and complete the installation. Open its Model Console and wait for **Model** to show **Ready** and **Engine** to show **Running**.
+1. Install "Qwen3.8-27B (llama.cpp)" from Market. When the installation completes, open its Model Console and wait for **Model** to show **Ready** and **Engine** to show **Running**.
 
    For another model, install its packaged app or follow [Run local LLMs with Engine Base apps](llm-base-apps.md).
 
-2. Open Router from Launchpad. On **Default models**, select the chat model for `default-chat`.
-3. Return to Qwen Image 2.1 and open **Settings**. Under **AI optimize**, click **Refresh** to reload the chat models from Router.
+2. Open Router from Launchpad, go to **Default models**, and select the chat model for `default-chat`.
+3. Return to Qwen Image 2.1, go to **Settings** > **AI optimize**, and click **Refresh** to reload the chat models from Router.
 4. In **Chat model**, keep **Router default (default-chat)** to follow Router's default, or select a specific model from the list. Confirm that the status shows **Ready**.
 
    Models marked **sees images** can use your reference images when rewriting the prompt. With a text-only model, enhancement uses the text alone. A specific model selection applies independently of Router's default.
 
-The app connects to Router automatically.
-
-## Create and refine images
+## Create and edit images
 
 Use the coffee mug examples below to create a product photograph and adapt it for different uses. Substitute your own product and desired changes as needed.
 
-The **Apps** page and the menu above the input panel provide **Generate image**, **Inpaint**, **Extend**, and **Remove background**. You can also open a result and choose an action directly below it.
-
 ### Generate an image from text
 
-1. Select **Generate image**. For a new image from text alone, remove any existing reference images with their remove buttons.
+1. Go to **Apps** and select **Generate image**. For a new image from text alone, remove any existing reference images with their remove buttons.
 2. Enter a description in **Prompt**. For example:
 
    ```text
    A clean product photograph of a matte teal ceramic coffee mug on a warm ivory tabletop, soft morning window light from the left, a few coffee beans beside the mug, minimalist composition, no text, no logo.
    ```
 
-3. Optionally, use the arrow beside **AI enhance** to choose **Enhance and translate to English**, **Enhance, keep the language**, or **Translate to English only**. Click **AI enhance** and review the rewritten prompt. Edit any details you do not want before generating.
-4. Set the aspect ratio to **1:1** and the image count to **1**. Under **Advanced settings**, use **Resolution** of **1K**, **Precision** of **INT8**, and a random seed.
+3. Optionally, click **AI enhance** to refine your description. Review the rewritten prompt and edit any details you do not want before generating.
+4. Optionally, to enhance without translating or to translate only, click the arrow beside **AI enhance** and select **Enhance, keep the language** or **Translate to English only**.
+5. Set **Aspect** to **1:1** and **Images** to **1**.
+6. Under **Advanced settings**, set the remaining options:
 
-   | Setting | How to choose |
-   | --- | --- |
-   | **Aspect** | Use 1:1 for a square product image, 16:9 for a banner, or 9:16 for a vertical composition. |
-   | **Images** | Generate 1–4 candidates. Start with one while refining the description. |
-   | **Resolution** | Use 1K for initial drafts. Select 2K when generating a higher-resolution version. |
-   | **Speed** | Available on supported editing paths. Text-to-image and reference composition have one speed. |
-   | **Seed** | Leave it random for new variations. Lock a seed when you want to compare prompt changes with the same starting seed. |
+   | Setting | This tutorial | How to choose |
+   | --- | --- | --- |
+   | **Resolution** | **1K** | Select 2K when generating a higher-resolution version. |
+   | **Precision** | **INT8** | Keep the default. |
+   | **Speed** | Quality priority | Fixed when generating from text. |
+   | **Seed** | Random | Lock a seed to compare prompt changes from the same starting point.
 
-5. Click **Generate**. The task appears in **Image** with its progress. Use **View queue** to inspect active and waiting tasks.
-6. Open the completed image to inspect it. **Details** shows its prompt, references, and generation parameters.
+7. Click **Generate** and wait for the task to complete. Open the result to preview it.
 
 ### Edit an existing image
 
@@ -97,39 +97,39 @@ Use a text instruction to change an image while keeping its composition. For exa
    ```
 
 3. Keep **Aspect** set to **Image 1**, then click **Generate**.
-4. Open the result and enable **Compare with the original**. Move the divider to inspect the edited and original areas.
+4. Open the result and click the **Compare with the original** icon in the top-right corner. Move the divider to inspect the edited and original areas.
 
-![Compare the original teal mug with the edited orange mug](/images/manual/use-cases/qwen-image-2.1-edit-compare.jpg#bordered)
+      ![Compare the original teal mug with the edited orange mug](/images/manual/use-cases/qwen-image-2.1-edit-compare.jpg#bordered)
 
-To start with your own photo, select **Generate image**, use **Add images** to upload it or choose it from the library, and select **Image 1** for the aspect. The first reference is the image being edited.
+5. To start with your own photo, select **Generate image**, use **Add images** to upload it or choose it from the library, and select **Image 1** for the aspect. The first reference is the image being edited.
 
 ### Create a new composition from references
 
 Reference generation combines elements from images into a new composition. Add references in the input panel and choose an output ratio for the new image.
 
-1. Select **Generate image** and add your reference images. You can add up to 10, including images already in **Library**.
+1. Go to **Apps**, select **Generate image**, and add your reference images. You can add up to 10, including images already in **Library**.
 2. Open a reference thumbnail to set its **Image role**, such as **Product**, **Person**, **Style**, or **Scene**. For a mug photograph, choose **Product** to indicate which design to preserve.
 3. In **Prompt**, type `@` and select an image from the list. Refer to each image where you explain how it should be used. For example, identify the mug image and a café interior image, then ask for the mug on a table in that café.
 
    ```text
-   Place the mug from [product reference] on a table in [café reference]. Keep the mug's color, shape and handle. Use warm morning light and leave empty space on the right for a headline. Do not add text.
+   Place the mug from @[product reference] on a table in @[café reference]. Put it near the center of the table, fully on the surface and away from the edge, at a size that looks natural in the scene. Keep the mug's color, shape and handle. Use warm morning light and leave empty space on the right for a headline. Do not add text.
    ```
 
-   Replace the bracketed descriptions with the image references inserted through `@`.
+   Insert each image reference by typing `@`, replacing the bracketed placeholder.
 
 4. Select an output ratio, such as **16:9** for a wide composition.
 5. Choose the resolution and image count, then click **Generate**. Check the product's shape and details in the result before using it.
 
-You can drag reference thumbnails to change their order and remove a reference directly from the tray. When enhancing a prompt that contains references, check that the intended images are still referenced in the rewritten text.
+      ![Compose a new image from a product reference and a café scene reference](/images/manual/use-cases/qwen-image-2.1-references-compose.jpg#bordered)
 
 ### Change a selected area
 
 Use **Inpaint** for a change limited to part of an image, such as removing the coffee beans beside the mug.
 
 1. Open the orange mug result and click **Inpaint**.
-2. Click **Paint mask**. Paint over the coffee beans and their immediate shadows. Adjust **Size**, use **Eraser** to refine the selection, or use **Undo** and **Clear** to correct it.
+2. Click **Paint mask**. Paint over the coffee beans and their immediate shadows, leaving enough room for the change to blend into the surroundings. Adjust **Size**, use **Eraser** to refine the selection, or use **Undo** and **Clear** to correct it.
 3. Click **Done**. The input panel now offers **Edit mask** and **Remove mask**.
-4. Under **What should change?**, enter:
+4. Under **What should change**, enter:
 
    ```text
    Remove the coffee beans and fill their area with the same warm ivory tabletop texture. Keep the mug and the rest of the photograph unchanged.
@@ -137,21 +137,19 @@ Use **Inpaint** for a change limited to part of an image, such as removing the c
 
 5. Click **Apply edit**. When the result is ready, compare it with the original and inspect the selection's edges.
 
-![Paint over the coffee beans before applying the edit](/images/manual/use-cases/qwen-image-2.1-inpaint-mask.jpg#bordered)
-
-The model uses the whole image as context, while the final result retains the original outside the mask. Give the selection enough room for the desired change and its transition into the surroundings.
+      ![Paint over the coffee beans before applying the edit](/images/manual/use-cases/qwen-image-2.1-inpaint-mask.jpg#bordered)
 
 ### Extend the composition
 
 Use **Extend** to make room around an existing image, such as adding space for a headline beside the mug.
 
-1. Open the image and click **Extend**.
-2. In the canvas editor, choose **16:9** under **Shape**, or use **Same shape** and an **Amount** preset to expand in the original proportions.
+1. Open the image and click **Extend**. To start from **Apps** instead, add a **Source image** and use **Adjust position and size** to open the same canvas editor.
+2. In the canvas editor, choose **16:9**, or choose **Same shape** and a multiplier such as **1.5x**, **2x**, or **3x** to expand in the original proportions.
 3. Drag the original image within the canvas to control where new content is added. For space on the right, move the original toward the left. Check the preview and displayed dimensions.
 4. Click **Extend** in the editor to submit the task.
-5. Open the result and inspect the join between the original and the new area. Plain backgrounds can reveal seams or changes in texture, so adjust the expansion and try again when needed.
+5. Open the result and inspect the join between the original and the new area. If the new area does not match the original background, retry with a smaller expansion, or use **Inpaint** to fix the junction.
 
-When opening **Extend** from **Apps**, first add a **Source image**. **Adjust position and size** opens the same canvas editor.
+      ![Extend the mug image to a wide composition and compare the result with the original](/images/manual/use-cases/qwen-image-2.1-extend.jpg#bordered)
 
 ### Remove a background
 
@@ -160,30 +158,27 @@ When opening **Extend** from **Apps**, first add a **Source image**. **Adjust po
 3. Open the completed result. The checkerboard indicates transparent areas. Inspect fine edges and the inside of the mug handle.
 4. Click **Download** to save the PNG with transparency.
 
-![The mug and coffee beans on a transparent background](/images/manual/use-cases/qwen-image-2.1-remove-background.jpg#bordered)
-
-For a cutout of the mug alone, first use **Inpaint** to remove the coffee beans, then remove the background.
+      ![The mug and coffee beans on a transparent background](/images/manual/use-cases/qwen-image-2.1-remove-background.jpg#bordered)
 
 ### Continue from a result
 
-Choose an action according to what you want to carry forward:
+Open a result and the actions below it let you carry the work forward:
 
 | Action | Use |
 | --- | --- |
-| **Reuse settings** | Return the prompt and generation settings to the input panel so you can change them before submitting another task. |
-| **Generate variations** | Generate alternatives from the same prompt and settings with new random seeds. |
-| **Use as reference** | Add the result as an input to another composition. |
+| **Use as source image** | Add the result as an input to another composition. |
 | **Edit** | Make a described change to this image. |
-
-For uploaded photos, use **Edit** to make changes or **Use as reference** to include them in a new composition.
+| **Inpaint**, **Extend**, **Remove background** | Start the corresponding tool with this image, the same as on the **Apps** page. |
+| **Generate variations** | Generate alternatives from the same prompt and settings with new random seeds. |
+| **Reuse settings** | Return the prompt and generation settings to the input panel so you can change them before submitting another task. |
 
 ## Find and download your work
 
-**Image** groups results by generation task. Use **Search prompts** to find a description or **Filters** to narrow results by type and date. **Layout** changes how results are displayed.
+Besides **Apps**, two more pages manage your work. The **Image** page groups your results by generation task, and **Library** collects your assets. Both pages support search and download.
 
-**Library** separates **Generations**, **Uploads**, and **Favorites**. Click an image's heart icon to keep it in **Favorites**, or use **Search names** to find an asset.
-
-To download one image, open it and click **Download**. To download several, select their checkboxes and click **Download** in the selection toolbar. The app packages the selected images into a ZIP file. The downloaded images retain their output dimensions and format.
+- **Search on Image**: Go to **Image** and use **Search prompts** to find a generation by its description, or narrow results by type and date with **Filters**.
+- **Search on Library**: Go to **Library** and use **Search names** to find an asset.
+- **Download from either page**: Open an image and click **Download**. To download several at once, select their checkboxes and click **Download**.
 
 ## Common issues
 
