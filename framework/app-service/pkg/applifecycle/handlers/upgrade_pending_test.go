@@ -87,3 +87,39 @@ func TestOnUpgradePendingCancelingTick_RestoresStopped(t *testing.T) {
 		t.Fatalf("Reason = %q, want UpgradePendingCanceled", patch.Status.Reason)
 	}
 }
+
+func TestUpgradeCancelFailedUninstall_EntersUninstalling(t *testing.T) {
+	cases := []struct {
+		name    string
+		state   appv1.ApplicationManagerState
+		handler func(context.Context, domain.World) domain.Result
+	}{
+		{"upgradePendingCancelFailed", appv1.UpgradePendingCancelFailed, handlers.OnUpgradePendingCancelFailedUninstall},
+		{"upgradeDownloadingCancelFailed", appv1.UpgradeDownloadingCancelFailed, handlers.OnUpgradeDownloadingCancelFailedUninstall},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			am := &appv1.ApplicationManager{
+				ObjectMeta: metav1.ObjectMeta{Name: "upgrade-me"},
+				Status:     appv1.ApplicationManagerStatus{State: tc.state},
+			}
+			res := tc.handler(context.Background(), domain.World{AM: am})
+			if res.Err != nil {
+				t.Fatal(res.Err)
+			}
+			if res.Next != appv1.Uninstalling {
+				t.Fatalf("Next = %s, want Uninstalling", res.Next)
+			}
+			patch, ok := findEffect[domain.PatchAM](res.Effects)
+			if !ok {
+				t.Fatal("no PatchAM")
+			}
+			if patch.Status.State != appv1.Uninstalling {
+				t.Fatalf("PatchAM.State = %s, want Uninstalling", patch.Status.State)
+			}
+			if patch.Status.Reason != "UninstallRequested" {
+				t.Fatalf("Reason = %q, want UninstallRequested", patch.Status.Reason)
+			}
+		})
+	}
+}

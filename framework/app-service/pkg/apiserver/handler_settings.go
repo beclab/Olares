@@ -6,8 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
@@ -16,7 +14,6 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/applifecycle/domain"
 	"github.com/beclab/Olares/framework/app-service/pkg/client/clientset"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
-	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/provider"
 	"github.com/beclab/Olares/framework/app-service/pkg/tapr"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
@@ -47,7 +44,6 @@ import (
 var appLevelSettingKeys = map[string]struct{}{
 	"enableOverlayGateway": {},
 	"enableLLMGateway":     {},
-	"bluetooth":            {},
 }
 
 // isAppLevelSettingKey reports whether the given Spec.Settings key is
@@ -108,49 +104,10 @@ func (h *Handler) setupApp(req *restful.Request, resp *restful.Response) {
 	appCopy := app.DeepCopy()
 	caller := req.Attribute(constants.UserContextAttribute).(string)
 	shared := v1alpha1.IsShared(appCopy)
-	var bluetoothWorkloads []string
 	client := req.Attribute(constants.KubeSphereClientAttribute).(*clientset.ClientSet)
 
 	// TODO: validate settings keys
 	for k, v := range settings {
-		if k == "bluetooth" {
-			value, ok := v.(string)
-			if !ok {
-				api.HandleBadRequest(resp, req, fmt.Errorf("bluetooth must be a string boolean"))
-				return
-			}
-			enabled, parseErr := strconv.ParseBool(value)
-			if parseErr != nil {
-				api.HandleBadRequest(resp, req, fmt.Errorf("bluetooth must be a string boolean: %w", parseErr))
-				return
-			}
-			_, appConfig, _, _, configErr := h.sidecarWebhook.GetAppConfig(app.Spec.Namespace)
-			if configErr != nil {
-				api.HandleError(resp, req, configErr)
-				return
-			}
-			if appConfig == nil {
-				api.HandleBadRequest(resp, req, fmt.Errorf("application manifest is unavailable"))
-				return
-			}
-			declared := false
-			for workload, option := range appConfig.WorkloadOptions {
-				if allowsCapability(option, "bluetooth") {
-					declared = true
-					bluetoothWorkloads = append(bluetoothWorkloads, workload)
-				}
-			}
-			if !declared {
-				api.HandleBadRequest(resp, req, fmt.Errorf("application does not declare bluetooth capability"))
-				return
-			}
-			if enabled {
-				if validateErr := validateBluetoothAttachmentNodes(req.Request.Context(), client, app.Spec.Attachments, bluetoothWorkloadSet(appConfig)); validateErr != nil {
-					api.HandleUnprocessableEntity(resp, req, validateErr)
-					return
-				}
-			}
-		}
 		var str []byte
 		switch v.(type) {
 		case map[string]interface{}:
@@ -185,13 +142,6 @@ func (h *Handler) setupApp(req *restful.Request, resp *restful.Response) {
 	if err != nil {
 		api.HandleError(resp, req, err)
 		return
-	}
-	if bluetoothWorkloads != nil {
-		sort.Strings(bluetoothWorkloads)
-		if restartErr := restartAttachmentWorkloads(req.Request.Context(), client, app.Spec.Namespace, bluetoothWorkloads); restartErr != nil {
-			api.HandleError(resp, req, restartErr)
-			return
-		}
 	}
 	// Respond with the caller's effective view so the response reflects
 	// both the global Spec.Settings and any per-user overlay just
@@ -252,6 +202,23 @@ func (h *Handler) setupAppEntranceDomain(req *restful.Request, resp *restful.Res
 	kclient := req.Attribute(constants.KubeSphereClientAttribute).(*clientset.ClientSet)
 
 	customDomain, ok := settings["customDomain"].(map[string]interface{})
+
+	var appMgr *v1alpha1.ApplicationManager
+	if ok {
+		appMgr, err = kclient.AppClient.AppV1alpha1().ApplicationManagers().Get(req.Request.Context(), appCopy.Name, metav1.GetOptions{})
+		if err != nil {
+			api.HandleError(resp, req, err)
+			return
+		}
+		if blockIfRequestPending(resp, req, appMgr, v1alpha1.UpgradeOp) {
+			return
+		}
+		if !domain.DefaultTable.AllowsOp(appMgr.Status.State, v1alpha1.UpgradeOp) {
+			err = fmt.Errorf("%s operation is not allowed for %s state", v1alpha1.UpgradeOp, appMgr.Status.State)
+			api.HandleBadRequest(resp, req, err)
+			return
+		}
+	}
 
 	existing := appCopy.EffectiveSettings(caller)["customDomain"]
 
@@ -361,7 +328,6 @@ func (h *Handler) setupAppEntranceDomain(req *restful.Request, resp *restful.Res
 	if ok {
 		// upgrade app set values
 		owner := req.Attribute(constants.UserContextAttribute).(string)
-		zone, err := kubesphere.GetUserZone(req.Request.Context(), owner)
 		if err != nil {
 			api.HandleError(resp, req, err)
 			return
@@ -374,50 +340,10 @@ func (h *Handler) setupAppEntranceDomain(req *restful.Request, resp *restful.Res
 			return
 		}
 
-		vals := make(map[string]interface{})
-		entries := make(map[string]interface{})
-		for i, entrance := range app.Spec.Entrances {
-			cfg, ok := customDomain[entrance.Name].(map[string]interface{})
-			if !ok {
-				continue
-			}
-			urls := make([]string, 0)
-			if cDomain, _ := cfg["third_party_domain"].(string); cDomain != "" {
-				urls = append(urls, cDomain)
-			}
-			if prefix := cfg["third_level_domain"]; prefix != "" {
-				urls = append(urls, fmt.Sprintf("%s.%s", prefix, zone))
-			}
-			var url string
-			if len(app.Spec.Entrances) == 1 {
-				url = fmt.Sprintf("%s.%s", app.Spec.Appid, zone)
-			} else {
-				url = fmt.Sprintf("%s%d.%s", app.Spec.Appid, i, zone)
-			}
-			urls = append(urls, url)
-
-			entries[entrance.Name] = strings.Join(urls, ",")
-		}
-		vals["domain"] = entries
-
-		appMgr, err := kclient.AppClient.AppV1alpha1().ApplicationManagers().Get(req.Request.Context(), appUpdated.Name, metav1.GetOptions{})
-		if err != nil {
-			api.HandleError(resp, req, err)
-			return
-		}
-
 		var appCfg *appcfg.ApplicationConfig
 		err = json.Unmarshal([]byte(appMgr.Spec.Config), &appCfg)
 		if err != nil {
 			api.HandleError(resp, req, err)
-			return
-		}
-		if blockIfRequestPending(resp, req, appMgr, v1alpha1.UpgradeOp) {
-			return
-		}
-		if !domain.DefaultTable.AllowsOp(appMgr.Status.State, v1alpha1.UpgradeOp) {
-			err = fmt.Errorf("%s operation is not allowed for %s state", v1alpha1.UpgradeOp, appMgr.Status.State)
-			api.HandleBadRequest(resp, req, err)
 			return
 		}
 

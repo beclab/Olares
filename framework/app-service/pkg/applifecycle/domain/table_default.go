@@ -341,7 +341,9 @@ func registerEdges(t *TransitionTable) {
 		{appsv1.PendingCancelFailed, appsv1.PendingCanceling},
 		{appsv1.DownloadingCancelFailed, appsv1.DownloadingCanceling},
 		{appsv1.UpgradePendingCancelFailed, appsv1.UpgradePendingCanceling},
+		{appsv1.UpgradePendingCancelFailed, appsv1.Uninstalling},
 		{appsv1.UpgradeDownloadingCancelFailed, appsv1.UpgradeDownloadingCanceling},
+		{appsv1.UpgradeDownloadingCancelFailed, appsv1.Uninstalling},
 		{appsv1.InstallingCancelFailed, appsv1.InstallingCanceling},
 		{appsv1.InstallingCancelFailed, appsv1.Uninstalling},
 		{appsv1.InitializingCancelFailed, appsv1.InitializingCanceling},
@@ -351,6 +353,7 @@ func registerEdges(t *TransitionTable) {
 		{appsv1.ApplyingEnvCancelFailed, appsv1.ApplyingEnvCanceling},
 		{appsv1.ApplyingEnvCancelFailed, appsv1.Uninstalling},
 		{appsv1.ResumingCancelFailed, appsv1.ResumingCanceling},
+		{appsv1.ResumingCancelFailed, appsv1.Uninstalling},
 
 		// Terminal-reinstallable re-target: Install operation on a
 		// same-owner AM flips state in place.
@@ -538,8 +541,11 @@ func opForEdge(from, to State) (OpType, bool) {
 // opAllowedLegacy replicates OperationAllowedInState[from][op] as a
 // pure lookup. Kept inline (rather than importing pkg/appstate) so
 // the domain package remains free of legacy dependencies. The data
-// below matches pkg/appstate/state_transition.go:258-388 verbatim;
-// table_test.go asserts them byte-for-byte.
+// below matches pkg/appstate/state_transition.go:258-388, except
+// UpgradePendingCancelFailed, UpgradeDownloadingCancelFailed, and
+// ResumingCancelFailed also allow UninstallOp. Those cancels fail
+// while the installed release is still present, so abandon goes
+// through Uninstalling. table_test.go asserts the same map.
 func opAllowedLegacy(from State, op OpType) bool {
 	table := map[State]map[OpType]bool{
 		InitialState:                          {appsv1.InstallOp: true},
@@ -565,13 +571,13 @@ func opAllowedLegacy(from State, op OpType) bool {
 		appsv1.ApplyEnvFailed:                 {appsv1.UninstallOp: true, appsv1.ApplyEnvOp: true, appsv1.StopOp: true},
 		appsv1.PendingCancelFailed:            {appsv1.CancelOp: true},
 		appsv1.DownloadingCancelFailed:        {appsv1.CancelOp: true},
-		appsv1.UpgradePendingCancelFailed:     {appsv1.CancelOp: true},
-		appsv1.UpgradeDownloadingCancelFailed: {appsv1.CancelOp: true},
+		appsv1.UpgradePendingCancelFailed:     {appsv1.CancelOp: true, appsv1.UninstallOp: true},
+		appsv1.UpgradeDownloadingCancelFailed: {appsv1.CancelOp: true, appsv1.UninstallOp: true},
 		appsv1.InstallingCancelFailed:         {appsv1.CancelOp: true, appsv1.UninstallOp: true},
 		appsv1.InitializingCancelFailed:       {appsv1.CancelOp: true, appsv1.UninstallOp: true},
 		appsv1.UpgradingCancelFailed:          {appsv1.CancelOp: true, appsv1.UninstallOp: true},
 		appsv1.ApplyingEnvCancelFailed:        {appsv1.CancelOp: true, appsv1.UninstallOp: true},
-		appsv1.ResumingCancelFailed:           {appsv1.CancelOp: true},
+		appsv1.ResumingCancelFailed:           {appsv1.CancelOp: true, appsv1.UninstallOp: true},
 		appsv1.Running:                        {appsv1.UninstallOp: true, appsv1.UpgradeOp: true, appsv1.ApplyEnvOp: true, appsv1.StopOp: true},
 		appsv1.Stopped:                        {appsv1.UninstallOp: true, appsv1.UpgradeOp: true, appsv1.ApplyEnvOp: true, appsv1.ResumeOp: true},
 	}

@@ -20,10 +20,17 @@ func attachmentWebhookHandler(t *testing.T) *Handler {
 	if err := appsv1.AddToScheme(scheme); err != nil {
 		t.Fatal(err)
 	}
+	if err := corev1.AddToScheme(scheme); err != nil {
+		t.Fatal(err)
+	}
 	bfl := &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{
 		Name: "bfl", Namespace: "user-space-alice", Annotations: map[string]string{constants.UserSpaceDirKey: "/olares/userspace/alice"},
 	}}
-	return &Handler{ctrlClient: fake.NewClientBuilder().WithScheme(scheme).WithObjects(bfl).Build()}
+	node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{
+		Name:        "node-a",
+		Annotations: map[string]string{deviceInventoryAnnotation: `{"schemaVersion":1,"bluetooth":[{"uid":"p-1","resourceName":"devices.bytetrade.io/bluetooth-p-1","displayName":"USB Bluetooth Adapter","online":true,"selectable":true,"adapter":"hci1","address":"00:1A:7D:DA:71:13","accessMode":"shared"}]}`},
+	}}
+	return &Handler{ctrlClient: fake.NewClientBuilder().WithScheme(scheme).WithObjects(bfl, node).Build()}
 }
 
 func TestInjectAttachmentsTargetsDeclaredContainer(t *testing.T) {
@@ -61,6 +68,97 @@ func TestInjectAttachmentsTargetsDeclaredContainer(t *testing.T) {
 	}
 	if len(tpl.Spec.Volumes) != 1 || len(tpl.Spec.Containers[0].VolumeMounts) != 1 || len(tpl.Spec.SecurityContext.SupplementalGroups) != 1 {
 		t.Fatalf("repeated injection was not idempotent: %#v", tpl.Spec)
+	}
+}
+
+func TestCleanupManagedAttachmentsRestoresOriginalHostnameSelector(t *testing.T) {
+	tpl := &corev1.PodTemplateSpec{
+		Spec: corev1.PodSpec{
+			NodeSelector: map[string]string{
+				corev1.LabelHostname:          "node-a",
+				"topology.kubernetes.io/zone": "zone-a",
+			},
+			Containers: []corev1.Container{{Name: "app"}},
+		},
+	}
+	cfg := &appcfg.ApplicationConfig{WorkloadOptions: appcfg.WorkloadOptions{
+		"server": {Allow: []appcfg.WorkloadCapability{{Type: "device.serial", Containers: []string{"app"}}}},
+	}}
+	application := &appv1alpha1.Application{Spec: appv1alpha1.ApplicationSpec{Attachments: []appv1alpha1.Attachment{
+		{Workload: "server", Type: "device.serial", Ref: "devices.bytetrade.io/serial-s-1", Node: "node-a"},
+	}}}
+
+	if err := (&Handler{}).injectAttachments(context.Background(), tpl, "server", cfg, application); err != nil {
+		t.Fatal(err)
+	}
+	if tpl.Annotations[attachmentHostnameSelectorAnnotation] == "" {
+		t.Fatal("hostname selector ownership was not recorded")
+	}
+	cleanupManagedAttachments(tpl, true)
+
+	if got := tpl.Spec.NodeSelector[corev1.LabelHostname]; got != "node-a" {
+		t.Fatalf("manifest hostname selector=%q, want node-a", got)
+	}
+	if got := tpl.Spec.NodeSelector["topology.kubernetes.io/zone"]; got != "zone-a" {
+		t.Fatalf("unmanaged selector=%q, want zone-a", got)
+	}
+	if _, exists := tpl.Annotations[attachmentHostnameSelectorAnnotation]; exists {
+		t.Fatal("hostname selector ownership marker was not cleaned up")
+	}
+}
+
+func TestCleanupManagedAttachmentsRemovesInjectedHostnameSelector(t *testing.T) {
+	tpl := &corev1.PodTemplateSpec{Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "app"}}}}
+	cfg := &appcfg.ApplicationConfig{WorkloadOptions: appcfg.WorkloadOptions{
+		"server": {Allow: []appcfg.WorkloadCapability{{Type: "device.serial", Containers: []string{"app"}}}},
+	}}
+	application := &appv1alpha1.Application{Spec: appv1alpha1.ApplicationSpec{Attachments: []appv1alpha1.Attachment{
+		{Workload: "server", Type: "device.serial", Ref: "devices.bytetrade.io/serial-s-1", Node: "node-a"},
+	}}}
+
+	if err := (&Handler{}).injectAttachments(context.Background(), tpl, "server", cfg, application); err != nil {
+		t.Fatal(err)
+	}
+	cleanupManagedAttachments(tpl, true)
+
+	if _, exists := tpl.Spec.NodeSelector[corev1.LabelHostname]; exists {
+		t.Fatalf("attachment-injected hostname selector was retained: %#v", tpl.Spec.NodeSelector)
+	}
+}
+
+func TestCleanupManagedAttachmentsPreservesExternallyChangedHostnameSelector(t *testing.T) {
+	tpl := &corev1.PodTemplateSpec{Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "app"}}}}
+	cfg := &appcfg.ApplicationConfig{WorkloadOptions: appcfg.WorkloadOptions{
+		"server": {Allow: []appcfg.WorkloadCapability{{Type: "device.serial", Containers: []string{"app"}}}},
+	}}
+	application := &appv1alpha1.Application{Spec: appv1alpha1.ApplicationSpec{Attachments: []appv1alpha1.Attachment{
+		{Workload: "server", Type: "device.serial", Ref: "devices.bytetrade.io/serial-s-1", Node: "node-a"},
+	}}}
+
+	if err := (&Handler{}).injectAttachments(context.Background(), tpl, "server", cfg, application); err != nil {
+		t.Fatal(err)
+	}
+	tpl.Spec.NodeSelector[corev1.LabelHostname] = "node-b"
+	cleanupManagedAttachments(tpl, true)
+
+	if got := tpl.Spec.NodeSelector[corev1.LabelHostname]; got != "node-b" {
+		t.Fatalf("externally changed hostname selector=%q, want node-b", got)
+	}
+}
+
+func TestCleanupManagedAttachmentsPreservesLegacyUnknownHostnameSelector(t *testing.T) {
+	tpl := &corev1.PodTemplateSpec{
+		ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{attachmentInjectedAnnotation: "true"}},
+		Spec: corev1.PodSpec{
+			NodeSelector: map[string]string{corev1.LabelHostname: "node-a"},
+			Containers:   []corev1.Container{{Name: "app"}},
+		},
+	}
+
+	cleanupManagedAttachments(tpl, true)
+
+	if got := tpl.Spec.NodeSelector[corev1.LabelHostname]; got != "node-a" {
+		t.Fatalf("legacy hostname selector=%q, want node-a", got)
 	}
 }
 
@@ -129,13 +227,19 @@ func TestInjectAttachmentsUsesDeviceClassSupplementalGroups(t *testing.T) {
 
 func TestInjectBluetoothHidesHostBusFromApplication(t *testing.T) {
 	t.Setenv("BLUEZ_DBUS_PROXY_IMAGE", "example/bluez-proxy:test")
+	handler := attachmentWebhookHandler(t)
 	tpl := &corev1.PodTemplateSpec{Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "app"}, {Name: "other"}}}}
 	cfg := &appcfg.ApplicationConfig{WorkloadOptions: appcfg.WorkloadOptions{
-		"server": {Allow: []appcfg.WorkloadCapability{{Type: "bluetooth", Containers: []string{"app"}}}},
+		"server": {Allow: []appcfg.WorkloadCapability{{Type: "device.bluetooth", Containers: []string{"app"}}}},
 	}}
-	application := &appv1alpha1.Application{Spec: appv1alpha1.ApplicationSpec{Settings: map[string]string{"bluetooth": "true"}}}
-	if err := (&Handler{}).injectAttachments(context.Background(), tpl, "server", cfg, application); err != nil {
+	application := &appv1alpha1.Application{Spec: appv1alpha1.ApplicationSpec{Attachments: []appv1alpha1.Attachment{{
+		Workload: "server", Type: "device.bluetooth", Ref: "devices.bytetrade.io/bluetooth-p-1", Node: "node-a",
+	}}}}
+	if err := handler.injectAttachments(context.Background(), tpl, "server", cfg, application); err != nil {
 		t.Fatal(err)
+	}
+	if got := tpl.Spec.NodeSelector[corev1.LabelHostname]; got != "node-a" {
+		t.Fatalf("hostname selector=%q, want node-a", got)
 	}
 	if len(tpl.Spec.Containers) != 3 || tpl.Spec.Containers[2].Name != bluezProxyContainerName {
 		t.Fatalf("bluez proxy not injected: %#v", tpl.Spec.Containers)
@@ -150,6 +254,16 @@ func TestInjectBluetoothHidesHostBusFromApplication(t *testing.T) {
 		t.Fatal("bluetooth socket leaked to non-target container")
 	}
 	proxy := tpl.Spec.Containers[2]
+	if len(tpl.Spec.Containers[0].Resources.Limits) != 0 {
+		t.Fatalf("Bluetooth attachment injected an extended resource: %#v", tpl.Spec.Containers[0].Resources.Limits)
+	}
+	proxyEnv := map[string]string{}
+	for _, env := range proxy.Env {
+		proxyEnv[env.Name] = env.Value
+	}
+	if proxyEnv["OLARES_BLUETOOTH_RESOURCES"] != "devices.bytetrade.io/bluetooth-p-1" || proxyEnv["OLARES_BLUETOOTH_ADAPTERS"] != "hci1" {
+		t.Fatalf("Bluetooth selection metadata=%#v", proxyEnv)
+	}
 	if proxy.SecurityContext == nil || proxy.SecurityContext.RunAsUser == nil || *proxy.SecurityContext.RunAsUser != 0 {
 		t.Fatalf("bluez proxy must run as uid 0 for system D-Bus EXTERNAL authentication: %#v", proxy.SecurityContext)
 	}
@@ -164,6 +278,13 @@ func TestInjectBluetoothHidesHostBusFromApplication(t *testing.T) {
 	}
 	if len(proxy.VolumeMounts) != 2 || proxy.VolumeMounts[0].Name != attachmentVolumePrefix+"bluez-host" {
 		t.Fatal("raw system bus must only be mounted into the bluez proxy")
+	}
+	cleanupManagedAttachments(tpl, true)
+	if err := handler.injectAttachments(context.Background(), tpl, "server", cfg, application); err != nil {
+		t.Fatal(err)
+	}
+	if len(tpl.Spec.Containers) != 3 || len(tpl.Spec.Volumes) != 2 || len(tpl.Spec.Containers[0].VolumeMounts) != 1 {
+		t.Fatalf("repeated Bluetooth injection was not idempotent: %#v", tpl.Spec)
 	}
 }
 

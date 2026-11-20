@@ -76,13 +76,13 @@ var legacyStateTransitions = map[State][]State{
 	appsv1.UninstallFailed:                {appsv1.Uninstalling},
 	appsv1.PendingCancelFailed:            {appsv1.PendingCanceling},
 	appsv1.DownloadingCancelFailed:        {appsv1.DownloadingCanceling},
-	appsv1.UpgradePendingCancelFailed:     {appsv1.UpgradePendingCanceling},
-	appsv1.UpgradeDownloadingCancelFailed: {appsv1.UpgradeDownloadingCanceling},
+	appsv1.UpgradePendingCancelFailed:     {appsv1.UpgradePendingCanceling, appsv1.Uninstalling},
+	appsv1.UpgradeDownloadingCancelFailed: {appsv1.UpgradeDownloadingCanceling, appsv1.Uninstalling},
 	appsv1.InstallingCancelFailed:         {appsv1.InstallingCanceling, appsv1.Uninstalling},
 	appsv1.InitializingCancelFailed:       {appsv1.InitializingCanceling, appsv1.Uninstalling},
 	appsv1.UpgradingCancelFailed:          {appsv1.UpgradingCanceling, appsv1.Uninstalling},
 	appsv1.ApplyingEnvCancelFailed:        {appsv1.ApplyingEnvCanceling, appsv1.Uninstalling},
-	appsv1.ResumingCancelFailed:           {appsv1.ResumingCanceling},
+	appsv1.ResumingCancelFailed:           {appsv1.ResumingCanceling, appsv1.Uninstalling},
 
 	appsv1.PendingCanceled:     {appsv1.Pending},
 	appsv1.DownloadingCanceled: {appsv1.Pending},
@@ -91,7 +91,10 @@ var legacyStateTransitions = map[State][]State{
 }
 
 // legacyOperationAllowedInState mirrors OperationAllowedInState from
-// pkg/appstate/state_transition.go:258-388.
+// pkg/appstate/state_transition.go:258-388, plus UninstallOp on
+// UpgradePendingCancelFailed, UpgradeDownloadingCancelFailed, and
+// ResumingCancelFailed. Those cancels fail while the installed
+// release is still present.
 var legacyOperationAllowedInState = map[State]map[OpType]bool{
 	InitialState:              {appsv1.InstallOp: true},
 	appsv1.Pending:            {appsv1.CancelOp: true},
@@ -119,13 +122,13 @@ var legacyOperationAllowedInState = map[State]map[OpType]bool{
 
 	appsv1.PendingCancelFailed:            {appsv1.CancelOp: true},
 	appsv1.DownloadingCancelFailed:        {appsv1.CancelOp: true},
-	appsv1.UpgradePendingCancelFailed:     {appsv1.CancelOp: true},
-	appsv1.UpgradeDownloadingCancelFailed: {appsv1.CancelOp: true},
+	appsv1.UpgradePendingCancelFailed:     {appsv1.CancelOp: true, appsv1.UninstallOp: true},
+	appsv1.UpgradeDownloadingCancelFailed: {appsv1.CancelOp: true, appsv1.UninstallOp: true},
 	appsv1.InstallingCancelFailed:         {appsv1.CancelOp: true, appsv1.UninstallOp: true},
 	appsv1.InitializingCancelFailed:       {appsv1.CancelOp: true, appsv1.UninstallOp: true},
 	appsv1.UpgradingCancelFailed:          {appsv1.CancelOp: true, appsv1.UninstallOp: true},
 	appsv1.ApplyingEnvCancelFailed:        {appsv1.CancelOp: true, appsv1.UninstallOp: true},
-	appsv1.ResumingCancelFailed:           {appsv1.CancelOp: true},
+	appsv1.ResumingCancelFailed:           {appsv1.CancelOp: true, appsv1.UninstallOp: true},
 
 	appsv1.Running: {appsv1.UninstallOp: true, appsv1.UpgradeOp: true, appsv1.ApplyEnvOp: true, appsv1.StopOp: true},
 	appsv1.Stopped: {appsv1.UninstallOp: true, appsv1.UpgradeOp: true, appsv1.ApplyEnvOp: true, appsv1.ResumeOp: true},

@@ -2,7 +2,7 @@
 
 Source: the market lifecycle plan, aligned with `controllers/applifecycle_runner_integration_test.go` (`It`, `DescribeTable`, `remainingTransitionCases`), `pkg/applifecycle/domain/table_default.go` `setTimeouts`, and the timeout reasons in `pkg/applifecycle/handlers/timeouts.go`.
 
-Scope: 42 states and edges T01–T92, plus extra edges S1, S3, and S4. `install` on the empty state (T01) is not a 43rd state. Five names have no edge in this file and are not tested, and they are not substitutes for any row below:
+Scope: 42 states and edges T01–T95, plus extra edges S1, S3, and S4. `install` on the empty state (T01) is not a 43rd state. Five names have no edge in this file and are not tested, and they are not substitutes for any row below:
 
 - `initializingCanceled`
 - `upgradingCanceled`
@@ -15,7 +15,6 @@ These edges are also absent. Observe them if they happen, but do not count them 
 - `cancel` on `running`, `stopped`, `stopping`, or `uninstalling`
 - `install` on `installFailed`
 - `stop` on `upgradeFailed`
-- `uninstall` on `resumingCancelFailed`
 
 Only one app may be in `downloading` at a time. Any other app stays in `pending` and waits for that slot. ApplicationManager has no status subresource. `status.state`, `status.statusTime`, and `status.payload` are written on the main object. `--subresource=status` returns 404. App names match `^[a-z0-9]{1,30}$`. The chart `name`, the OlaresManifest `metadata.name`, and the Deployment name are the same. `Chart.yaml` `version` and OlaresManifest `metadata.version` change together.
 
@@ -112,10 +111,10 @@ Every row must be entered, and must leave through the exits listed here. The ent
 | `downloadingCancelFailed` | T51 | T81 `downloadingCanceling` |
 | `installingCancelFailed` | T49 | T82 `installingCanceling`; T83 `uninstalling` |
 | `initializingCancelFailed` | T52 | T84 `initializingCanceling`; T85 `uninstalling` |
-| `resumingCancelFailed` | T53 | T63 empty tick stays; T90 `resumingCanceling` |
+| `resumingCancelFailed` | T53 | T63 empty tick stays; T90 `resumingCanceling`; T93 `uninstalling` |
 | `applyingEnvCancelFailed` | T54 | T88 `applyingEnvCanceling`; T89 `uninstalling` |
-| `upgradePendingCancelFailed` | T55 | T91 `upgradePendingCanceling` |
-| `upgradeDownloadingCancelFailed` | T43 | T92 `upgradeDownloadingCanceling` |
+| `upgradePendingCancelFailed` | T55 | T91 `upgradePendingCanceling`; T94 `uninstalling` |
+| `upgradeDownloadingCancelFailed` | T43 | T92 `upgradeDownloadingCanceling`; T95 `uninstalling` |
 | `upgradingCancelFailed` | T56 | T86 `upgradingCanceling`; T87 `uninstalling` |
 
 ## Edges
@@ -275,8 +274,11 @@ The integration test sends the operation directly from that state. On the cluste
 | T90 | `resumingcancelfailed cancel` | `resumingCancelFailed` | `cancel` | `resumingCanceling` |
 | T91 | `upgpendcf-cancel` | `upgradePendingCancelFailed` | `cancel` | `upgradePendingCanceling` |
 | T92 | `upgdlcf-cancel` | `upgradeDownloadingCancelFailed` | `cancel` | `upgradeDownloadingCanceling` |
+| T93 | `resumingcancelfailed uninstall` | `resumingCancelFailed` | `uninstall` | `uninstalling` |
+| T94 | `upgpendcf-uninstall` | `upgradePendingCancelFailed` | `uninstall` | `uninstalling` |
+| T95 | `upgdlcf-uninstall` | `upgradeDownloadingCancelFailed` | `uninstall` | `uninstalling` |
 
-The reason for another `cancel` on T80–T92 is `CancelRetryRequested`. `uninstall` on a cancel-failed state enters `uninstalling`. `resumingCancelFailed` has cancel in this file and does not have uninstall.
+The reason for another `cancel` on T80–T92 is `CancelRetryRequested`. `uninstall` on a cancel-failed state enters `uninstalling` with reason `UninstallRequested` (T83, T85, T87, T89, T93–T95). `pendingCancelFailed` and `downloadingCancelFailed` stay cancel-only: those cancels run before a Helm release exists.
 
 ### Extra edges
 
@@ -407,12 +409,12 @@ Delete the pod. Do not scale the replica count to 0. The image after startup mus
 | State | Before stop | After startup |
 |---|---|---|
 | In progress: `pending`, `downloading`, `installing`, `initializing`, `stopping`, `resuming`, `upgradePending`, `upgradeDownloading`, `upgrading`, `applyingEnv`, `uninstalling`, and the nine `*Canceling` states | record `state`, `opID`, and payload phase | Still the same state and the same `opID`. If the phase is already set, the tick only re-dispatches that step's workload. If the phase is still empty, the tick restarts from the first step of that state and it is still the same operation. It then reaches that operation's original terminal state. |
-| Steady and failed: `running`, `stopped`, `uninstalled`, the seven operation `*Failed` states, the three `*Canceled` states, and the nine `*CancelFailed` states | record `state`, `reason`, and `opID` | The restart itself emits no `state change`, and those three fields do not change. After the pod is Ready, the next operation for that state must be accepted: `stop` on `running`, `resume` on `stopped`, `install` on `uninstalled`, and the matching T64–T92 row for the rest. |
+| Steady and failed: `running`, `stopped`, `uninstalled`, the seven operation `*Failed` states, the three `*Canceled` states, and the nine `*CancelFailed` states | record `state`, `reason`, and `opID` | The restart itself emits no `state change`, and those three fields do not change. After the pod is Ready, the next operation for that state must be accepted: `stop` on `running`, `resume` on `stopped`, `install` on `uninstalled`, and the matching T64–T95 row for the rest. |
 
 The empty tick of `initializingCanceling`, `resumingCanceling`, `applyingEnvCanceling`, `upgradingCanceling`, and `upgradePendingCanceling` leaves immediately. For restart coverage, hold that state and then delete the pod. If it cannot be held, record it as missed. The matching `*CancelFailed` states do hold (`resumingCancelFailed` does not leave on an empty tick, see T63). Reach the failed state, then run the restart check.
 
 ## Pass
 
-An edge passes only when all of these hold: `state` is the terminal state of that T row; the `state change` reason matches the reason table; upgrade edges match the version table for chart, target, pre, config, and Helm; T12–T14 delete the namespace and T77–T79 can install again; T15–T17 keep the namespace and `resume` can return to `running`; T28 keeps the namespace and then T72 can enter `upgradePending` or T73 reaches `uninstalled`; a failure edge enters the matching failed state and then recovers through T64–T92; T44 and T63 do not change state on restart or an empty tick; an operation that must be rejected is rejected and the state is not rewritten. Restart coverage stops each of the 42 states once: an in-progress operation reaches its original terminal state with the original `opID`, and a steady or failed state still accepts the next operation that state allows. After each fault edge, remove `test.olares/hold` and uninstall the fault app.
+An edge passes only when all of these hold: `state` is the terminal state of that T row; the `state change` reason matches the reason table; upgrade edges match the version table for chart, target, pre, config, and Helm; T12–T14 delete the namespace and T77–T79 can install again; T15–T17 keep the namespace and `resume` can return to `running`; T28 keeps the namespace and then T72 can enter `upgradePending` or T73 reaches `uninstalled`; a failure edge enters the matching failed state and then recovers through T64–T95; T44 and T63 do not change state on restart or an empty tick; an operation that must be rejected is rejected and the state is not rewritten. Restart coverage stops each of the 42 states once: an in-progress operation reaches its original terminal state with the original `opID`, and a steady or failed state still accepts the next operation that state allows. After each fault edge, remove `test.olares/hold` and uninstall the fault app.
 
 All 42 rows of the state table need one entry record. A missing row means the run is not finished. Record S1, S3, and S4 on their own. Do not substitute T43 for S1. S3 fails when an apply from `stopped` starts pods, or a later apply from `running` stops them. S4 fails when a retry of a stopped-app upgrade leaves `stopped`.
