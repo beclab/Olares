@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"testing"
 	"time"
 
@@ -81,7 +82,7 @@ func TestDiffSnapshotsPublisherTransitionsDoNotRemoveDevices(t *testing.T) {
 	}
 }
 
-func TestBuildDeviceInventoryEventHasDeterministicID(t *testing.T) {
+func TestBuildDeviceInventoryEventUsesUniqueIDForRepeatedTransitions(t *testing.T) {
 	previous := snapshotForTest(true)
 	previous.Revision = "before"
 	current := snapshotForTest(true, deviceForTest("device.serial", "s-1", "/dev/ttyUSB0"))
@@ -89,8 +90,12 @@ func TestBuildDeviceInventoryEventHasDeterministicID(t *testing.T) {
 	changes := diffSnapshots(previous, current)
 	first := buildDeviceInventoryEvent(previous, current, changes, time.Unix(1, 0))
 	second := buildDeviceInventoryEvent(previous, current, changes, time.Unix(2, 0))
-	if first.EventID != second.EventID {
-		t.Fatalf("event IDs differ: %q != %q", first.EventID, second.EventID)
+	if first.EventID == second.EventID {
+		t.Fatalf("repeated transition reused event ID %q", first.EventID)
+	}
+	prefix := "device-inventory:node-a:"
+	if !strings.HasPrefix(first.EventID, prefix) || !strings.HasPrefix(second.EventID, prefix) {
+		t.Fatalf("event IDs = %q/%q, want prefix %q", first.EventID, second.EventID, prefix)
 	}
 }
 

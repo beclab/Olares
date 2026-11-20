@@ -18,6 +18,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/users"
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	iamv1alpha2 "github.com/beclab/api/iam/v1alpha2"
+	"github.com/google/uuid"
 
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -669,12 +670,7 @@ func cloneDeviceState(state DeviceState) DeviceState {
 }
 
 func buildDeviceInventoryEvent(previous, current nodeDeviceSnapshot, changes []DeviceInventoryChange, now time.Time) DeviceInventoryEvent {
-	eventIDInput := strings.Join([]string{
-		current.NodeName, previous.Revision, current.Revision,
-		fmt.Sprintf("%t", previous.PublisherOnline), fmt.Sprintf("%t", current.PublisherOnline),
-	}, "\x00")
-	sum := sha256.Sum256([]byte(eventIDInput))
-	eventID := "device-inventory:" + current.NodeName + ":" + hex.EncodeToString(sum[:])
+	eventID := "device-inventory:" + current.NodeName + ":" + uuid.NewString()
 	return DeviceInventoryEvent{
 		SchemaVersion: 1, EventID: eventID, Topic: deviceInventoryTopic, OccurredAt: now,
 		Node: current.NodeName, PublisherOnline: current.PublisherOnline,

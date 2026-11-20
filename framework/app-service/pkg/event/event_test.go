@@ -25,3 +25,24 @@ func TestQueuedEventPassesMessageIDToPublisher(t *testing.T) {
 		t.Fatalf("publish data = %#v", data)
 	}
 }
+
+func TestSameQueuedEventReusesMessageID(t *testing.T) {
+	var ids []string
+	controller := &QueuedEventController{
+		ctx: context.Background(),
+		publishOverride: func(_, msgID string, _ interface{}) error {
+			ids = append(ids, msgID)
+			return nil
+		},
+	}
+	event := &QueueEvent{Subject: "os.device.inventory.alice", MsgID: "event-1:alice", Data: map[string]string{"topic": "device.inventory.changed"}}
+	if err := controller.publish(event.Subject, event.MsgID, event.Data); err != nil {
+		t.Fatal(err)
+	}
+	if err := controller.publish(event.Subject, event.MsgID, event.Data); err != nil {
+		t.Fatal(err)
+	}
+	if len(ids) != 2 || ids[0] != event.MsgID || ids[1] != event.MsgID {
+		t.Fatalf("publish IDs = %#v", ids)
+	}
+}
