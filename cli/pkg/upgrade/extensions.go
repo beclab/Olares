@@ -39,8 +39,12 @@ func registerUpgradeExtension(ext upgradeExtension) {
 		panic(fmt.Sprintf("duplicate upgrade extension for %s", ext.Target))
 	}
 	for stage, tasks := range ext.Stages {
-		if _, ok := StageByName(stage); !ok {
+		definition, ok := StageByName(stage)
+		if !ok {
 			panic(fmt.Sprintf("upgrade extension for %s: unknown stage %q", ext.Target, stage))
+		}
+		if definition.Runner != RunnerOlaresCLI {
+			panic(fmt.Sprintf("upgrade extension for %s: stage %q runs in olaresd", ext.Target, stage))
 		}
 		if tasks.Before == nil && tasks.After == nil {
 			panic(fmt.Sprintf("upgrade extension for %s: no task factory for stage %q", ext.Target, stage))
