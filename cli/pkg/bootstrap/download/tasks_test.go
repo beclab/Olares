@@ -133,6 +133,30 @@ func TestCheckLocalCacheWithContainerd(t *testing.T) {
 	}
 }
 
+// bootstrap-node fetches olaresd alone; the rest of the release waits for the
+// download stage, which runs on the olaresd it installs.
+func TestCheckLocalCacheOnlyConsidersTheNamedComponents(t *testing.T) {
+	baseDir := t.TempDir()
+	var lines []string
+	for _, id := range []string{"olaresd", "olares-cli", "docker.io/beclab/example:v1"} {
+		lines = append(lines, fmt.Sprintf("%s.tar.gz,pkg,binary,/amd64,%s,/arm64,%s,%s", strings.ReplaceAll(id, "/", "_"), utils.MD5("x"), utils.MD5("x"), id))
+	}
+	manifestPath := filepath.Join(baseDir, "manifest")
+	if err := os.WriteFile(manifestPath, []byte(strings.Join(lines, "\n")), 0644); err != nil {
+		t.Fatal(err)
+	}
+	host := &cacheHost{exec: func(string) (string, error) { return "", nil }}
+	runtime := &cacheRuntime{runner: &connector.Runner{Host: host}, linux: true}
+
+	d := &PackageDownload{Manifest: manifestPath, BaseDir: baseDir, Only: []string{"olaresd"}}
+	if err := d.CheckLocalCache(runtime); err != nil {
+		t.Fatal(err)
+	}
+	if len(d.existingItems) != 0 || len(d.missingItems) != 1 || d.missingItems[0].FileID != "olaresd" {
+		t.Fatalf("missing = %v, existing = %v; want only olaresd missing", d.missingItems, d.existingItems)
+	}
+}
+
 func TestNormalizeImageRef(t *testing.T) {
 	for input, want := range map[string]string{
 		"nginx:1.27":                   "docker.io/library/nginx:1.27",
