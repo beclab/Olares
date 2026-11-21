@@ -37,9 +37,8 @@ func (p UpgradeStagePhase) Terminal() bool {
 // that implements it, which is backwards: the tasks only exist in that binary.
 //
 // What makes both sides derive the same plan is that both run the same
-// olares-cli version, which the orchestrator establishes before dispatching
-// anything — the node prepare stage installs it and checkWorkersCanUpgrade
-// confirms it.
+// olares-cli version, which the bootstrap stage installs on every node and
+// confirms before anything later is dispatched.
 type UpgradeStageRequest struct {
 	OperationID string `json:"operationId"`
 	Stage       string `json:"stage"`
@@ -63,10 +62,18 @@ type UpgradeStageRequest struct {
 	// private mirror or an air-gapped release works on the control node and
 	// fails on every other machine.
 	//
-	// Only the node prepare stage downloads anything, so only it is sent them.
+	// Only bootstrap and download fetch anything, so only they are sent them.
 	// Empty means the CDN, which is what an operator who named nothing wants.
+	//
+	// Together with Version, these and CDN are what the bootstrap stage reads,
+	// and the source version's olaresd runs that stage: their JSON names are
+	// frozen.
 	CliURL    string `json:"cliUrl,omitempty"`
 	WizardURL string `json:"wizardUrl,omitempty"`
+
+	// CDN is the release CDN the control node uses. Empty means the node's
+	// own.
+	CDN string `json:"cdn,omitempty"`
 }
 
 // UpgradeStageState is one node's record of one stage. It is persisted by the node
@@ -153,7 +160,7 @@ func (m *Manager) runUpgrade(ctx context.Context, id string) Outcome {
 	// to leave alone. Worse, if that work fails the run settles as a stage
 	// failure rather than as cancelled, and a stage failure is retried — so
 	// the cancel would be undone by the very work it forbade.
-	if m.StopRequested(id) {
+	if m.stopping(id) {
 		klog.Infof("clusterop: upgrade %s was cancelled before it resumed", id)
 		return failedWith(CodeUpgradeCancelled, reasonFor(CodeUpgradeCancelled))
 	}
@@ -168,9 +175,12 @@ func (m *Manager) runUpgrade(ctx context.Context, id string) Outcome {
 		// node is between pieces of work rather than inside one, so it is the
 		// only point at which stopping leaves the cluster somewhere anybody
 		// can describe. See Manager.RequestStop.
-		if m.StopRequested(id) {
+		if m.stopping(id) {
 			klog.Infof("clusterop: upgrade %s stopping before stage %s at the operator's request", id, stage.Name)
 			return failedWith(CodeUpgradeCancelled, reasonFor(CodeUpgradeCancelled))
+		}
+		if stage.Name == StageNotifyStart && !m.commit(id) {
+			return outcomeStatePersistenceFailed
 		}
 
 		// A stage this operation already finished is not run again. This is
@@ -213,6 +223,30 @@ func (m *Manager) runUpgrade(ctx context.Context, id string) Outcome {
 	return Outcome{Status: StatusSucceeded}
 }
 
+// stopping is whether a stop request still applies. One that arrives after
+// notify-start is not refused — StopClusterUpgrade is also how the watcher
+// tidies up — but it can no longer be honoured.
+func (m *Manager) stopping(id string) bool {
+	op, ok := m.Get(id)
+	if !ok || !op.StopRequested {
+		return false
+	}
+	if op.Committed {
+		klog.Infof("clusterop: upgrade %s is past %s; the stop request is ignored", id, StageNotifyStart)
+		return false
+	}
+	return true
+}
+
+// commit records that the upgrade is past the point of no return, before the
+// stage that makes it so, and reports whether the record reached disk.
+func (m *Manager) commit(id string) bool {
+	if op, ok := m.Get(id); ok && op.Committed {
+		return true
+	}
+	return m.update(id, func(op *Operation) { op.Committed = true })
+}
+
 // upgradeRun is everything the stage loop needs, named so that the plan of
 // stages and the layout of nodes cannot be mistaken for each other — they are
 // both called some kind of "plan" in this package and they are not the same
@@ -223,16 +257,6 @@ type upgradeRun struct {
 	token string
 }
 
-// upgradePrecheck settles everything that has to be true before the first
-// stage runs, in the order the answers become available: what the cluster is,
-// what may reach it, whether every node can take part, what the upgrade
-// consists of, and then getting the release onto the nodes that need it.
-//
-// The order is not arbitrary and cannot be shuffled. The token is minted
-// before the first probe because the probe is carried by it; the plan is read
-// before nodes are asked whether they can run it because that question has no
-// meaning without one; and the nodes are prepared before being asked what
-// version they hold, because preparing them is what changes the answer.
 // awaitInventory reads the node directory, waiting for it to become readable.
 //
 // An upgrade reboots the control node — reboot-nodes is one of its stages — and
@@ -268,6 +292,13 @@ func (m *Manager) awaitInventory(ctx context.Context) ([]inventory.Node, error) 
 	}
 }
 
+// upgradePrecheck settles what has to be known before the first stage runs, in
+// the order the answers become available: what the cluster is, what may reach
+// it, what the upgrade consists of, and whether every node can be reached.
+// None of it changes a node; the bootstrap stage is the first thing that does.
+//
+// The token is minted before the first probe because the probe is carried by
+// it.
 func (m *Manager) upgradePrecheck(ctx context.Context, id string) (upgradeRun, *Outcome) {
 	m.startStep(id, StepPrecheck)
 
@@ -295,39 +326,13 @@ func (m *Manager) upgradePrecheck(ctx context.Context, id string) (upgradeRun, *
 		return upgradeRun{}, stopped(failedWith(CodePlanUnavailable, reason))
 	}
 
-	// Validate the selected version's plan before a legacy worker is
-	// bootstrapped. That compatibility path installs a new daemon, so a wrong
-	// CLI plan must be rejected while the cluster is still untouched.
 	up, failure := m.readUpgradePlan(ctx, id)
 	if failure != nil {
 		return upgradeRun{}, failure
 	}
-	m.update(id, func(op *Operation) {
-		op.TotalSteps = len(up.Stages) + 2 // precheck and plan
-		if len(p.workers) > 0 {
-			op.TotalSteps += 2
-		} // prepare and readiness
-	})
+	m.update(id, func(op *Operation) { op.TotalSteps = len(up.Stages) + 2 }) // precheck and plan
 
 	if failure := m.checkWorkersReachable(ctx, id, p, token); failure != nil {
-		return upgradeRun{}, failure
-	}
-
-	// Everything above only looked at the cluster. Preparing the nodes is the
-	// first thing that changes one, so it is a stage boundary in the sense
-	// that matters for stopping, and asked the same question.
-	if m.StopRequested(id) {
-		klog.Infof("clusterop: upgrade %s stopping before it prepares any node, at the operator's request", id)
-		return upgradeRun{}, stopped(failedWith(CodeUpgradeCancelled, reasonFor(CodeUpgradeCancelled)))
-	}
-
-	// Each compute node fetches the target version's binaries before it is
-	// asked whether it can run a stage of it, because that is what makes the
-	// answer yes.
-	if failure := m.prepareNodes(ctx, id, p, up, token); failure != nil {
-		return upgradeRun{}, failure
-	}
-	if failure := m.checkWorkersCanUpgrade(ctx, id, p, up, token); failure != nil {
 		return upgradeRun{}, failure
 	}
 
@@ -434,74 +439,6 @@ func expectedUpgradeVersion(op Operation) string {
 	return v.Original()
 }
 
-// prepareNodes brings every compute node to the target version's binaries.
-//
-// It runs as an ordinary stage — same dispatch, same persistence, same
-// polling, same resume — because it needs all of those for the same reason a
-// plan stage does, and more acutely: installing the new olaresd on a node
-// restarts the daemon that is running the work. That node's stage record is
-// left saying "running", its replacement settles it as interrupted, and this
-// orchestrator dispatches it again; the second run finds the packages
-// downloaded and the binaries already at the target version and finishes.
-func (m *Manager) prepareNodes(ctx context.Context, id string, p plan, up UpgradePlan, token string) *Outcome {
-	if len(p.workers) == 0 {
-		return nil
-	}
-	return m.runStage(ctx, id, upgradeRun{plan: up, nodes: p, token: token}, NodePrepareStage(), p.workers)
-}
-
-// checkWorkersCanUpgrade confirms every compute node now holds the version
-// being rolled out, after the prepare stage has put it there.
-//
-// This is the check that the prepare stage worked, asked of the node rather
-// than inferred from the stage having returned success, and it is the only
-// thing standing between a node on the previous olares-cli and that node
-// resolving every stage name against the previous version's plan. Nothing
-// downstream compares the two plans, so a mismatch that gets past here is not
-// caught at all.
-func (m *Manager) checkWorkersCanUpgrade(ctx context.Context, id string, p plan, up UpgradePlan,
-	token string) *Outcome {
-	if len(p.workers) == 0 {
-		return nil
-	}
-	m.startStep(id, StepUpgradeReadiness)
-
-	for _, w := range p.workers {
-		code, reason := m.checkWorkerVersion(ctx, id, w, up, token)
-		if code == "" {
-			continue
-		}
-		klog.Warningf("clusterop: upgrade %s: node %s cannot run stages: %s", id, w.NodeName, code)
-		m.failStep(id, StepUpgradeReadiness, code, reason)
-		return stopped(failedWith(code, reason))
-	}
-	m.finishStep(id, StepUpgradeReadiness, StepSucceeded, "", "")
-	return nil
-}
-
-func (m *Manager) checkWorkerVersion(ctx context.Context, id string, w inventory.Node, up UpgradePlan,
-	token string) (code, reason string) {
-	ready, err := m.upgradeDeps().Readiness(ctx, w, id, token)
-	if err != nil {
-		return CodeNodeUnreachable, suppress(CodeNodeUnreachable,
-			"read node "+w.NodeName+" after preparing it", err)
-	}
-	if !ready.Supported {
-		// It answered the precheck and does not now. The node was left in a
-		// state the prepare stage did not intend.
-		return CodeUpgradeUnsupported, reasonFor(CodeUpgradeUnsupported)
-	}
-	// A node that cannot say which olares-cli it holds is refused like one
-	// holding the wrong version. This used to be allowed through, on the
-	// grounds that the plan digest would catch it at the stage; with the
-	// digest gone this is the only check there is, and "it would not say" is
-	// not an answer to build an upgrade on.
-	if ready.CLIVersion != up.Version {
-		return CodeVersionMismatch, reasonFor(CodeVersionMismatch)
-	}
-	return "", ""
-}
-
 // upgradeToken is the credential workers check. A single-node cluster needs
 // none: nothing leaves the machine, so there is no hop to authorize and no
 // reason to put a secret in the cluster for one.
@@ -512,17 +449,6 @@ func (m *Manager) upgradeToken(ctx context.Context, id string, hasWorkers bool) 
 	return m.upgradeDeps().Auth(ctx, id)
 }
 
-// checkUpgradeWorker asks whether one node can run the staged protocol.
-//
-// The last of them is whether the node speaks the staged-upgrade protocol at
-// all. An olaresd from before staged upgrades serves no stage route and does
-// not declare upgrade.stages — it has never heard of the key — and the missing
-// capability is the only way to tell. A 404 response triggers a host-local
-// bootstrap job; authorization failures and network errors never do.
-//
-// What is deliberately not asked here is which olares-cli the node holds. At
-// this point it holds the previous one — that is the normal state, and fixing
-// it is what the node prepare stage is for. See checkWorkersCanUpgrade.
 // awaitNodeReady waits for one node to be Ready, and reports whether it got
 // there.
 //
@@ -559,6 +485,14 @@ func (m *Manager) awaitNodeReady(ctx context.Context, name string) bool {
 	}
 }
 
+// checkUpgradeWorker asks whether one node can take part: whether the cluster
+// knows it, it is Ready, and its olaresd answers.
+//
+// Which olaresd answers does not matter yet. A node too old to run the
+// bootstrap stage — one that answers without the capability, or serves no
+// readiness route at all and so answers 404 — is bootstrapped by the legacy Job
+// instead. What does matter is that it answers: an authorization failure or a
+// network error is a node the upgrade cannot reach later either.
 func (m *Manager) checkUpgradeWorker(ctx context.Context, id string, w inventory.Node, token string) (code, reason string) {
 	if w.NodeName == "" || w.Role == "" || w.Role == inventory.RoleUnknown {
 		return CodeNodeIdentityUnknown, "the node directory could not identify this node"
@@ -569,42 +503,16 @@ func (m *Manager) checkUpgradeWorker(ctx context.Context, id string, w inventory
 	if w.IP == "" {
 		return CodeNodeUnaddressable, "node has no internal address"
 	}
-	// An olaresd from before upgrade stages existed serves no readiness route.
-	// A real HTTP 404 allows the compatibility bootstrap; other failures do not.
-	ready, err := m.upgradeDeps().Readiness(ctx, w, id, token)
-	var httpStatus *UpgradeHTTPStatusError
-	if errors.As(err, &httpStatus) && httpStatus.StatusCode == http.StatusNotFound {
-		bootstrap := m.upgradeDeps().BootstrapLegacy
-		op, ok := m.Get(id)
-		if bootstrap != nil && ok && expectedUpgradeVersion(op) != "" && !m.StopRequested(id) {
-			locations := UpgradeLocations{}
-			if at := m.upgradeDeps().Locations; at != nil {
-				locations = at()
-			}
-			if bootErr := bootstrap(ctx, w, id, expectedUpgradeVersion(op), locations); bootErr != nil {
-				return CodeUpgradeUnsupported, suppress(CodeUpgradeUnsupported,
-					"bootstrap legacy daemon on "+w.NodeName, bootErr)
-			}
-			deadline := m.deps.Now().Add(m.deps.Timeouts.Ready)
-			for {
-				ready, err = m.upgradeDeps().Readiness(ctx, w, id, token)
-				if err == nil || !m.deps.Now().Before(deadline) {
-					break
-				}
-				if sleepErr := m.deps.Sleep(ctx, m.deps.Timeouts.Poll); sleepErr != nil {
-					break
-				}
-			}
-		}
-	}
-	if err != nil {
+	if _, err := m.upgradeDeps().Readiness(ctx, w, id, token); err != nil && !isNotFound(err) {
 		klog.Warningf("clusterop: node %s did not answer the upgrade readiness probe: %v", w.NodeName, err)
 		return CodeUpgradeUnsupported, reasonFor(CodeUpgradeUnsupported)
 	}
-	if !ready.Supported {
-		return CodeUpgradeUnsupported, reasonFor(CodeUpgradeUnsupported)
-	}
 	return "", ""
+}
+
+func isNotFound(err error) bool {
+	var status *UpgradeHTTPStatusError
+	return errors.As(err, &status) && status.StatusCode == http.StatusNotFound
 }
 
 // runStage runs one stage on its nodes and reports whether the upgrade may go on.
@@ -817,22 +725,13 @@ func (m *Manager) runStageOnNode(ctx context.Context, id string, stage UpgradeSt
 		n.StartedAt = &at
 	})
 
-	state, err := m.dispatchStage(ctx, id, stage, node, req, token)
-	if err != nil {
-		code, reason := stageDispatchReason(node, err)
-		m.settleStageNode(id, stage.Name, node.NodeName, NodeFailed, code, reason)
-		return false
+	if stage.Name == StageBootstrap {
+		return m.bootstrapNode(ctx, id, stage, node, req, token)
 	}
-	if state.Phase.Terminal() {
-		if !m.settleFromState(id, stage.Name, node.NodeName, state) {
-			return false
-		}
-	} else {
-		settled, ok := m.awaitStage(ctx, id, stage, node, req, token)
-		if !ok {
-			return false
-		}
-		state = settled
+
+	state, ok := m.runStageThere(ctx, id, stage, node, req, token)
+	if !ok {
+		return false
 	}
 
 	// Waiting is for the machines that are actually going down. The node says
@@ -846,6 +745,154 @@ func (m *Manager) runStageOnNode(ctx context.Context, id string, stage UpgradeSt
 		return true
 	}
 	return m.awaitNodeRestart(ctx, id, stage, node, state.BootID)
+}
+
+// runStageThere hands the stage to the node's own runner and waits for its
+// record to settle.
+func (m *Manager) runStageThere(ctx context.Context, id string, stage UpgradeStage,
+	node inventory.Node, req UpgradeStageRequest, token string) (UpgradeStageState, bool) {
+	state, err := m.dispatchStage(ctx, id, stage, node, req, token)
+	if err != nil {
+		code, reason := stageDispatchReason(node, err)
+		m.settleStageNode(id, stage.Name, node.NodeName, NodeFailed, code, reason)
+		return UpgradeStageState{}, false
+	}
+	if state.Phase.Terminal() {
+		return state, m.settleFromState(id, stage.Name, node.NodeName, state)
+	}
+	return m.awaitStage(ctx, id, stage, node, req, token)
+}
+
+// bootstrapNode puts the target olares-cli and olaresd on one node, and does
+// not let the node through until it says both are running.
+//
+// Who does the work is asked of the node now, not taken from the precheck: a
+// resumed run finds some workers already bootstrapped, and those now run an
+// olaresd that can do it — and that, finding itself at the target, does nothing.
+// This machine always does it itself; the upgrade watcher already put the
+// target binaries here before the orchestrator started.
+func (m *Manager) bootstrapNode(ctx context.Context, id string, stage UpgradeStage,
+	node inventory.Node, req UpgradeStageRequest, token string) bool {
+	limit := stage.Timeout(m.deps.Timeouts.Stage)
+	deadline := m.deps.Now().Add(limit)
+
+	legacy := false
+	if !node.IsSelf {
+		ready, err := m.awaitReadiness(ctx, id, node, token, deadline)
+		switch {
+		case isNotFound(err):
+			legacy = true
+		case err != nil:
+			m.settleStageNode(id, stage.Name, node.NodeName, NodeFailed, CodeNodeUnreachable,
+				suppress(CodeNodeUnreachable, "ask node "+node.NodeName+" how to bootstrap it", err))
+			return false
+		default:
+			legacy = !ready.Bootstrap
+		}
+	}
+
+	if legacy {
+		if !m.bootstrapLegacy(ctx, id, stage, node, req, limit) {
+			return false
+		}
+	} else if _, ok := m.runStageThere(ctx, id, stage, node, req, token); !ok {
+		return false
+	}
+
+	if !m.awaitBootstrapped(ctx, id, stage, node, req.Version, token, deadline) {
+		return false
+	}
+	m.settleStageNode(id, stage.Name, node.NodeName, NodeSucceeded, "", "")
+	return true
+}
+
+func (m *Manager) bootstrapLegacy(ctx context.Context, id string, stage UpgradeStage,
+	node inventory.Node, req UpgradeStageRequest, limit time.Duration) bool {
+	bootstrap := m.upgradeDeps().BootstrapLegacy
+	if bootstrap == nil {
+		m.settleStageNode(id, stage.Name, node.NodeName, NodeFailed,
+			CodeUpgradeUnsupported, reasonFor(CodeUpgradeUnsupported))
+		return false
+	}
+	klog.Infof("clusterop: node %s cannot bootstrap itself; bootstrapping it through a Job", node.NodeName)
+	jobCtx, cancel := context.WithTimeout(ctx, limit)
+	defer cancel()
+	where := UpgradeLocations{CliURL: req.CliURL, WizardURL: req.WizardURL, CDN: req.CDN}
+	if err := bootstrap(jobCtx, node, id, req.Version, where); err != nil {
+		m.settleStageNode(id, stage.Name, node.NodeName, NodeFailed, CodeStageFailed,
+			legacyBootstrapReason(node, err))
+		return false
+	}
+	return true
+}
+
+// awaitBootstrapped waits for the node to report the target olaresd and the
+// target olares-cli. A finished bootstrap record is not enough: the stage
+// replaces the olaresd running it, so its record may be written by either one,
+// and a node with only the new olares-cli would run every later stage on the
+// old daemon.
+func (m *Manager) awaitBootstrapped(ctx context.Context, id string, stage UpgradeStage,
+	node inventory.Node, version, token string, deadline time.Time) bool {
+	for {
+		daemon, cli, err := m.nodeVersions(ctx, id, node, version, token)
+		if err == nil && daemon == version && cli == version {
+			return true
+		}
+		if !m.deps.Now().Before(deadline) {
+			if err != nil {
+				m.settleStageNode(id, stage.Name, node.NodeName, NodeFailed, CodeNodeUnreachable,
+					suppress(CodeNodeUnreachable, "read node "+node.NodeName+" after bootstrapping it", err))
+			} else {
+				m.settleStageNode(id, stage.Name, node.NodeName, NodeFailed, CodeVersionMismatch,
+					fmt.Sprintf("after the bootstrap this node runs olaresd %s and olares-cli %s, not %s",
+						orUnknown(daemon), orUnknown(cli), version))
+			}
+			return false
+		}
+		if err := m.deps.Sleep(ctx, m.deps.Timeouts.Poll); err != nil {
+			m.settleStageNode(id, stage.Name, node.NodeName, NodeFailed, CodeStageTimeout,
+				"the wait for this node was cancelled")
+			return false
+		}
+	}
+}
+
+func (m *Manager) nodeVersions(ctx context.Context, id string, node inventory.Node,
+	version, token string) (daemon, cli string, err error) {
+	if node.IsSelf {
+		local := m.upgradeDeps().LocalVersions
+		if local == nil {
+			return version, version, nil
+		}
+		return local(ctx)
+	}
+	ready, err := m.upgradeDeps().Readiness(ctx, node, id, token)
+	if err != nil {
+		return "", "", err
+	}
+	return ready.DaemonVersion, ready.CLIVersion, nil
+}
+
+// awaitReadiness asks a node for its readiness until it answers, the answer
+// being 404 included. The node may be between two olaresd processes.
+func (m *Manager) awaitReadiness(ctx context.Context, id string, node inventory.Node, token string,
+	deadline time.Time) (UpgradeReadiness, error) {
+	for {
+		ready, err := m.upgradeDeps().Readiness(ctx, node, id, token)
+		if err == nil || isNotFound(err) || !m.deps.Now().Before(deadline) {
+			return ready, err
+		}
+		if sleepErr := m.deps.Sleep(ctx, m.deps.Timeouts.Poll); sleepErr != nil {
+			return ready, err
+		}
+	}
+}
+
+func orUnknown(v string) string {
+	if v == "" {
+		return "(unknown)"
+	}
+	return v
 }
 
 // awaitStage polls one node until its stage settles or the deadline passes,
@@ -874,7 +921,7 @@ func (m *Manager) awaitStage(ctx context.Context, id string, stage UpgradeStage,
 			klog.V(4).Infof("clusterop: read stage %s on %s: %v", stage.Name, node.NodeName, err)
 		case state.Phase.Terminal() && state.Code == CodeDaemonRestarted:
 			// Not a failure: the stage restarted the olaresd that was
-			// running it. Several stages are expected to — node-prepare
+			// running it. Several stages are expected to — bootstrap
 			// installs the new daemon, reboot-nodes takes the machine down —
 			// and the node marks its own record failed on the way back up
 			// because nothing about the half-finished run can be recovered.
@@ -989,10 +1036,10 @@ func (m *Manager) stageRequest(id string, up UpgradePlan, stage UpgradeStage) Up
 	if op, ok := m.Get(id); ok {
 		req.ClusterID = op.ClusterID
 	}
-	if stage.Name == StageNodePrepare {
+	if stage.Name == StageBootstrap || stage.Name == StageDownload {
 		if at := m.upgradeDeps().Locations; at != nil {
 			where := at()
-			req.CliURL, req.WizardURL = where.CliURL, where.WizardURL
+			req.CliURL, req.WizardURL, req.CDN = where.CliURL, where.WizardURL, where.CDN
 		}
 	}
 	return req

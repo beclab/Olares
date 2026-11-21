@@ -87,6 +87,7 @@ func (w *upgradeWatcher) Watch(ctx context.Context) {
 		state.CurrentState.UpgradingRetryNum = 0
 		state.CurrentState.UpgradingNextRetryAt = nil
 		state.CurrentState.UpgradingStep = ""
+		state.CurrentState.UpgradingCancellable = false
 		state.CurrentState.UpgradingProgressNum = 0
 		state.CurrentState.UpgradingProgress = ""
 		state.CurrentState.UpgradingError = ""
@@ -100,6 +101,7 @@ func (w *upgradeWatcher) Watch(ctx context.Context) {
 
 		return
 	}
+	state.CurrentState.UpgradingCancellable = !upgrade.ClusterUpgradeCommitted(*target)
 	if w.runningAnotherTarget(*target) {
 		if w.cancel != nil {
 			w.cancel()
@@ -125,13 +127,13 @@ func (w *upgradeWatcher) Watch(ctx context.Context) {
 	if err != nil || currentVersion.LessThan(&target.Version) {
 		state.CurrentState.UpgradingTarget = target.Version.Original()
 	} else if !w.isUpgrading() {
-		// The version CR has reached the target. On a single node that means
-		// the upgrade is over. On a cluster it does not, and the gap is where
-		// the reboot lives: post-upgrade-admin flips the CR, and reboot-nodes
+		// The version CR has reached the target, which does not mean the
+		// upgrade is over: post-upgrade-admin flips the CR, and reboot-nodes
 		// runs after it — the stage that takes this very machine down. The
 		// daemon that comes back therefore finds the target reached with no
 		// upgrade running in this process, while the orchestrator is quietly
-		// resuming the rest of the run behind it.
+		// resuming the rest of the run behind it. The operation record, not
+		// the CR, says whether it is over.
 		//
 		// Removing the target here does two things, both wrong. It calls
 		// StopClusterUpgrade, which cancels the run that is still going. And
@@ -314,21 +316,17 @@ var downloadPhases = weigh(upgrade.ReleaseDownloadPhases,
 	40, 60,
 )
 
-// upgradePhases is the control node upgrading itself: check, adopt the
-// release, run the upgrade, forget the target.
-//
-// The middle of it is the same sequence, in the same order, that the
-// orchestrator has a compute node run before it may be given a stage. See
-// upgrade.ReleaseAdoptPhases for why that is shared rather than written twice.
+// upgradePhases is the control node putting the target olares-cli and olaresd
+// in place, handing the upgrade to the orchestrator they bring, and forgetting
+// the target. The checks, the images and every node's own binaries are stages
+// of the orchestrated upgrade.
 var upgradePhases = phases(
-	[]upgradePhase{{upgrade.NewPreCheck, 0, 10}},
 	weigh(upgrade.ReleaseAdoptPhases,
-		10, 10,
-		20, 10,
-		30, 30,
+		0, 5,
+		5, 5,
 	),
 	[]upgradePhase{
-		{upgrade.NewUpgrade, 60, 35},
+		{upgrade.NewUpgrade, 10, 85},
 		{upgrade.NewRemoveTarget, 95, 5},
 	},
 )

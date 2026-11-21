@@ -15,17 +15,10 @@ import (
 //
 // The methods are grouped below by the stage they feed. Ordering inside one
 // stage is the contributor's own business and is preserved as written.
+//
+// The stages before notify-start have no method: olaresd carries them out
+// (see RunnerOlaresd), so a version has nothing to contribute to them.
 type upgrader interface {
-	// --- stage: replace-binaries (every node, one at a time) ---
-
-	// ReplaceBinaries swaps olaresd and olares-cli on the machine.
-	ReplaceBinaries() []task.Interface
-
-	// --- stage: import-images (every node) ---
-
-	// ImportImages loads the images this upgrade needs onto the machine.
-	ImportImages() []task.Interface
-
 	// --- stage: pre-upgrade-node (every node, one at a time) ---
 
 	// PreUpgradeNode is work each machine does to itself before the cluster
@@ -87,8 +80,6 @@ type upgrader interface {
 // would never see what the version replaced.
 func stageTasks(u upgrader) map[string][]task.Interface {
 	return map[string][]task.Interface{
-		StageReplaceBinaries: u.ReplaceBinaries(),
-		StageImportImages:    u.ImportImages(),
 		StagePreUpgradeNode:  u.PreUpgradeNode(),
 		StagePreUpgradeAdmin: u.PrepareForUpgrade(),
 		StageUpgradeCluster: concat(
