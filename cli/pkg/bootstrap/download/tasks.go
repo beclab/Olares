@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"slices"
 	"strings"
 
 	"github.com/distribution/reference"
@@ -22,9 +23,11 @@ import (
 
 type PackageDownload struct {
 	common.KubeAction
-	Manifest      string
-	BaseDir       string
-	CDNService    string
+	Manifest   string
+	BaseDir    string
+	CDNService string
+	// Only limits the download to these manifest file ids. Empty means all.
+	Only          []string
 	existingItems []*manifest.ManifestItem
 	missingItems  []*manifest.ManifestItem
 }
@@ -92,6 +95,9 @@ func (d *PackageDownload) CheckLocalCache(runtime connector.Runtime) error {
 			continue
 		}
 		item := must(manifest.ReadItem(line))
+		if len(d.Only) > 0 && !slices.Contains(d.Only, item.FileID) {
+			continue
+		}
 		if must(isRealExists(runtime, item, baseDir)) {
 			d.existingItems = append(d.existingItems, item)
 		} else {
