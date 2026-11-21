@@ -167,19 +167,22 @@ type State struct {
 	// upgrade ("in-progress", "completed", "failed", or empty).
 	UpgradingState ProcessingState `json:"upgradingState"`
 
-	// UpgradingStep is the name of the current upgrade step.
+	// UpgradingStep is the name of the current upgrade step. While the
+	// orchestrator runs the upgrade it is the stage running now.
 	UpgradingStep string `json:"upgradingStep"`
 
+	// UpgradingCancellable says the upgrade may still be cancelled. It
+	// turns false when the upgrade reaches notify-start: from there it
+	// changes the system, and a cancel is refused until it has finished.
+	UpgradingCancellable bool `json:"upgradingCancellable"`
+
 	// UpgradingOperationID names the cluster operation carrying this
-	// upgrade, when there is one. It is empty on a single-node Olares,
-	// where the upgrade is not orchestrated and there is no record
-	// beyond the fields here.
+	// upgrade, once the orchestrator has started it.
 	//
 	// It is the handle for everything these fields cannot say. They
-	// describe one upgrade as one number, because that is all a
-	// single-node upgrade ever was; on a cluster the interesting part
-	// is which stage is running and how each node is getting on with
-	// it, and that lives in the operation record. Reading it needs an
+	// describe one upgrade as one number; the interesting part is which
+	// stage is running and how each node is getting on with it, and
+	// that lives in the operation record. Reading it needs an
 	// id, and guessing one from the version would tie a client to how
 	// the daemon happens to name them today.
 	//

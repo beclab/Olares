@@ -21,16 +21,15 @@ var (
 	}
 
 	// ReleaseAdoptPhases make this machine run a release it has already
-	// downloaded: the two binaries, then the images they will need.
+	// downloaded, so that the orchestrator it starts is the target's.
+	// Images are loaded later, by the import-images stage on every node.
 	//
-	// The middle one ends this process. NewInstallOlaresd replaces the daemon
-	// and restarts it, so on both paths the sequence is expected not to
-	// return, and both paths are expected to run it again afterwards — which
-	// is why every phase here is reentrant, and why NewInstallOlaresd checks
-	// its own version and does nothing when it is already the target.
+	// NewInstallOlaresd ends this process: it replaces the daemon and
+	// restarts it, and the watcher runs the sequence again afterwards. That
+	// is why both phases are reentrant, and why NewInstallOlaresd does
+	// nothing when it is already the target.
 	ReleaseAdoptPhases = []func() commands.Interface{
 		NewInstallCLI,
 		NewInstallOlaresd,
-		NewImportImages,
 	}
 )
