@@ -63,10 +63,18 @@ type UpgradeStageRequest struct {
 	// private mirror or an air-gapped release works on the control node and
 	// fails on every other machine.
 	//
-	// Only the node prepare stage downloads anything, so only it is sent them.
+	// Only bootstrap and download fetch anything, so only they are sent them.
 	// Empty means the CDN, which is what an operator who named nothing wants.
+	//
+	// Together with Version, these and CDN are what the bootstrap stage reads,
+	// and the source version's olaresd runs that stage: their JSON names are
+	// frozen.
 	CliURL    string `json:"cliUrl,omitempty"`
 	WizardURL string `json:"wizardUrl,omitempty"`
+
+	// CDN is the release CDN the control node uses. Empty means the node's
+	// own.
+	CDN string `json:"cdn,omitempty"`
 }
 
 // UpgradeStageState is one node's record of one stage. It is persisted by the node

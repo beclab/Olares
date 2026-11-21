@@ -30,6 +30,7 @@ type preCheck struct {
 
 var _ commands.Interface = &preCheck{}
 
+// NewPreCheck runs both halves of the upgrade precheck on this machine.
 func NewPreCheck() commands.Interface {
 	return &preCheck{
 		Operation: commands.Operation{
@@ -39,7 +40,31 @@ func NewPreCheck() commands.Interface {
 }
 
 func (i *preCheck) Execute(ctx context.Context, p any) (res any, err error) {
-	klog.Info("Starting upgrade pre check")
+	if _, err := NewImageImportSpaceCheck().Execute(ctx, p); err != nil {
+		return nil, err
+	}
+	return NewClusterPreCheck().Execute(ctx, p)
+}
+
+// imageImportSpaceCheck is the part of the precheck that is about one machine:
+// whether it has room to import the images of a release it has downloaded.
+// Every node runs it, as the precheck-node stage.
+type imageImportSpaceCheck struct {
+	commands.Operation
+}
+
+var _ commands.Interface = &imageImportSpaceCheck{}
+
+func NewImageImportSpaceCheck() commands.Interface {
+	return &imageImportSpaceCheck{
+		Operation: commands.Operation{
+			Name: commands.ImageImportSpaceCheck,
+		},
+	}
+}
+
+func (i *imageImportSpaceCheck) Execute(ctx context.Context, p any) (res any, err error) {
+	klog.Info("Starting image import space check")
 
 	target, ok := p.(state.UpgradeTarget)
 	if !ok {
@@ -89,6 +114,28 @@ func (i *preCheck) Execute(ctx context.Context, p any) (res any, err error) {
 	if err := tryToUseDiskSpace(containerd.DefaultContainerdRootPath, requiredSpace); err != nil {
 		return nil, err
 	}
+	return newExecutionRes(true, nil), nil
+}
+
+// clusterPreCheck is the part of the precheck that is about the cluster: node
+// conditions, system pods, users still activating, and apps whose presence
+// blocks this upgrade. The control node runs it once, as precheck-cluster.
+type clusterPreCheck struct {
+	commands.Operation
+}
+
+var _ commands.Interface = &clusterPreCheck{}
+
+func NewClusterPreCheck() commands.Interface {
+	return &clusterPreCheck{
+		Operation: commands.Operation{
+			Name: commands.ClusterPreCheck,
+		},
+	}
+}
+
+func (i *clusterPreCheck) Execute(ctx context.Context, _ any) (res any, err error) {
+	klog.Info("Starting cluster pre check for upgrade")
 
 	client, err := utils.GetKubeClient()
 	if err != nil {
