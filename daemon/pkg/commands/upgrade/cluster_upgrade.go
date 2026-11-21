@@ -241,6 +241,10 @@ func (i *upgrade) followClusterUpgrade(ctx context.Context, m *clusterop.Manager
 			last = p
 			progressChan <- p
 		}
+		if step := runningStep(op); step != "" {
+			state.CurrentState.UpgradingStep = step
+		}
+		state.CurrentState.UpgradingCancellable = !op.Committed
 		if op.Status.Terminal() {
 			if err := terminalUpgradeError(op); err != nil {
 				klog.Errorf("cluster upgrade %s: %v", id, err)
@@ -254,6 +258,15 @@ func (i *upgrade) followClusterUpgrade(ctx context.Context, m *clusterop.Manager
 			return
 		}
 	}
+}
+
+func runningStep(op clusterop.Operation) string {
+	for i := len(op.Steps) - 1; i >= 0; i-- {
+		if op.Steps[i].Status == clusterop.StepRunning {
+			return op.Steps[i].Name
+		}
+	}
+	return ""
 }
 
 // upgradeProgressOf is the share of the operation's steps that have settled.

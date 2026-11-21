@@ -24,28 +24,6 @@ import (
 	"k8s.io/klog/v2"
 )
 
-type preCheck struct {
-	commands.Operation
-}
-
-var _ commands.Interface = &preCheck{}
-
-// NewPreCheck runs both halves of the upgrade precheck on this machine.
-func NewPreCheck() commands.Interface {
-	return &preCheck{
-		Operation: commands.Operation{
-			Name: commands.UpgradePreCheck,
-		},
-	}
-}
-
-func (i *preCheck) Execute(ctx context.Context, p any) (res any, err error) {
-	if _, err := NewImageImportSpaceCheck().Execute(ctx, p); err != nil {
-		return nil, err
-	}
-	return NewClusterPreCheck().Execute(ctx, p)
-}
-
 // imageImportSpaceCheck is the part of the precheck that is about one machine:
 // whether it has room to import the images of a release it has downloaded.
 // Every node runs it, as the precheck-node stage.
