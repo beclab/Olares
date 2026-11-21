@@ -207,6 +207,8 @@ type UpgradeTarget struct {
 	RequestNonce string `json:"requestNonce,omitempty"`
 	WizardURL    string `json:"wizardURL"`
 	CliURL       string `json:"cliURL"`
+	// CDN is the control node's download location for a dispatched stage.
+	CDN          string `json:"-"`
 	DownloadOnly bool   `json:"downloadOnly"`
 	Downloaded   bool   `json:"downloaded"`
 }

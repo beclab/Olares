@@ -42,7 +42,7 @@ func phaseStage(phases ...func() commands.Interface) olaresdStage {
 		if err != nil {
 			return fmt.Errorf("invalid target version %q: %v", req.Version, err)
 		}
-		target := state.UpgradeTarget{Version: *v, CliURL: req.CliURL, WizardURL: req.WizardURL}
+		target := state.UpgradeTarget{Version: *v, CliURL: req.CliURL, WizardURL: req.WizardURL, CDN: req.CDN}
 		for _, newCMD := range phases {
 			cmd := newCMD()
 			klog.Infof("upgrade stage %s for %s: %s", req.Stage, req.Version, cmd.OperationName())
@@ -55,6 +55,16 @@ func phaseStage(phases ...func() commands.Interface) olaresdStage {
 }
 
 var stagePhase = runPhaseToCompletion
+
+func appendReleaseCDN(args []string, cdn string) []string {
+	if cdn == "" {
+		cdn = commands.OLARES_CDN_SERVICE
+	}
+	if cdn != "" {
+		return append(args, "--cdn-service", cdn)
+	}
+	return args
+}
 
 // runPhaseToCompletion executes one phase and waits for it, whether it reports
 // completion straight away or through a progress channel.

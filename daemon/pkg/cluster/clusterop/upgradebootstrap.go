@@ -4,7 +4,9 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/beclab/Olares/daemon/pkg/cluster/inventory"
@@ -15,32 +17,97 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/klog/v2"
 )
 
+// legacyBootstrapScript is the bootstrap stage (upgradecmd.Bootstrap) in shell,
+// run on the host of a worker whose olaresd is too old to run it. It depends on
+// the same three frozen things: the request fields, the CLI archive name on the
+// CDN, and the target CLI's bootstrap-node command line.
+//
+// The check that the work is already done covers only olares-cli. The Job only
+// runs on a node whose olaresd could not bootstrap itself, so that olaresd is
+// never the target yet.
 const legacyBootstrapScript = `
 set -eu
 . /etc/systemd/system/olaresd.service.env
 : "${BASE_DIR:?olaresd service has no BASE_DIR}"
-set -- /usr/local/bin/olares-cli download wizard --version "$UPGRADE_VERSION" --base-dir "$BASE_DIR" --cdn-service "$UPGRADE_CDN"
+cli=/usr/local/bin/olares-cli
+
+installed=$("$cli" -v 2>/dev/null | head -n 1 || true)
+case " $installed " in
+*" $UPGRADE_VERSION "*|*" v$UPGRADE_VERSION "*) ;;
+*)
+  case "$(uname -m)" in
+  x86_64|amd64) arch=amd64 ;;
+  aarch64|arm64) arch=arm64 ;;
+  *) echo "unsupported architecture $(uname -m)" >&2; exit 1 ;;
+  esac
+  url=${CLI_URL:-${UPGRADE_CDN%/}/olares-cli-v${UPGRADE_VERSION}_linux_${arch}.tar.gz}
+  work=$(mktemp -d "$BASE_DIR/.olares-cli-bootstrap.XXXXXX")
+  trap 'rm -rf "$work"' EXIT
+  if command -v curl >/dev/null 2>&1; then
+    curl -fsSL --retry 3 -o "$work/cli.tar.gz" "$url"
+  else
+    wget --tries=3 -O "$work/cli.tar.gz" "$url"
+  fi
+  tar -xzf "$work/cli.tar.gz" -C "$work"
+  chmod 0755 "$work/olares-cli"
+  case " $("$work/olares-cli" -v | head -n 1) " in
+  *" $UPGRADE_VERSION "*|*" v$UPGRADE_VERSION "*) ;;
+  *) echo "the downloaded olares-cli is not $UPGRADE_VERSION" >&2; exit 1 ;;
+  esac
+  cp "$work/olares-cli" "$cli.bootstrap"
+  mv -f "$cli.bootstrap" "$cli"
+  ;;
+esac
+
+set -- upgrade bootstrap-node --version "$UPGRADE_VERSION" --base-dir "$BASE_DIR" --cdn-service "$UPGRADE_CDN"
 if [ -n "$WIZARD_URL" ]; then
   set -- "$@" --url-override "$WIZARD_URL"
 fi
-"$@"
-/usr/local/bin/olares-cli download component --version "$UPGRADE_VERSION" --base-dir "$BASE_DIR" --cdn-service "$UPGRADE_CDN"
-# Older prepare commands select their compiled-in version even with --version.
-# Their release override is needed until the target CLI is installed later.
-OLARES_LOCAL_RELEASE_VERSION_OVERRIDE="$UPGRADE_VERSION" /usr/local/bin/olares-cli prepare olaresd --version "$UPGRADE_VERSION" --base-dir "$BASE_DIR"
+"$cli" "$@"
 `
 
+// Both architectures of the 1.12.8 installer ship busybox:1.28, which
+// provides /bin/sh and /bin/chroot. Try it before images that may require
+// a registry on an unactivated worker.
+var legacyBootstrapImages = []string{
+	"docker.io/library/busybox:1.28",
+	"docker.io/beclab/aboveos-busybox:1.37.0",
+	"docker.io/library/alpine@sha256:d9e853e87e55526f6b2917df91a2115c36dd7c696a35be12163d44e6e2a4b6bc",
+}
+
+var legacyBootstrapPoll = 5 * time.Second
+
+const legacyBootstrapLogLines = 40
+
+// LegacyBootstrapError is a Job that ran and failed. Log is the end of its
+// output, which is where olares-cli prints the reason.
+type LegacyBootstrapError struct {
+	Job string
+	Log string
+}
+
+func (e *LegacyBootstrapError) Error() string {
+	return "legacy bootstrap job " + e.Job + " failed: " + e.Log
+}
+
 func legacyBootstrapReason(node inventory.Node, err error) string {
+	var failed *LegacyBootstrapError
+	if errors.As(err, &failed) {
+		klog.Warningf("clusterop: bootstrap node %s through the legacy Job: %v", node.NodeName, err)
+		if detail := commands.CommandErrorSummary(failed.Log); detail != "" {
+			return detail
+		}
+	}
 	return suppress(CodeStageFailed, "bootstrap node "+node.NodeName+" through the legacy Job", err)
 }
 
-// BootstrapLegacyUpgradeWorker upgrades only olaresd on a worker whose old
-// daemon cannot serve the staged-upgrade protocol. The old CLI runs on its
-// host through a temporary Kubernetes Job; once the new daemon answers, the
-// ordinary node-prepare stage installs the target CLI and images. No SSH
-// credentials or owner signature are copied to a worker.
+// BootstrapLegacyUpgradeWorker runs the bootstrap stage on a worker through a
+// Kubernetes Job pinned to it: privileged, in the host's PID namespace so that
+// systemctl can restart olaresd, and chrooted into the host. No SSH credential
+// or owner signature reaches the worker.
 func BootstrapLegacyUpgradeWorker(ctx context.Context, node inventory.Node, operationID, version string, locations UpgradeLocations) error {
 	client, err := utils.GetKubeClient()
 	if err != nil {
@@ -49,57 +116,144 @@ func BootstrapLegacyUpgradeWorker(ctx context.Context, node inventory.Node, oper
 	return bootstrapLegacyUpgradeWorker(ctx, client, node, operationID, version, locations)
 }
 
+// bootstrapLegacyUpgradeWorker goes through the images in order. A Job whose
+// pod cannot get its image is deleted and the next image tried; any other
+// outcome is the answer. The Job names come from the operation and the node,
+// so a run resumed after olaresd restarted finds the Job it started rather
+// than starting a second one.
 func bootstrapLegacyUpgradeWorker(ctx context.Context, client kubernetes.Interface, node inventory.Node,
 	operationID, version string, locations UpgradeLocations) error {
 	if node.NodeName == "" || operationID == "" || version == "" {
 		return fmt.Errorf("legacy worker bootstrap needs a node, operation and version")
 	}
+	if locations.CDN == "" {
+		locations.CDN = commands.OLARES_CDN_SERVICE
+	}
 	sum := sha256.Sum256([]byte(operationID + "\x00" + node.NodeName))
-	name := "olares-upgrade-bootstrap-" + hex.EncodeToString(sum[:16])
+	base := "olares-upgrade-bootstrap-" + hex.EncodeToString(sum[:12])
+
+	var pullErrs []error
+	for i, image := range legacyBootstrapImages {
+		name := base + "-" + strconv.Itoa(i)
+		err := runLegacyBootstrapJob(ctx, client, legacyBootstrapJob(name, node.NodeName, image, version, locations))
+		var pull *imagePullError
+		if !errors.As(err, &pull) {
+			return err
+		}
+		klog.Warningf("clusterop: node %s cannot run the bootstrap Job in %s: %s; trying the next image",
+			node.NodeName, image, pull.reason)
+		pullErrs = append(pullErrs, err)
+	}
+	return fmt.Errorf("node %s has none of the bootstrap images: %w", node.NodeName, errors.Join(pullErrs...))
+}
+
+type imagePullError struct {
+	image, reason string
+}
+
+func (e *imagePullError) Error() string { return e.image + ": " + e.reason }
+
+func runLegacyBootstrapJob(ctx context.Context, client kubernetes.Interface, want *batchv1.Job) (runErr error) {
 	jobs := client.BatchV1().Jobs(upgradeSecretNamespace)
-	job, err := jobs.Get(ctx, name, metav1.GetOptions{})
+	if deadline, ok := ctx.Deadline(); ok {
+		seconds := max(int64(1), int64(time.Until(deadline).Seconds()))
+		want.Spec.ActiveDeadlineSeconds = &seconds
+	}
+	job, err := jobs.Get(ctx, want.Name, metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
-		job, err = jobs.Create(ctx, legacyBootstrapJob(name, node.NodeName, version, locations), metav1.CreateOptions{})
+		job, err = jobs.Create(ctx, want, metav1.CreateOptions{})
 		if apierrors.IsAlreadyExists(err) {
-			job, err = jobs.Get(ctx, name, metav1.GetOptions{})
+			job, err = jobs.Get(ctx, want.Name, metav1.GetOptions{})
 		}
 	}
 	if err != nil {
-		return fmt.Errorf("create legacy bootstrap job on %s: %w", node.NodeName, err)
+		return fmt.Errorf("create legacy bootstrap job %s: %w", want.Name, err)
 	}
-	if job.Spec.Template.Spec.NodeName != node.NodeName || !bootstrapJobVersionIs(job, version) {
-		return fmt.Errorf("legacy bootstrap job %s does not match node and version", name)
+	if !sameBootstrapJob(job, want) {
+		return fmt.Errorf("legacy bootstrap job %s exists for another node, image or version", want.Name)
 	}
-
-	deadline := time.NewTimer(2 * time.Hour)
-	defer deadline.Stop()
-	ticker := time.NewTicker(5 * time.Second)
-	defer ticker.Stop()
-	for {
-		if job.Status.Succeeded > 0 {
-			return nil
+	// A timeout can interrupt a Kubernetes API call as well as the poll sleep.
+	// Only delete the Job we observed; a daemon restart can reuse a live one.
+	uid := job.UID
+	defer func() {
+		if !errors.Is(ctx.Err(), context.DeadlineExceeded) {
+			return
 		}
-		if job.Status.Failed > 0 {
-			return fmt.Errorf("legacy bootstrap job %s failed on %s", name, node.NodeName)
+		cleanup, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		propagation := metav1.DeletePropagationForeground
+		err := jobs.Delete(cleanup, want.Name, metav1.DeleteOptions{
+			PropagationPolicy: &propagation, Preconditions: &metav1.Preconditions{UID: &uid},
+		})
+		if err != nil && !apierrors.IsNotFound(err) {
+			runErr = errors.Join(runErr, fmt.Errorf("stop expired bootstrap job %s: %w", want.Name, err))
+		}
+	}()
+
+	for {
+		switch {
+		case job.Status.Succeeded > 0:
+			return nil
+		case job.Status.Failed > 0:
+			return &LegacyBootstrapError{Job: job.Name, Log: legacyBootstrapLog(ctx, client, job.Name)}
+		}
+		if reason := imagePullFailure(ctx, client, job.Name); reason != "" {
+			propagation := metav1.DeletePropagationBackground
+			if err := jobs.Delete(ctx, job.Name, metav1.DeleteOptions{PropagationPolicy: &propagation}); err != nil && !apierrors.IsNotFound(err) {
+				return fmt.Errorf("delete legacy bootstrap job %s: %w", job.Name, err)
+			}
+			return &imagePullError{image: want.Spec.Template.Spec.Containers[0].Image, reason: reason}
 		}
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
-		case <-deadline.C:
-			return fmt.Errorf("legacy bootstrap job %s timed out on %s", name, node.NodeName)
-		case <-ticker.C:
+			return fmt.Errorf("legacy bootstrap job %s did not finish: %w", job.Name, ctx.Err())
+		case <-time.After(legacyBootstrapPoll):
 		}
-		job, err = jobs.Get(ctx, name, metav1.GetOptions{})
-		if err != nil {
-			return fmt.Errorf("read legacy bootstrap job %s: %w", name, err)
+		if job, err = jobs.Get(ctx, want.Name, metav1.GetOptions{}); err != nil {
+			return fmt.Errorf("read legacy bootstrap job %s: %w", want.Name, err)
 		}
 	}
 }
 
-func legacyBootstrapJob(name, nodeName, version string, locations UpgradeLocations) *batchv1.Job {
+func jobPods(ctx context.Context, client kubernetes.Interface, job string) []corev1.Pod {
+	pods, err := client.CoreV1().Pods(upgradeSecretNamespace).List(ctx, metav1.ListOptions{LabelSelector: "job-name=" + job})
+	if err != nil {
+		klog.V(4).Infof("clusterop: list pods of %s: %v", job, err)
+		return nil
+	}
+	return pods.Items
+}
+
+func imagePullFailure(ctx context.Context, client kubernetes.Interface, job string) string {
+	for _, pod := range jobPods(ctx, client, job) {
+		for _, c := range pod.Status.ContainerStatuses {
+			if w := c.State.Waiting; w != nil {
+				switch w.Reason {
+				case "ErrImagePull", "ImagePullBackOff", "ErrImageNeverPull", "InvalidImageName":
+					return w.Reason
+				}
+			}
+		}
+	}
+	return ""
+}
+
+func legacyBootstrapLog(ctx context.Context, client kubernetes.Interface, job string) string {
+	tail := int64(legacyBootstrapLogLines)
+	for _, pod := range jobPods(ctx, client, job) {
+		out, err := client.CoreV1().Pods(upgradeSecretNamespace).
+			GetLogs(pod.Name, &corev1.PodLogOptions{TailLines: &tail}).DoRaw(ctx)
+		if err == nil && len(out) > 0 {
+			return string(out)
+		}
+	}
+	return ""
+}
+
+func legacyBootstrapJob(name, nodeName, image, version string, locations UpgradeLocations) *batchv1.Job {
 	backoff := int32(0)
 	ttl := int32(3600)
-	active := int64(7200)
+	active := int64(3600)
 	privileged := true
 	automountToken := false
 	hostPathType := corev1.HostPathDirectory
@@ -110,19 +264,21 @@ func legacyBootstrapJob(name, nodeName, version string, locations UpgradeLocatio
 			BackoffLimit: &backoff, TTLSecondsAfterFinished: &ttl, ActiveDeadlineSeconds: &active,
 			Template: corev1.PodTemplateSpec{Spec: corev1.PodSpec{
 				// systemctl authenticates the host systemd peer by PID. Without
-				// host PID visibility, prepare cannot restart olaresd from chroot.
+				// host PID visibility, bootstrap-node cannot restart olaresd.
 				NodeName: nodeName, HostNetwork: true, HostPID: true, RestartPolicy: corev1.RestartPolicyNever,
 				AutomountServiceAccountToken: &automountToken,
+				Tolerations:                  []corev1.Toleration{{Operator: corev1.TolerationOpExists}},
 				Volumes: []corev1.Volume{{Name: "host", VolumeSource: corev1.VolumeSource{
 					HostPath: &corev1.HostPathVolumeSource{Path: "/", Type: &hostPathType},
 				}}},
 				Containers: []corev1.Container{{
-					Name: "bootstrap", Image: "docker.io/library/alpine@sha256:d9e853e87e55526f6b2917df91a2115c36dd7c696a35be12163d44e6e2a4b6bc", ImagePullPolicy: corev1.PullIfNotPresent,
+					Name: "bootstrap", Image: image, ImagePullPolicy: corev1.PullIfNotPresent,
 					Command: []string{"/bin/sh", "-ec", `chroot /host /bin/sh -ec "$BOOTSTRAP_SCRIPT"`},
 					Env: []corev1.EnvVar{
 						{Name: "BOOTSTRAP_SCRIPT", Value: legacyBootstrapScript},
 						{Name: "UPGRADE_VERSION", Value: version},
-						{Name: "UPGRADE_CDN", Value: commands.OLARES_CDN_SERVICE},
+						{Name: "UPGRADE_CDN", Value: locations.CDN},
+						{Name: "CLI_URL", Value: locations.CliURL},
 						{Name: "WIZARD_URL", Value: locations.WizardURL},
 					},
 					SecurityContext: &corev1.SecurityContext{Privileged: &privileged},
@@ -133,14 +289,19 @@ func legacyBootstrapJob(name, nodeName, version string, locations UpgradeLocatio
 	}
 }
 
-func bootstrapJobVersionIs(job *batchv1.Job, version string) bool {
-	if len(job.Spec.Template.Spec.Containers) != 1 {
+func sameBootstrapJob(job, want *batchv1.Job) bool {
+	got, exp := job.Spec.Template.Spec, want.Spec.Template.Spec
+	if got.NodeName != exp.NodeName || len(got.Containers) != 1 || got.Containers[0].Image != exp.Containers[0].Image {
 		return false
 	}
+	return jobEnv(job, "UPGRADE_VERSION") == jobEnv(want, "UPGRADE_VERSION")
+}
+
+func jobEnv(job *batchv1.Job, name string) string {
 	for _, env := range job.Spec.Template.Spec.Containers[0].Env {
-		if env.Name == "UPGRADE_VERSION" {
-			return env.Value == version
+		if env.Name == name {
+			return env.Value
 		}
 	}
-	return false
+	return ""
 }

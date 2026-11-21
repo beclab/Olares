@@ -809,7 +809,12 @@ func (m *Manager) bootstrapNode(ctx context.Context, id string, stage UpgradeSta
 	}
 
 	if legacy {
-		if !m.bootstrapLegacy(ctx, id, stage, node, req, limit) {
+		remaining := deadline.Sub(m.deps.Now())
+		if remaining <= 0 {
+			m.settleStageNode(id, stage.Name, node.NodeName, NodeFailed, CodeStageTimeout, reasonFor(CodeStageTimeout))
+			return false
+		}
+		if !m.bootstrapLegacy(ctx, id, stage, node, req, remaining) {
 			return false
 		}
 	} else if _, ok := m.runStageThere(ctx, id, stage, node, req, token); !ok {
