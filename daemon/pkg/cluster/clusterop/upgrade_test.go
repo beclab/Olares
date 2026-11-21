@@ -2088,3 +2088,108 @@ func TestAStopBeforeNotifyStartStopsBeforeIt(t *testing.T) {
 		}
 	}
 }
+
+// Bootstrap replaces olaresd on the node running it, so the daemon that
+// accepted the stage is not the one that finishes it. The new one reports the
+// restart, and the stage is asked again rather than failed.
+func TestBootstrapThatRestartsOlaresdIsAskedAgain(t *testing.T) {
+	h := newUpgradeHarness(t, samplePlan(), twoNodeCluster())
+	h.restartOnce[stageKey("worker-1", StageBootstrap)] = true
+
+	op := runUpgradeOperation(t, h)
+	if op.Status != StatusSucceeded {
+		t.Fatalf("status = %s (%s: %s)", op.Status, op.Code, op.Error)
+	}
+	var asked int
+	for _, key := range h.order() {
+		if key == stageKey("worker-1", StageBootstrap) {
+			asked++
+		}
+	}
+	if asked != 2 {
+		t.Errorf("bootstrap was dispatched to worker-1 %d times, want 2", asked)
+	}
+}
+
+// On a single node there is no readiness call to ask; the control node reads
+// its own binaries. Bootstrap that left either one behind is a failure, not a
+// stage to move past.
+func TestSingleNodeBootstrapChecksItsOwnBinaries(t *testing.T) {
+	single := []inventory.Node{
+		{NodeName: "master-1", Role: inventory.RoleMaster, IP: "10.0.0.11", Ready: true, IsSelf: true},
+	}
+	for _, tc := range []struct {
+		name, daemon, cli string
+		want              Status
+	}{
+		{"both on the target", "1.12.8", "1.12.8", StatusSucceeded},
+		{"olaresd left behind", "1.12.7", "1.12.8", StatusFailed},
+		{"olares-cli left behind", "1.12.8", "1.12.7", StatusFailed},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			h := newUpgradeHarness(t, samplePlan(), single)
+			h.deps.Timeouts.Stage = 50 * time.Millisecond
+			h.deps.Upgrade.LocalVersions = func(context.Context) (string, string, error) {
+				return tc.daemon, tc.cli, nil
+			}
+			op := runUpgradeOperation(t, h)
+			if op.Status != tc.want {
+				t.Fatalf("status = %s (%s: %s), want %s", op.Status, op.Code, op.Error, tc.want)
+			}
+			if tc.want == StatusFailed {
+				if got := bootstrapNodeResult(t, op, "master-1"); got.Code != CodeVersionMismatch {
+					t.Errorf("master-1 bootstrap = %s/%s, want failed/%s", got.Status, got.Code, CodeVersionMismatch)
+				}
+				for _, key := range h.order() {
+					if !strings.HasSuffix(key, "/"+StageBootstrap) {
+						t.Errorf("dispatched %q after bootstrap failed", key)
+					}
+				}
+			}
+		})
+	}
+}
+
+// A retry of an upgrade that failed after notify-start resumes a system that
+// has already changed. It is committed from the start, so nobody can cancel
+// it before it reaches the point the first attempt was past.
+func TestARetryAfterNotifyStartIsCommittedFromTheStart(t *testing.T) {
+	plan := samplePlan()
+	plan.Stages = append(plan.Stages[:1], append([]UpgradeStage{{Name: StageNotifyStart, Placement: PlacementAdmin,
+		Tasks: []string{"NotifyUpgradeStart"}}}, plan.Stages[1:]...)...)
+	h := newUpgradeHarness(t, plan, twoNodeCluster())
+	h.failAt[stageKey("master-1", "03-master")] = true
+	h.deps.Store = newTestStore(t)
+	m, err := NewManager(h.deps)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req := CreateRequest{
+		Type: TypeUpgrade, RequestID: "req-1", Scope: ScopeCluster,
+		ClusterID: "cluster-1", Owner: "alice@olares.com",
+	}
+	first, err := m.Create(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := waitForTerminal(t, m, first.ID); got.Status == StatusSucceeded || !got.Committed {
+		t.Fatalf("first attempt = %s committed = %t, want failed after notify-start", got.Status, got.Committed)
+	}
+
+	h.mu.Lock()
+	delete(h.failAt, stageKey("master-1", "03-master"))
+	h.mu.Unlock()
+	retry, err := m.Create(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if retry.ID == first.ID {
+		t.Fatal("the failed attempt was returned instead of retried")
+	}
+	if !retry.Committed {
+		t.Error("the retry was cancellable before it had run a stage")
+	}
+	if got := waitForTerminal(t, m, retry.ID); got.Status != StatusSucceeded {
+		t.Fatalf("retry = %s (%s: %s)", got.Status, got.Code, got.Error)
+	}
+}
