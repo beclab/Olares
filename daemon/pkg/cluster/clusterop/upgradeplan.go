@@ -85,7 +85,45 @@ type UpgradeReadiness struct {
 	//
 	// Empty means the node would not say, and is refused like a wrong answer.
 	CLIVersion string `json:"cliVersion,omitempty"`
+
+	// DaemonVersion is the olaresd that is answering. The bootstrap stage is
+	// only done when both this and CLIVersion are the target: a node whose
+	// olares-cli was replaced and whose olaresd was not would otherwise run
+	// every later stage on the old daemon.
+	DaemonVersion string `json:"daemonVersion,omitempty"`
+
+	// Bootstrap says this olaresd runs the bootstrap stage itself. A node that
+	// does not say so is bootstrapped by the legacy Job patch instead.
+	Bootstrap bool `json:"bootstrap,omitempty"`
 }
+
+// Runner is the program on a node that carries a stage out. The values match
+// cli/pkg/upgrade.Runner.
+type Runner string
+
+const (
+	RunnerOlaresd   Runner = "olaresd"
+	RunnerOlaresCLI Runner = "olares-cli"
+)
+
+// The stages olaresd implements itself, all of them before notify-start. Their
+// names match cli/pkg/upgrade, which is where the flow is written down.
+//
+// StageBootstrap is different from the rest in one way: the source version's
+// olaresd runs it, so what it is asked (see UpgradeStageRequest) and what it
+// calls (`olares-cli upgrade bootstrap-node`) cannot change once released.
+const (
+	StageBootstrap       = "bootstrap"
+	StageDownload        = "download"
+	StagePrecheckNode    = "precheck-node"
+	StagePrecheckCluster = "precheck-cluster"
+	StageImportImages    = "import-images"
+
+	// StageNotifyStart is the point of no return. Before it nothing the system
+	// runs has been touched and an upgrade may be cancelled; after it an
+	// upgrade can only be finished.
+	StageNotifyStart = "notify-start"
+)
 
 // UpgradeStage is one point in the upgrade flow: what it is called, where its
 // tasks run, how many nodes at a time, and how long one node may take.
@@ -97,6 +135,11 @@ type UpgradeReadiness struct {
 type UpgradeStage struct {
 	Name      string    `json:"name"`
 	Placement Placement `json:"placement"`
+
+	// Runner says whether the node's olaresd or its olares-cli carries the
+	// stage out. Empty is olares-cli, which is what every stage was before
+	// olaresd had any of its own.
+	Runner Runner `json:"runner,omitempty"`
 
 	// MaxParallel is how many nodes may be inside this stage at once, zero for
 	// no limit. See cli/pkg/upgrade.Stage.MaxParallel.

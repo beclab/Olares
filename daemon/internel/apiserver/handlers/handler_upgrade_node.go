@@ -155,6 +155,12 @@ func (h *Handlers) GetUpgradeReadiness(ctx *fiber.Ctx) error {
 		if c, ok := caps[nodestatus.CapUpgradeStages]; ok && c.Supported {
 			ready.Supported = true
 			ready.CLIVersion, _ = c.Config[nodestatus.CapConfigCLIVersion].(string)
+			// This olaresd carries the bootstrap stage, and names itself so the
+			// orchestrator can tell when that stage has replaced it.
+			ready.Bootstrap = true
+			if snap.OlaresdVersion != nil {
+				ready.DaemonVersion = *snap.OlaresdVersion
+			}
 		}
 	}
 	return h.OkJSON(ctx, "success", ready)
