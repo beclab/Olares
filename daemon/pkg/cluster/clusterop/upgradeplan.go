@@ -226,14 +226,32 @@ func (p UpgradePlan) Validate() error {
 		if h.TimeoutSeconds < 0 {
 			return fmt.Errorf("stage %s has a negative timeout", h.Name)
 		}
+		switch h.Runner {
+		case "", RunnerOlaresCLI:
+		case RunnerOlaresd:
+			// A node dispatches by stage name, so an olaresd stage this daemon
+			// does not know would be handed to olares-cli, which refuses it.
+			if !olaresdStages[h.Name] {
+				return fmt.Errorf("stage %s is not one olaresd runs", h.Name)
+			}
+		default:
+			return fmt.Errorf("stage %s has unknown runner %q", h.Name, h.Runner)
+		}
+	}
+	if !seen[StageBootstrap] {
+		return fmt.Errorf("upgrade plan for %s has no %s stage", p.Version, StageBootstrap)
 	}
 	return nil
 }
 
+var olaresdStages = map[string]bool{
+	StageBootstrap: true, StageDownload: true, StagePrecheckNode: true,
+	StagePrecheckCluster: true, StageImportImages: true,
+}
+
 // HasStage reports whether name is a stage of this plan. It is how the
 // orchestrator tells the flow's own stages from the steps around them — the
-// precheck, the plan read, the readiness check, the node prepare — none of
-// which change the cluster.
+// precheck and the plan read — neither of which changes the cluster.
 func (p UpgradePlan) HasStage(name string) bool {
 	for _, h := range p.Stages {
 		if h.Name == name {
@@ -243,47 +261,13 @@ func (p UpgradePlan) HasStage(name string) bool {
 	return false
 }
 
-// StageNodePrepare brings a node's own binaries up to the target version: the
-// packages, the new olares-cli, and the new olaresd.
-//
-// It is deliberately not a stage of the plan. A plan stage is resolved by the
-// node's olares-cli against the plan that binary derives, and the whole point
-// of this one is that the node does not have that binary yet — it would
-// resolve the stage against the previous version's plan. So the one piece of
-// work that cannot be expressed as a plan stage is the one that installs the
-// thing which understands plans.
-//
-// In the written flow this is step b, "olaresd 和 olares-cli 进行套娃替换（多节点）",
-// and it stays the orchestrator's own: olaresd performs it, not olares-cli.
-const StageNodePrepare = "node-prepare"
-
-// NodePrepareStage is the synthetic stage that runs it.
-//
-// Its fanout is the compute nodes only. The control node already has the
-// target version — the upgrade watcher installed the new olares-cli and the
-// new olaresd there before this orchestrator existed to run, which is
-// precisely why there is an orchestrator on this machine and not the old one.
-func NodePrepareStage() UpgradeStage {
-	return UpgradeStage{
-		Name:      StageNodePrepare,
-		Placement: PlacementWorkers,
-		// Unbounded: fetching a release is the one part of an upgrade that
-		// costs the cluster nothing, and on a large cluster doing it one node
-		// at a time is most of the wall clock for no benefit.
-		MaxParallel: 0,
-		// Generous, because this is the download: a release is gigabytes and
-		// the node may be fetching it over the slowest link in the cluster.
-		TimeoutSeconds: 90 * 60,
-		Desc:           "fetch and install the target release on each compute node",
-		Tasks:          []string{"DownloadTargetVersion", "InstallOlaresCLI", "InstallOlaresd", "ImportImages"},
-	}
-}
-
 // UpgradeDeps are the side effects an upgrade has, and nothing else does.
 //
 // They are grouped so that "can this daemon orchestrate an upgrade" is one
 // question with one answer. See Deps.Upgrade.
 type UpgradeDeps struct {
+	// CheckSource asks the target CLI whether it can upgrade the installed release.
+	CheckSource func(context.Context) error
 	// Plan reads what an upgrade to the version this node is holding consists
 	// of. The daemon asks olares-cli rather than deciding: the plan is a
 	// property of the binary that implements the tasks.
@@ -319,15 +303,20 @@ type UpgradeDeps struct {
 	// the same token-guarded surface as the other two. See UpgradeReadiness.
 	Readiness func(ctx context.Context, node inventory.Node, operationID, token string) (UpgradeReadiness, error)
 
-	// BootstrapLegacy updates an older worker daemon which does not yet serve
-	// the stage protocol. It is only called after an HTTP 404 readiness reply.
-	// Nil keeps the conservative refusal used by test harnesses and installs
-	// without a Kubernetes bootstrap transport.
+	// BootstrapLegacy runs the bootstrap stage on a worker whose olaresd
+	// cannot: one that answers readiness without the bootstrap capability, or
+	// serves no readiness route at all. Nil leaves such a worker failing the
+	// stage.
 	BootstrapLegacy func(ctx context.Context, node inventory.Node, operationID, version string, locations UpgradeLocations) error
+
+	// LocalVersions reports the running olaresd's version and the installed
+	// olares-cli's on this machine, which has no readiness route to ask. Nil
+	// trusts this machine's bootstrap record.
+	LocalVersions func(ctx context.Context) (daemon, cli string, err error)
 
 	// Locations reports where the operator asked for this release to be
 	// fetched from. It reads the upgrade target, which only the control node
-	// has, so that the nodes being prepared can be told.
+	// has, so that the nodes fetching the release can be told.
 	//
 	// Unlike the seams above it may be nil, and complete() does not ask for
 	// it. Those are the ones an upgrade cannot proceed without; this one has
@@ -336,17 +325,20 @@ type UpgradeDeps struct {
 	Locations func() UpgradeLocations
 }
 
-// UpgradeLocations is where a release is fetched from when the operator named
-// somewhere other than the CDN. Empty fields mean the CDN.
+// UpgradeLocations is where a release is fetched from. Empty URLs mean the
+// CDN, and an empty CDN means each node's own.
 type UpgradeLocations struct {
 	CliURL    string
 	WizardURL string
+	// CDN is the control node's, so a cluster set up against a regional CDN
+	// does not have its workers fetch from another.
+	CDN string
 }
 
 // complete reports whether every seam an upgrade needs is present. A partly
 // wired set is refused the same way a missing one is: the difference is not
 // something a run part way through a cluster should discover.
 func (d *UpgradeDeps) complete() bool {
-	return d != nil && d.Plan != nil && d.Local != nil && d.Auth != nil &&
+	return d != nil && d.CheckSource != nil && d.Plan != nil && d.Local != nil && d.Auth != nil &&
 		d.Start != nil && d.Status != nil && d.Readiness != nil
 }

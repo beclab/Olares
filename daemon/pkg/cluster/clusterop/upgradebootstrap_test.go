@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/beclab/Olares/daemon/pkg/cluster/inventory"
@@ -81,30 +82,46 @@ func TestLegacyWorkerBootstrapJobIsNodeBoundAndResumable(t *testing.T) {
 	}
 }
 
-func TestLegacyWorkerBootstrapOnlyOnMissingReadinessRoute(t *testing.T) {
+// The legacy Job is for a worker whose olaresd cannot run the bootstrap stage:
+// 1.12.8 answers readiness without the capability, and anything older serves
+// no readiness route. A worker that refuses the token is not reachable at all,
+// and is not bootstrapped behind its back.
+func TestLegacyWorkerBootstrapOnlyForAnOlaresdThatCannotBootstrap(t *testing.T) {
 	for _, tc := range []struct {
 		name          string
-		status        int
+		before        func() (UpgradeReadiness, error)
 		wantBootstrap bool
 	}{
-		{"legacy 404", http.StatusNotFound, true},
-		{"auth refusal", http.StatusForbidden, false},
+		{"no readiness route", func() (UpgradeReadiness, error) {
+			return UpgradeReadiness{}, &UpgradeHTTPStatusError{StatusCode: http.StatusNotFound, Status: "404 Not Found"}
+		}, true},
+		{"no bootstrap capability", func() (UpgradeReadiness, error) {
+			return UpgradeReadiness{Supported: true, CLIVersion: "1.12.7"}, nil
+		}, true},
+		{"auth refusal", func() (UpgradeReadiness, error) {
+			return UpgradeReadiness{}, &UpgradeHTTPStatusError{StatusCode: http.StatusForbidden, Status: "403 Forbidden"}
+		}, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			h := newUpgradeHarness(t, samplePlan(), twoNodeCluster())
 			h.deps.Store = newTestStore(t)
+			var mu sync.Mutex
 			bootstrapped := false
-			h.deps.Upgrade.Readiness = func(_ context.Context, _ inventory.Node, _, _ string) (UpgradeReadiness, error) {
-				if bootstrapped {
+			h.deps.Upgrade.Readiness = func(_ context.Context, n inventory.Node, _, _ string) (UpgradeReadiness, error) {
+				mu.Lock()
+				defer mu.Unlock()
+				if n.NodeName != "worker-1" || bootstrapped {
 					return readyOn("1.12.8"), nil
 				}
-				return UpgradeReadiness{}, &UpgradeHTTPStatusError{StatusCode: tc.status, Status: http.StatusText(tc.status)}
+				return tc.before()
 			}
 			h.deps.Upgrade.BootstrapLegacy = func(_ context.Context, node inventory.Node, _, version string, _ UpgradeLocations) error {
 				if node.NodeName != "worker-1" || version != "1.12.8" {
-					t.Fatalf("wrong bootstrap target: %s %s", node.NodeName, version)
+					t.Errorf("wrong bootstrap target: %s %s", node.NodeName, version)
 				}
+				mu.Lock()
 				bootstrapped = true
+				mu.Unlock()
 				return nil
 			}
 			m, err := NewManager(h.deps)
@@ -123,8 +140,16 @@ func TestLegacyWorkerBootstrapOnlyOnMissingReadinessRoute(t *testing.T) {
 			if bootstrapped != tc.wantBootstrap {
 				t.Fatalf("bootstrap = %t, want %t", bootstrapped, tc.wantBootstrap)
 			}
-			if tc.wantBootstrap && got.Status != StatusSucceeded {
+			if !tc.wantBootstrap {
+				return
+			}
+			if got.Status != StatusSucceeded {
 				t.Fatalf("upgrade = %s/%s", got.Status, got.Code)
+			}
+			for _, key := range h.order() {
+				if key == "worker-1/"+StageBootstrap {
+					t.Error("the bootstrap stage was also dispatched to the olaresd that cannot run it")
+				}
 			}
 		})
 	}

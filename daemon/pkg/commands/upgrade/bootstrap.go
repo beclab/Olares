@@ -118,6 +118,20 @@ func Bootstrap(ctx context.Context, req BootstrapRequest) error {
 	return nil
 }
 
+// LocalVersions reports this machine's running olaresd and installed
+// olares-cli, for the orchestrator to confirm its own bootstrap.
+func LocalVersions(context.Context) (daemon, cli string, err error) {
+	d, err := runningDaemonVersion()
+	if err != nil {
+		return "", "", err
+	}
+	c, err := installedCLI()
+	if err != nil {
+		return d.Original(), "", err
+	}
+	return d.Original(), c.Original(), nil
+}
+
 func bootstrapped(target *semver.Version) bool {
 	daemon, err := runningDaemonVersion()
 	if err != nil || !daemon.Equal(target) {

@@ -32,6 +32,10 @@ fi
 OLARES_LOCAL_RELEASE_VERSION_OVERRIDE="$UPGRADE_VERSION" /usr/local/bin/olares-cli prepare olaresd --version "$UPGRADE_VERSION" --base-dir "$BASE_DIR"
 `
 
+func legacyBootstrapReason(node inventory.Node, err error) string {
+	return suppress(CodeStageFailed, "bootstrap node "+node.NodeName+" through the legacy Job", err)
+}
+
 // BootstrapLegacyUpgradeWorker upgrades only olaresd on a worker whose old
 // daemon cannot serve the staged-upgrade protocol. The old CLI runs on its
 // host through a temporary Kubernetes Job; once the new daemon answers, the

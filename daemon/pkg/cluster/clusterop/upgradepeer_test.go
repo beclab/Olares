@@ -161,7 +161,7 @@ func TestUpgradeStageDispatchRefusesAnUndecodableAnswer(t *testing.T) {
 func TestUpgradePlanValidation(t *testing.T) {
 	valid := UpgradePlan{
 		Version: "1.12.8",
-		Stages:  []UpgradeStage{{Name: "01-master", Placement: PlacementAdmin}},
+		Stages:  []UpgradeStage{bootstrapStage(), {Name: "01-master", Placement: PlacementAdmin}},
 	}
 	if err := valid.Validate(); err != nil {
 		t.Fatalf("a usable plan was refused: %v", err)
@@ -173,13 +173,22 @@ func TestUpgradePlanValidation(t *testing.T) {
 		"unnamed stage": {Version: "1.12.8",
 			Stages: []UpgradeStage{{Placement: PlacementAdmin}}},
 		"repeated stage": {Version: "1.12.8", Stages: []UpgradeStage{
+			bootstrapStage(),
 			{Name: "01-master", Placement: PlacementAdmin},
 			{Name: "01-master", Placement: PlacementWorkers},
 		}},
 		// A scope this daemon does not know how to schedule is refused while
 		// the cluster is whole, not discovered part way through.
 		"unknown fanout": {Version: "1.12.8",
-			Stages: []UpgradeStage{{Name: "01-gpu-nodes", Placement: "gpu-nodes"}}},
+			Stages: []UpgradeStage{bootstrapStage(), {Name: "01-gpu-nodes", Placement: "gpu-nodes"}}},
+		// Nothing would put the target binaries on the nodes.
+		"no bootstrap": {Version: "1.12.8",
+			Stages: []UpgradeStage{{Name: "01-master", Placement: PlacementAdmin}}},
+		"unknown runner": {Version: "1.12.8",
+			Stages: []UpgradeStage{bootstrapStage(), {Name: "01-master", Placement: PlacementAdmin, Runner: "systemd"}}},
+		// A node would hand it to olares-cli, which refuses olaresd's stages.
+		"olaresd stage this daemon lacks": {Version: "1.12.8",
+			Stages: []UpgradeStage{bootstrapStage(), {Name: "verify-disks", Placement: PlacementAllNodes, Runner: RunnerOlaresd}}},
 	}
 	for name, plan := range cases {
 		if err := plan.Validate(); err == nil {
