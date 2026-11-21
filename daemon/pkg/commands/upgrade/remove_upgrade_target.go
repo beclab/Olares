@@ -46,8 +46,7 @@ func (i *removeUpgradeTarget) Execute(ctx context.Context, p any) (res any, err 
 		}
 	}
 	// Read before deleting: the target names the version, and the version is
-	// what identifies the orchestrated upgrade to stop. On a single node
-	// there is nothing to stop and this does nothing.
+	// what identifies the orchestrated upgrade to stop.
 	if target, terr := state.GetOlaresUpgradeTarget(); terr == nil && target != nil {
 		StopClusterUpgrade(*target)
 	}
