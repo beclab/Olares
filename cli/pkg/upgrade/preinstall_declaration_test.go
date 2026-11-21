@@ -19,7 +19,7 @@ func TestEveryUpgradePublishesThePreinstallDeclaration(t *testing.T) {
 		tasks []task.Interface
 	}{
 		{name: "base", tasks: upgraderBase{}.PrepareForUpgrade()},
-		{name: "mainline", tasks: getUpgraderByVersion(upgrader_1_12_7{}.Version()).PrepareForUpgrade()},
+		{name: "mainline", tasks: getUpgraderByVersion(upgrader_1_12_8{}.Version()).PrepareForUpgrade()},
 		{name: "daily", tasks: getUpgraderByVersion(semver.MustParse("1.12.7-20260731")).PrepareForUpgrade()},
 		{name: "successor", tasks: getUpgraderByVersion(semver.MustParse("1.12.8")).PrepareForUpgrade()},
 	} {
@@ -72,13 +72,13 @@ func TestTheUpgradePublishBringsNoMediumAndSaysWhichVersionItDeclares(t *testing
 	}
 }
 
-func TestOneTwelveSevenIsBreakingBoundaryForSuccessor(t *testing.T) {
+func TestOneTwelveNineIsBreakingBoundaryForSuccessor(t *testing.T) {
 	original := olversion.VERSION
-	olversion.VERSION = "1.12.8"
+	olversion.VERSION = "1.12.10"
 	t.Cleanup(func() { olversion.VERSION = original })
 
-	got := getLastBreakingVersion(mainUpgraders, semver.MustParse("1.12.8"))
-	if got == nil || !got.Equal(version_1_12_7) {
-		t.Fatalf("last breaking version before 1.12.8 = %v, want %s", got, version_1_12_7)
+	got := getLastBreakingVersion(mainUpgraders, semver.MustParse("1.12.10"))
+	if got == nil || !got.Equal(version_1_12_9) {
+		t.Fatalf("last breaking version before 1.12.10 = %v, want %s", got, version_1_12_9)
 	}
 }

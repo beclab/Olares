@@ -63,7 +63,7 @@ func TestPlacementIsAPropertyOfTheStage(t *testing.T) {
 // cluster belongs to a control-node stage. This is the placement the weekly
 // was about, so it is asserted rather than left to reading.
 func TestPerMachineWorkIsPlacedOnNodeStages(t *testing.T) {
-	plan, err := BuildPlan(semver.MustParse("1.12.7"))
+	plan, err := BuildPlan(semver.MustParse("1.12.8"))
 	require.NoError(t, err)
 
 	stageOf := map[string]string{}
