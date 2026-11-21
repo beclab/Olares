@@ -55,3 +55,17 @@ func phaseStage(phases ...func() commands.Interface) olaresdStage {
 }
 
 var stagePhase = runPhaseToCompletion
+
+// runPhaseToCompletion executes one phase and waits for it, whether it reports
+// completion straight away or through a progress channel.
+func runPhaseToCompletion(ctx context.Context, cmd commands.Interface, target state.UpgradeTarget) error {
+	res, err := cmd.Execute(ctx, target)
+	if err != nil {
+		return err
+	}
+	execution, ok := res.(ExecutionRes)
+	if !ok {
+		return fmt.Errorf("unexpected result type")
+	}
+	return AwaitExecution(ctx, execution, nil)
+}

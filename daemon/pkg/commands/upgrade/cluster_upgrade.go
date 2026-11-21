@@ -191,6 +191,19 @@ func StopActiveClusterUpgrade() {
 	}
 }
 
+// ClusterUpgradeCommitted reports whether the upgrade to this version is past
+// notify-start and has not succeeded yet, which is when it may no longer be
+// cancelled: it has already changed the system, and only finishing it leaves
+// one version running.
+func ClusterUpgradeCommitted(target state.UpgradeTarget) bool {
+	m := clusterop.Current()
+	if m == nil || strings.TrimSpace(target.Version.Original()) == "" {
+		return false
+	}
+	op, ok := m.GetByRequest(upgradeRequestID(target))
+	return ok && op.Committed && op.Status != clusterop.StatusSucceeded
+}
+
 // ClusterOutcome is what became of the orchestrated upgrade to some
 // version: enough for the watcher to tell an upgrade that is over from one that
 // merely flipped the version CR on its way through, without the watcher having

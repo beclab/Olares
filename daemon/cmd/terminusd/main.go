@@ -107,6 +107,7 @@ func main() {
 	} else {
 		handlers.InstallUpgradeStageRunner(stageRunner)
 		deps.Upgrade = clusterop.NewUpgradeDeps(stageRunner)
+		deps.Upgrade.LocalVersions = upgradecmd.LocalVersions
 	}
 
 	if err := handlers.InitClusterOperations(commands.CLUSTER_OPERATIONS_DIR, deps); err != nil {
@@ -295,9 +296,6 @@ func main() {
 // with two sets of state: the stages before notify-start are olaresd's own,
 // and the rest are resolved by olares-cli against its plan.
 func runUpgradeStage(ctx context.Context, req clusterop.UpgradeStageRequest) error {
-	if req.Stage == clusterop.StageNodePrepare {
-		return upgradecmd.PrepareNode(ctx, req.Version, req.CliURL, req.WizardURL)
-	}
 	if handled, err := upgradecmd.RunOlaresdStage(ctx, req); handled {
 		return err
 	}

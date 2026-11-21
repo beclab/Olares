@@ -577,6 +577,9 @@ func (m *Manager) Create(_ context.Context, req CreateRequest) (Operation, error
 		Steps:          []Step{},
 		Nodes:          []NodeResult{},
 	}
+	if supersededID != "" {
+		op.Committed = m.ops[supersededID].Committed
+	}
 	m.ops[op.ID] = op
 	m.order = append(m.order, op.ID)
 	m.byRequest[req.RequestID] = op.ID

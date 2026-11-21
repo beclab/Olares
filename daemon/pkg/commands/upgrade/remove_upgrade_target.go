@@ -2,12 +2,19 @@ package upgrade
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"github.com/beclab/Olares/daemon/pkg/cluster/state"
 	"os"
 
+	"github.com/beclab/Olares/daemon/pkg/cluster/state"
 	"github.com/beclab/Olares/daemon/pkg/commands"
 )
+
+// OperatorCancel is passed by the operator's cancel. Removing the target is
+// also how the watcher tidies up after an upgrade, which is never refused.
+type OperatorCancel struct{}
+
+var ErrUpgradeCommitted = errors.New("the upgrade has started changing the system and can no longer be cancelled")
 
 type removeUpgradeTarget struct {
 	commands.Operation
@@ -24,6 +31,11 @@ func NewRemoveUpgradeTarget() commands.Interface {
 }
 
 func (i *removeUpgradeTarget) Execute(ctx context.Context, p any) (res any, err error) {
+	if _, ok := p.(OperatorCancel); ok {
+		if target, terr := state.GetOlaresUpgradeTarget(); terr == nil && target != nil && ClusterUpgradeCommitted(*target) {
+			return nil, ErrUpgradeCommitted
+		}
+	}
 	if expected, ok := p.(state.UpgradeTarget); ok {
 		selected, err := state.GetOlaresUpgradeTarget()
 		if err != nil {
