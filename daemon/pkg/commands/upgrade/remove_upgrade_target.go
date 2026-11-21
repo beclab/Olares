@@ -16,6 +16,8 @@ type OperatorCancel struct{}
 
 var ErrUpgradeCommitted = errors.New("the upgrade has started changing the system and can no longer be cancelled")
 
+var upgradeCommitted = ClusterUpgradeCommitted
+
 type removeUpgradeTarget struct {
 	commands.Operation
 }
@@ -32,7 +34,7 @@ func NewRemoveUpgradeTarget() commands.Interface {
 
 func (i *removeUpgradeTarget) Execute(ctx context.Context, p any) (res any, err error) {
 	if _, ok := p.(OperatorCancel); ok {
-		if target, terr := state.GetOlaresUpgradeTarget(); terr == nil && target != nil && ClusterUpgradeCommitted(*target) {
+		if target, terr := state.GetOlaresUpgradeTarget(); terr == nil && target != nil && upgradeCommitted(*target) {
 			return nil, ErrUpgradeCommitted
 		}
 	}
