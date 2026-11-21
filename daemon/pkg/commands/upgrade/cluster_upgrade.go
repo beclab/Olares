@@ -20,69 +20,43 @@ import (
 // moves the progress number the UI shows.
 const clusterUpgradePoll = 5 * time.Second
 
-// upgradeOrchestrator reports whether this upgrade has to be scheduled across
-// other nodes, and returns the orchestrator to do it with.
+// upgradeOrchestrator returns the orchestrator that carries out this upgrade.
 //
-// The order of the two questions is the point. Whether there are other nodes
-// is asked first and from the node directory, and only then is an orchestrator
-// looked for — because "there is no orchestrator" means two entirely different
-// things depending on the answer. On a single machine it means nothing at all:
-// there is nothing to schedule and the upgrade runs here, as it always has. On
-// a cluster it means this daemon cannot upgrade the other nodes, and going
-// ahead anyway would upgrade the control node alone and leave the rest of the
-// cluster on the old version — the exact outcome the whole orchestrator exists
-// to prevent, arrived at silently.
-//
-// For the same reason a node directory that cannot be read is an error rather
-// than an assumption. Not knowing how many nodes there are is not evidence
-// that there is one.
-func upgradeOrchestrator(ctx context.Context) (*clusterop.Manager, bool, error) {
+// A single machine goes through it too: the stage table is one flow, and a
+// second way of upgrading one node would be a second flow to keep in step
+// with it. What is refused is a machine that the node directory does not name
+// as the control node, or that has no orchestrator: either way this daemon
+// cannot schedule the upgrade, and upgrading only itself would leave any
+// other node on the old version. A directory that cannot be read is refused
+// for the same reason.
+func upgradeOrchestrator(ctx context.Context) (*clusterop.Manager, error) {
 	nodes, err := inventory.List(ctx)
 	if err != nil {
-		return nil, false, fmt.Errorf("cannot tell whether this Olares has other nodes to upgrade: %v", err)
+		return nil, fmt.Errorf("cannot tell which nodes this Olares has to upgrade: %v", err)
 	}
 	return orchestratorFor(nodes, clusterop.Current())
 }
 
 // orchestratorFor is the decision on its own, so it can be checked without a
 // cluster to read a directory from.
-func orchestratorFor(nodes []inventory.Node, m *clusterop.Manager) (*clusterop.Manager, bool, error) {
-	var self bool
-	var others int
+func orchestratorFor(nodes []inventory.Node, m *clusterop.Manager) (*clusterop.Manager, error) {
+	self := false
 	for _, n := range nodes {
 		if n.IsSelf && n.Role == inventory.RoleMaster {
 			self = true
-			continue
 		}
-		others++
 	}
-	// The only machine there is: this upgrade is its own, as it always has
-	// been.
-	if others == 0 {
-		return nil, false, nil
-	}
-
-	// There are other nodes and the directory does not point at this machine
-	// as the one that would schedule them. Refused for the same reason a
-	// missing orchestrator is refused below, and it took reading this
-	// function's own first paragraph to notice the two were not treated
-	// alike: falling back to the local path here upgrades this machine and
-	// leaves the rest of the cluster behind, which is the outcome being
-	// guarded against, not a special case of a single node.
 	if !self {
-		return nil, false, fmt.Errorf(
-			"this Olares has %d other node(s) but the node directory does not identify this machine"+
-				" as the control node, so their upgrade cannot be scheduled from here", others)
+		return nil, fmt.Errorf("the node directory does not identify this machine as the control node," +
+			" so the upgrade cannot be scheduled from here")
 	}
-
 	if m == nil {
-		return nil, false, fmt.Errorf(
-			"this Olares has %d other node(s) but this daemon has no orchestrator to upgrade them with", others)
+		return nil, fmt.Errorf("this daemon has no orchestrator to carry out the upgrade with")
 	}
-	return m, true, nil
+	return m, nil
 }
 
-// upgradeAcrossCluster hands the upgrade to the orchestrator and follows it.
+// upgradeThroughOrchestrator hands the upgrade to the orchestrator and follows it.
 //
 // The owner is not asked again. They already authorized this upgrade when they
 // created the upgrade target through the signed route, and this is the same
@@ -93,7 +67,7 @@ func orchestratorFor(nodes []inventory.Node, m *clusterop.Manager) (*clusterop.M
 // The request id is derived from the target version rather than generated, so
 // the watcher's own retries and restarts rejoin the operation they started
 // instead of being refused as a second concurrent upgrade.
-func (i *upgrade) upgradeAcrossCluster(ctx context.Context, m *clusterop.Manager,
+func (i *upgrade) upgradeThroughOrchestrator(ctx context.Context, m *clusterop.Manager,
 	target state.UpgradeTarget) (ExecutionRes, error) {
 	owner, err := upgradeOwner()
 	if err != nil {
@@ -152,7 +126,7 @@ func upgradeRequestID(target state.UpgradeTarget) string {
 // any one phase, and left alone it would carry on dispatching stages to nodes
 // after the operator had cancelled. This is the other half of that cancel.
 //
-// It is best-effort by design. A node has no orchestrator, an upgrade that
+// It is best-effort by design. A worker has no orchestrator, an upgrade that
 // already settled has nothing to stop, and neither is a reason to refuse to
 // remove the target.
 func StopClusterUpgrade(target state.UpgradeTarget) {
@@ -221,9 +195,8 @@ type ClusterOutcome struct {
 }
 
 // ClusterUpgradeOutcome reports what became of the orchestrated upgrade to this
-// version, and whether there was one at all. A single node has no orchestrator
-// and no record, which is not a failure — it is the other flow, and the second
-// return is how a caller tells the two apart.
+// version, and whether there was one at all: none has been started yet, or
+// this daemon has no orchestrator.
 func ClusterUpgradeOutcome(target state.UpgradeTarget) (ClusterOutcome, bool) {
 	m := clusterop.Current()
 	if m == nil || strings.TrimSpace(target.Version.Original()) == "" {
