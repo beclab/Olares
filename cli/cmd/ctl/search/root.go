@@ -12,10 +12,11 @@ import (
 func NewSearchCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "search",
-		Short: "Search files, Sync, Wise, installed applications, or the Market catalog",
+		Short: "Search Files RAG, global files, Wise, applications, or Market",
 		Long: `Run the same searches the Olares Desktop global search dialog uses.
 
 Subcommands:
+  rag         Retrieve relevant evidence chunks from configured Files RAG roots
   drive       Search Drive, Sync, Google Drive, and Dropbox (alias: files)
   sync        Search Seafile/Sync libraries only
   knowledge   Search Wise / Knowledge content (Olares >= 1.12.7; alias: wise)
@@ -28,6 +29,7 @@ in one request; sync restricts the same channel to seafile. Older Olares
 versions keep the legacy /api/search/init and /api/search/sync APIs.
 
 Examples:
+  olares-cli search rag "What does the release plan say?" --highlights -o json
   olares-cli search drive report
   olares-cli search files report
   olares-cli search drive "design doc" --type file_name
@@ -41,6 +43,7 @@ Examples:
 	cmd.SilenceErrors = true
 
 	cmd.AddCommand(newDriveCommand(f))
+	cmd.AddCommand(newRAGCommand(f))
 	cmd.AddCommand(newSyncCommand(f))
 	cmd.AddCommand(newKnowledgeCommand(f))
 	cmd.AddCommand(newAppCommand(f))
