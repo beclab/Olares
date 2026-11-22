@@ -252,18 +252,19 @@ func (wh *Webhook) CreatePatch(
 				klog.Infof("mesh-xport: annotate pod=%s/%s linkerd.io/inject=enabled", req.Namespace, pod.Name)
 			}
 		}
-		// Full-HTTP mesh waves (OLARES_HTTP_MESH_WAVE) inject beyond mesh-in callers.
-		httpWave := mesh.ParseHTTPMeshWave(os.Getenv("OLARES_HTTP_MESH_WAVE"))
-		if mesh.ShouldInjectHTTPMesh(injectMeshInAgent, req.Namespace, httpWave, pod) {
-			mesh.AnnotatePodForHTTPMesh(pod, true, httpWave, os.Getenv("OLARES_LINKERD_OPAQUE_PORTS"))
-			klog.Infof("mesh-http: annotate pod=%s/%s wave=%d inject=enabled", req.Namespace, pod.Name, httpWave)
-		}
 		if injectMeshOutAgent {
 			pod.Spec.Volumes = append(pod.Spec.Volumes, meshoutagent.SATokenVolume(), meshoutagent.ConfVolume())
 			pod.Spec.InitContainers = append(pod.Spec.InitContainers, meshoutagent.InitContainerSpec())
 			pod.Spec.Containers = append(pod.Spec.Containers, meshoutagent.ContainerSpec())
 		}
 	} // end of inject sidecar
+
+	// Full-HTTP mesh waves apply across eligible namespaces (not only app NS).
+	httpWave := mesh.ParseHTTPMeshWave(os.Getenv("OLARES_HTTP_MESH_WAVE"))
+	if mesh.ShouldInjectHTTPMesh(injectMeshInAgent, req.Namespace, httpWave, pod) {
+		mesh.AnnotatePodForHTTPMesh(pod, true, httpWave, os.Getenv("OLARES_LINKERD_OPAQUE_PORTS"))
+		klog.Infof("mesh-http: annotate pod=%s/%s wave=%d inject=enabled", req.Namespace, pod.Name, httpWave)
+	}
 
 	// The macvlan bypass must stay behind every iptables writer in the init
 	// sequence (mesh-in agent iptables is appended above, linkerd-init comes
