@@ -1,6 +1,7 @@
 package v2
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
@@ -9,8 +10,41 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/helm"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
+	"helm.sh/helm/v3/pkg/action"
 	"k8s.io/klog/v2"
 )
+
+// applyEnvToSubReleases is the dependency-free core of applyEnvToReleases.
+// skip reports whether a chart must be left alone (shared chart, non-admin
+// owner, mirroring HelmOpsV2.upgrade); configFor returns the action
+// configuration whose storage holds that chart's release.
+func applyEnvToSubReleases(ctx context.Context, charts []appcfg.Chart,
+	skip func(appcfg.Chart) (bool, error),
+	configFor func(appcfg.Chart) (*action.Configuration, error),
+	values map[string]interface{}) error {
+	for _, chart := range charts {
+		skipped, err := skip(chart)
+		if err != nil {
+			return err
+		}
+		if skipped {
+			klog.Infof("Skipping applyEnv of shared chart %s for non-admin owner", chart.Name)
+			continue
+		}
+		cfg, err := configFor(chart)
+		if err != nil {
+			return fmt.Errorf("action config for chart %s: %w", chart.Name, err)
+		}
+		rel, err := action.NewStatus(cfg).Run(chart.Name)
+		if err != nil {
+			return fmt.Errorf("get release of chart %s: %w", chart.Name, err)
+		}
+		if err := helm.UpgradeReleaseCharts(ctx, cfg, chart.Name, rel.Namespace, rel.Chart, values); err != nil {
+			return fmt.Errorf("apply env to chart %s: %w", chart.Name, err)
+		}
+	}
+	return nil
+}
 
 func (h *HelmOpsV2) ApplyEnv() error {
 	if !h.isMultiCharts() {
