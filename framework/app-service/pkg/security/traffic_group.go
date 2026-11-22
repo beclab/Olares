@@ -10,7 +10,7 @@ import (
 )
 
 // Traffic group label for namespace isolation (L3/L4). Cross-group HTTP must
-// traverse mesh-authorized paths once policy compilation is enabled.
+// traverse the gateway (ViaAppGateway) or an explicitly compiled peer allow.
 const (
 	TrafficGroupLabel = "traffic.olares.io/group"
 
@@ -30,7 +30,10 @@ func InferTrafficGroup(ns string) string {
 		return TrafficGroupMesh
 	case ns == "os-gateway":
 		return TrafficGroupGateway
-	case ns == "os-network" || ns == "os-platform":
+	case ns == "os-network":
+		// Edge L4 (shared l4-bfl-proxy) lives in os-network.
+		return TrafficGroupL4
+	case ns == "os-platform":
 		return TrafficGroupOSSystem
 	case strings.HasPrefix(ns, "os-"):
 		return TrafficGroupOSFramework
@@ -52,6 +55,12 @@ func LabelNamespaceTrafficGroup(ns *corev1.Namespace) {
 	ns.Labels[TrafficGroupLabel] = InferTrafficGroup(ns.Name)
 }
 
+// TrafficGroupNPEnabled reports whether operators opted into applying NP bundles.
+func TrafficGroupNPEnabled(raw string) bool {
+	v := strings.TrimSpace(raw)
+	return v == "1" || strings.EqualFold(v, "true") || strings.EqualFold(v, "yes")
+}
+
 func tcpPort(p int32) netv1.NetworkPolicyPort {
 	proto := corev1.ProtocolTCP
 	port := intstr.FromInt(int(p))
@@ -64,34 +73,39 @@ func udpPort(p int32) netv1.NetworkPolicyPort {
 	return netv1.NetworkPolicyPort{Protocol: &proto, Port: &port}
 }
 
-// NPGroupDefaultDeny returns ingress+egress deny-all for pods in a namespace,
-// retaining DNS and Linkerd control-plane egress so sidecars can start.
+func npMeta(name, namespace string) metav1.ObjectMeta {
+	return metav1.ObjectMeta{
+		Name:      name,
+		Namespace: namespace,
+		Labels: map[string]string{
+			"app.kubernetes.io/managed-by": "app-service",
+			"app.kubernetes.io/name":       "traffic-group",
+		},
+	}
+}
+
+func nsPeer(group string) netv1.NetworkPolicyPeer {
+	return netv1.NetworkPolicyPeer{
+		NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{
+			TrafficGroupLabel: group,
+		}},
+	}
+}
+
+// NPGroupDefaultDeny returns ingress+egress deny-all baseline, retaining DNS and
+// Linkerd control-plane egress so sidecars can start. Callers MUST also apply
+// peer allow policies (same-group / gateway / L4) before relying on this object.
 func NPGroupDefaultDeny(namespace string) netv1.NetworkPolicy {
 	return netv1.NetworkPolicy{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "olares-traffic-group-default-deny",
-			Namespace: namespace,
-			Labels: map[string]string{
-				"app.kubernetes.io/managed-by": "app-service",
-				"app.kubernetes.io/name":       "traffic-group",
-			},
-		},
+		ObjectMeta: npMeta("olares-traffic-group-default-deny", namespace),
 		Spec: netv1.NetworkPolicySpec{
 			PodSelector: metav1.LabelSelector{},
 			PolicyTypes: []netv1.PolicyType{netv1.PolicyTypeIngress, netv1.PolicyTypeEgress},
 			Ingress:     []netv1.NetworkPolicyIngressRule{},
 			Egress: []netv1.NetworkPolicyEgressRule{
 				{
-					To: []netv1.NetworkPolicyPeer{{
-						NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{
-							TrafficGroupLabel: TrafficGroupMesh,
-						}},
-					}},
-					Ports: []netv1.NetworkPolicyPort{
-						tcpPort(8080),
-						tcpPort(8086),
-						tcpPort(8090),
-					},
+					To:    []netv1.NetworkPolicyPeer{nsPeer(TrafficGroupMesh)},
+					Ports: []netv1.NetworkPolicyPort{tcpPort(8080), tcpPort(8086), tcpPort(8090)},
 				},
 				{
 					Ports: []netv1.NetworkPolicyPort{tcpPort(53), udpPort(53)},
@@ -104,24 +118,87 @@ func NPGroupDefaultDeny(namespace string) netv1.NetworkPolicy {
 // NPAllowSameTrafficGroup permits ingress from namespaces sharing the same group label.
 func NPAllowSameTrafficGroup(namespace, group string) netv1.NetworkPolicy {
 	return netv1.NetworkPolicy{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "olares-traffic-group-same",
-			Namespace: namespace,
-			Labels: map[string]string{
-				"app.kubernetes.io/managed-by": "app-service",
-				"app.kubernetes.io/name":       "traffic-group",
-			},
-		},
+		ObjectMeta: npMeta("olares-traffic-group-same", namespace),
 		Spec: netv1.NetworkPolicySpec{
 			PodSelector: metav1.LabelSelector{},
 			PolicyTypes: []netv1.PolicyType{netv1.PolicyTypeIngress},
 			Ingress: []netv1.NetworkPolicyIngressRule{{
-				From: []netv1.NetworkPolicyPeer{{
-					NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{
-						TrafficGroupLabel: group,
-					}},
-				}},
+				From: []netv1.NetworkPolicyPeer{nsPeer(group)},
 			}},
 		},
 	}
+}
+
+// NPAllowFromGateway permits ingress from the gateway traffic group (ViaAppGateway / N-S).
+func NPAllowFromGateway(namespace string) netv1.NetworkPolicy {
+	return netv1.NetworkPolicy{
+		ObjectMeta: npMeta("olares-traffic-group-from-gateway", namespace),
+		Spec: netv1.NetworkPolicySpec{
+			PodSelector: metav1.LabelSelector{},
+			PolicyTypes: []netv1.PolicyType{netv1.PolicyTypeIngress},
+			Ingress: []netv1.NetworkPolicyIngressRule{{
+				From: []netv1.NetworkPolicyPeer{nsPeer(TrafficGroupGateway)},
+			}},
+		},
+	}
+}
+
+// NPAllowFromL4 permits ingress from the L4 edge group into gateway (north-south).
+func NPAllowFromL4(namespace string) netv1.NetworkPolicy {
+	return netv1.NetworkPolicy{
+		ObjectMeta: npMeta("olares-traffic-group-from-l4", namespace),
+		Spec: netv1.NetworkPolicySpec{
+			PodSelector: metav1.LabelSelector{},
+			PolicyTypes: []netv1.PolicyType{netv1.PolicyTypeIngress},
+			Ingress: []netv1.NetworkPolicyIngressRule{{
+				From: []netv1.NetworkPolicyPeer{nsPeer(TrafficGroupL4)},
+			}},
+		},
+	}
+}
+
+// NPAllowFromMesh permits ingress from the mesh control-plane group (probes / tap as needed).
+func NPAllowFromMesh(namespace string) netv1.NetworkPolicy {
+	return netv1.NetworkPolicy{
+		ObjectMeta: npMeta("olares-traffic-group-from-mesh", namespace),
+		Spec: netv1.NetworkPolicySpec{
+			PodSelector: metav1.LabelSelector{},
+			PolicyTypes: []netv1.PolicyType{netv1.PolicyTypeIngress},
+			Ingress: []netv1.NetworkPolicyIngressRule{{
+				From: []netv1.NetworkPolicyPeer{nsPeer(TrafficGroupMesh)},
+			}},
+		},
+	}
+}
+
+// BuildTrafficGroupIsolationBundle returns the safe NP set for a namespace.
+// Cross-group east-west is denied at L3 except via gateway (and L4→gateway for N-S).
+// Mesh identity authorization remains a separate layer (Server / AuthorizationPolicy).
+func BuildTrafficGroupIsolationBundle(namespace string) []netv1.NetworkPolicy {
+	group := InferTrafficGroup(namespace)
+	out := []netv1.NetworkPolicy{
+		NPGroupDefaultDeny(namespace),
+		NPAllowSameTrafficGroup(namespace, group),
+		NPAllowFromMesh(namespace),
+	}
+	switch group {
+	case TrafficGroupGateway:
+		out = append(out, NPAllowFromL4(namespace))
+	case TrafficGroupApp, TrafficGroupUserSpace, TrafficGroupOSFramework, TrafficGroupOSSystem:
+		out = append(out, NPAllowFromGateway(namespace))
+	}
+	return out
+}
+
+// BundleHasInboundAllow reports whether the bundle includes at least one ingress allow
+// besides the empty default-deny (guards against shipping deny-only policies).
+func BundleHasInboundAllow(policies []netv1.NetworkPolicy) bool {
+	for _, p := range policies {
+		for _, rule := range p.Spec.Ingress {
+			if len(rule.From) > 0 || len(rule.Ports) > 0 {
+				return true
+			}
+		}
+	}
+	return false
 }
