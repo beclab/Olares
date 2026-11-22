@@ -64,7 +64,24 @@ func ChartNamespace(c *Chart, owner string) string {
 	return fmt.Sprintf("%s-%s", c.Name, owner)
 }
 
-// ChartPath returns the on-disk path to a sub-chart's files.
+// ChartPath returns the legacy flat on-disk path to a sub-chart's files.
+//
+// Deprecated: use SubChartPath, which follows the chart the app was actually
+// installed or upgraded from.
 func ChartPath(appName, chartName string) string {
 	return AppChartPath(filepath.Join(appName, chartName))
+}
+
+// SubChartPath returns the on-disk path to a multi-chart app's sub-chart:
+// a directory under the app's ChartsName. For apps whose config predates
+// ChartsName, it falls back to the legacy flat path.
+func SubChartPath(cfg *ApplicationConfig, chartName string) string {
+	if cfg.ChartsName != "" {
+		return filepath.Join(cfg.ChartsName, chartName)
+	}
+	raw := cfg.RawAppName
+	if raw == "" {
+		raw = cfg.AppName
+	}
+	return ChartPath(raw, chartName)
 }

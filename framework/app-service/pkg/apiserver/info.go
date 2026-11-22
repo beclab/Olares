@@ -2,10 +2,13 @@ package apiserver
 
 import (
 	"io/fs"
+	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/oac"
+	"k8s.io/klog/v2"
 )
 
 /*
@@ -21,11 +24,51 @@ metadata:
   title: <app title>
 */
 
-func (h *Handler) readAppInfo(dir fs.FileInfo) (*appcfg.AppConfiguration, error) {
-	chartDir := filepath.Join(appcfg.ChartsPath, dir.Name())
-	cfg, err := oac.LoadAppConfiguration(chartDir)
+// registryApps loads every chart under root, in both the legacy flat layout
+// (root/<app>) and the per-version cache layout
+// (root/<source>/<owner>/<app>/<version>-<sha>/<app>). When the same app
+// appears more than once, the most recently written chart wins.
+func registryApps(root string) (map[string]*appcfg.AppConfiguration, error) {
+	type found struct {
+		cfg *appcfg.AppConfiguration
+		mod time.Time
+	}
+	apps := make(map[string]found)
+	err := filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			if p == root {
+				return err
+			}
+			return nil
+		}
+		if !d.IsDir() {
+			return nil
+		}
+		if d.Name() == ".tmp" {
+			return filepath.SkipDir
+		}
+		fi, statErr := os.Stat(filepath.Join(p, oac.ManifestFileName))
+		if statErr != nil {
+			return nil
+		}
+		cfg, loadErr := oac.LoadAppConfiguration(p)
+		if loadErr != nil {
+			klog.Errorf("Failed to read app chart %s err=%v", p, loadErr)
+			return filepath.SkipDir
+		}
+		name := cfg.Metadata.Name
+		if prev, ok := apps[name]; !ok || fi.ModTime().After(prev.mod) {
+			apps[name] = found{cfg, fi.ModTime()}
+		}
+		// A chart root's own sub-directories are sub-charts, not apps.
+		return filepath.SkipDir
+	})
 	if err != nil {
 		return nil, err
 	}
-	return cfg, nil
+	out := make(map[string]*appcfg.AppConfiguration, len(apps))
+	for name, f := range apps {
+		out[name] = f.cfg
+	}
+	return out, nil
 }

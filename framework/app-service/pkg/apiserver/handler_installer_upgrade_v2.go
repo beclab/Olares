@@ -143,12 +143,25 @@ func (h *Handler) appUpgradeV2(req *restful.Request, resp *restful.Response) {
 	if appMgr.Spec.RawAppName != "" {
 		rawAppName = appMgr.Spec.RawAppName
 	}
-	apiVersion, err := apputils.GetAppConfigVersion(req.Request.Context(), &apputils.ConfigOptions{
+	// Version must be passed: this is the only download on the upgrade
+	// path, and the chart it returns is what every later read uses.
+	// Without it the index's latest would be fetched instead of the
+	// requested version.
+	chartURL, chartDigest := "", ""
+	if request.Version != "" && request.ChartURL != "" && request.ChartDigest != "" {
+		chartURL, chartDigest = request.ChartURL, request.ChartDigest
+	}
+	apiVersion, downloadedChartPath, err := apputils.GetAppConfigVersion(req.Request.Context(), &apputils.ConfigOptions{
 		App:          app,
 		RawAppName:   rawAppName,
 		Owner:        prevCfg.OwnerName,
 		RepoURL:      request.RepoURL,
 		MarketSource: marketSource,
+		Version:      request.Version,
+		Token:        token,
+		ChartOwner:   prevCfg.ChartOwner,
+		ChartURL:     chartURL,
+		ChartDigest:  chartDigest,
 	})
 	if err != nil {
 		klog.Errorf("Failed to get api version err=%v", err)
@@ -166,6 +179,8 @@ func (h *Handler) appUpgradeV2(req *restful.Request, resp *restful.Response) {
 		rawAppName: rawAppName,
 		owner:      prevCfg.OwnerName,
 		token:      token,
+
+		downloadedChartPath: downloadedChartPath,
 	}
 	switch apiVersion {
 	case appcfg.V1:
@@ -233,6 +248,8 @@ func (h *Handler) appUpgradeV2(req *restful.Request, resp *restful.Response) {
 		Version:      request.Version,
 		MarketSource: marketSource,
 		ConfigJSON:   configJSON,
+		ChartURL:     chartURL,
+		ChartDigest:  chartDigest,
 	})
 }
 
@@ -246,6 +263,10 @@ type upgradeV2Options struct {
 	Version      string
 	MarketSource string
 	ConfigJSON   string
+	// ChartURL / ChartDigest are recorded on the AM when market sent an
+	// exact chart reference; otherwise any earlier reference is removed.
+	ChartURL    string
+	ChartDigest string
 }
 
 // deliverUpgradeV2 is the pure translator step of appUpgradeV2.
@@ -304,6 +325,13 @@ func (h *Handler) deliverUpgradeV2(
 	patched.Annotations[api.AppRepoURLKey] = opts.RepoURL
 	patched.Annotations[api.AppTokenKey] = opts.Token
 	patched.Annotations[api.AppMarketSourceKey] = opts.MarketSource
+	if opts.ChartURL != "" && opts.ChartDigest != "" {
+		patched.Annotations[api.AppChartURLKey] = opts.ChartURL
+		patched.Annotations[api.AppChartDigestKey] = opts.ChartDigest
+	} else {
+		delete(patched.Annotations, api.AppChartURLKey)
+		delete(patched.Annotations, api.AppChartDigestKey)
+	}
 	// Running and Stopped overwrite. UpgradeFailed keeps a prior
 	// stopped snapshot so the retry still lands at replicas=0.
 	api.SnapshotPreUpgradeState(patched.Annotations, am.Status.State)
