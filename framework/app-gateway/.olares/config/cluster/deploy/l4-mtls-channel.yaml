@@ -1,0 +1,31 @@
+# L4 → app-gateway mTLS channel (disabled until L4 AppGatewayMTLS=true).
+# Entry CA is separate from Linkerd identity CA. Rotate via dual-trust then cutover.
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: app-gateway-l4-mtls
+  namespace: os-gateway
+  labels:
+    app.kubernetes.io/name: app-gateway-l4-mtls
+    app.kubernetes.io/part-of: app-gateway
+spec:
+  selector:
+    app.kubernetes.io/name: app-gateway-data
+  ports:
+    - name: mtls
+      port: 8443
+      targetPort: 8443
+      protocol: TCP
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: l4-app-gateway-mtls
+  namespace: os-gateway
+  labels:
+    app.kubernetes.io/name: app-gateway-l4-mtls
+data:
+  enabled: "false"
+  sni: "app-gateway-l4-mtls.os-gateway.svc.cluster.local"
+  rotationMode: "dual-trust-then-cutover"

@@ -105,6 +105,16 @@ type ClusterIR struct {
 	Host   string
 	Port   uint32
 	UseDNS bool
+	// UpstreamMTLS enables client TLS to app-gateway when the feature flag is on.
+	// SDS secret names reference rotated entry CA material separate from Linkerd CA.
+	UpstreamMTLS *UpstreamMTLSIR
+}
+
+// UpstreamMTLSIR describes L4→app-gateway client mTLS (default off).
+type UpstreamMTLSIR struct {
+	SNI            string
+	ClientCertSDS  string
+	TrustedCACerts string // SDS CA secret name
 }
 
 type SecretIR struct {
