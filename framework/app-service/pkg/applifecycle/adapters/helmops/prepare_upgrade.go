@@ -129,6 +129,9 @@ func (o *Ops) refreshUpgradeChart(ctx context.Context, req ports.WorkloadRequest
 		return err
 	}
 	opts.SelectedGpu = cfg.SelectedGpuType
+	// Keep the chart owner: it selects X-Market-User for a re-download
+	// (clones, uploads) and GetAppConfig copies it into the refreshed config.
+	opts.ChartOwner = cfg.ChartOwner
 	// Read the chart the upgrade handler downloaded and recorded as
 	// ChartsName. AMs written by earlier releases carry the legacy flat
 	// path there, which still resolves. If the directory is gone (cache
