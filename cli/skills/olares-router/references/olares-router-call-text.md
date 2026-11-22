@@ -33,6 +33,13 @@ olares-cli router call scrape https://example.com/post
 
 ## Authorized Files RAG evidence
 
+Use this mode when the user asks the host agent to **answer, explain,
+summarize, compare, or cite** something from their files. If the user only
+wants to know which file/path contains a name or text, use `olares-search`
+instead. Do not emulate a grounded answer with `search drive` followed by
+`files cat`: that loses the Files RAG ranking, evidence, locator, highlight and
+abstention contracts.
+
 `router call search --source files <query>` is not Web Search and does not call
 a model. It uses Router's delegated `/v1/files-rag/search` route, then Search3
 retrieves indexed source evidence within the final user's current Files
