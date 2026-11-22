@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -127,13 +128,21 @@ func main() {
 	//	klog.Fatalf("set up envoy-config ready check failed: %v", err)
 	//}
 
+	translatorCfg := &translator.Config{
+		SSLServerPort:      sslServerPort,
+		SSLProxyServerPort: sslProxyServerPort,
+		AppGatewayMTLS:     envTruthy("OLARES_L4_APP_GATEWAY_MTLS"),
+		AppGatewayHost:     envOr("OLARES_L4_APP_GATEWAY_HOST", "app-gateway-mtls-channel.os-system.svc.cluster.local"),
+		AppGatewayPort:     8443,
+	}
+	if translatorCfg.AppGatewayMTLS {
+		klog.Info("translator: AppGatewayMTLS enabled via OLARES_L4_APP_GATEWAY_MTLS")
+	}
+
 	runners := []runner.Runner{
 		prov,
 		fsReconciler,
-		translator.New(providerResources, xdsIR, &translator.Config{
-			SSLServerPort:      sslServerPort,
-			SSLProxyServerPort: sslProxyServerPort,
-		}),
+		translator.New(providerResources, xdsIR, translatorCfg),
 		xdstranslator.New(xdsIR, xdsResources),
 		xdsSrv,
 	}
@@ -174,6 +183,18 @@ func main() {
 	// before the Go process itself returns.
 	<-envoyExited
 	klog.Info("envoy exited, shutting down")
+}
+
+func envTruthy(key string) bool {
+	v := strings.TrimSpace(os.Getenv(key))
+	return v == "1" || strings.EqualFold(v, "true") || strings.EqualFold(v, "yes")
+}
+
+func envOr(key, fallback string) string {
+	if v := strings.TrimSpace(os.Getenv(key)); v != "" {
+		return v
+	}
+	return fallback
 }
 
 // cacheReadyCheck returns a healthz.Checker that verifies the manager's cache has synced.
