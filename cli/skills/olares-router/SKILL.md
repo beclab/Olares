@@ -1,7 +1,7 @@
 ---
 name: olares-router
 version: 0.0.0-cli.0
-description: "Olares models via olares-cli router — Router (the AI gateway) and the Model Console inside a locally installed model application. Configure cloud vendors and their models, manage local LLM / embedding / audio / OCR model applications, edit a local model's card, name models with aliases, groups and default categories, issue API keys and quotas, read usage and audit, and call a model: chat, embed, rerank, search, scrape, translate, images, video, music, 3D, transcribe, speak, diarize, OCR. Requires Olares 1.12.7+. Use for Router, llm-gateway, AI gateway, 模型, 模型网关, 本地模型, add an OpenAI/Anthropic/DeepSeek key, install a Qwen or Gemma model, sk- key, model quota, token spend, model alias, default-chat, engine_args, which model answers by default, why a model call fails."
+description: "Olares models and delegated Files RAG via olares-cli router — Router (the AI gateway) and the Model Console inside a locally installed model application. Configure cloud vendors and their models, manage local LLM / embedding / audio / OCR model applications, edit a local model's card, name models with aliases, groups and default categories, issue API keys and quotas, read usage and audit, call models, and retrieve authorized file evidence from a host agent. Requires Olares 1.12.7+. Use for Router, llm-gateway, AI gateway, Files RAG search, 模型, 模型网关, 本地模型, add an OpenAI/Anthropic/DeepSeek key, install a Qwen or Gemma model, sk- key, model quota, token spend, model alias, default-chat, engine_args, which model answers by default, why a model call fails."
 compatibility: Requires olares-cli on PATH, active Olares profile, Olares >= 1.12.7
 metadata:
   openclaw:
@@ -23,6 +23,7 @@ Use `olares-cli router <verb> --help` for authoritative syntax.
 - Decide what a caller may put in the `model` field: an alias, a group of models, or a default category.
 - Issue keys and quotas for software that calls models, and read what it spent.
 - Send work to a model from the command line: chat, embeddings, reranking, web search and scraping, translation, images, video, speech in either direction, and OCR.
+- From a host agent such as Lares, retrieve source-grounded evidence from the final user's authorized Files RAG index.
 
 > **Mental model:** every call goes through **Router**, one AI gateway per Olares. Router holds providers, models, keys, quotas and the usage record; it runs no model itself. A local model runs inside a **model application**, whose own **Model Console** downloads the weights, launches the engine and serves the OpenAI-compatible endpoint Router forwards to. So **a local model has two states, not one**: the platform says whether the container is up, the application says whether the model can answer, and a container reports `running` minutes before the weights have loaded. Never read one as evidence for the other. [Architecture and identity](references/olares-router-architecture.md) is the long form, and is worth reading before the first write.
 
@@ -34,6 +35,7 @@ All verbs require Olares 1.12.7+ because Router ships as the `router` Market lis
 |---|---|---|
 | Prove a model answers | this file | `olares-cli router call chat "hello"` |
 | See what this profile may call | this file | `olares-cli router call models` |
+| Retrieve authorized file evidence for a host agent | [text, the web and Files RAG](references/olares-router-call-text.md) | `olares-cli router call search --source files "query" -o json` |
 | Give Olares a cloud vendor's models | [configuring an external provider](references/olares-router-external.md) | `olares-cli router provider create --type openai --credentials-json @openai.json --validate` |
 | Find out what a failed call recorded | this file | `olares-cli router usage list --limit 5` |
 
@@ -67,7 +69,7 @@ A provider whose `source` is `olares` belongs to a Market application. Its addre
 | access control | `key issue/list/update/revoke/current`, `quota set/list/clear` | [names, defaults and access control](references/olares-router-governance.md) |
 | what happened | `usage summary/list/export/retention/apps`, `audit list/get` | [usage and audit](references/olares-router-usage.md) |
 | what any call needs, and why one failed | `call models`, `key current`, `call ocr` | [the calling contract](references/olares-router-calling.md) |
-| asking a model in words | `call chat/responses/count-tokens/embed/rerank/search/scrape` | [text and the web](references/olares-router-call-text.md) |
+| asking a model or retrieving indexed evidence | `call chat/responses/count-tokens/embed/rerank/search/scrape`; `call search --source files` is the delegated non-model route | [text, the web and Files RAG](references/olares-router-call-text.md) |
 | translating, including a whole transcript | `call translate`, with `--detect`, `--languages` or `--transcript` | [translation](references/olares-router-call-translate.md) |
 | generating or editing a picture, or generating a clip, track or mesh | `call image/video/music/3d` — image edit uses `--operation edit --image`; `music` and `3d` require `--model`, and `call music format/draft/alignment/cancel` are music's own | [pictures, clips, tracks and meshes](references/olares-router-call-media.md) |
 | speech in either direction | `call transcribe/listen/speak/clone/dialogue/vad/diarize/speaker-embed/enhance/align`, `call task get/result/list/cancel` | [audio](references/olares-router-call-audio.md) |

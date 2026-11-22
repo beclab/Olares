@@ -28,6 +28,11 @@ The profile identity is stamped by the Olares edge, and a command running **insi
 
 An application that hosts an agent proxies Router in process and stamps the logged-in person, and it tells the commands it runs where by setting `OLARES_ROUTER_DATA_PLANE_URL` to that proxy's `/v1` root — Lares sets it to `$LARES_LLM_BASE_URL`. With it set, every `router call` verb goes through the proxy and is from the person; `router key current` shows `CALLS USE  the host application's proxy`. Two things stay as they were: a named key (`--api-key`, `OLARES_ROUTER_API_KEY`) still goes to Router directly as that key, and the streaming sockets (`listen` and `responses --stream`) still dial Router, since a proxy that forwards requests does not forward sockets.
 
+Files RAG is stricter than model calls: `router call search --source files`
+requires this host mode and refuses both a named key and direct platform mode.
+An API key can authorize model spend, but it does not name the final user whose
+Files ACLs must constrain retrieval. See [Files RAG evidence](olares-router-call-text.md#authorized-files-rag-evidence).
+
 **Where the variable is not set, do not generate from in-cluster with `router call`** — that is where the wrong caller does visible damage. Use the host application's own skill and base URL instead.
 
 A sandbox that can write only its workspace and `$TMPDIR` still works: the refresh lock falls back to the temp dir, and a platform-issued (managed) token that cannot be cached is used for the one command and refreshed from the mount by the next.

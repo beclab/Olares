@@ -1,4 +1,4 @@
-# Calling a model — text and the web
+# Calling text services — models, the web and Files RAG
 
 > **Prerequisite:** [the calling contract](olares-router-calling.md) — the credential, what `--model` takes, and how to read a refusal — holds for every verb here.
 
@@ -11,6 +11,7 @@ olares-cli router call count-tokens "how big is this turn" --model default-chat
 olares-cli router call embed "text" --dimensions 512
 olares-cli router call rerank "who wrote it" --document "…" --document "…"
 olares-cli router call search "olares release notes" --limit 5
+olares-cli router call search --source files "港口安全标识" -o json
 olares-cli router call scrape https://example.com/post
 ```
 
@@ -29,5 +30,40 @@ olares-cli router call scrape https://example.com/post
 ## The web
 
 `search` and `scrape` reach a provider that has one of those two modes; most do not, so both are commonly refused for want of a category rather than for anything wrong with the request.
+
+## Authorized Files RAG evidence
+
+`router call search --source files <query>` is not Web Search and does not call
+a model. It uses Router's delegated `/v1/files-rag/search` route, then Search3
+retrieves indexed source evidence within the final user's current Files
+permissions. The caller cannot submit an owner or an authorization scope:
+`--directory-root` and `--resource-uri` are untrusted narrowing filters only.
+
+This mode is intended for a host agent such as Lares. The host must set
+`OLARES_ROUTER_DATA_PLANE_URL` and attach the logged-in person to its Router
+proxy; the command rejects a laptop profile and an `sk-*` API key because
+neither proves which person's Files permissions should apply. The host identity
+authenticates the application, while its signed delegation binds the final
+user. Router strips caller credentials before forwarding, and Search3 obtains
+the authoritative searchable scope from Files.
+
+Useful controls:
+
+```
+--mode lexical|vector|hybrid      # default hybrid
+--candidate-k 40 --limit 10      # bounded candidates and final hits
+--rerank --rerank-top-n 5        # optional configured reranker
+--directory-root <canonical-uri> # repeatable scope narrowing
+--resource-uri <canonical-uri>   # repeatable exact-file narrowing
+--deadline 5s                    # maximum 30s
+--highlights                     # enabled by default
+```
+
+Use `-o json` for an agent. It preserves the stable evidence contract rather
+than reducing it to the human table: source locators, lexical/vector/fused
+scores, provenance, citations and content/source highlight ranges all remain
+available. A valid empty result is not filled with unrelated chunks; the
+response carries its abstention reason. Table output is for inspection and
+shows rank, canonical source URI, scores and a clipped evidence excerpt.
 
 `translate` is on the same tree but is [its own read](olares-router-call-translate.md): it takes a file and a turn model rather than a prompt.
