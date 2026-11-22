@@ -39,7 +39,7 @@ metadata:
     linkerd.io/control-plane-component: controller
     linkerd.io/control-plane-ns: os-mesh
   annotations:
-    linkerd.io/created-by: linkerd/helm edge-26.5.1
+    linkerd.io/created-by: linkerd/helm edge-26.9.1
 data:
   linkerd-crds-chart-version: linkerd-crds-1.0.0-edge
   values: |
@@ -142,7 +142,7 @@ data:
     kubeAPI:
       clientBurst: 200
       clientQPS: 100
-    linkerdVersion: edge-26.5.1
+    linkerdVersion: edge-26.9.1
     networkValidator:
       connectAddr: ""
       listenAddr: ""
@@ -608,7 +608,7 @@ metadata:
   labels:
     linkerd.io/control-plane-ns: os-mesh
   annotations:
-    linkerd.io/created-by: linkerd/helm edge-26.5.1
+    linkerd.io/created-by: linkerd/helm edge-26.9.1
   name: ext-namespace-metadata-linkerd-config
   namespace: os-mesh
 rules:
@@ -669,7 +669,7 @@ metadata:
     linkerd.io/control-plane-component: destination
     linkerd.io/control-plane-ns: os-mesh
   annotations:
-    linkerd.io/created-by: linkerd/helm edge-26.5.1
+    linkerd.io/created-by: linkerd/helm edge-26.9.1
 spec:
   type: ClusterIP
   selector:
@@ -689,7 +689,7 @@ metadata:
     linkerd.io/control-plane-component: destination
     linkerd.io/control-plane-ns: os-mesh
   annotations:
-    linkerd.io/created-by: linkerd/helm edge-26.5.1
+    linkerd.io/created-by: linkerd/helm edge-26.9.1
 spec:
   clusterIP: None
   selector:
@@ -709,7 +709,7 @@ metadata:
     linkerd.io/control-plane-component: destination
     linkerd.io/control-plane-ns: os-mesh
   annotations:
-    linkerd.io/created-by: linkerd/helm edge-26.5.1
+    linkerd.io/created-by: linkerd/helm edge-26.9.1
 spec:
   type: ClusterIP
   selector:
@@ -729,7 +729,7 @@ metadata:
     linkerd.io/control-plane-component: destination
     linkerd.io/control-plane-ns: os-mesh
   annotations:
-    linkerd.io/created-by: linkerd/helm edge-26.5.1
+    linkerd.io/created-by: linkerd/helm edge-26.9.1
 spec:
   clusterIP: None
   selector:
@@ -749,7 +749,7 @@ metadata:
     linkerd.io/control-plane-component: destination
     linkerd.io/control-plane-ns: os-mesh
   annotations:
-    linkerd.io/created-by: linkerd/helm edge-26.5.1
+    linkerd.io/created-by: linkerd/helm edge-26.9.1
 spec:
   type: ClusterIP
   selector:
@@ -769,7 +769,7 @@ metadata:
     linkerd.io/control-plane-component: identity
     linkerd.io/control-plane-ns: os-mesh
   annotations:
-    linkerd.io/created-by: linkerd/helm edge-26.5.1
+    linkerd.io/created-by: linkerd/helm edge-26.9.1
 spec:
   type: ClusterIP
   selector:
@@ -789,7 +789,7 @@ metadata:
     linkerd.io/control-plane-component: identity
     linkerd.io/control-plane-ns: os-mesh
   annotations:
-    linkerd.io/created-by: linkerd/helm edge-26.5.1
+    linkerd.io/created-by: linkerd/helm edge-26.9.1
 spec:
   clusterIP: None
   selector:
@@ -809,7 +809,7 @@ metadata:
     linkerd.io/control-plane-component: proxy-injector
     linkerd.io/control-plane-ns: os-mesh
   annotations:
-    linkerd.io/created-by: linkerd/helm edge-26.5.1
+    linkerd.io/created-by: linkerd/helm edge-26.9.1
     config.linkerd.io/opaque-ports: "443"
 spec:
   type: ClusterIP
@@ -825,11 +825,11 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   annotations:
-    linkerd.io/created-by: linkerd/helm edge-26.5.1
+    linkerd.io/created-by: linkerd/helm edge-26.9.1
   labels:
     app.kubernetes.io/name: destination
     app.kubernetes.io/part-of: Linkerd
-    app.kubernetes.io/version: edge-26.5.1
+    app.kubernetes.io/version: edge-26.9.1
     linkerd.io/control-plane-component: destination
     linkerd.io/control-plane-ns: os-mesh
   name: linkerd-destination
@@ -850,8 +850,8 @@ spec:
     metadata:
       annotations:
         checksum/config: d256ddb95f374973ea38f8988e8fe6a3945b0750cbaf7f0f63e0c7fa6a37d900
-        linkerd.io/created-by: linkerd/helm edge-26.5.1
-        linkerd.io/proxy-version: edge-26.5.1
+        linkerd.io/created-by: linkerd/helm edge-26.9.1
+        linkerd.io/proxy-version: edge-26.9.1
         cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
         linkerd.io/trust-root-sha256: 16b963273c8f16067f944c7cef262350151034f1ec5b9442213d9eec5b669487
         config.linkerd.io/default-inbound-policy: "all-unauthenticated"
@@ -993,7 +993,7 @@ spec:
           value: linkerd-destination.os-mesh.serviceaccount.identity.os-mesh.cluster.local
         - name: LINKERD2_PROXY_POLICY_SVC_NAME
           value: linkerd-destination.os-mesh.serviceaccount.identity.os-mesh.cluster.local
-        image: cr.l5d.io/linkerd/proxy:edge-26.5.1
+        image: cr.l5d.io/linkerd/proxy:edge-26.9.1
         imagePullPolicy: IfNotPresent
         livenessProbe:
           httpGet:
@@ -1052,7 +1052,7 @@ spec:
         - -enable-ipv6=false
         - -enable-pprof=false
         - --meshed-http2-client-params={"keep_alive":{"interval":{"seconds":10},"timeout":{"seconds":3},"while_idle":true}}
-        image: cr.l5d.io/linkerd/controller:edge-26.5.1
+        image: cr.l5d.io/linkerd/controller:edge-26.9.1
         imagePullPolicy: IfNotPresent
         livenessProbe:
           httpGet:
@@ -1091,7 +1091,7 @@ spec:
         - -log-level=info
         - -log-format=plain
         - -enable-pprof=false
-        image: cr.l5d.io/linkerd/controller:edge-26.5.1
+        image: cr.l5d.io/linkerd/controller:edge-26.9.1
         imagePullPolicy: IfNotPresent
         livenessProbe:
           httpGet:
@@ -1145,7 +1145,7 @@ spec:
         - --default-opaque-ports=25,587,3306,4444,5432,6379,9300,11211
         - --global-egress-network-namespace=linkerd-egress
         - --probe-networks=0.0.0.0/0,::/0
-        image: cr.l5d.io/linkerd/controller:edge-26.5.1
+        image: cr.l5d.io/linkerd/controller:edge-26.9.1
         imagePullPolicy: IfNotPresent
         livenessProbe:
           httpGet:
@@ -1202,7 +1202,7 @@ spec:
         - "3389,4190,4191,4567,4568"
         - --outbound-ports-to-ignore
         - "443,6443"
-        image: cr.l5d.io/linkerd/proxy:edge-26.5.1
+        image: cr.l5d.io/linkerd/proxy:edge-26.9.1
         command: ["/usr/lib/linkerd/linkerd2-proxy-init"]
         imagePullPolicy: IfNotPresent
         name: linkerd-init
@@ -1278,11 +1278,11 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   annotations:
-    linkerd.io/created-by: linkerd/helm edge-26.5.1
+    linkerd.io/created-by: linkerd/helm edge-26.9.1
   labels:
     app.kubernetes.io/name: identity
     app.kubernetes.io/part-of: Linkerd
-    app.kubernetes.io/version: edge-26.5.1
+    app.kubernetes.io/version: edge-26.9.1
     linkerd.io/control-plane-component: identity
     linkerd.io/control-plane-ns: os-mesh
   name: linkerd-identity
@@ -1302,8 +1302,8 @@ spec:
   template:
     metadata:
       annotations:
-        linkerd.io/created-by: linkerd/helm edge-26.5.1
-        linkerd.io/proxy-version: edge-26.5.1
+        linkerd.io/created-by: linkerd/helm edge-26.9.1
+        linkerd.io/proxy-version: edge-26.9.1
         cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
         linkerd.io/trust-root-sha256: 16b963273c8f16067f944c7cef262350151034f1ec5b9442213d9eec5b669487
         config.linkerd.io/default-inbound-policy: "all-unauthenticated"
@@ -1332,7 +1332,7 @@ spec:
         env:
         - name: LINKERD_DISABLED
           value: "linkerd-await cannot block the identity controller"
-        image: cr.l5d.io/linkerd/controller:edge-26.5.1
+        image: cr.l5d.io/linkerd/controller:edge-26.9.1
         imagePullPolicy: IfNotPresent
         livenessProbe:
           httpGet:
@@ -1500,7 +1500,7 @@ spec:
           value: linkerd-destination.os-mesh.serviceaccount.identity.os-mesh.cluster.local
         - name: LINKERD2_PROXY_POLICY_SVC_NAME
           value: linkerd-destination.os-mesh.serviceaccount.identity.os-mesh.cluster.local
-        image: cr.l5d.io/linkerd/proxy:edge-26.5.1
+        image: cr.l5d.io/linkerd/proxy:edge-26.9.1
         imagePullPolicy: IfNotPresent
         livenessProbe:
           httpGet:
@@ -1554,7 +1554,7 @@ spec:
         - "3389,4190,4191,4567,4568"
         - --outbound-ports-to-ignore
         - "443,6443"
-        image: cr.l5d.io/linkerd/proxy:edge-26.5.1
+        image: cr.l5d.io/linkerd/proxy:edge-26.9.1
         command: ["/usr/lib/linkerd/linkerd2-proxy-init"]
         imagePullPolicy: IfNotPresent
         name: linkerd-init
@@ -1634,11 +1634,11 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   annotations:
-    linkerd.io/created-by: linkerd/helm edge-26.5.1
+    linkerd.io/created-by: linkerd/helm edge-26.9.1
   labels:
     app.kubernetes.io/name: proxy-injector
     app.kubernetes.io/part-of: Linkerd
-    app.kubernetes.io/version: edge-26.5.1
+    app.kubernetes.io/version: edge-26.9.1
     linkerd.io/control-plane-component: proxy-injector
     linkerd.io/control-plane-ns: os-mesh
   name: linkerd-proxy-injector
@@ -1657,8 +1657,8 @@ spec:
     metadata:
       annotations:
         checksum/config: 0f99ce58625f120ef9ca1dd6ffeae1e0a06a120d678eb9d015b8d8724e3a54b1
-        linkerd.io/created-by: linkerd/helm edge-26.5.1
-        linkerd.io/proxy-version: edge-26.5.1
+        linkerd.io/created-by: linkerd/helm edge-26.9.1
+        linkerd.io/proxy-version: edge-26.9.1
         cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
         linkerd.io/trust-root-sha256: 16b963273c8f16067f944c7cef262350151034f1ec5b9442213d9eec5b669487
         config.linkerd.io/opaque-ports: "8443"
@@ -1801,7 +1801,7 @@ spec:
           value: linkerd-destination.os-mesh.serviceaccount.identity.os-mesh.cluster.local
         - name: LINKERD2_PROXY_POLICY_SVC_NAME
           value: linkerd-destination.os-mesh.serviceaccount.identity.os-mesh.cluster.local
-        image: cr.l5d.io/linkerd/proxy:edge-26.5.1
+        image: cr.l5d.io/linkerd/proxy:edge-26.9.1
         imagePullPolicy: IfNotPresent
         livenessProbe:
           httpGet:
@@ -1851,7 +1851,7 @@ spec:
         - -log-format=plain
         - -linkerd-namespace=os-mesh
         - -enable-pprof=false
-        image: cr.l5d.io/linkerd/controller:edge-26.5.1
+        image: cr.l5d.io/linkerd/controller:edge-26.9.1
         imagePullPolicy: IfNotPresent
         livenessProbe:
           httpGet:
@@ -1909,7 +1909,7 @@ spec:
         - "3389,4190,4191,4567,4568"
         - --outbound-ports-to-ignore
         - "443,6443"
-        image: cr.l5d.io/linkerd/proxy:edge-26.5.1
+        image: cr.l5d.io/linkerd/proxy:edge-26.9.1
         command: ["/usr/lib/linkerd/linkerd2-proxy-init"]
         imagePullPolicy: IfNotPresent
         name: linkerd-init
