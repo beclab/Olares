@@ -1,0 +1,1070 @@
+# 设计草案。须在隔离环境经版本和准入校验后使用。
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: appcapabilitysets.access.olares.io
+spec:
+  group: access.olares.io
+  scope: Namespaced
+  names:
+    kind: AppCapabilitySet
+    listKind: AppCapabilitySetList
+    plural: appcapabilitysets
+    singular: appcapabilityset
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+    subresources:
+      status: {}
+    schema:
+      openAPIV3Schema:
+        type: object
+        required:
+        - spec
+        properties:
+          spec:
+            type: object
+            description: Immutable directory of reviewed capabilities for a provider artifact.
+            required:
+            - release
+            - reviewRef
+            - capabilities
+            properties:
+              release:
+                type: object
+                required:
+                - applicationId
+                - publisherId
+                - version
+                - artifactDigest
+                properties:
+                  applicationId:
+                    type: string
+                    minLength: 1
+                    maxLength: 128
+                    pattern: "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+                  publisherId:
+                    type: string
+                    minLength: 1
+                    maxLength: 128
+                    pattern: "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+                  version:
+                    type: string
+                    minLength: 1
+                    maxLength: 64
+                    pattern: "^[A-Za-z0-9][A-Za-z0-9._+-]*$"
+                  artifactDigest:
+                    type: string
+                    minLength: 1
+                    maxLength: 71
+                    pattern: "^sha256:[a-f0-9]{64}$"
+              reviewRef:
+                type: string
+                minLength: 1
+                maxLength: 128
+                pattern: "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+              capabilities:
+                type: array
+                minItems: 1
+                maxItems: 32
+                items:
+                  type: object
+                  required:
+                  - id
+                  - serviceKey
+                  - portName
+                  - protocol
+                  - rules
+                  properties:
+                    id:
+                      type: string
+                      minLength: 1
+                      maxLength: 63
+                      pattern: "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+                    serviceKey:
+                      type: string
+                      minLength: 1
+                      maxLength: 63
+                      pattern: "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+                    portName:
+                      type: string
+                      minLength: 1
+                      maxLength: 63
+                      pattern: "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+                    protocol:
+                      type: string
+                      enum:
+                      - HTTP
+                    title:
+                      type: string
+                      minLength: 1
+                      maxLength: 128
+                    description:
+                      type: string
+                      minLength: 1
+                      maxLength: 512
+                    enforcement:
+                      type: string
+                      description: Omission means HTTPRoute. DedicatedPort requires platform approval of the entire listener.
+                      enum:
+                      - HTTPRoute
+                      - DedicatedPort
+                    rules:
+                      type: array
+                      minItems: 1
+                      maxItems: 64
+                      items:
+                        type: object
+                        required:
+                        - method
+                        - path
+                        properties:
+                          method:
+                            type: string
+                            enum:
+                            - GET
+                            - HEAD
+                            - POST
+                            - PUT
+                            - PATCH
+                            - DELETE
+                            - OPTIONS
+                          pathType:
+                            type: string
+                            description: Omission means Exact for backward compatibility.
+                            enum: [Exact, PathPrefix, RegularExpression]
+                          path:
+                            type: string
+                            minLength: 1
+                            maxLength: 256
+                        x-kubernetes-validations:
+                        - rule: >-
+                            has(self.pathType) && self.pathType == 'RegularExpression' ?
+                            self.path.startsWith('^/') && self.path.endsWith('$') &&
+                            self.path.matches('^./[A-Za-z0-9_-]+/[ -~]+[$]$') :
+                            self.path.matches('^/([A-Za-z0-9_-]+(/[A-Za-z0-9_-]+)*/?)?$')
+                          message: Use a literal absolute path or an anchored ASCII expression with a fixed first path segment
+                        - rule: >-
+                            !has(self.pathType) || self.pathType != 'PathPrefix' ||
+                            self.path == '/' || !self.path.endsWith('/')
+                          message: PathPrefix cannot end in a slash except for the root prefix
+                      x-kubernetes-list-type: map
+                      x-kubernetes-list-map-keys:
+                      - method
+                      - path
+                x-kubernetes-list-type: map
+                x-kubernetes-list-map-keys:
+                - id
+            x-kubernetes-validations:
+            - rule: self == oldSelf
+              message: The published material is immutable
+          status:
+            type: object
+            description: Observed review and resolution conditions for this catalog.
+            required: []
+            properties:
+              observedGeneration:
+                type: integer
+                minimum: 0
+                format: int64
+              conditions:
+                type: array
+                minItems: 1
+                maxItems: 12
+                items:
+                  type: object
+                  required:
+                  - type
+                  - status
+                  - reason
+                  - message
+                  - lastTransitionTime
+                  - observedGeneration
+                  properties:
+                    type:
+                      type: string
+                      minLength: 1
+                      maxLength: 64
+                      pattern: "^[A-Za-z][A-Za-z0-9]*$"
+                    status:
+                      type: string
+                      enum:
+                      - 'True'
+                      - 'False'
+                      - Unknown
+                    reason:
+                      type: string
+                      minLength: 1
+                      maxLength: 64
+                      pattern: "^[A-Za-z][A-Za-z0-9_]*$"
+                    message:
+                      type: string
+                      maxLength: 512
+                    lastTransitionTime:
+                      type: string
+                      format: date-time
+                    observedGeneration:
+                      type: integer
+                      minimum: 0
+                      format: int64
+                x-kubernetes-list-type: map
+                x-kubernetes-list-map-keys:
+                - type
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: appaccessrequests.access.olares.io
+spec:
+  group: access.olares.io
+  scope: Namespaced
+  names:
+    kind: AppAccessRequest
+    listKind: AppAccessRequestList
+    plural: appaccessrequests
+    singular: appaccessrequest
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+    subresources:
+      status: {}
+    schema:
+      openAPIV3Schema:
+        type: object
+        required:
+        - spec
+        properties:
+          spec:
+            type: object
+            description: Immutable installation request for one provider instance and capability.
+            required:
+            - installTransactionId
+            - requesterUserId
+            - sourceRelease
+            - requestDigest
+            - target
+            - purpose
+            - required
+            - expiresAt
+            properties:
+              installTransactionId:
+                type: string
+                minLength: 1
+                maxLength: 128
+                pattern: "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+              requesterUserId:
+                type: string
+                minLength: 1
+                maxLength: 128
+                pattern: "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+              sourceRelease:
+                type: object
+                required:
+                - applicationId
+                - publisherId
+                - version
+                - artifactDigest
+                properties:
+                  applicationId:
+                    type: string
+                    minLength: 1
+                    maxLength: 128
+                    pattern: "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+                  publisherId:
+                    type: string
+                    minLength: 1
+                    maxLength: 128
+                    pattern: "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+                  version:
+                    type: string
+                    minLength: 1
+                    maxLength: 64
+                    pattern: "^[A-Za-z0-9][A-Za-z0-9._+-]*$"
+                  artifactDigest:
+                    type: string
+                    minLength: 1
+                    maxLength: 71
+                    pattern: "^sha256:[a-f0-9]{64}$"
+              requestDigest:
+                type: string
+                minLength: 1
+                maxLength: 71
+                pattern: "^sha256:[a-f0-9]{64}$"
+              accessScope:
+                type: object
+                required: [sourceProfile, targetProfile, relation, userContext, delivery]
+                properties:
+                  sourceProfile:
+                    type: object
+                    required:
+                    - workloadClass
+                    - ownership
+                    properties:
+                      workloadClass:
+                        type: string
+                        enum: [System, Application]
+                      ownership:
+                        type: string
+                        enum: [Platform, User, Shared]
+                      ownerUserId:
+                        type: string
+                        minLength: 1
+                        maxLength: 128
+                        pattern: "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+                    x-kubernetes-validations:
+                    - rule: (self.ownership == 'User') == has(self.ownerUserId)
+                      message: Only user-owned instances have an ownerUserId
+                  targetProfile:
+                    type: object
+                    required:
+                    - workloadClass
+                    - ownership
+                    properties:
+                      workloadClass:
+                        type: string
+                        enum: [System, Application]
+                      ownership:
+                        type: string
+                        enum: [Platform, User, Shared]
+                      ownerUserId:
+                        type: string
+                        minLength: 1
+                        maxLength: 128
+                        pattern: "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+                    x-kubernetes-validations:
+                    - rule: (self.ownership == 'User') == has(self.ownerUserId)
+                      message: Only user-owned instances have an ownerUserId
+                  relation:
+                    type: string
+                    enum: [SameUser, PlatformCapability, SharedCapability]
+                  userContext:
+                    type: string
+                    enum: [WorkloadOnly, VerifiedUser]
+                  delivery:
+                    type: string
+                    enum: [Direct, ViaAppGateway]
+                  gatewayRef:
+                    type: object
+                    required: [name, uid, listenerName]
+                    properties:
+                      name:
+                        type: string
+                        minLength: 1
+                        maxLength: 63
+                        pattern: "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+                      uid:
+                        type: string
+                        maxLength: 36
+                        pattern: "^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$"
+                      listenerName:
+                        type: string
+                        minLength: 1
+                        maxLength: 63
+                        pattern: "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+                x-kubernetes-validations:
+                - rule: >-
+                    self.relation == 'SameUser' ?
+                    self.sourceProfile.ownership == 'User' && self.targetProfile.ownership == 'User' &&
+                    self.sourceProfile.ownerUserId == self.targetProfile.ownerUserId :
+                    self.relation == 'PlatformCapability' ? self.targetProfile.ownership == 'Platform' :
+                    self.relation == 'SharedCapability' ? self.targetProfile.ownership == 'Shared' :
+                    self.sourceProfile.workloadClass == 'System' && self.targetProfile.workloadClass == 'System' &&
+                    self.sourceProfile.ownership == 'Platform' && self.targetProfile.ownership == 'Platform' &&
+                    self.userContext == 'WorkloadOnly' && self.delivery == 'Direct'
+                  message: Access relation must match the ownership and workload profiles
+                - rule: >-
+                    (self.delivery == 'ViaAppGateway') == has(self.gatewayRef)
+                  message: Gateway delivery requires a gateway and listener reference
+              target:
+                type: object
+                required:
+                - instanceRef
+                - namespaceRef
+                - capabilitySetRef
+                - capabilityId
+                properties:
+                  instanceRef:
+                    type: object
+                    required:
+                    - name
+                    - uid
+                    properties:
+                      name:
+                        type: string
+                        minLength: 1
+                        maxLength: 63
+                        pattern: "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+                      uid:
+                        type: string
+                        minLength: 1
+                        maxLength: 36
+                        pattern: "^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$"
+                  namespaceRef:
+                    type: object
+                    required:
+                    - name
+                    - uid
+                    properties:
+                      name:
+                        type: string
+                        minLength: 1
+                        maxLength: 63
+                        pattern: "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+                      uid:
+                        type: string
+                        minLength: 1
+                        maxLength: 36
+                        pattern: "^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$"
+                  capabilitySetRef:
+                    type: object
+                    required:
+                    - name
+                    - uid
+                    properties:
+                      name:
+                        type: string
+                        minLength: 1
+                        maxLength: 63
+                        pattern: "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+                      uid:
+                        type: string
+                        minLength: 1
+                        maxLength: 36
+                        pattern: "^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$"
+                  capabilityId:
+                    type: string
+                    minLength: 1
+                    maxLength: 63
+                    pattern: "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+              purpose:
+                type: string
+                minLength: 1
+                maxLength: 256
+              required:
+                type: boolean
+              expiresAt:
+                type: string
+                format: date-time
+            x-kubernetes-validations:
+            - rule: self == oldSelf
+              message: The request intent is immutable
+          status:
+            type: object
+            description: Decision recorded by the trusted approval service. An absent decision means Pending.
+            required: []
+            properties:
+              decision:
+                type: object
+                required:
+                - outcome
+                - decidedAt
+                properties:
+                  outcome:
+                    type: string
+                    enum:
+                    - Approved
+                    - Denied
+                    - Withdrawn
+                    - Expired
+                  decidedAt:
+                    type: string
+                    format: date-time
+                  actorUserId:
+                    type: string
+                    minLength: 1
+                    maxLength: 128
+                    pattern: "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+                  receiptId:
+                    type: string
+                    minLength: 1
+                    maxLength: 128
+                    pattern: "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+                  intentDigestVersion:
+                    type: string
+                    enum:
+                    - v1
+                    - v2
+                    - v3
+                    - v4
+                  intentDigest:
+                    type: string
+                    minLength: 1
+                    maxLength: 71
+                    pattern: "^sha256:[a-f0-9]{64}$"
+                x-kubernetes-validations:
+                - rule: "(self.outcome == 'Expired') == !has(self.actorUserId)"
+                  message: Only expiry is recorded without a user actor
+                - rule: "(self.outcome == 'Approved') == (has(self.receiptId) && has(self.intentDigest))
+                    && (has(self.receiptId) == has(self.intentDigest))"
+                  message: Approval must include both receiptId and intentDigest
+                - rule: "!has(self.intentDigestVersion) || self.outcome == 'Approved'"
+                  message: Only an approval can specify an intent digest version
+        x-kubernetes-validations:
+        - rule: "!has(oldSelf.status) || !has(oldSelf.status.decision) || (has(self.status) && has(self.status.decision) && self.status.decision == oldSelf.status.decision)"
+          message: A recorded decision cannot be changed or removed
+        - rule: >-
+            !has(self.status) || !has(self.status.decision) ||
+            self.status.decision.outcome != 'Approved' ||
+            self.status.decision.decidedAt < self.spec.expiresAt
+          message: Approval must be recorded before the request deadline
+        - rule: >-
+            !has(self.status) || !has(self.status.decision) ||
+            self.status.decision.outcome != 'Expired' ||
+            self.status.decision.decidedAt >= self.spec.expiresAt
+          message: A request cannot expire before its deadline
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: appaccesspolicies.access.olares.io
+spec:
+  group: access.olares.io
+  scope: Namespaced
+  names:
+    kind: AppAccessPolicy
+    listKind: AppAccessPolicyList
+    plural: appaccesspolicies
+    singular: appaccesspolicy
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+    subresources:
+      status: {}
+    schema:
+      openAPIV3Schema:
+        type: object
+        required:
+        - spec
+        properties:
+          spec:
+            type: object
+            description: Approved binding of one caller instance to one provider capability.
+            required:
+            - binding
+            - desiredState
+            properties:
+              binding:
+                type: object
+                required:
+                - source
+                - target
+                properties:
+                  accessScope:
+                    type: object
+                    required: [sourceProfile, targetProfile, relation, userContext, delivery]
+                    properties:
+                      sourceProfile:
+                        type: object
+                        required:
+                        - workloadClass
+                        - ownership
+                        properties:
+                          workloadClass:
+                            type: string
+                            enum: [System, Application]
+                          ownership:
+                            type: string
+                            enum: [Platform, User, Shared]
+                          ownerUserId:
+                            type: string
+                            minLength: 1
+                            maxLength: 128
+                            pattern: "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+                        x-kubernetes-validations:
+                        - rule: (self.ownership == 'User') == has(self.ownerUserId)
+                          message: Only user-owned instances have an ownerUserId
+                      targetProfile:
+                        type: object
+                        required:
+                        - workloadClass
+                        - ownership
+                        properties:
+                          workloadClass:
+                            type: string
+                            enum: [System, Application]
+                          ownership:
+                            type: string
+                            enum: [Platform, User, Shared]
+                          ownerUserId:
+                            type: string
+                            minLength: 1
+                            maxLength: 128
+                            pattern: "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+                        x-kubernetes-validations:
+                        - rule: (self.ownership == 'User') == has(self.ownerUserId)
+                          message: Only user-owned instances have an ownerUserId
+                      relation:
+                        type: string
+                        enum: [SameUser, PlatformCapability, SharedCapability, SystemDefault]
+                      userContext:
+                        type: string
+                        enum: [WorkloadOnly, VerifiedUser]
+                      delivery:
+                        type: string
+                        enum: [Direct, ViaAppGateway]
+                      gatewayRef:
+                        type: object
+                        required: [name, uid, listenerName]
+                        properties:
+                          name:
+                            type: string
+                            minLength: 1
+                            maxLength: 63
+                            pattern: "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+                          uid:
+                            type: string
+                            maxLength: 36
+                            pattern: "^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$"
+                          listenerName:
+                            type: string
+                            minLength: 1
+                            maxLength: 63
+                            pattern: "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+                    x-kubernetes-validations:
+                    - rule: >-
+                        self.relation == 'SameUser' ?
+                        self.sourceProfile.ownership == 'User' && self.targetProfile.ownership == 'User' &&
+                        self.sourceProfile.ownerUserId == self.targetProfile.ownerUserId :
+                        self.relation == 'PlatformCapability' ? self.targetProfile.ownership == 'Platform' :
+                        self.relation == 'SharedCapability' ? self.targetProfile.ownership == 'Shared' :
+                        self.sourceProfile.workloadClass == 'System' && self.targetProfile.workloadClass == 'System' &&
+                        self.sourceProfile.ownership == 'Platform' && self.targetProfile.ownership == 'Platform' &&
+                        self.userContext == 'WorkloadOnly' && self.delivery == 'Direct'
+                      message: Access relation must match the ownership and workload profiles
+                    - rule: >-
+                        (self.delivery == 'ViaAppGateway') == has(self.gatewayRef)
+                      message: Gateway delivery requires a gateway and listener reference
+                  systemRuleRef:
+                    type: object
+                    required: [ruleId, revision, catalogDigest]
+                    properties:
+                      ruleId:
+                        type: string
+                        minLength: 1
+                        maxLength: 63
+                        pattern: "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+                      revision:
+                        type: integer
+                        format: int64
+                        minimum: 1
+                      catalogDigest:
+                        type: string
+                        minLength: 1
+                        maxLength: 71
+                        pattern: "^sha256:[a-f0-9]{64}$"
+                  source:
+                    type: object
+                    required:
+                    - instanceRef
+                    - namespaceRef
+                    - workload
+                    - serviceAccount
+                    - release
+                    properties:
+                      instanceRef:
+                        type: object
+                        required:
+                        - name
+                        - uid
+                        properties:
+                          name:
+                            type: string
+                            minLength: 1
+                            maxLength: 63
+                            pattern: "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+                          uid:
+                            type: string
+                            minLength: 1
+                            maxLength: 36
+                            pattern: "^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$"
+                      namespaceRef:
+                        type: object
+                        required:
+                        - name
+                        - uid
+                        properties:
+                          name:
+                            type: string
+                            minLength: 1
+                            maxLength: 63
+                            pattern: "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+                          uid:
+                            type: string
+                            minLength: 1
+                            maxLength: 36
+                            pattern: "^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$"
+                      workload:
+                        type: object
+                        required:
+                        - kind
+                        - name
+                        - uid
+                        properties:
+                          kind:
+                            type: string
+                            enum:
+                            - Deployment
+                            - StatefulSet
+                          name:
+                            type: string
+                            minLength: 1
+                            maxLength: 63
+                            pattern: "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+                          uid:
+                            type: string
+                            minLength: 1
+                            maxLength: 36
+                            pattern: "^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$"
+                      serviceAccount:
+                        type: object
+                        required:
+                        - name
+                        - uid
+                        properties:
+                          name:
+                            type: string
+                            minLength: 1
+                            maxLength: 63
+                            pattern: "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+                          uid:
+                            type: string
+                            minLength: 1
+                            maxLength: 36
+                            pattern: "^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$"
+                      release:
+                        type: object
+                        required:
+                        - applicationId
+                        - publisherId
+                        - version
+                        - artifactDigest
+                        properties:
+                          applicationId:
+                            type: string
+                            minLength: 1
+                            maxLength: 128
+                            pattern: "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+                          publisherId:
+                            type: string
+                            minLength: 1
+                            maxLength: 128
+                            pattern: "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+                          version:
+                            type: string
+                            minLength: 1
+                            maxLength: 64
+                            pattern: "^[A-Za-z0-9][A-Za-z0-9._+-]*$"
+                          artifactDigest:
+                            type: string
+                            minLength: 1
+                            maxLength: 71
+                            pattern: "^sha256:[a-f0-9]{64}$"
+                      requestDigest:
+                        type: string
+                        minLength: 1
+                        maxLength: 71
+                        pattern: "^sha256:[a-f0-9]{64}$"
+                  target:
+                    type: object
+                    required:
+                    - instanceRef
+                    - namespaceRef
+                    - workload
+                    - serviceAccount
+                    - capabilitySetRef
+                    - capabilityId
+                    - service
+                    properties:
+                      instanceRef:
+                        type: object
+                        required:
+                        - name
+                        - uid
+                        properties:
+                          name:
+                            type: string
+                            minLength: 1
+                            maxLength: 63
+                            pattern: "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+                          uid:
+                            type: string
+                            minLength: 1
+                            maxLength: 36
+                            pattern: "^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$"
+                      namespaceRef:
+                        type: object
+                        required:
+                        - name
+                        - uid
+                        properties:
+                          name:
+                            type: string
+                            minLength: 1
+                            maxLength: 63
+                            pattern: "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+                          uid:
+                            type: string
+                            minLength: 1
+                            maxLength: 36
+                            pattern: "^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$"
+                      workload:
+                        type: object
+                        required:
+                        - kind
+                        - name
+                        - uid
+                        properties:
+                          kind:
+                            type: string
+                            enum:
+                            - Deployment
+                            - StatefulSet
+                          name:
+                            type: string
+                            minLength: 1
+                            maxLength: 63
+                            pattern: "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+                          uid:
+                            type: string
+                            minLength: 1
+                            maxLength: 36
+                            pattern: "^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$"
+                      serviceAccount:
+                        type: object
+                        required:
+                        - name
+                        - uid
+                        properties:
+                          name:
+                            type: string
+                            minLength: 1
+                            maxLength: 63
+                            pattern: "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+                          uid:
+                            type: string
+                            minLength: 1
+                            maxLength: 36
+                            pattern: "^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$"
+                      capabilitySetRef:
+                        type: object
+                        required:
+                        - name
+                        - uid
+                        properties:
+                          name:
+                            type: string
+                            minLength: 1
+                            maxLength: 63
+                            pattern: "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+                          uid:
+                            type: string
+                            minLength: 1
+                            maxLength: 36
+                            pattern: "^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$"
+                      capabilityId:
+                        type: string
+                        minLength: 1
+                        maxLength: 63
+                        pattern: "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+                      service:
+                        type: object
+                        required:
+                        - name
+                        - uid
+                        - servicePort
+                        - containerPort
+                        properties:
+                          name:
+                            type: string
+                            minLength: 1
+                            maxLength: 63
+                            pattern: "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+                          uid:
+                            type: string
+                            minLength: 1
+                            maxLength: 36
+                            pattern: "^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$"
+                          servicePort:
+                            type: integer
+                            minimum: 1
+                            maximum: 65535
+                          containerPort:
+                            type: integer
+                            minimum: 1
+                            maximum: 65535
+                  requestRef:
+                    type: object
+                    required:
+                    - name
+                    - uid
+                    properties:
+                      name:
+                        type: string
+                        minLength: 1
+                        maxLength: 63
+                        pattern: "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+                      uid:
+                        type: string
+                        minLength: 1
+                        maxLength: 36
+                        pattern: "^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$"
+                  consent:
+                    type: object
+                    required:
+                    - receiptId
+                    - userId
+                    - confirmedAt
+                    - intentDigest
+                    properties:
+                      receiptId:
+                        type: string
+                        minLength: 1
+                        maxLength: 128
+                        pattern: "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+                      userId:
+                        type: string
+                        minLength: 1
+                        maxLength: 128
+                        pattern: "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+                      confirmedAt:
+                        type: string
+                        format: date-time
+                      intentDigestVersion:
+                        type: string
+                        enum:
+                        - v1
+                        - v2
+                        - v3
+                        - v4
+                      intentDigest:
+                        type: string
+                        minLength: 1
+                        maxLength: 71
+                        pattern: "^sha256:[a-f0-9]{64}$"
+                x-kubernetes-validations:
+                - rule: >-
+                    has(self.systemRuleRef) ?
+                    has(self.accessScope) && self.accessScope.relation == 'SystemDefault' &&
+                    !has(self.requestRef) && !has(self.consent) && !has(self.source.requestDigest) :
+                    has(self.requestRef) && has(self.consent) && has(self.source.requestDigest) &&
+                    (!has(self.accessScope) || (self.accessScope.relation != 'SystemDefault' &&
+                    has(self.consent.intentDigestVersion) && self.consent.intentDigestVersion in ['v3', 'v4']))
+                  message: Grant must have exactly one valid authorization provenance
+                - rule: self == oldSelf
+                  message: The published material is immutable
+              desiredState:
+                type: string
+                enum:
+                - Active
+                - Revoked
+                x-kubernetes-validations:
+                - rule: oldSelf != 'Revoked' || self == 'Revoked'
+                  message: Revoked grants cannot be reactivated
+          status:
+            type: object
+            description: Observed policy reconciliation and data-plane verification.
+            required: []
+            properties:
+              observedGeneration:
+                type: integer
+                minimum: 0
+                format: int64
+              conditions:
+                type: array
+                minItems: 1
+                maxItems: 12
+                items:
+                  type: object
+                  required:
+                  - type
+                  - status
+                  - reason
+                  - message
+                  - lastTransitionTime
+                  - observedGeneration
+                  properties:
+                    type:
+                      type: string
+                      minLength: 1
+                      maxLength: 64
+                      pattern: "^[A-Za-z][A-Za-z0-9]*$"
+                    status:
+                      type: string
+                      enum:
+                      - 'True'
+                      - 'False'
+                      - Unknown
+                    reason:
+                      type: string
+                      minLength: 1
+                      maxLength: 64
+                      pattern: "^[A-Za-z][A-Za-z0-9_]*$"
+                    message:
+                      type: string
+                      maxLength: 512
+                    lastTransitionTime:
+                      type: string
+                      format: date-time
+                    observedGeneration:
+                      type: integer
+                      minimum: 0
+                      format: int64
+                x-kubernetes-list-type: map
+                x-kubernetes-list-map-keys:
+                - type
+              managedObjects:
+                type: array
+                maxItems: 256
+                items:
+                  type: object
+                  required:
+                  - apiVersion
+                  - kind
+                  - namespace
+                  - name
+                  - uid
+                  properties:
+                    apiVersion:
+                      type: string
+                      minLength: 1
+                      maxLength: 100
+                    kind:
+                      type: string
+                      minLength: 1
+                      maxLength: 128
+                      pattern: "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+                    namespace:
+                      type: string
+                      minLength: 1
+                      maxLength: 63
+                      pattern: "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+                    name:
+                      type: string
+                      minLength: 1
+                      maxLength: 63
+                      pattern: "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+                    uid:
+                      type: string
+                      minLength: 1
+                      maxLength: 36
+                      pattern: "^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$"
+                x-kubernetes-list-type: map
+                x-kubernetes-list-map-keys:
+                - apiVersion
+                - kind
+                - namespace
+                - name
+              effectivePolicyDigest:
+                type: string
+                minLength: 1
+                maxLength: 71
+                pattern: "^sha256:[a-f0-9]{64}$"
+              verificationRef:
+                type: string
+                minLength: 1
+                maxLength: 128
+                pattern: "^[A-Za-z0-9][A-Za-z0-9._:-]*$"

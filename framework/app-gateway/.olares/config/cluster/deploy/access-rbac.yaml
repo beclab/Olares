@@ -1,0 +1,91 @@
+# Access authorization control-plane RBAC. Business policy compilation stays
+# disabled until AppAccessPolicy desiredState is explicitly Active.
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: os-app-access
+  labels:
+    app.kubernetes.io/name: app-access
+    app.kubernetes.io/managed-by: app-gateway
+    traffic.olares.io/group: mesh
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: app-access-controller
+  namespace: os-app-access
+  labels:
+    app.kubernetes.io/name: app-access
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: olares:app-access:controller
+  labels:
+    app.kubernetes.io/name: app-access
+rules:
+  - apiGroups: ["access.olares.io"]
+    resources:
+      - appcapabilitysets
+      - appcapabilitysets/status
+      - appaccessrequests
+      - appaccessrequests/status
+      - appaccesspolicies
+      - appaccesspolicies/status
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["policy.linkerd.io"]
+    resources: ["servers", "serverauthorizations", "authorizationpolicies", "meshtlsauthentications", "networkauthentications"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources: ["httproutes"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["networkpolicies"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: [""]
+    resources: ["namespaces", "services", "serviceaccounts", "pods", "endpoints"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: olares:app-access:controller
+  labels:
+    app.kubernetes.io/name: app-access
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: olares:app-access:controller
+subjects:
+  - kind: ServiceAccount
+    name: app-access-controller
+    namespace: os-app-access
+---
+# Application workloads may read capability catalogs in os-app-access but must
+# not create or mutate access policies (system grants included).
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: olares:app-access:app-read
+  namespace: os-app-access
+  labels:
+    app.kubernetes.io/name: app-access
+rules:
+  - apiGroups: ["access.olares.io"]
+    resources: ["appcapabilitysets"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-access-runtime
+  namespace: os-app-access
+  labels:
+    app.kubernetes.io/name: app-access
+data:
+  # When false, controllers must not emit Linkerd authz or deny-by-default NP
+  # for application namespaces (install-base default).
+  policyCompilationEnabled: "false"
+  l4AppGatewayMTLSEnabled: "false"
+  httpMeshWave: "0"
