@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"slices"
 	"sort"
 	"strconv"
@@ -250,6 +251,12 @@ func (wh *Webhook) CreatePatch(
 				mesh.AnnotatePodForLinkerdInject(pod, true)
 				klog.Infof("mesh-xport: annotate pod=%s/%s linkerd.io/inject=enabled", req.Namespace, pod.Name)
 			}
+		}
+		// Full-HTTP mesh waves (OLARES_HTTP_MESH_WAVE) inject beyond mesh-in callers.
+		httpWave := mesh.ParseHTTPMeshWave(os.Getenv("OLARES_HTTP_MESH_WAVE"))
+		if mesh.ShouldInjectHTTPMesh(injectMeshInAgent, req.Namespace, httpWave, pod) {
+			mesh.AnnotatePodForHTTPMesh(pod, true, httpWave, os.Getenv("OLARES_LINKERD_OPAQUE_PORTS"))
+			klog.Infof("mesh-http: annotate pod=%s/%s wave=%d inject=enabled", req.Namespace, pod.Name, httpWave)
 		}
 		if injectMeshOutAgent {
 			pod.Spec.Volumes = append(pod.Spec.Volumes, meshoutagent.SATokenVolume(), meshoutagent.ConfVolume())
