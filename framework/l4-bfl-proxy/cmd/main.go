@@ -132,8 +132,8 @@ func main() {
 		SSLServerPort:      sslServerPort,
 		SSLProxyServerPort: sslProxyServerPort,
 		AppGatewayMTLS:     envTruthy("OLARES_L4_APP_GATEWAY_MTLS"),
-		AppGatewayHost:     envOr("OLARES_L4_APP_GATEWAY_HOST", "app-gateway-mtls-channel.os-system.svc.cluster.local"),
-		AppGatewayPort:     8443,
+		AppGatewayHost:     envOr("OLARES_L4_APP_GATEWAY_HOST", translator.DefaultAppGatewayHost),
+		AppGatewayPort:     translator.DefaultAppGatewayPort,
 	}
 	if translatorCfg.AppGatewayMTLS {
 		klog.Info("translator: AppGatewayMTLS enabled via OLARES_L4_APP_GATEWAY_MTLS")
