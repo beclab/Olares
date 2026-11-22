@@ -43,3 +43,31 @@ func TestAccessCRDsAndRBACPresent(t *testing.T) {
 		t.Fatal("policy compilation must default to false")
 	}
 }
+
+func TestDeployOmitsTrafficGroupDefaultDenyNP(t *testing.T) {
+	_, file, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("runtime.Caller failed")
+	}
+	deploy := filepath.Clean(filepath.Join(filepath.Dir(file), "../../.olares/config/cluster/deploy"))
+	entries, err := os.ReadDir(deploy)
+	if err != nil {
+		t.Fatalf("read deploy: %v", err)
+	}
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".yaml") {
+			continue
+		}
+		raw, err := os.ReadFile(filepath.Join(deploy, e.Name()))
+		if err != nil {
+			t.Fatalf("read %s: %v", e.Name(), err)
+		}
+		body := string(raw)
+		if strings.Contains(body, "olares-traffic-group-default-deny") {
+			t.Fatalf("%s must not ship traffic-group default-deny NetworkPolicy (AC-5)", e.Name())
+		}
+		if e.Name() == "traffic-group-labels.yaml" && strings.Contains(body, "kind: NetworkPolicy") {
+			t.Fatal("traffic-group-labels.yaml must be labels-only; NetworkPolicy is opt-in outside deploy/")
+		}
+	}
+}
