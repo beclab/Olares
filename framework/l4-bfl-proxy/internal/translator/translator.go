@@ -602,6 +602,9 @@ func (t *Translator) buildAppVirtualHosts(user *message.UserInfo, app *message.A
 		if entrance.Type == entranceTypeDev {
 			cluster.Host = entrance.Host
 			cluster.UseDNS = false
+		} else if agw := t.clusterForAppGateway(clusterName); agw != nil {
+			// North-south HTTP via L4→app-gateway mTLS channel when enabled.
+			cluster = agw
 		}
 		clusterSet[clusterName] = cluster
 
