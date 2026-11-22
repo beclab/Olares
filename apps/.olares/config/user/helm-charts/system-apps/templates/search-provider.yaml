@@ -21,3 +21,44 @@ rules:
   - "/monitorsetting/*"
   - "/file/*"
   verbs: ["*"]
+
+---
+# The external `search3.<terminus>` entrance is a different registry key from
+# the in-cluster `user-system-<user>/search3` provider above. Keep the same
+# path allow-list, but give the authenticated user a domain-scoped provider
+# instead of granting access to the internal ServiceAccount registry entry.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Values.bfl.username }}:search-frontend-domain
+  annotations:
+    provider-registry-ref: {{ .Values.bfl.username }}/search3
+    provider-service-ref: search3.os-framework:80
+rules:
+- nonResourceURLs:
+  - "/document/search*"
+  - "/task/*"
+  - "/search/*"
+  - "/v1/retrieval/*"
+  - "/rag/*"
+  - "/monitorsetting/*"
+  - "/file/*"
+  verbs: ["*"]
+
+---
+# TermiPass uses the authenticated, per-user `search3.<terminus>` entrance.
+# Route that invisible entrance through the same user-scoped system-server
+# provider used by the existing Search3 APIs; the provider injects the final
+# user identity before the request reaches the shared Search3 service.
+apiVersion: v1
+kind: Service
+metadata:
+  name: search3
+  namespace: user-space-{{ .Values.bfl.username }}
+spec:
+  type: ExternalName
+  externalName: system-server.user-system-{{ .Values.bfl.username }}.svc.cluster.local
+  ports:
+    - protocol: TCP
+      port: 28080
+      targetPort: 28080
