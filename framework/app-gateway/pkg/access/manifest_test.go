@@ -44,6 +44,28 @@ func TestAccessCRDsAndRBACPresent(t *testing.T) {
 	}
 }
 
+func TestHTTPMeshWaveConfigDefaultsOff(t *testing.T) {
+	_, file, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("runtime.Caller failed")
+	}
+	deploy := filepath.Clean(filepath.Join(filepath.Dir(file), "../../.olares/config/cluster/deploy"))
+	raw, err := os.ReadFile(filepath.Join(deploy, "http-mesh-wave-config.yaml"))
+	if err != nil {
+		t.Fatalf("http-mesh-wave-config.yaml: %v", err)
+	}
+	body := string(raw)
+	if !strings.Contains(body, `wave: "0"`) {
+		t.Fatal("wave must default to 0")
+	}
+	if !strings.Contains(body, `trafficGroupNP: "false"`) {
+		t.Fatal("trafficGroupNP must default false")
+	}
+	if !strings.Contains(body, `l4AppGatewayMTLS: "false"`) {
+		t.Fatal("l4AppGatewayMTLS must default false")
+	}
+}
+
 func TestDeployOmitsTrafficGroupDefaultDenyNP(t *testing.T) {
 	_, file, _, ok := runtime.Caller(0)
 	if !ok {

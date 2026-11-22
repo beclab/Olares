@@ -22,6 +22,18 @@ func TestNamespaceWaveEligible(t *testing.T) {
 	}
 }
 
+func TestDesiredInboundPolicy(t *testing.T) {
+	if DesiredInboundPolicy(0) != "" {
+		t.Fatal("wave 0 no policy")
+	}
+	if DesiredInboundPolicy(2) != InboundPolicyAllUnauthenticated {
+		t.Fatalf("wave 2: %s", DesiredInboundPolicy(2))
+	}
+	if DesiredInboundPolicy(4) != InboundPolicyClusterAuthenticated {
+		t.Fatalf("wave 4: %s", DesiredInboundPolicy(4))
+	}
+}
+
 func TestShouldInjectHTTPMeshRespectsDisable(t *testing.T) {
 	pod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{
 		LinkerdInjectAnnotation: LinkerdInjectDisabled,
@@ -40,7 +52,16 @@ func TestAnnotatePodForHTTPMesh(t *testing.T) {
 	if pod.Annotations[LinkerdServerTLSModeAnnotation] != MTLSModeRequired {
 		t.Fatalf("mode=%s", pod.Annotations[LinkerdServerTLSModeAnnotation])
 	}
+	if pod.Annotations[LinkerdDefaultInboundPolicyAnnotation] != InboundPolicyClusterAuthenticated {
+		t.Fatalf("inbound=%s", pod.Annotations[LinkerdDefaultInboundPolicyAnnotation])
+	}
 	if pod.Annotations[LinkerdOpaquePortsAnnotation] != "3306" {
 		t.Fatal("opaque")
+	}
+
+	early := &corev1.Pod{}
+	AnnotatePodForHTTPMesh(early, true, 1, "")
+	if early.Annotations[LinkerdDefaultInboundPolicyAnnotation] != InboundPolicyAllUnauthenticated {
+		t.Fatalf("wave1 inbound=%s", early.Annotations[LinkerdDefaultInboundPolicyAnnotation])
 	}
 }

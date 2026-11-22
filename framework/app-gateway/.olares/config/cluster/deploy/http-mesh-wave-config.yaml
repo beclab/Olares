@@ -1,0 +1,17 @@
+# Full-HTTP mesh wave control (default off). Operators raise the wave via
+# app-service env OLARES_HTTP_MESH_WAVE (0–4). This ConfigMap documents the
+# contract and keeps policyCompilation-style fail-closed defaults visible.
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: olares-http-mesh-wave
+  namespace: os-gateway
+  labels:
+    app.kubernetes.io/name: http-mesh-wave
+    app.kubernetes.io/part-of: uniauth
+data:
+  # 0=off, 1=gateway/mesh, 2=+os-*, 3=+user-space, 4=all HTTP + cluster-authenticated inbound
+  wave: "0"
+  trafficGroupNP: "false"
+  l4AppGatewayMTLS: "false"
