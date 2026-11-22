@@ -178,6 +178,30 @@ spec:
         - ALTER TEXT SEARCH CONFIGURATION yiddish ADD MAPPING FOR asciiword WITH simple;
         - commit;
 ---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: search3
+  namespace: {{ .Release.Namespace }}
+---
+# Search3 historically ran as os-internal, which is already cluster-admin.
+# Give the dedicated identity equivalent runtime access for this migration;
+# Files can now authenticate Search3 precisely without changing its existing
+# Kubernetes behavior. Reducing the historical permissions is a separate
+# least-privilege migration.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: search3-cluster-admin
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+  - kind: ServiceAccount
+    name: search3
+    namespace: {{ .Release.Namespace }}
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -197,7 +221,7 @@ spec:
       labels:
         app: search3
     spec:
-      serviceAccountName: os-internal
+      serviceAccountName: search3
       priorityClassName: "system-cluster-critical"
       affinity:
         nodeAffinity:
@@ -231,6 +255,14 @@ spec:
           hostPath:
             path: /olares/rootfs/Common
             type: DirectoryOrCreate
+        - name: files-rag-scope-token
+          projected:
+            defaultMode: 0400
+            sources:
+              - serviceAccountToken:
+                  audience: files-rag-scope
+                  expirationSeconds: 3600
+                  path: token
       initContainers:
       - name: init-container
         image: 'postgres:16.0-alpine3.18'
@@ -252,10 +284,14 @@ spec:
             value: os_framework_search3
       containers:
       - name: search3
-        image: beclab/search3:v0.4.9
+        image: beclab/search3:rag-agent-d782046
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
+        volumeMounts:
+        - name: files-rag-scope-token
+          mountPath: /var/run/secrets/files-rag-scope
+          readOnly: true
         env:
         - name: NODE_IP
           valueFrom:

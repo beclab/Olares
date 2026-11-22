@@ -242,7 +242,7 @@ spec:
           command:
             - /samba_share
         - name: files
-          image: beclab/files-server:v0.2.222
+          image: beclab/files-server:rag-agent-af004887
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: true
