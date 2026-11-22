@@ -118,6 +118,13 @@ var fileserverPatchApps = map[string]bool{
 type Config struct {
 	SSLServerPort      int
 	SSLProxyServerPort int
+	// AppGatewayMTLS enables L4 client mTLS to the app-gateway channel Service.
+	// Default false preserves legacy cleartext upstreams.
+	AppGatewayMTLS bool
+	// AppGatewayHost is the channel Service DNS name used when AppGatewayMTLS is set.
+	AppGatewayHost string
+	// AppGatewayPort is the channel Service port (mTLS listener).
+	AppGatewayPort uint32
 }
 
 type Translator struct {
