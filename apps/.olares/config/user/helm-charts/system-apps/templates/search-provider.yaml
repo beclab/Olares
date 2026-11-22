@@ -11,11 +11,12 @@ rules:
   - "/document/search*"
   - "/task/*"
   - "/search/*"
-  # user-service is the browser-facing authorization boundary for RAG
-  # retrieval and forwards only its computed owner/root scope to Search3.
+  # The authenticated per-user Search3 entrance serves TermiPass RAG
+  # retrieval directly. Search3 resolves the user's searchable scope from
+  # Files; the browser cannot supply trusted owner/root state.
   - "/v1/retrieval/*"
-  # Settings reaches the Search3 RAG control plane through the same trusted
-  # user-service/provider path; Search3 still enforces user/Owner semantics.
+  # TermiPass Settings reaches the Search3 RAG control plane through this
+  # provider. Search3 still enforces user/Owner semantics itself.
   - "/rag/*"
   - "/monitorsetting/*"
   - "/file/*"

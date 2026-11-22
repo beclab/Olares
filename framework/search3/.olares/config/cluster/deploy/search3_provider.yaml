@@ -30,12 +30,12 @@ rules:
       - "/document"
       - "/task/*"
       - "/search/*"
-      # Dedicated service-to-service RAG evidence API. The system-provider
+      # Shared RAG evidence API for trusted system callers. The provider
       # authenticates the caller and injects Terminus-Nonce/X-BFL-USER;
-      # Search3 additionally requires trusted_owner to match that user.
+      # Search3 resolves owner and authorized roots from Files itself.
       - "/v1/retrieval/*"
-      # Settings/user-service RAG control plane. Search3 still validates the
-      # provider-injected identity and keeps global rebuild Owner-only.
+      # RAG control plane. Search3 validates the provider-injected identity,
+      # keeps global operations Owner-only, and denies query-only Agents.
       - "/rag/*"
       - "/image/*"
     verbs: ["*"]
