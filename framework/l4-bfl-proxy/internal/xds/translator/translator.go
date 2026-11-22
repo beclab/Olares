@@ -1596,7 +1596,7 @@ func buildL7Cluster(c *ir.ClusterIR) *clusterv3.Cluster {
 	if !c.UseDNS {
 		discoveryType = clusterv3.Cluster_STATIC
 	}
-	return &clusterv3.Cluster{
+	cluster := &clusterv3.Cluster{
 		Name:                 c.Name,
 		ClusterDiscoveryType: &clusterv3.Cluster_Type{Type: discoveryType},
 		ConnectTimeout:       durationpb.New(connectTimeout),
@@ -1622,6 +1622,37 @@ func buildL7Cluster(c *ir.ClusterIR) *clusterv3.Cluster {
 				}},
 			}},
 		},
+	}
+	if c.UpstreamMTLS != nil {
+		cluster.TransportSocket = buildUpstreamMTLSTransport(c.UpstreamMTLS)
+	}
+	return cluster
+}
+
+func buildUpstreamMTLSTransport(m *ir.UpstreamMTLSIR) *corev3.TransportSocket {
+	ads := &corev3.ConfigSource{
+		ConfigSourceSpecifier: &corev3.ConfigSource_Ads{Ads: &corev3.AggregatedConfigSource{}},
+		ResourceApiVersion:    corev3.ApiVersion_V3,
+	}
+	tlsContext := &tlsv3.UpstreamTlsContext{
+		Sni: m.SNI,
+		CommonTlsContext: &tlsv3.CommonTlsContext{
+			TlsCertificateSdsSecretConfigs: []*tlsv3.SdsSecretConfig{{
+				Name:      m.ClientCertSDS,
+				SdsConfig: ads,
+			}},
+			ValidationContextType: &tlsv3.CommonTlsContext_ValidationContextSdsSecretConfig{
+				ValidationContextSdsSecretConfig: &tlsv3.SdsSecretConfig{
+					Name:      m.TrustedCACerts,
+					SdsConfig: ads,
+				},
+			},
+			AlpnProtocols: []string{"h2", "http/1.1"},
+		},
+	}
+	return &corev3.TransportSocket{
+		Name:       "envoy.transport_sockets.tls",
+		ConfigType: &corev3.TransportSocket_TypedConfig{TypedConfig: mustAny(tlsContext)},
 	}
 }
 
