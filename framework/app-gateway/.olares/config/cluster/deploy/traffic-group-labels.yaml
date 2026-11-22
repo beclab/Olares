@@ -1,0 +1,51 @@
+# Namespace traffic-group labels for L3/L4 isolation. Controllers may also
+# infer labels via InferTrafficGroup; this manifest pins platform namespaces.
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: os-mesh
+  labels:
+    traffic.olares.io/group: mesh
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: os-gateway
+  labels:
+    traffic.olares.io/group: gateway
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: olares-traffic-group-default-deny
+  namespace: os-gateway
+  labels:
+    app.kubernetes.io/managed-by: app-gateway
+    app.kubernetes.io/name: traffic-group
+spec:
+  podSelector: {}
+  policyTypes: ["Ingress", "Egress"]
+  ingress: []
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              traffic.olares.io/group: mesh
+      ports:
+        - protocol: TCP
+          port: 8080
+        - protocol: TCP
+          port: 8086
+        - protocol: TCP
+          port: 8090
+    - ports:
+        - protocol: TCP
+          port: 53
+        - protocol: UDP
+          port: 53
+    # Same-group and compiled Direct/ViaAppGateway peers are added by controllers.
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              traffic.olares.io/group: gateway
