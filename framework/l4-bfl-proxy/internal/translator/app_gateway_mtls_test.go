@@ -6,6 +6,9 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/beclab/l4-bfl-proxy/internal/ir"
+	"github.com/beclab/l4-bfl-proxy/internal/message"
 )
 
 func TestClusterForAppGatewayDisabledByDefault(t *testing.T) {
@@ -32,6 +35,50 @@ func TestClusterForAppGatewayEnabled(t *testing.T) {
 	}
 	if c.UpstreamMTLS.ClientCertSDS != appGatewayClientCertSDS {
 		t.Fatalf("client SDS=%s", c.UpstreamMTLS.ClientCertSDS)
+	}
+}
+
+func TestBuildAppVirtualHostsUsesAppGatewayMTLS(t *testing.T) {
+	tr := &Translator{cfg: &Config{AppGatewayMTLS: true, SSLServerPort: 443}}
+	user := &message.UserInfo{Name: "alice"}
+	app := &message.AppInfo{
+		Name:      "myapp",
+		Appid:     "myapp",
+		Namespace: "myapp-alice",
+		Entrances: []*message.EntranceInfo{
+			{Name: "web", Host: "myapp-svc", Port: 8080},
+		},
+	}
+	clusterSet := make(map[string]*ir.ClusterIR)
+	_ = tr.buildAppVirtualHosts(user, app, "alice.example.com", false, clusterSet)
+	c := clusterSet["app_alice_myapp_web"]
+	if c == nil || c.UpstreamMTLS == nil {
+		t.Fatal("expected app-gateway mTLS cluster")
+	}
+	if c.Host != DefaultAppGatewayHost {
+		t.Fatalf("host=%s", c.Host)
+	}
+}
+
+func TestBuildAppVirtualHostsDevSkipsAppGatewayMTLS(t *testing.T) {
+	tr := &Translator{cfg: &Config{AppGatewayMTLS: true, SSLServerPort: 443}}
+	user := &message.UserInfo{Name: "alice"}
+	app := &message.AppInfo{
+		Name:      "myapp",
+		Appid:     "myapp",
+		Namespace: "myapp-alice",
+		Entrances: []*message.EntranceInfo{
+			{Name: "web", Host: "10.0.0.9", Port: 8080, Type: entranceTypeDev},
+		},
+	}
+	clusterSet := make(map[string]*ir.ClusterIR)
+	_ = tr.buildAppVirtualHosts(user, app, "alice.example.com", false, clusterSet)
+	c := clusterSet["app_alice_myapp_web"]
+	if c == nil || c.UpstreamMTLS != nil {
+		t.Fatal("dev entrance must stay on pod IP without AGW mTLS")
+	}
+	if c.Host != "10.0.0.9" || c.UseDNS {
+		t.Fatalf("dev cluster=%+v", c)
 	}
 }
 
