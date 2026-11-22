@@ -42,14 +42,20 @@ func ValidateHTTPRules(rules []HTTPRule) error {
 		if strings.TrimSpace(r.Method) == "" {
 			return fmt.Errorf("rule[%d]: method is required", i)
 		}
-		if r.Path == "" || !strings.HasPrefix(r.Path, "/") {
+		if r.Path == "" {
+			return fmt.Errorf("rule[%d]: path is required", i)
+		}
+		if pt == PathTypeRegularExpression {
+			if !strings.HasPrefix(r.Path, "^/") {
+				return fmt.Errorf("rule[%d]: RegularExpression path must start with ^/", i)
+			}
+			continue
+		}
+		if !strings.HasPrefix(r.Path, "/") {
 			return fmt.Errorf("rule[%d]: path must start with /", i)
 		}
 		if pt == PathTypePrefix && r.Path != "/" && strings.HasSuffix(r.Path, "/") {
 			return fmt.Errorf("rule[%d]: PathPrefix cannot end with / except for root", i)
-		}
-		if pt == PathTypeRegularExpression && !strings.HasPrefix(r.Path, "^/") {
-			return fmt.Errorf("rule[%d]: RegularExpression path must start with ^/", i)
 		}
 	}
 	return nil
