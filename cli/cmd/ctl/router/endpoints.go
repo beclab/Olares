@@ -34,6 +34,11 @@ const (
 	dataPlaneAPI = "/v1"
 )
 
+// Files RAG is a Router-owned agent route rather than a model route. Router
+// authenticates the calling application, binds the host-delegated final user,
+// and forwards the bounded request to Search3.
+const epFilesRAGSearch = dataPlaneAPI + "/files-rag/search"
+
 // isDataPlanePath reports whether a path this package already built addresses
 // the data plane. It exists so that code deciding something about a request in
 // hand — which credential paid for it, what a retry would cost — does not have
