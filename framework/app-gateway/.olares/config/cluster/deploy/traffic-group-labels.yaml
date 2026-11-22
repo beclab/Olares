@@ -19,3 +19,10 @@ metadata:
   name: os-gateway
   labels:
     traffic.olares.io/group: gateway
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: os-network
+  labels:
+    traffic.olares.io/group: l4
