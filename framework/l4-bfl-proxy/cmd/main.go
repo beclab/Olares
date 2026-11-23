@@ -131,12 +131,12 @@ func main() {
 	translatorCfg := &translator.Config{
 		SSLServerPort:      sslServerPort,
 		SSLProxyServerPort: sslProxyServerPort,
-		AppGatewayMTLS:     envTruthy("OLARES_L4_APP_GATEWAY_MTLS") || envTruthy("OLARES_UNIAUTH_ENDSTATE"),
+		AppGatewayMTLS:     envTruthy("OLARES_L4_APP_GATEWAY_MTLS") || uniauthEndStateEnabled(),
 		AppGatewayHost:     envOr("OLARES_L4_APP_GATEWAY_HOST", translator.DefaultAppGatewayHost),
 		AppGatewayPort:     translator.DefaultAppGatewayPort,
 	}
 	if translatorCfg.AppGatewayMTLS {
-		klog.Info("translator: AppGatewayMTLS enabled (L4 flag or OLARES_UNIAUTH_ENDSTATE)")
+		klog.Info("translator: AppGatewayMTLS enabled (L4 flag or uniauth end-state)")
 	}
 
 	runners := []runner.Runner{
@@ -187,6 +187,16 @@ func main() {
 
 func envTruthy(key string) bool {
 	v := strings.TrimSpace(os.Getenv(key))
+	return v == "1" || strings.EqualFold(v, "true") || strings.EqualFold(v, "yes")
+}
+
+// uniauthEndStateEnabled matches product steady-state: ON unless explicitly false.
+func uniauthEndStateEnabled() bool {
+	v, ok := os.LookupEnv("OLARES_UNIAUTH_ENDSTATE")
+	if !ok {
+		return true
+	}
+	v = strings.TrimSpace(v)
 	return v == "1" || strings.EqualFold(v, "true") || strings.EqualFold(v, "yes")
 }
 

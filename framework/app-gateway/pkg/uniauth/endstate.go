@@ -1,5 +1,5 @@
-// Package uniauth provides the single end-state switch for full HTTP mesh
-// control-plane components hosted in app-gateway.
+// Package uniauth provides the product end-state switch for app-gateway control plane.
+// New install / upgrade steady-state: end-state is ON unless explicitly disabled.
 package uniauth
 
 import (
@@ -9,12 +9,16 @@ import (
 
 const EndStateEnv = "OLARES_UNIAUTH_ENDSTATE"
 
-// EndStateEnabled reports whether operators enabled the full product end-state.
+// EndStateEnabled reports whether the cluster should run the product end-state.
+// If OLARES_UNIAUTH_ENDSTATE is set, use it; otherwise default true.
 func EndStateEnabled() bool {
-	return truthy(os.Getenv(EndStateEnv))
+	if v, ok := os.LookupEnv(EndStateEnv); ok {
+		return truthy(v)
+	}
+	return true
 }
 
-// PolicyCompilationDesired is true when end-state or explicit compilation env is on.
+// PolicyCompilationDesired is true when end-state or explicit compilation is on.
 func PolicyCompilationDesired(explicitEnv string, cmEnabled bool) bool {
 	return EndStateEnabled() || truthy(explicitEnv) || cmEnabled
 }

@@ -39,8 +39,8 @@ func TestAccessCRDsAndRBACPresent(t *testing.T) {
 	if !strings.Contains(rb, "name: os-app-access") {
 		t.Fatal("missing os-app-access namespace")
 	}
-	if !strings.Contains(rb, "policyCompilationEnabled: \"false\"") {
-		t.Fatal("policy compilation must default to false")
+	if !strings.Contains(rb, "policyCompilationEnabled: \"true\"") {
+		t.Fatal("policy compilation must default to true for steady-state")
 	}
 }
 
@@ -74,17 +74,30 @@ func TestHTTPMeshWaveConfigDefaultsOff(t *testing.T) {
 		t.Fatalf("http-mesh-wave-config.yaml: %v", err)
 	}
 	body := string(raw)
-	if !strings.Contains(body, `endState: "false"`) {
-		t.Fatal("endState must default false")
+	if !strings.Contains(body, `endState: "true"`) {
+		t.Fatal("endState must default true for install/upgrade steady-state")
 	}
-	if !strings.Contains(body, `wave: "0"`) {
-		t.Fatal("wave must default to 0")
+	if !strings.Contains(body, `wave: "4"`) {
+		t.Fatal("wave must default to 4")
 	}
-	if !strings.Contains(body, `trafficGroupNP: "false"`) {
-		t.Fatal("trafficGroupNP must default false")
+}
+
+func TestAccessRuntimeEndStateDefaultsOn(t *testing.T) {
+	_, file, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("runtime.Caller failed")
 	}
-	if !strings.Contains(body, `l4AppGatewayMTLS: "false"`) {
-		t.Fatal("l4AppGatewayMTLS must default false")
+	deploy := filepath.Clean(filepath.Join(filepath.Dir(file), "../../.olares/config/cluster/deploy"))
+	rbac, err := os.ReadFile(filepath.Join(deploy, "access-rbac.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := string(rbac)
+	if !strings.Contains(body, `endState: "true"`) {
+		t.Fatal("app-access-runtime endState must be true")
+	}
+	if !strings.Contains(body, `policyCompilationEnabled: "true"`) {
+		t.Fatal("policy compilation must be on for steady-state")
 	}
 }
 

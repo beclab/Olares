@@ -39,3 +39,34 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
   name: linkerd-pki-guardian
+---
+# Entry mTLS vault lives in os-gateway (separate from Linkerd identity CA).
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: linkerd-pki-guardian-entry
+  namespace: os-gateway
+  labels:
+    app.kubernetes.io/name: app-gateway
+    app.kubernetes.io/component: linkerd-pki-guardian
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: linkerd-pki-guardian-entry
+  namespace: os-gateway
+  labels:
+    app.kubernetes.io/name: app-gateway
+    app.kubernetes.io/component: linkerd-pki-guardian
+subjects:
+  - kind: ServiceAccount
+    name: linkerd-pki-guardian
+    namespace: os-mesh
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: linkerd-pki-guardian-entry
