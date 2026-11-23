@@ -2,6 +2,7 @@ package routecontrol
 
 import (
 	"context"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -43,10 +44,21 @@ func (r *SharedRouteReconciler) Reconcile(ctx context.Context, req reconcile.Req
 			Message: rerr.Error(),
 		}
 	}
+	var retry time.Duration
+	if rerr == nil && res.HTTPRouteName != "" {
+		if err := servingReadiness(ctx, r.Client, GatewayRef{}, srr, res.HTTPRouteName); err != nil {
+			res.Status, res.Reason, res.Message = metav1.ConditionFalse, ReasonAwaitingDataPlane, err.Error()
+			retry = 5 * time.Second
+		} else {
+			res.Message = "Entry route and current mesh endpoints are ready"
+			// Endpoint changes need not modify the owned Route.
+			retry = 30 * time.Second
+		}
+	}
 	if statusErr := UpdateSRRStatus(ctx, r.Client, srr, res); statusErr != nil {
 		klog.Warningf("update SRR status %s/%s failed: %v", srr.Namespace, srr.Name, statusErr)
 	}
-	return reconcile.Result{}, rerr
+	return reconcile.Result{RequeueAfter: retry}, rerr
 }
 
 // SetupWithManager registers the reconciler against SharedRouteRegistry and the
