@@ -1360,3 +1360,24 @@ func TestTranslateRoute_BypassSourceCIDR(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 var _ = []cachetypes.Resource(nil)
+
+func TestEntryAuthorizationFilterDoesNotAssertTenant(t *testing.T) {
+	const name = "authelia_backend_alice"
+	filter := buildExtAuthzFilter(name, map[string]*ir.ClusterIR{
+		name: {Name: name, Host: "gateway.internal", Port: 9444, UpstreamMTLS: &ir.UpstreamMTLSIR{}},
+	}, "alice")
+	require.NotNil(t, filter)
+	var config extauthzv3.ExtAuthz
+	require.NoError(t, filter.GetTypedConfig().UnmarshalTo(&config))
+	require.False(t, config.GetFailureModeAllow())
+	service := config.GetHttpService()
+	require.Equal(t, "https://gateway.internal:9444", service.GetServerUri().GetUri())
+	require.Equal(t, name, service.GetServerUri().GetCluster())
+	require.Equal(t, "/api/verify/", service.GetPathPrefix())
+	for _, header := range service.GetAuthorizationRequest().GetHeadersToAdd() {
+		if strings.EqualFold(header.Key, "X-BFL-USER") {
+			require.Empty(t, header.Value, "entry listener must resolve the tenant from the registered authority")
+		}
+		require.NotEqual(t, "X-Olares-Auth-Tenant", header.Key)
+	}
+}

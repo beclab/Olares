@@ -11,8 +11,8 @@ import (
 const edgeForwardClusterName = "app_gateway_edge_forward"
 
 // buildEdgeForwardVirtualHosts builds Host-preserving reverse-proxy vhosts to AGW.
-// Used when AppGatewayMTLS is on: L4 terminates user TLS only; AGW owns all HTTP routing.
-func (t *Translator) buildEdgeForwardVirtualHosts(user *message.UserInfo, zone string, clusterSet map[string]*ir.ClusterIR) []*ir.VirtualHostIR {
+// L4 authorizes browser traffic, and AGW owns all upstream routing.
+func (t *Translator) buildEdgeForwardVirtualHosts(user *message.UserInfo, zone string, clusterSet map[string]*ir.ClusterIR, extraNoAuthHosts ...string) []*ir.VirtualHostIR {
 	if user == nil || t == nil {
 		return nil
 	}
@@ -26,7 +26,41 @@ func (t *Translator) buildEdgeForwardVirtualHosts(user *message.UserInfo, zone s
 	if len(domains) == 0 {
 		return nil
 	}
-	makeVHost := func(suffix string, domains []string) *ir.VirtualHostIR {
+	// Login and activation must reach their own handlers without an ExtAuth
+	// check. Shared routes keep the AGW caller-JWT contract.
+	withoutExtAuth := map[string]bool{}
+	for _, domain := range append([]string{zone}, user.ServerNameDomains...) {
+		if domain != "" {
+			withoutExtAuth["auth."+domain] = true
+			withoutExtAuth["wizard."+domain] = true
+		}
+	}
+	if local := toLocalDomain("auth." + zone); zone != "" {
+		withoutExtAuth[local] = true
+		withoutExtAuth[toLocalDomain("wizard."+zone)] = true
+	}
+	for _, app := range user.Apps {
+		if app == nil || !app.IsShared {
+			continue
+		}
+		// Reuse the same exact aliases emitted by existing app vhosts.
+		unused := map[string]*ir.ClusterIR{}
+		appHosts := t.buildAppVirtualHosts(user, app, zone, false, unused)
+		appHosts = append(appHosts, t.buildCustomDomainVirtualHosts(user, app, unused)...)
+		for _, vhost := range appHosts {
+			for _, host := range vhost.Domains {
+				withoutExtAuth[strings.ToLower(host)] = true
+			}
+		}
+	}
+	for _, host := range extraNoAuthHosts {
+		withoutExtAuth[host] = true
+	}
+	makeVHost := func(suffix string, domains []string, check bool) *ir.VirtualHostIR {
+		var extAuth *ir.ExtAuthConfigIR
+		if check {
+			extAuth = buildAppExtAuthConfig(user)
+		}
 		return &ir.VirtualHostIR{
 			Name:     "edge_forward_" + user.Name + suffix,
 			Domains:  domains,
@@ -38,15 +72,10 @@ func (t *Translator) buildEdgeForwardVirtualHosts(user *message.UserInfo, zone s
 				PathPrefix:       "/",
 				Cluster:          edgeForwardClusterName,
 				WebSocketUpgrade: true,
+				ExtAuth:          extAuth,
 			}},
 		}
 	}
-	if !user.DenyAll {
-		return []*ir.VirtualHostIR{makeVHost("", domains)}
-	}
-
-	// Exact public hosts must not share the virtual host containing the
-	// private wildcard. Envoy prefers exact domains to wildcard domains.
 	allowed := make(map[string]bool, len(user.AllowedDomains))
 	for _, host := range user.AllowedDomains {
 		host = strings.ToLower(strings.TrimSpace(host))
@@ -54,29 +83,40 @@ func (t *Translator) buildEdgeForwardVirtualHosts(user *message.UserInfo, zone s
 			allowed[host] = true
 		}
 	}
-	var public, restricted []string
+	selected := make(map[string]bool, len(domains))
 	for _, domain := range domains {
-		if allowed[domain] {
-			public = append(public, domain)
-			continue
-		}
-		restricted = append(restricted, domain)
-		if suffix, ok := strings.CutPrefix(domain, "*."); ok {
+		selected[domain] = true
+		if suffix, wildcard := strings.CutPrefix(domain, "*."); wildcard {
+			for host := range withoutExtAuth {
+				if label, ok := strings.CutSuffix(host, "."+suffix); ok && label != "" && !strings.Contains(label, ".") {
+					selected[host] = true
+				}
+			}
 			for host := range allowed {
 				if label, ok := strings.CutSuffix(host, "."+suffix); ok && label != "" && !strings.Contains(label, ".") {
-					public = append(public, host)
+					selected[host] = true
 				}
 			}
 		}
 	}
-	slices.Sort(public)
-	public = slices.Compact(public)
 	var out []*ir.VirtualHostIR
-	if len(restricted) != 0 {
-		out = append(out, makeVHost("", restricted))
-	}
-	if len(public) != 0 {
-		out = append(out, makeVHost("_public", public))
+	for _, group := range []struct {
+		suffix        string
+		check, public bool
+	}{
+		{"", true, false}, {"_public", true, true},
+		{"_no_auth", false, false}, {"_no_auth_public", false, true},
+	} {
+		var hosts []string
+		for host := range selected {
+			if group.check == !withoutExtAuth[host] && group.public == (user.DenyAll && allowed[host]) {
+				hosts = append(hosts, host)
+			}
+		}
+		if len(hosts) > 0 {
+			slices.Sort(hosts)
+			out = append(out, makeVHost(group.suffix, hosts, group.check))
+		}
 	}
 	return out
 }

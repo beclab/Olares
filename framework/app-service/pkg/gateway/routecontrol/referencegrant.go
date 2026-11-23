@@ -2,6 +2,7 @@ package routecontrol
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"strings"
 
@@ -231,12 +232,10 @@ func autheliaNSForSRR(srr *srrv1alpha1.SharedRouteRegistry) string {
 }
 
 func autheliaReferenceGrantName(srr *srrv1alpha1.SharedRouteRegistry) string {
-	const prefix = "allow-securitypolicy-authelia-"
-	raw := prefix + srr.Namespace
-	if len(raw) <= 63 {
-		return raw
-	}
-	return strings.TrimRight(raw[:63], "-")
+	// The grant is per entrance: removing an unrelated no-auth route in
+	// the same namespace must not withdraw a protected route's grant.
+	key := sha256.Sum256([]byte(srr.Namespace + "/" + srr.Name))
+	return fmt.Sprintf("allow-authelia-%x", key[:16])
 }
 
 // applyAutheliaReferenceGrant allows SecurityPolicy in the app namespace to
@@ -264,6 +263,11 @@ func applyAutheliaReferenceGrant(ctx context.Context, c client.Client, srr *srrv
 				map[string]any{
 					"group":     "gateway.envoyproxy.io",
 					"kind":      "SecurityPolicy",
+					"namespace": srr.Namespace,
+				},
+				map[string]any{
+					"group":     "gateway.networking.k8s.io",
+					"kind":      "HTTPRoute",
 					"namespace": srr.Namespace,
 				},
 			},

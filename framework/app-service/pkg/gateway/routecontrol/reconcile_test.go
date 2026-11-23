@@ -287,7 +287,7 @@ func TestReconcileSharedRouteGatewayModeApplicationHostContracts(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Name: "demo-svc", Namespace: "demo-shared"},
 		Spec:       corev1.ServiceSpec{Ports: []corev1.ServicePort{{Port: 8080, Protocol: corev1.ProtocolTCP}}},
 	}
-	const pattern = "ab12cd34.*.olares.com"
+	const pattern = "console.example.net"
 	srr := &srrv1alpha1.SharedRouteRegistry{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "shared-demo-app-host",
@@ -320,40 +320,8 @@ func TestReconcileSharedRouteGatewayModeApplicationHostContracts(t *testing.T) {
 	if err != nil || !found || len(hostnames) != 1 {
 		t.Fatalf("spec.hostnames invalid: found=%v len=%d err=%v", found, len(hostnames), err)
 	}
-	if got := hostnames[0]; got != "*.olares.com" {
-		t.Fatalf("hostname = %v, want *.olares.com", got)
-	}
-
-	rules, found, err := unstructured.NestedSlice(route.Object, "spec", "rules")
-	if err != nil || !found || len(rules) == 0 {
-		t.Fatalf("spec.rules invalid: found=%v len=%d err=%v", found, len(rules), err)
-	}
-	firstRule, ok := rules[0].(map[string]any)
-	if !ok {
-		t.Fatalf("spec.rules[0] type = %T, want map[string]any", rules[0])
-	}
-	matches, ok := firstRule["matches"].([]any)
-	if !ok || len(matches) == 0 {
-		t.Fatalf("spec.rules[0].matches invalid: %v", firstRule["matches"])
-	}
-	firstMatch, ok := matches[0].(map[string]any)
-	if !ok {
-		t.Fatalf("spec.rules[0].matches[0] type = %T, want map[string]any", matches[0])
-	}
-	headers, ok := firstMatch["headers"].([]any)
-	if !ok || len(headers) == 0 {
-		t.Fatalf("headers missing in first match: %v", firstMatch["headers"])
-	}
-	header, ok := headers[0].(map[string]any)
-	if !ok {
-		t.Fatalf("first header type = %T, want map[string]any", headers[0])
-	}
-	wantHeader, ok := HostHeaderMatch(pattern)
-	if !ok {
-		t.Fatalf("HostHeaderMatch(%q) returned !ok", pattern)
-	}
-	if got := header["value"]; got != wantHeader["value"] {
-		t.Fatalf("host header regex = %v, want %v", got, wantHeader["value"])
+	if hostnames[0] != pattern {
+		t.Fatalf("hostname = %v, want exact authority %s", hostnames[0], pattern)
 	}
 }
 
@@ -363,7 +331,7 @@ func TestReconcileSharedRouteGatewayModeApplicationMultiEntranceHostPattern(t *t
 		ObjectMeta: metav1.ObjectMeta{Name: "demo-svc", Namespace: "demo-shared"},
 		Spec:       corev1.ServiceSpec{Ports: []corev1.ServicePort{{Port: 8080, Protocol: corev1.ProtocolTCP}}},
 	}
-	const pattern = "e31111940.*.olares.cn"
+	const pattern = "console.example.net"
 	srr := &srrv1alpha1.SharedRouteRegistry{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "app-e3111194-terminal",
@@ -399,22 +367,8 @@ func TestReconcileSharedRouteGatewayModeApplicationMultiEntranceHostPattern(t *t
 	if err != nil || !found || len(hostnames) != 1 {
 		t.Fatalf("spec.hostnames invalid: found=%v len=%d err=%v", found, len(hostnames), err)
 	}
-	if got := hostnames[0]; got != "*.olares.cn" {
-		t.Fatalf("hostname = %v, want *.olares.cn", got)
-	}
-	wantHeader, ok := HostHeaderMatch(pattern)
-	if !ok {
-		t.Fatalf("HostHeaderMatch(%q) returned !ok", pattern)
-	}
-	rules, _, err := unstructured.NestedSlice(route.Object, "spec", "rules")
-	if err != nil || len(rules) == 0 {
-		t.Fatalf("spec.rules: %v err=%v", rules, err)
-	}
-	firstRule := rules[0].(map[string]any)
-	matches := firstRule["matches"].([]any)
-	header := matches[0].(map[string]any)["headers"].([]any)[0].(map[string]any)
-	if got := header["value"]; got != wantHeader["value"] {
-		t.Fatalf("host header regex = %v, want %v", got, wantHeader["value"])
+	if hostnames[0] != pattern {
+		t.Fatalf("hostname = %v, want exact authority %s", hostnames[0], pattern)
 	}
 }
 
@@ -436,7 +390,7 @@ func TestReconcileSharedRouteGatewayModeApplicationBootstrapReady(t *testing.T) 
 		Spec: srrv1alpha1.SharedRouteRegistrySpec{
 			RouteMode:     srrv1alpha1.RouteModeGateway,
 			EntranceClass: srrv1alpha1.EntranceClassApplication,
-			HostPatterns:  []string{"ab12cd34.*.olares.com"},
+			HostPatterns:  []string{"console.example.net"},
 			Upstream:      srrv1alpha1.UpstreamRef{ServiceName: "demo-svc", Port: 8080},
 		},
 	}
@@ -1153,6 +1107,53 @@ func TestExtAuthRouteWaitsForBothAutheliaMeshHops(t *testing.T) {
 			}
 			assertReconciled(true)
 		})
+	}
+}
+
+func TestL4AuthzUsesRegisteredAuthorityAndWithdrawsOnConflict(t *testing.T) {
+	ctx := context.Background()
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "portal-ns", Name: "web"},
+		Spec:       corev1.ServiceSpec{Ports: []corev1.ServicePort{{Port: 80}}},
+	}
+	srr := &srrv1alpha1.SharedRouteRegistry{
+		ObjectMeta: metav1.ObjectMeta{Namespace: svc.Namespace, Name: "web", UID: "portal-registry",
+			Annotations: map[string]string{gateway.AnnotationExtAuthUser: "alice"}},
+		Spec: srrv1alpha1.SharedRouteRegistrySpec{
+			RouteMode: srrv1alpha1.RouteModeGateway, EntranceClass: srrv1alpha1.EntranceClassApplication,
+			HostPatterns: []string{"console.example.net"}, Upstream: srrv1alpha1.UpstreamRef{ServiceName: svc.Name, Port: 80},
+		},
+	}
+	c := fake.NewClientBuilder().WithScheme(testScheme(t)).WithObjects(meshedServiceObjects(svc, srr)...).Build()
+	check := l4AuthzRoute(srr)
+	if _, err := ReconcileSharedRoute(ctx, c, GatewayRef{}, srr); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Get(ctx, client.ObjectKeyFromObject(check), check); err != nil {
+		t.Fatal(err)
+	}
+	hosts, _, err := unstructured.NestedStringSlice(check.Object, "spec", "hostnames")
+	if err != nil || !reflect.DeepEqual(hosts, []string{"console.example.net"}) || mustHTTPRouteSectionName(t, check) != l4AuthzSection {
+		t.Fatalf("authorization route is not isolated and host-bound: %v %v", hosts, err)
+	}
+	rules, _, _ := unstructured.NestedSlice(check.Object, "spec", "rules")
+	rule := rules[0].(map[string]any)
+	backend := rule["backendRefs"].([]any)[0].(map[string]any)
+	if backend["namespace"] != "user-system-alice" || backend["port"] != int64(9091) {
+		t.Fatalf("backend did not use the trusted entrance owner: %v", backend)
+	}
+	competing := srr.DeepCopy()
+	competing.ObjectMeta = metav1.ObjectMeta{Namespace: "other", Name: srr.Name, UID: "different-registry",
+		Annotations: map[string]string{gateway.AnnotationExtAuthUser: "bob"}}
+	if err := c.Create(ctx, competing); err != nil {
+		t.Fatal(err)
+	}
+	result, err := ReconcileSharedRoute(ctx, c, GatewayRef{}, srr)
+	if err != nil || result.Reason != ReasonAwaitingDataPlane {
+		t.Fatalf("authority conflict did not fail closed: %+v %v", result, err)
+	}
+	if err := c.Get(ctx, client.ObjectKeyFromObject(check), check); !apierrors.IsNotFound(err) {
+		t.Fatalf("conflicting authorization route is still present: %v", err)
 	}
 }
 

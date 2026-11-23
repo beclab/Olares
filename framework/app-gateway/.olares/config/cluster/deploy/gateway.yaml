@@ -12,6 +12,18 @@ spec:
       group: gateway.envoyproxy.io
       kind: EnvoyProxy
       name: app-gateway-envoy-proxy
+  tls:
+    frontend:
+      default: {}
+      perPort:
+        - port: 9444
+          tls:
+            validation:
+              mode: AllowValidOnly
+              caCertificateRefs:
+                - group: ""
+                  kind: Secret
+                  name: olares-l4-agw-mtls
   listeners:
     - name: http
       protocol: HTTP
@@ -38,6 +50,21 @@ spec:
       protocol: HTTPS
       port: 8443
       allowedRoutes:
+        namespaces:
+          from: All
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            group: ""
+            name: olares-l4-agw-mtls
+    - name: l4-authz
+      protocol: HTTPS
+      port: 9444
+      allowedRoutes:
+        kinds:
+          - group: gateway.networking.k8s.io
+            kind: HTTPRoute
         namespaces:
           from: All
       tls:

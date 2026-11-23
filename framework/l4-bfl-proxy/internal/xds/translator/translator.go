@@ -1063,9 +1063,18 @@ func buildExtAuthzFilter(autheliaClusterName string, clusterMap map[string]*ir.C
 		return nil
 	}
 
+	authUser := userName
+	if clusterIR.UpstreamMTLS != nil {
+		authUser = ""
+	}
+	httpService := buildAutheliaHttpService(autheliaClusterName, clusterIR.Host, autheliaVerifyPathPrefix, authUser)
+	if clusterIR.UpstreamMTLS != nil {
+		httpService.ServerUri.Uri = fmt.Sprintf("https://%s:%d", clusterIR.Host, clusterIR.Port)
+	}
+
 	extAuthz := &extauthzv3.ExtAuthz{
 		Services: &extauthzv3.ExtAuthz_HttpService{
-			HttpService: buildAutheliaHttpService(autheliaClusterName, clusterIR.Host, autheliaVerifyPathPrefix, userName),
+			HttpService: httpService,
 		},
 		// AllowedHeaders is filter-level (not part of HttpService); per-route
 		// CheckSettings.http_service does not override it.
@@ -1120,7 +1129,7 @@ var (
 )
 
 func autheliaAuthorizationRequest(userName string) *extauthzv3.AuthorizationRequest {
-	return &extauthzv3.AuthorizationRequest{
+	request := &extauthzv3.AuthorizationRequest{
 		HeadersToAdd: []*corev3.HeaderValue{
 			{Key: "X-Forwarded-Proto", Value: xForwardedProtoValue},
 			// Authelia ForwardAuth/Verify uses these for the post-login rd=
@@ -1131,9 +1140,12 @@ func autheliaAuthorizationRequest(userName string) *extauthzv3.AuthorizationRequ
 			{Key: "X-Forwarded-Host", Value: "%REQ(:AUTHORITY)%"},
 			{Key: "X-Original-Method", Value: "%REQ(:METHOD)%"},
 			{Key: "X-Forwarded-Method", Value: "%REQ(:METHOD)%"},
-			{Key: "X-BFL-USER", Value: userName},
 		},
 	}
+	if userName != "" {
+		request.HeadersToAdd = append(request.HeadersToAdd, &corev3.HeaderValue{Key: "X-BFL-USER", Value: userName})
+	}
+	return request
 }
 
 func autheliaAuthorizationResponse() *extauthzv3.AuthorizationResponse {

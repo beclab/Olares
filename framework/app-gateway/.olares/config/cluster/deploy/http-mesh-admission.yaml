@@ -84,7 +84,7 @@ spec:
     - name: entry-listener-policy
       expression: >-
         request.namespace == 'os-gateway' &&
-        (request.operation == 'DELETE' ? oldObject.metadata.name : object.metadata.name) == 'app-gateway-l4-entry-mtls'
+        (request.operation == 'DELETE' ? oldObject.metadata.name : object.metadata.name) in ['app-gateway-l4-entry-mtls', 'app-gateway-l4-authz-mtls']
   validations:
     - expression: "request.operation != 'DELETE'"
       message: Keep client validation installed on the active Entry mTLS listener.
@@ -92,7 +92,8 @@ spec:
         request.operation == 'DELETE' ||
         (has(object.spec.targetRef) && object.spec.targetRef.group == 'gateway.networking.k8s.io' &&
           object.spec.targetRef.kind == 'Gateway' && object.spec.targetRef.name == 'app-gateway' &&
-          object.spec.targetRef.sectionName == 'l4-mtls' &&
+          object.spec.targetRef.sectionName ==
+            (object.metadata.name == 'app-gateway-l4-authz-mtls' ? 'l4-authz' : 'l4-mtls') &&
           has(object.spec.tls) && has(object.spec.tls.clientValidation) &&
           object.spec.tls.clientValidation.mode == 'RequireAndVerify' &&
           object.spec.tls.clientValidation.caCertificateRefs.size() == 1 &&
@@ -111,4 +112,45 @@ metadata:
   name: olares-entry-mtls-client-validation
 spec:
   policyName: olares-entry-mtls-client-validation
+  validationActions: [Deny, Audit]
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: olares-l4-authz-route-writer
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: ["gateway.networking.k8s.io"]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["httproutes"]
+        scope: Namespaced
+  matchConditions:
+    - name: auth-listener-or-backend
+      expression: >-
+        (has(object.spec.parentRefs) && object.spec.parentRefs.exists(p,
+          p.name == 'app-gateway' &&
+          (!has(p.namespace) ? request.namespace == 'os-gateway' : p.namespace == 'os-gateway') &&
+          (has(p.sectionName) ? p.sectionName == 'l4-authz' : (!has(p.port) || p.port == 9444)))) ||
+        (has(object.spec.rules) && object.spec.rules.exists(r, has(r.backendRefs) &&
+          r.backendRefs.exists(b, b.name == 'authelia-backend' &&
+            (has(b.namespace) ? b.namespace : request.namespace).startsWith('user-system-'))))
+  validations:
+    - expression: >-
+        request.userInfo.username == 'system:serviceaccount:os-framework:os-internal' &&
+        has(request.userInfo.extra) && 'authentication.kubernetes.io/pod-name' in request.userInfo.extra &&
+        request.userInfo.extra['authentication.kubernetes.io/pod-name'].exists(n, n.startsWith('app-service-')) &&
+        has(object.spec.parentRefs) && object.spec.parentRefs.size() == 1 &&
+        object.spec.parentRefs.all(p, p.name == 'app-gateway' && has(p.namespace) && p.namespace == 'os-gateway' &&
+          has(p.sectionName) && p.sectionName == 'l4-authz' && (!has(p.port) || p.port == 9444))
+      message: Only app-service pods may attach an Authelia route to the L4 authorization listener.
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: olares-l4-authz-route-writer
+spec:
+  policyName: olares-l4-authz-route-writer
   validationActions: [Deny, Audit]
