@@ -1,6 +1,7 @@
 package apiserver
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
@@ -18,6 +19,7 @@ func attachmentTestConfig() *appcfg.ApplicationConfig {
 				Allow: []appcfg.WorkloadCapability{
 					{Type: "folder", Containers: []string{"server"}},
 					{Type: "device.video", Containers: []string{"server"}},
+					{Type: "device.bluetooth", Containers: []string{"server"}},
 				},
 			},
 		},
@@ -40,11 +42,50 @@ func TestAttachmentCapabilitiesResponse(t *testing.T) {
 	if server.Name != "server" || server.Replicas == nil || *server.Replicas != 1 {
 		t.Fatalf("server workload=%#v", server)
 	}
-	if len(server.Capabilities) != 2 || server.Capabilities[0].Type != "folder" || server.Capabilities[1].Type != "device.video" {
+	if len(server.Capabilities) != 3 || server.Capabilities[0].Type != "folder" || server.Capabilities[1].Type != "device.video" || server.Capabilities[2].Type != "device.bluetooth" {
 		t.Fatalf("server capabilities=%#v", server.Capabilities)
 	}
 	if len(server.Capabilities[0].Containers) != 1 || server.Capabilities[0].Containers[0] != "server" {
 		t.Fatalf("folder containers=%#v", server.Capabilities[0].Containers)
+	}
+}
+
+func TestValidateBluetoothAttachment(t *testing.T) {
+	cfg := attachmentTestConfig()
+	inventory := []DeviceInventoryItem{{
+		Node: "node-a", Type: "device.bluetooth", ResourceName: "devices.bytetrade.io/bluetooth-p-1",
+		Adapter: "hci1", Address: "00:1A:7D:DA:71:13", AccessMode: "shared", Online: true, Selectable: true,
+	}}
+	attachment := appv1alpha1.Attachment{
+		Workload: "server", Type: "device.bluetooth", Ref: "devices.bytetrade.io/bluetooth-p-1", Node: "node-a",
+	}
+	if err := validateAttachments([]appv1alpha1.Attachment{attachment}, nil, cfg, inventory); err != nil {
+		t.Fatalf("valid Bluetooth attachment rejected: %v", err)
+	}
+}
+
+func TestBluetoothInventoryJSONAndSharedReservation(t *testing.T) {
+	raw := `{"schemaVersion":1,"bluetooth":[{"uid":"p-1","resourceName":"devices.bytetrade.io/bluetooth-p-1","online":true,"selectable":true,"adapter":"hci1","address":"00:1A:7D:DA:71:13","accessMode":"shared"}]}`
+	var inventory nodeDeviceInventory
+	if err := json.Unmarshal([]byte(raw), &inventory); err != nil {
+		t.Fatal(err)
+	}
+	if len(inventory.Bluetooth) != 1 {
+		t.Fatalf("Bluetooth inventory=%#v", inventory.Bluetooth)
+	}
+	item := inventory.Bluetooth[0]
+	item.Node = "node-a"
+	item.Type = "device.bluetooth"
+	reserved := map[string]string{"node-a/device.bluetooth/devices.bytetrade.io/bluetooth-p-1": "other-app"}
+	applyDeviceReservation(&item, reserved)
+	if !item.Selectable || item.Reason != "" {
+		t.Fatalf("shared Bluetooth adapter was reserved exclusively: %#v", item)
+	}
+
+	item.AccessMode = ""
+	applyDeviceReservation(&item, reserved)
+	if item.Selectable || item.Reason == "" {
+		t.Fatalf("exclusive device reservation was not applied: %#v", item)
 	}
 }
 

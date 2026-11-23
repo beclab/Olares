@@ -393,6 +393,8 @@ func terminalOpMatrix() []terminalOpCase {
 			appv1.Uninstalling, "UninstallRequested"},
 		{"resumingcancelfailed/cancel", appv1.ResumingCancelFailed, handlers.OnResumingCancelFailedCancel,
 			appv1.ResumingCanceling, "CancelRetryRequested"},
+		{"resumingcancelfailed/uninstall", appv1.ResumingCancelFailed, handlers.OnResumingCancelFailedUninstall,
+			appv1.Uninstalling, "UninstallRequested"},
 	}
 }
 
@@ -537,6 +539,9 @@ func terminalReconcileMatrix() []terminalReconcileCase {
 		{"applyingenvcancelfailed_cancel", appv1.ApplyingEnvCancelFailed, appv1.CancelOp, appv1.ApplyingEnvCanceling},
 		{"applyingenvcancelfailed_uninstall", appv1.ApplyingEnvCancelFailed, appv1.UninstallOp, appv1.Uninstalling},
 		{"resumingcancelfailed_cancel", appv1.ResumingCancelFailed, appv1.CancelOp, appv1.ResumingCanceling},
+		{"resumingcancelfailed_uninstall", appv1.ResumingCancelFailed, appv1.UninstallOp, appv1.Uninstalling},
+		{"upgpendcf_uninstall", appv1.UpgradePendingCancelFailed, appv1.UninstallOp, appv1.Uninstalling},
+		{"upgdlcf_uninstall", appv1.UpgradeDownloadingCancelFailed, appv1.UninstallOp, appv1.Uninstalling},
 	}
 }
 

@@ -37,10 +37,12 @@ func registerUpgradeDownloadCancel(t *domain.TransitionTable) {
 	t.AddReachable(appv1.UpgradePendingCancelFailed, appv1.UpgradePendingCancelFailed)
 	t.SetOrAddHandler(appv1.UpgradePendingCancelFailed, domain.Tick{}, OnUpgradePendingCancelFailedTick)
 	t.SetOrAddHandler(appv1.UpgradePendingCancelFailed, domain.TriggerOp{Op: appv1.CancelOp}, OnUpgradePendingCancelFailedCancel)
+	t.SetOrAddHandler(appv1.UpgradePendingCancelFailed, domain.TriggerOp{Op: appv1.UninstallOp}, OnUpgradePendingCancelFailedUninstall)
 
 	t.AddReachable(appv1.UpgradeDownloadingCancelFailed, appv1.UpgradeDownloadingCancelFailed)
 	t.SetOrAddHandler(appv1.UpgradeDownloadingCancelFailed, domain.Tick{}, OnUpgradeDownloadingCancelFailedTick)
 	t.SetOrAddHandler(appv1.UpgradeDownloadingCancelFailed, domain.TriggerOp{Op: appv1.CancelOp}, OnUpgradeDownloadingCancelFailedCancel)
+	t.SetOrAddHandler(appv1.UpgradeDownloadingCancelFailed, domain.TriggerOp{Op: appv1.UninstallOp}, OnUpgradeDownloadingCancelFailedUninstall)
 }
 
 func OnUpgradePendingCancel(_ context.Context, w domain.World) domain.Result {
@@ -118,12 +120,24 @@ func OnUpgradePendingCancelFailedCancel(_ context.Context, w domain.World) domai
 	return terminalOpTransition(w, appv1.UpgradePendingCanceling, terminalReasonCancelRetry, "user requested cancel retry; transitioning back to UpgradePendingCanceling")
 }
 
+// OnUpgradePendingCancelFailedUninstall abandons the queued upgrade.
+// Helm has not started, and the previous release is still installed.
+func OnUpgradePendingCancelFailedUninstall(_ context.Context, w domain.World) domain.Result {
+	return terminalOpTransition(w, appv1.Uninstalling, terminalReasonUninstall, terminalMsgUninstall)
+}
+
 func OnUpgradeDownloadingCancelFailedTick(ctx context.Context, w domain.World) domain.Result {
 	return noopTerminalTick(ctx, w)
 }
 
 func OnUpgradeDownloadingCancelFailedCancel(_ context.Context, w domain.World) domain.Result {
 	return terminalOpTransition(w, appv1.UpgradeDownloadingCanceling, terminalReasonCancelRetry, "user requested cancel retry; transitioning back to UpgradeDownloadingCanceling")
+}
+
+// OnUpgradeDownloadingCancelFailedUninstall abandons the upgrade
+// whose image-pull cancel failed. The previous release is still installed.
+func OnUpgradeDownloadingCancelFailedUninstall(_ context.Context, w domain.World) domain.Result {
+	return terminalOpTransition(w, appv1.Uninstalling, terminalReasonUninstall, terminalMsgUninstall)
 }
 
 func startUpgradeDownloadCancelImagePull(_ domain.World) domain.Result {

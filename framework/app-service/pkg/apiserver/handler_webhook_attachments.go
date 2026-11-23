@@ -25,13 +25,20 @@ import (
 )
 
 const (
-	attachmentInjectedAnnotation = "app.bytetrade.io/attachments-injected"
-	attachmentGroupsAnnotation   = "app.bytetrade.io/attachment-supplemental-groups"
-	attachmentVolumePrefix       = "olares-attachment-"
-	deviceResourcePrefix         = "devices.bytetrade.io/"
-	bluezVolumeName              = "olares-bluez"
-	bluezProxyContainerName      = "bluez-dbus-proxy"
+	attachmentInjectedAnnotation         = "app.bytetrade.io/attachments-injected"
+	attachmentGroupsAnnotation           = "app.bytetrade.io/attachment-supplemental-groups"
+	attachmentHostnameSelectorAnnotation = "app.bytetrade.io/attachment-hostname-selector-state"
+	attachmentVolumePrefix               = "olares-attachment-"
+	deviceResourcePrefix                 = "devices.bytetrade.io/"
+	bluezVolumeName                      = "olares-bluez"
+	bluezProxyContainerName              = "bluez-dbus-proxy"
 )
+
+type attachmentHostnameSelectorState struct {
+	OriginalPresent bool   `json:"originalPresent"`
+	OriginalValue   string `json:"originalValue,omitempty"`
+	AppliedValue    string `json:"appliedValue"`
+}
 
 // Olares hosts use the standard dialout, audio, and video group IDs for
 // serial, audio, and video device nodes. Kubernetes supplementalGroups accepts
@@ -97,6 +104,7 @@ func (h *Handler) createAttachmentPatch(ctx context.Context, req *admissionv1.Ad
 }
 
 func cleanupManagedAttachments(tpl *corev1.PodTemplateSpec, managedBefore bool) {
+	restoreManagedHostnameSelector(tpl)
 	if !managedBefore {
 		return
 	}
@@ -144,7 +152,6 @@ func cleanupManagedAttachments(tpl *corev1.PodTemplateSpec, managedBefore bool) 
 	}
 	tpl.Spec.Containers = containers
 	if managedBefore {
-		delete(tpl.Spec.NodeSelector, corev1.LabelHostname)
 		if tpl.Spec.SecurityContext != nil {
 			managedGroups := previouslyInjectedDeviceGroups(tpl.Annotations)
 			groups := tpl.Spec.SecurityContext.SupplementalGroups[:0]
@@ -155,12 +162,72 @@ func cleanupManagedAttachments(tpl *corev1.PodTemplateSpec, managedBefore bool) 
 			}
 			tpl.Spec.SecurityContext.SupplementalGroups = groups
 		}
-		removeBluetoothAffinity(tpl)
 	}
 	if tpl.Annotations != nil {
 		delete(tpl.Annotations, attachmentInjectedAnnotation)
 		delete(tpl.Annotations, attachmentGroupsAnnotation)
 	}
+}
+
+func restoreManagedHostnameSelector(tpl *corev1.PodTemplateSpec) {
+	if tpl.Annotations == nil {
+		return
+	}
+	raw, managed := tpl.Annotations[attachmentHostnameSelectorAnnotation]
+	if !managed {
+		return
+	}
+	delete(tpl.Annotations, attachmentHostnameSelectorAnnotation)
+
+	var state attachmentHostnameSelectorState
+	if err := json.Unmarshal([]byte(raw), &state); err != nil || state.AppliedValue == "" {
+		// An unreadable ownership marker cannot prove that the current selector
+		// belongs to attachment injection. Preserve it rather than widening the
+		// workload's scheduling scope.
+		return
+	}
+	current, present := tpl.Spec.NodeSelector[corev1.LabelHostname]
+	if !present || current != state.AppliedValue {
+		// A different current value may have been written by the manifest or
+		// another controller after injection. It is no longer ours to restore.
+		return
+	}
+	if state.OriginalPresent {
+		tpl.Spec.NodeSelector[corev1.LabelHostname] = state.OriginalValue
+		return
+	}
+	delete(tpl.Spec.NodeSelector, corev1.LabelHostname)
+	if len(tpl.Spec.NodeSelector) == 0 {
+		tpl.Spec.NodeSelector = nil
+	}
+}
+
+func applyManagedHostnameSelector(tpl *corev1.PodTemplateSpec, workload, nodeName string) error {
+	existing, originalPresent := tpl.Spec.NodeSelector[corev1.LabelHostname]
+	if existing != "" && existing != nodeName {
+		return fmt.Errorf("workload %s is already pinned to node %s, attachment requires %s", workload, existing, nodeName)
+	}
+	if !requiredAffinityAllowsHostname(tpl.Spec.Affinity, nodeName) {
+		return fmt.Errorf("workload %s required node affinity excludes attachment node %s", workload, nodeName)
+	}
+	state := attachmentHostnameSelectorState{
+		OriginalPresent: originalPresent,
+		OriginalValue:   existing,
+		AppliedValue:    nodeName,
+	}
+	raw, err := json.Marshal(state)
+	if err != nil {
+		return fmt.Errorf("record workload %s hostname selector ownership: %w", workload, err)
+	}
+	if tpl.Annotations == nil {
+		tpl.Annotations = map[string]string{}
+	}
+	tpl.Annotations[attachmentHostnameSelectorAnnotation] = string(raw)
+	if tpl.Spec.NodeSelector == nil {
+		tpl.Spec.NodeSelector = map[string]string{}
+	}
+	tpl.Spec.NodeSelector[corev1.LabelHostname] = nodeName
+	return nil
 }
 
 func (h *Handler) injectAttachments(ctx context.Context, tpl *corev1.PodTemplateSpec, workload string, cfg *appcfg.ApplicationConfig, application *appv1alpha1.Application) error {
@@ -175,16 +242,17 @@ func (h *Handler) injectAttachments(ctx context.Context, tpl *corev1.PodTemplate
 	var nodeName string
 	deviceAttached := false
 	deviceGroups := make(map[int64]struct{})
+	var bluetoothAttachments []appv1alpha1.Attachment
 	injected := false
 	for _, attachment := range application.Spec.Attachments {
 		if attachment.Workload != workload {
 			continue
 		}
-		injected = true
 		targets, allowed := capabilities[attachment.Type]
 		if !allowed {
 			continue
 		}
+		injected = true
 		if attachment.Node != "" {
 			if nodeName != "" && nodeName != attachment.Node {
 				return fmt.Errorf("workload %s attachments require different nodes", workload)
@@ -202,6 +270,16 @@ func (h *Handler) injectAttachments(ctx context.Context, tpl *corev1.PodTemplate
 			if err := addMountToContainers(tpl, targets, corev1.VolumeMount{Name: volumeName, MountPath: "/olares/attachments/" + attachment.Name}); err != nil {
 				return err
 			}
+			continue
+		}
+		if attachment.Type == "device.bluetooth" {
+			if len(targets) != 1 {
+				return fmt.Errorf("device capability %s must target exactly one container", attachment.Type)
+			}
+			if findContainer(tpl, targets[0]) == nil {
+				return fmt.Errorf("target container %s not found", targets[0])
+			}
+			bluetoothAttachments = append(bluetoothAttachments, attachment)
 			continue
 		}
 		if strings.HasPrefix(attachment.Type, "device.") {
@@ -228,16 +306,15 @@ func (h *Handler) injectAttachments(ctx context.Context, tpl *corev1.PodTemplate
 		}
 	}
 	if nodeName != "" {
-		if tpl.Spec.NodeSelector == nil {
-			tpl.Spec.NodeSelector = map[string]string{}
+		if err := applyManagedHostnameSelector(tpl, workload, nodeName); err != nil {
+			return err
 		}
-		if existing := tpl.Spec.NodeSelector[corev1.LabelHostname]; existing != "" && existing != nodeName {
-			return fmt.Errorf("workload %s is already pinned to node %s, attachment requires %s", workload, existing, nodeName)
+	}
+	if len(bluetoothAttachments) > 0 {
+		resources, adapters := h.bluetoothSelectionMetadata(ctx, bluetoothAttachments)
+		if err := injectBluetooth(tpl, capabilities["device.bluetooth"], resources, adapters); err != nil {
+			return err
 		}
-		if !requiredAffinityAllowsHostname(tpl.Spec.Affinity, nodeName) {
-			return fmt.Errorf("workload %s required node affinity excludes attachment node %s", workload, nodeName)
-		}
-		tpl.Spec.NodeSelector[corev1.LabelHostname] = nodeName
 	}
 	if deviceAttached {
 		if tpl.Spec.SecurityContext == nil {
@@ -262,15 +339,6 @@ func (h *Handler) injectAttachments(ctx context.Context, tpl *corev1.PodTemplate
 			tpl.Annotations[attachmentGroupsAnnotation] = strings.Join(addedGroups, ",")
 		}
 	}
-	bluetooth, _ := strconv.ParseBool(application.Spec.Settings["bluetooth"])
-	if bluetooth {
-		if targets, ok := capabilities["bluetooth"]; ok {
-			if err := injectBluetooth(tpl, targets); err != nil {
-				return err
-			}
-			injected = true
-		}
-	}
 	if injected {
 		if tpl.Annotations == nil {
 			tpl.Annotations = map[string]string{}
@@ -278,6 +346,60 @@ func (h *Handler) injectAttachments(ctx context.Context, tpl *corev1.PodTemplate
 		tpl.Annotations[attachmentInjectedAnnotation] = "true"
 	}
 	return nil
+}
+
+func (h *Handler) bluetoothSelectionMetadata(ctx context.Context, attachments []appv1alpha1.Attachment) (resources, adapters []string) {
+	adapterByResource := make(map[string]string)
+	for _, attachment := range attachments {
+		adapterByResource[attachment.Ref] = ""
+	}
+	if h.ctrlClient == nil {
+		for resource := range adapterByResource {
+			resources = append(resources, resource)
+		}
+		sort.Strings(resources)
+		return resources, nil
+	}
+	nodeInventories := make(map[string]nodeDeviceInventory)
+	loadedNodes := make(map[string]struct{})
+	for _, attachment := range attachments {
+		if _, loaded := loadedNodes[attachment.Node]; loaded {
+			continue
+		}
+		loadedNodes[attachment.Node] = struct{}{}
+		var node corev1.Node
+		if err := h.ctrlClient.Get(ctx, types.NamespacedName{Name: attachment.Node}, &node); err != nil {
+			continue
+		}
+		var inventory nodeDeviceInventory
+		if err := json.Unmarshal([]byte(node.Annotations[deviceInventoryAnnotation]), &inventory); err != nil {
+			continue
+		}
+		nodeInventories[attachment.Node] = inventory
+	}
+	for _, attachment := range attachments {
+		inventory, ok := nodeInventories[attachment.Node]
+		if !ok {
+			continue
+		}
+		for _, item := range inventory.Bluetooth {
+			if item.ResourceName == attachment.Ref {
+				adapterByResource[attachment.Ref] = item.Adapter
+				break
+			}
+		}
+	}
+	resources = make([]string, 0, len(adapterByResource))
+	for resource := range adapterByResource {
+		resources = append(resources, resource)
+	}
+	sort.Strings(resources)
+	for _, resource := range resources {
+		if adapter := adapterByResource[resource]; adapter != "" {
+			adapters = append(adapters, adapter)
+		}
+	}
+	return resources, adapters
 }
 
 func previouslyInjectedDeviceGroups(annotations map[string]string) map[int64]struct{} {
@@ -403,7 +525,7 @@ func findContainer(tpl *corev1.PodTemplateSpec, name string) *corev1.Container {
 	return nil
 }
 
-func injectBluetooth(tpl *corev1.PodTemplateSpec, targets []string) error {
+func injectBluetooth(tpl *corev1.PodTemplateSpec, targets, resources, adapters []string) error {
 	image := os.Getenv("BLUEZ_DBUS_PROXY_IMAGE")
 	if image == "" {
 		return fmt.Errorf("BLUEZ_DBUS_PROXY_IMAGE is required when bluetooth is enabled")
@@ -423,6 +545,10 @@ func injectBluetooth(tpl *corev1.PodTemplateSpec, targets []string) error {
 			ReadOnlyRootFilesystem:   ptr.To(true),
 			RunAsNonRoot:             ptr.To(false),
 			RunAsUser:                ptr.To(int64(0)),
+		},
+		Env: []corev1.EnvVar{
+			{Name: "OLARES_BLUETOOTH_RESOURCES", Value: strings.Join(resources, ",")},
+			{Name: "OLARES_BLUETOOTH_ADAPTERS", Value: strings.Join(adapters, ",")},
 		},
 		VolumeMounts: []corev1.VolumeMount{
 			{Name: attachmentVolumePrefix + "bluez-host", MountPath: "/run/dbus/system_bus_socket", ReadOnly: true},
@@ -447,46 +573,7 @@ func injectBluetooth(tpl *corev1.PodTemplateSpec, targets []string) error {
 		container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{Name: bluezVolumeName, MountPath: "/run/olares-bluez"})
 		container.Env = append(container.Env, corev1.EnvVar{Name: "DBUS_SYSTEM_BUS_ADDRESS", Value: "unix:path=/run/olares-bluez/system_bus_socket"})
 	}
-	if tpl.Spec.Affinity == nil {
-		tpl.Spec.Affinity = &corev1.Affinity{}
-	}
-	if tpl.Spec.Affinity.NodeAffinity == nil {
-		tpl.Spec.Affinity.NodeAffinity = &corev1.NodeAffinity{}
-	}
-	if tpl.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution == nil {
-		tpl.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution = &corev1.NodeSelector{}
-	}
-	required := tpl.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution
-	requirement := corev1.NodeSelectorRequirement{Key: bluetoothNodeLabel, Operator: corev1.NodeSelectorOpIn, Values: []string{"true"}}
-	if len(required.NodeSelectorTerms) == 0 {
-		required.NodeSelectorTerms = []corev1.NodeSelectorTerm{{MatchExpressions: []corev1.NodeSelectorRequirement{requirement}}}
-	} else {
-		for i := range required.NodeSelectorTerms {
-			required.NodeSelectorTerms[i].MatchExpressions = append(required.NodeSelectorTerms[i].MatchExpressions, requirement)
-		}
-	}
 	return nil
-}
-
-func removeBluetoothAffinity(tpl *corev1.PodTemplateSpec) {
-	if tpl.Spec.Affinity == nil || tpl.Spec.Affinity.NodeAffinity == nil || tpl.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution == nil {
-		return
-	}
-	required := tpl.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution
-	terms := required.NodeSelectorTerms[:0]
-	for _, term := range required.NodeSelectorTerms {
-		filtered := term.MatchExpressions[:0]
-		for _, expression := range term.MatchExpressions {
-			if expression.Key != bluetoothNodeLabel {
-				filtered = append(filtered, expression)
-			}
-		}
-		term.MatchExpressions = filtered
-		if len(term.MatchExpressions) > 0 || len(term.MatchFields) > 0 {
-			terms = append(terms, term)
-		}
-	}
-	required.NodeSelectorTerms = terms
 }
 
 func combineJSONPatches(first, second []byte) []byte {

@@ -180,7 +180,7 @@ spec:
       priorityClassName: "system-cluster-critical"
       containers:
       - name: app-service
-        image: beclab/app-service:0.7.1
+        image: beclab/app-service:0.7.2
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 6755
@@ -437,4 +437,8 @@ spec:
         permission:
           pub: allow
           sub: allow
+      - name: "device.inventory.*"
+        permission:
+          pub: allow
+          sub: deny
     user: os-app-service

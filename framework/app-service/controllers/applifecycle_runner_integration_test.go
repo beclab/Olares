@@ -485,6 +485,9 @@ var _ = Describe("Application lifecycle Runner integration", func() {
 		Entry("applyingenvcancelfailed cancel", "acf-c", appv1.ApplyingEnvCancelFailed, appv1.CancelOp, appv1.ApplyingEnvCanceling),
 		Entry("applyingenvcancelfailed uninstall", "acf-u", appv1.ApplyingEnvCancelFailed, appv1.UninstallOp, appv1.Uninstalling),
 		Entry("resumingcancelfailed cancel", "rcf-c", appv1.ResumingCancelFailed, appv1.CancelOp, appv1.ResumingCanceling),
+		Entry("resumingcancelfailed uninstall", "rcf-u", appv1.ResumingCancelFailed, appv1.UninstallOp, appv1.Uninstalling),
+		Entry("upgpendcf-uninstall", "upgpendcf-u", appv1.UpgradePendingCancelFailed, appv1.UninstallOp, appv1.Uninstalling),
+		Entry("upgdlcf-uninstall", "upgdlcf-u", appv1.UpgradeDownloadingCancelFailed, appv1.UninstallOp, appv1.Uninstalling),
 	)
 
 	for _, tc := range remainingTransitionCases() {
