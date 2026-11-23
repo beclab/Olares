@@ -1,0 +1,94 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: app-access-envoy
+  namespace: os-gateway
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: app-access-internal
+  namespace: os-gateway
+spec:
+  mergeGateways: false
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyService:
+        type: ClusterIP
+      envoyDeployment:
+        pod:
+          annotations:
+            linkerd.io/inject: enabled
+            config.linkerd.io/default-inbound-policy: deny
+        patch:
+          type: StrategicMerge
+          value:
+            spec:
+              template:
+                spec:
+                  serviceAccountName: app-access-envoy
+                  containers:
+                    - name: envoy
+                      ports:
+                        - name: access
+                          containerPort: 18080
+                          protocol: TCP
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: app-access-internal
+  namespace: os-gateway
+spec:
+  gatewayClassName: olares-app-gateway
+  infrastructure:
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: app-access-internal
+  listeners:
+    - name: access
+      protocol: HTTP
+      port: 8080
+      hostname: "*.access.olares.internal"
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              kubernetes.io/metadata.name: os-app-access
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: app-access-internal
+  namespace: os-gateway
+spec:
+  type: ClusterIP
+  selector:
+    gateway.envoyproxy.io/owning-gateway-name: app-access-internal
+    gateway.envoyproxy.io/owning-gateway-namespace: os-gateway
+    app.kubernetes.io/component: proxy
+    app.kubernetes.io/managed-by: envoy-gateway
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 18080
+      protocol: TCP
+---
+apiVersion: policy.linkerd.io/v1beta3
+kind: Server
+metadata:
+  name: app-access-internal-server
+  namespace: os-gateway
+spec:
+  podSelector:
+    matchLabels:
+      gateway.envoyproxy.io/owning-gateway-name: app-access-internal
+      gateway.envoyproxy.io/owning-gateway-namespace: os-gateway
+      app.kubernetes.io/component: proxy
+      app.kubernetes.io/managed-by: envoy-gateway
+  port: 18080
+  proxyProtocol: HTTP/1
+  accessPolicy: deny

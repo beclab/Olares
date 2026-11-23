@@ -56,11 +56,11 @@ func TestReconcileAccessPolicyRevokesWithoutReopeningServer(t *testing.T) {
 	ctx := context.Background()
 	c := fake.NewClientBuilder().WithScheme(runtime.NewScheme()).Build()
 	u := samplePolicy()
-	if err := ReconcileAccessPolicy(ctx, c, u, true); err != nil {
-		t.Fatal(err)
-	}
 	p, err := PolicyFromUnstructured(u)
 	if err != nil {
+		t.Fatal(err)
+	}
+	if err := reconcileProjectedPolicy(ctx, c, p); err != nil {
 		t.Fatal(err)
 	}
 	plan, err := CompilePolicy(p, true)
@@ -71,11 +71,9 @@ func TestReconcileAccessPolicyRevokesWithoutReopeningServer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := unstructured.SetNestedField(u.Object, DesiredRevoked, "spec", "desiredState"); err != nil {
-		t.Fatal(err)
-	}
+	p.DesiredState = DesiredRevoked
 	for i := 0; i < 2; i++ {
-		if err := ReconcileAccessPolicy(ctx, c, u, true); err != nil {
+		if err := reconcileProjectedPolicy(ctx, c, p); err != nil {
 			t.Fatal(err)
 		}
 	}

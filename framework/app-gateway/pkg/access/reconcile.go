@@ -2,35 +2,96 @@ package access
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"reflect"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-// ReconcileAccessPolicy applies or deletes Linkerd projections for one policy.
-// When compilationEnabled is false, no API writes occur.
-func ReconcileAccessPolicy(ctx context.Context, c client.Client, u *unstructured.Unstructured, compilationEnabled bool) error {
-	if u == nil {
-		return fmt.Errorf("nil policy")
-	}
-	p, err := PolicyFromUnstructured(u)
-	if err != nil {
-		return err
-	}
-	plan, err := CompilePolicy(p, compilationEnabled)
-	if err != nil {
-		return err
-	}
-	if !compilationEnabled {
+const bindingFinalizer = "access.olares.io/revoke-projection"
+
+// ReconcileAccessPolicy resolves a persisted grant and withdraws existing permissions
+// when any bound object is replaced, removed, or no longer matches approval.
+func ReconcileAccessPolicy(ctx context.Context, c client.Client, u *unstructured.Unstructured, enabled bool) error {
+	if !enabled {
 		return nil
+	}
+	b, err := readBinding(u)
+	if err != nil {
+		return err
+	}
+	deleting := !u.GetDeletionTimestamp().IsZero()
+	if deleting || b.policy.DesiredState == DesiredRevoked {
+		if err := b.withdraw(ctx, c); err != nil {
+			return err
+		}
+		if deleting && controllerutil.ContainsFinalizer(u, bindingFinalizer) {
+			original := u.DeepCopy()
+			controllerutil.RemoveFinalizer(u, bindingFinalizer)
+			return c.Patch(ctx, u, client.MergeFromWithOptions(original, client.MergeFromWithOptimisticLock{}))
+		}
+		return nil
+	}
+	if err := b.resolve(ctx, c); err != nil {
+		return errors.Join(err, b.withdraw(ctx, c))
+	}
+	if !controllerutil.ContainsFinalizer(u, bindingFinalizer) {
+		original := u.DeepCopy()
+		controllerutil.AddFinalizer(u, bindingFinalizer)
+		return c.Patch(ctx, u, client.MergeFromWithOptions(original, client.MergeFromWithOptimisticLock{}))
+	}
+	if b.policy.RouteMode == RouteModeViaAppGateway {
+		return b.reconcileGateway(ctx, c)
+	}
+	if err := b.checkTarget(ctx, c); err != nil {
+		return errors.Join(err, b.withdrawAllows(ctx, c))
+	}
+	plan, err := CompilePolicy(b.policy, true)
+	if err != nil {
+		return err
+	}
+	objects, err := BuildLinkerdObjects(plan, b.policy)
+	if err != nil {
+		return err
+	}
+	if err := applyProjections(ctx, c, objects[:3]); err != nil {
+		return errors.Join(err, b.withdrawAllows(ctx, c))
+	}
+	if ok, err := routeReady(ctx, c, objects[2], "policy.linkerd.io", "Server", b.policy.Namespace, objects[0].Name, ""); err != nil || !ok {
+		return errors.Join(err, fmt.Errorf("target route is not accepted for its current generation"), b.withdrawAllows(ctx, c))
+	}
+	if err := b.stillActive(ctx, c); err != nil {
+		return errors.Join(err, b.withdrawAllows(ctx, c))
+	}
+	return applyProjections(ctx, c, objects[3:])
+}
+
+func (b boundPolicy) withdraw(ctx context.Context, c client.Client) error {
+	b.policy.DesiredState = DesiredRevoked
+	if b.policy.RouteMode == RouteModeViaAppGateway {
+		return b.withdrawGateway(ctx, c)
+	}
+	return reconcileProjectedPolicy(ctx, c, b.policy)
+}
+
+func reconcileProjectedPolicy(ctx context.Context, c client.Client, p PolicySpec) error {
+	plan, err := CompilePolicy(p, true)
+	if err != nil {
+		return err
 	}
 	desired, err := BuildLinkerdObjects(plan, p)
 	if err != nil {
 		return err
 	}
+	return applyProjections(ctx, c, desired)
+}
+
+func applyProjections(ctx context.Context, c client.Client, desired []DesiredObject) error {
 	for _, d := range desired {
 		existing := &unstructured.Unstructured{}
 		existing.SetGroupVersionKind(d.GVK)
@@ -47,7 +108,7 @@ func ReconcileAccessPolicy(ctx context.Context, c client.Client, u *unstructured
 			return err
 		}
 		labels := existing.GetLabels()
-		if labels[ManagedByLabel] != ManagedByAccessPolicy || labels[PolicyNameLabel] != p.Name {
+		if labels[ManagedByLabel] != ManagedByAccessPolicy || labels[PolicyNameLabel] != d.Object.GetLabels()[PolicyNameLabel] {
 			return fmt.Errorf("refusing to change %s %s/%s owned by another controller", d.GVK.Kind, d.Namespace, d.Name)
 		}
 		if d.Delete {
@@ -57,8 +118,11 @@ func ReconcileAccessPolicy(ctx context.Context, c client.Client, u *unstructured
 			}
 			continue
 		}
-		d.Object.SetResourceVersion(existing.GetResourceVersion())
-		if err := c.Update(ctx, d.Object); err != nil {
+		if reflect.DeepEqual(existing.Object["spec"], d.Object.Object["spec"]) {
+			continue
+		}
+		existing.Object["spec"] = d.Object.Object["spec"]
+		if err := c.Update(ctx, existing); err != nil {
 			return err
 		}
 	}
