@@ -83,8 +83,11 @@ metadata:
   namespace: os-app-access
   labels:
     app.kubernetes.io/name: app-access
+    olares.io/uniauth-posture: "true"
+  annotations:
+    olares.io/config-integrity: "release-controlled"
 data:
-  # Install/upgrade steady-state (ADR-SYS-UNIAUTH-STEADY-01).
+  # Projection of Chart/OTA SSOT (ADR-SYS-UNIAUTH-CONFIG-01). Not a secret.
   endState: "true"
   policyCompilationEnabled: "true"
   l4AppGatewayMTLSEnabled: "true"
