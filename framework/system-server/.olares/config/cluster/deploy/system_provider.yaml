@@ -23,6 +23,9 @@ spec:
         app: system-provider
         io.bytetrade.app: "true"
         provider: "true"
+        traffic.olares.io/platform-mesh: "true"
+      annotations:
+        linkerd.io/inject: enabled
     spec:
       containers:
         - name: provider-proxy

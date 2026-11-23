@@ -70,7 +70,11 @@ spec:
     metadata:
       labels:
         app: systemserver
+        traffic.olares.io/platform-mesh: "true"
       annotations:
+        linkerd.io/inject: enabled
+        config.linkerd.io/default-inbound-policy: cluster-authenticated
+        traffic.olares.io/mtls-mode: Required
 {{ if .Values.telemetry }}
         instrumentation.opentelemetry.io/go-container-names: system-server
         instrumentation.opentelemetry.io/inject-go: olares-instrumentation

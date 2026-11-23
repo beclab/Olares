@@ -40,7 +40,7 @@ const (
 	MeshInjectStateEpochKey           = "epoch"
 	MeshInjectStateHTTPMeshPostureKey = "httpMeshPosture"
 	// HTTPMeshPostureVersion marks completed upgrade sweep to cluster-authenticated.
-	HTTPMeshPostureVersion = "http-mtls-v2"
+	HTTPMeshPostureVersion = "http-mtls-v3"
 
 	EGDataplaneNamespace = "os-gateway"
 )

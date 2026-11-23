@@ -1103,6 +1103,71 @@ func TestReconcileSharedRouteWithdrawsUnverifiedBackendAndRecovers(t *testing.T)
 	assertRoute(false)
 }
 
+func TestExtAuthRouteWaitsForBothAutheliaMeshHops(t *testing.T) {
+	ctx := context.Background()
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "user-space-alice", Name: "edge-desktop"},
+		Spec:       corev1.ServiceSpec{Ports: []corev1.ServicePort{{Port: 80}}},
+	}
+	srr := &srrv1alpha1.SharedRouteRegistry{
+		ObjectMeta: metav1.ObjectMeta{Namespace: svc.Namespace, Name: "desktop", UID: "desktop-registry",
+			Annotations: map[string]string{gateway.AnnotationExtAuthUser: "alice"}},
+		Spec: srrv1alpha1.SharedRouteRegistrySpec{
+			RouteMode: srrv1alpha1.RouteModeGateway, EntranceClass: srrv1alpha1.EntranceClassApplication,
+			HostPatterns: []string{"desktop.alice.example.com"},
+			Upstream:     srrv1alpha1.UpstreamRef{ServiceName: svc.Name, Port: 80},
+		},
+	}
+	for _, namespace := range []string{"user-system-alice", "os-framework"} {
+		t.Run(namespace, func(t *testing.T) {
+			c := fake.NewClientBuilder().WithScheme(testScheme(t)).WithObjects(meshedServiceObjects(svc, srr)...).Build()
+			assertReconciled := func(ready bool) {
+				t.Helper()
+				result, err := ReconcileSharedRoute(ctx, c, GatewayRef{}, srr)
+				if err != nil {
+					t.Fatal(err)
+				}
+				route := &unstructured.Unstructured{}
+				route.SetGroupVersionKind(schema.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1", Kind: "HTTPRoute"})
+				err = c.Get(ctx, client.ObjectKeyFromObject(srr), route)
+				if ready && (result.HTTPRouteName != srr.Name || err != nil) {
+					t.Fatalf("route did not recover: %+v, %v", result, err)
+				}
+				if !ready && (result.Reason != ReasonAwaitingDataPlane || !apierrors.IsNotFound(err)) {
+					t.Fatalf("route did not fail closed: %+v, %v", result, err)
+				}
+			}
+			assertReconciled(true)
+			var pod corev1.Pod
+			if err := c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: AutheliaBackendServiceName}, &pod); err != nil {
+				t.Fatal(err)
+			}
+			pod.Status.ContainerStatuses[0].Ready = false
+			if err := c.Status().Update(ctx, &pod); err != nil {
+				t.Fatal(err)
+			}
+			assertReconciled(false)
+			pod.Status.ContainerStatuses[0].Ready = true
+			if err := c.Status().Update(ctx, &pod); err != nil {
+				t.Fatal(err)
+			}
+			assertReconciled(true)
+		})
+	}
+}
+
+func autheliaMeshServiceObjects(userNamespace string) []client.Object {
+	var objects []client.Object
+	for _, namespace := range []string{userNamespace, "os-framework"} {
+		service := &corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: AutheliaBackendServiceName},
+			Spec:       corev1.ServiceSpec{Ports: []corev1.ServicePort{{Port: AutheliaBackendPort, Protocol: corev1.ProtocolTCP}}},
+		}
+		objects = append(objects, meshedServiceObjects(service)...)
+	}
+	return objects
+}
+
 func meshedServiceObjects(svc *corev1.Service, extras ...client.Object) []client.Object {
 	if svc.UID == "" {
 		svc.UID = types.UID(svc.Name + "-service")
@@ -1136,5 +1201,12 @@ func meshedServiceObjects(svc *corev1.Service, extras ...client.Object) []client
 			Addresses: []string{pod.Status.PodIP}, Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)},
 		}},
 	}
-	return append([]client.Object{svc, pod, slice}, extras...)
+	objects := append([]client.Object{svc, pod, slice}, extras...)
+	for _, extra := range extras {
+		if srr, ok := extra.(*srrv1alpha1.SharedRouteRegistry); ok && isApplicationSRR(srr) && srrAuthMode(srr) != gateway.AuthModeNone {
+			objects = append(objects, autheliaMeshServiceObjects(autheliaNSForSRR(srr))...)
+			break
+		}
+	}
+	return objects
 }

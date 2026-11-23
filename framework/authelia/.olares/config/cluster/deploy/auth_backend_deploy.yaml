@@ -391,6 +391,11 @@ spec:
     metadata:
       labels:
         app: authelia-backend
+        traffic.olares.io/platform-mesh: "true"
+      annotations:
+        linkerd.io/inject: enabled
+        config.linkerd.io/default-inbound-policy: cluster-authenticated
+        traffic.olares.io/mtls-mode: Required
     spec:
       serviceAccountName: os-internal
       serviceAccount: os-internal
@@ -498,3 +503,4 @@ spec:
       name: authelia
       port: 9091
       targetPort: 9091
+      appProtocol: http

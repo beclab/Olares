@@ -28,17 +28,25 @@ func TestEnsureAppGatewayMeshNetworkPolicies(t *testing.T) {
 	}, meshNP); err != nil {
 		t.Fatalf("os-mesh NP: %v", err)
 	}
-	if len(meshNP.Spec.Ingress) != 1 || len(meshNP.Spec.Ingress[0].From) != 4 {
+	if len(meshNP.Spec.Ingress) != 1 || len(meshNP.Spec.Ingress[0].From) != 6 {
 		t.Fatalf("os-mesh from peers = %+v", meshNP.Spec.Ingress)
 	}
 	foundCaller := false
+	platformPeers := 0
 	for _, peer := range meshNP.Spec.Ingress[0].From {
 		if peer.NamespaceSelector == nil {
 			continue
 		}
+		if peer.PodSelector != nil && peer.PodSelector.MatchLabels["traffic.olares.io/platform-mesh"] == "true" &&
+			len(peer.NamespaceSelector.MatchExpressions) == 1 {
+			platformPeers++
+		}
 		if peer.NamespaceSelector.MatchLabels[security.NamespaceInClusterCallerLabel] == "true" {
 			foundCaller = true
 		}
+	}
+	if platformPeers != 2 {
+		t.Fatal("platform mesh peers must be constrained by both namespace and pod")
 	}
 	if !foundCaller {
 		t.Fatal("expected in-cluster-caller peer on os-mesh NP")

@@ -199,7 +199,9 @@ spec:
     metadata:
       labels:
         tier: bfl
+        traffic.olares.io/platform-mesh: "true"
       annotations:
+        linkerd.io/inject: enabled
 {{ if .Values.telemetry }}
         instrumentation.opentelemetry.io/inject-go: "olares-instrumentation"
         instrumentation.opentelemetry.io/go-container-names: "api"    
