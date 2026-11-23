@@ -6,7 +6,8 @@
     "dev": "vitepress dev",
     "build": "vitepress build",
     "preview": "vitepress preview",
-    "test:og": "node --test .vitepress/og/og.test.mjs"
+    "test:og": "node --test .vitepress/og/og.test.mjs",
+    "test:lastmod": "node --test .vitepress/lastmod/content-dates.test.mjs"
   },
   "devDependencies": {
     "@resvg/resvg-js": "2.6.2",
