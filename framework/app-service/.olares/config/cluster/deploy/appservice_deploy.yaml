@@ -199,6 +199,10 @@ spec:
         - name: {{ $key }}
           value: {{ $val | quote }}
         {{- end }}
+        - name: APP_SERVICE_POD_UID
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.uid
         - name: KS_APISERVER_SERVICE_HOST
           value: 'ks-apiserver.kubesphere-system'
         - name: KS_APISERVER_SERVICE_PORT

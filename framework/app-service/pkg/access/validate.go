@@ -3,6 +3,7 @@ package access
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 )
 
@@ -48,6 +49,12 @@ func ValidateHTTPRules(rules []HTTPRule) error {
 		if pt == PathTypeRegularExpression {
 			if !strings.HasPrefix(r.Path, "^/") {
 				return fmt.Errorf("rule[%d]: RegularExpression path must start with ^/", i)
+			}
+			if !strings.HasSuffix(r.Path, "$") {
+				return fmt.Errorf("rule[%d]: RegularExpression path must be anchored", i)
+			}
+			if _, err := regexp.Compile(r.Path); err != nil {
+				return fmt.Errorf("rule[%d]: invalid RegularExpression", i)
 			}
 			continue
 		}
