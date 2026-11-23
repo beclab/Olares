@@ -2,15 +2,17 @@ package access
 
 import (
 	"fmt"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 const (
-	ManagedByLabel      = "app.kubernetes.io/managed-by"
+	ManagedByLabel        = "app.kubernetes.io/managed-by"
 	ManagedByAccessPolicy = "access-policy"
-	PolicyNameLabel     = "access.olares.io/policy"
+	policyRouteGroup      = "gateway.networking.k8s.io"
+	PolicyNameLabel       = "access.olares.io/policy"
 )
 
 // DesiredObject is one projected API object the reconciler should apply or delete.
@@ -31,8 +33,11 @@ func BuildLinkerdObjects(plan CompiledObjects, p PolicySpec) ([]DesiredObject, e
 		}
 		return nil, nil
 	}
-	if plan.ServerName == "" || plan.AuthorizationPolicyName == "" {
+	if plan.ServerName == "" || plan.AuthorizationPolicyName == "" || plan.HTTPRouteName == "" {
 		return nil, fmt.Errorf("incomplete compile plan")
+	}
+	if err := ValidateHTTPRules(p.Rules); err != nil {
+		return nil, err
 	}
 	ns := p.Namespace
 	labels := map[string]string{
@@ -67,9 +72,9 @@ func BuildLinkerdObjects(plan CompiledObjects, p PolicySpec) ([]DesiredObject, e
 	authz.SetNamespace(ns)
 	authz.SetLabels(labels)
 	_ = unstructured.SetNestedField(authz.Object, map[string]any{
-		"group": "policy.linkerd.io",
-		"kind":  "Server",
-		"name":  plan.ServerName,
+		"group": policyRouteGroup,
+		"kind":  "HTTPRoute",
+		"name":  plan.HTTPRouteName,
 	}, "spec", "targetRef")
 	_ = unstructured.SetNestedSlice(authz.Object, []any{
 		map[string]any{
@@ -81,7 +86,7 @@ func BuildLinkerdObjects(plan CompiledObjects, p PolicySpec) ([]DesiredObject, e
 
 	route := &unstructured.Unstructured{}
 	route.SetGroupVersionKind(schema.GroupVersionKind{
-		Group: "policy.linkerd.io", Version: "v1beta3", Kind: "HTTPRoute",
+		Group: policyRouteGroup, Version: "v1", Kind: "HTTPRoute",
 	})
 	route.SetName(plan.HTTPRouteName)
 	route.SetNamespace(ns)
@@ -94,11 +99,26 @@ func BuildLinkerdObjects(plan CompiledObjects, p PolicySpec) ([]DesiredObject, e
 		},
 	}, "spec", "parentRefs")
 
+	matches := make([]any, 0, len(p.Rules))
+	for _, rule := range p.Rules {
+		pathType := rule.PathType
+		if pathType == "" {
+			pathType = PathTypeExact
+		}
+		matches = append(matches, map[string]any{
+			"method": strings.ToUpper(rule.Method),
+			"path":   map[string]any{"type": pathType, "value": rule.Path},
+		})
+	}
+	if err := unstructured.SetNestedSlice(route.Object, []any{map[string]any{"matches": matches}}, "spec", "rules"); err != nil {
+		return nil, err
+	}
+
 	out := []DesiredObject{
 		{GVK: server.GroupVersionKind(), Namespace: ns, Name: plan.ServerName, Object: server},
 		{GVK: mtls.GroupVersionKind(), Namespace: ns, Name: plan.MeshTLSAuthName, Object: mtls},
-		{GVK: authz.GroupVersionKind(), Namespace: ns, Name: plan.AuthorizationPolicyName, Object: authz},
 		{GVK: route.GroupVersionKind(), Namespace: ns, Name: plan.HTTPRouteName, Object: route},
+		{GVK: authz.GroupVersionKind(), Namespace: ns, Name: plan.AuthorizationPolicyName, Object: authz},
 	}
 	return out, nil
 }
@@ -109,10 +129,11 @@ func deleteMarkers(plan CompiledObjects, p PolicySpec) []DesiredObject {
 		gvk  schema.GroupVersionKind
 		name string
 	}{
-		{schema.GroupVersionKind{Group: "policy.linkerd.io", Version: "v1beta1", Kind: "Server"}, plan.ServerName},
+		// Keep the Server's default deny after removing the grant. Removing it
+		// would restore the namespace's broader inbound default.
 		{schema.GroupVersionKind{Group: "policy.linkerd.io", Version: "v1alpha1", Kind: "MeshTLSAuthentication"}, plan.MeshTLSAuthName},
 		{schema.GroupVersionKind{Group: "policy.linkerd.io", Version: "v1alpha1", Kind: "AuthorizationPolicy"}, plan.AuthorizationPolicyName},
-		{schema.GroupVersionKind{Group: "policy.linkerd.io", Version: "v1beta3", Kind: "HTTPRoute"}, plan.HTTPRouteName},
+		{schema.GroupVersionKind{Group: policyRouteGroup, Version: "v1", Kind: "HTTPRoute"}, plan.HTTPRouteName},
 	}
 	var out []DesiredObject
 	for _, n := range names {

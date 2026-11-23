@@ -27,14 +27,14 @@ type PolicySpec struct {
 
 // CompiledObjects are deterministic names for Linkerd/Gateway/NP projections.
 type CompiledObjects struct {
-	ServerName               string
-	HTTPRouteName            string
-	AuthorizationPolicyName  string
-	MeshTLSAuthName          string
-	NetworkPolicyName        string
-	IdentityPrincipal        string
-	SkipCompile              bool
-	Reason                   string
+	ServerName              string
+	HTTPRouteName           string
+	AuthorizationPolicyName string
+	MeshTLSAuthName         string
+	NetworkPolicyName       string
+	IdentityPrincipal       string
+	SkipCompile             bool
+	Reason                  string
 }
 
 // CompilePolicy maps an access policy into managed object names and principals.
@@ -49,6 +49,12 @@ func CompilePolicy(p PolicySpec, compilationEnabled bool) (CompiledObjects, erro
 	if p.Name == "" || p.Namespace == "" {
 		return out, fmt.Errorf("policy name and namespace are required")
 	}
+	base := sanitizeDNSLabel(p.Name)
+	out.ServerName = base + "-server"
+	out.HTTPRouteName = base + "-route"
+	out.AuthorizationPolicyName = base + "-authz"
+	out.MeshTLSAuthName = base + "-mtls"
+	out.NetworkPolicyName = base + "-np"
 	if p.DesiredState == DesiredRevoked {
 		out.SkipCompile = true
 		out.Reason = "desiredState=Revoked"
@@ -70,12 +76,6 @@ func CompilePolicy(p PolicySpec, compilationEnabled bool) (CompiledObjects, erro
 	if p.ServerPort <= 0 {
 		return out, fmt.Errorf("serverPort must be positive")
 	}
-	base := sanitizeDNSLabel(p.Name)
-	out.ServerName = base + "-server"
-	out.HTTPRouteName = base + "-route"
-	out.AuthorizationPolicyName = base + "-authz"
-	out.MeshTLSAuthName = base + "-mtls"
-	out.NetworkPolicyName = base + "-np"
 	switch mode {
 	case RouteModeDirect:
 		if p.SourceSANamespace == "" || p.SourceSAName == "" {
