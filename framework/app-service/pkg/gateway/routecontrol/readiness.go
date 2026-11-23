@@ -249,15 +249,8 @@ func meshedReadyEndpoints(ctx context.Context, c client.Client, ns string, upstr
 			if err := c.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &pod); err != nil {
 				return err
 			}
-			proxyReady := false
-			for _, s := range pod.Status.ContainerStatuses {
-				if s.Name == mesh.LinkerdProxyContainer && s.Ready {
-					proxyReady = true
-					break
-				}
-			}
 			if pod.UID != ref.UID || !selector.Matches(labels.Set(pod.Labels)) || !pod.DeletionTimestamp.IsZero() ||
-				mesh.CheckHTTPMeshInterception(&pod) != nil || !proxyReady ||
+				mesh.CheckHTTPMeshInterception(&pod) != nil || !mesh.LinkerdProxyReady(&pod) ||
 				pod.Annotations[mesh.LinkerdDefaultInboundPolicyAnnotation] != mesh.InboundPolicyClusterAuthenticated ||
 				!mesh.HasHTTPMeshInit(&pod) ||
 				!mesh.ProxyHasInboundPolicy(&pod, mesh.InboundPolicyClusterAuthenticated) {

@@ -21,17 +21,29 @@ spec:
         traffic.olares.io/platform-mesh: "true"
       annotations:
         linkerd.io/inject: enabled
+        config.linkerd.io/proxy-enable-native-sidecar: "true"
         config.linkerd.io/default-inbound-policy: cluster-authenticated
         traffic.olares.io/mtls-mode: Required
     spec:
       priorityClassName: "system-cluster-critical"
       initContainers:
-      - args:
-        - -it
-        - authelia-backend.user-system-{{ .Values.bfl.username }}:9091
-        image: owncloudci/wait-for:latest
+      - name: check-auth
+        image: busybox:1.28
         imagePullPolicy: IfNotPresent
-        name: check-auth
+        command:
+          - /bin/sh
+          - -ec
+          - |
+            url="http://authelia-backend.user-system-{{ .Values.bfl.username }}:9091/api/health"
+            attempts=0
+            until wget -q -T 5 -O /dev/null "$url"; do
+              attempts=$((attempts + 1))
+              if [ "$attempts" -ge 24 ]; then
+                echo "Authelia health endpoint is unavailable" >&2
+                exit 1
+              fi
+              sleep 5
+            done
       containers:
       - name: auth-front
         image: beclab/login:v1.13.1
