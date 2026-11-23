@@ -73,8 +73,8 @@ type upgrader interface {
 	NeedRestart() bool
 }
 
-// stageTasks asks u for everything it contributes, stage by stage. It is the
-// only place the mapping from method to stage is written down.
+// stageTasks maps upstream hooks to stages, then adds any tasks registered
+// for those stages by the distribution.
 //
 // The methods above are the hooks and the stages are what they feed: a stage
 // is a point in the upgrade, and a hook is how one version gets its tasks into
@@ -86,7 +86,7 @@ type upgrader interface {
 // embedded struct's own call to its own method, so a base that asked itself
 // would never see what the version replaced.
 func stageTasks(u upgrader) map[string][]task.Interface {
-	return map[string][]task.Interface{
+	byStage := map[string][]task.Interface{
 		StageReplaceBinaries: u.ReplaceBinaries(),
 		StageImportImages:    u.ImportImages(),
 		StagePreUpgradeNode:  u.PreUpgradeNode(),
@@ -114,6 +114,14 @@ func stageTasks(u upgrader) map[string][]task.Interface {
 		// driver installed and never loaded.
 		StageVerifyCluster: u.PostUpgrade(),
 	}
+	if u, ok := u.(extendedUpgrader); ok {
+		for _, stage := range UpgradeFlow {
+			if ext, exists := u.ext.Stages[stage.Name]; exists {
+				byStage[stage.Name] = ext.withUpstream(byStage[stage.Name])
+			}
+		}
+	}
+	return byStage
 }
 
 // concat joins task groups, keeping the order they were given in. Ordering
