@@ -61,6 +61,8 @@ type boundPolicy struct {
 	source          map[string]any
 	target          map[string]any
 	scope           map[string]any
+	sourceSelector  map[string]string
+	targetPortName  string
 }
 
 func readBinding(u *unstructured.Unstructured) (boundPolicy, error) {
@@ -148,8 +150,14 @@ func (b *boundPolicy) resolve(ctx context.Context, c client.Client) error {
 		return fmt.Errorf("source and target must be distinct")
 	}
 
-	if _, err := boundWorkload(ctx, c, b.source); err != nil {
+	sourceWorkload, err := boundWorkload(ctx, c, b.source)
+	if err != nil {
 		return err
+	}
+	b.sourceSelector, _, _ = unstructured.NestedStringMap(sourceWorkload.Object, "spec", "selector", "matchLabels")
+	sourceExpressions, _, _ := unstructured.NestedSlice(sourceWorkload.Object, "spec", "selector", "matchExpressions")
+	if len(b.sourceSelector) == 0 || len(sourceExpressions) != 0 {
+		return fmt.Errorf("source workload must have an exact label selector")
 	}
 	workload, err := boundWorkload(ctx, c, b.target)
 	if err != nil {
@@ -176,7 +184,8 @@ func (b *boundPolicy) resolve(ctx context.Context, c client.Client) error {
 	if value(capability, "serviceKey") != ref.Name {
 		return fmt.Errorf("capability service key does not resolve to the bound Service")
 	}
-	port, err := boundPort(b.target, serviceObj.Object, workload.Object, value(capability, "portName"))
+	b.targetPortName = value(capability, "portName")
+	port, err := boundPort(b.target, serviceObj.Object, workload.Object, b.targetPortName)
 	if err != nil {
 		return err
 	}

@@ -2,10 +2,13 @@ package access
 
 import (
 	"context"
+	"maps"
 	"testing"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/security"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
+	netv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -81,6 +84,7 @@ func TestInternalGatewayGrantsSourceLastAndUsesSeparateIdentities(t *testing.T) 
 	}
 	mustAbsent(t, c, inPlan.AuthorizationPolicyName, in.Namespace)
 	mustAbsent(t, c, outPlan.AuthorizationPolicyName, out.Namespace)
+	assertAccessTransport(t, c, b, false)
 	route := b.gatewayRoute()
 	observeRoute(t, c, route.Namespace, route.Name, policyRouteGroup, "Gateway", internalNamespace, internalGateway, internalListener)
 	observeRoute(t, c, out.Namespace, outPlan.HTTPRouteName, "policy.linkerd.io", "Server", out.Namespace, outPlan.ServerName, "")
@@ -99,6 +103,7 @@ func TestInternalGatewayGrantsSourceLastAndUsesSeparateIdentities(t *testing.T) 
 		}
 	}
 	mustObject(t, c, authzGVK(), in.Namespace, inPlan.AuthorizationPolicyName)
+	assertAccessTransport(t, c, b, true)
 	if err := unstructured.SetNestedField(u.Object, DesiredRevoked, "spec", "desiredState"); err != nil {
 		t.Fatal(err)
 	}
@@ -107,12 +112,50 @@ func TestInternalGatewayGrantsSourceLastAndUsesSeparateIdentities(t *testing.T) 
 	}
 	mustAbsent(t, c, inPlan.AuthorizationPolicyName, in.Namespace)
 	mustAbsent(t, c, outPlan.AuthorizationPolicyName, out.Namespace)
+	assertAccessTransport(t, c, b, false)
+}
+
+func assertAccessTransport(t *testing.T, c client.Client, b boundPolicy, present bool) {
+	t.Helper()
+	for _, leg := range b.transportLegs() {
+		out := b.transportPolicy(leg.from.namespace, leg.name+"-egress")
+		in := b.transportPolicy(leg.to.namespace, leg.name+"-ingress")
+		for _, want := range []*netv1.NetworkPolicy{&out, &in} {
+			var got netv1.NetworkPolicy
+			err := c.Get(context.Background(), client.ObjectKeyFromObject(want), &got)
+			if !present {
+				if !apierrors.IsNotFound(err) {
+					t.Fatalf("unexpected retained transport policy %s: %v", want.Name, err)
+				}
+				continue
+			}
+			if err != nil || !security.IsAppServiceManagedExternalNP(&got) {
+				t.Fatalf("missing or unrecognizable transport policy %s: %v", want.Name, err)
+			}
+			var peers []netv1.NetworkPolicyPeer
+			var namespace string
+			var selector map[string]string
+			if want.Name == out.Name {
+				peers = got.Spec.Egress[0].To
+				namespace, selector = leg.to.namespace, accessTransportSelector(leg.from.selector).MatchLabels
+			} else {
+				peers = got.Spec.Ingress[0].From
+				namespace, selector = leg.from.namespace, accessTransportSelector(leg.to.selector).MatchLabels
+			}
+			if len(peers) != 1 || peers[0].PodSelector == nil || peers[0].NamespaceSelector == nil ||
+				peers[0].NamespaceSelector.MatchLabels["kubernetes.io/metadata.name"] != namespace ||
+				!maps.Equal(got.Spec.PodSelector.MatchLabels, selector) {
+				t.Fatalf("transport policy %s is not restricted to the bound workloads: %+v", want.Name, got.Spec)
+			}
+		}
+	}
 }
 
 func bindingFixture(t *testing.T, mode string) (client.Client, *unstructured.Unstructured) {
 	t.Helper()
 	s := runtime.NewScheme()
 	_ = corev1.AddToScheme(s)
+	_ = netv1.AddToScheme(s)
 	_ = discoveryv1.AddToScheme(s)
 	makeObj := func(gvk schema.GroupVersionKind, ns, name, uid string, spec map[string]any) *unstructured.Unstructured {
 		u := &unstructured.Unstructured{Object: map[string]any{"spec": spec}}

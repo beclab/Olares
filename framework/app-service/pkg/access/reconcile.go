@@ -68,7 +68,16 @@ func ReconcileAccessPolicy(ctx context.Context, c client.Client, u *unstructured
 	if err := b.stillActive(ctx, c); err != nil {
 		return errors.Join(err, b.withdrawAllows(ctx, c))
 	}
-	return applyProjections(ctx, c, objects[3:])
+	if err := b.reconcileTransport(ctx, c, false); err != nil {
+		return errors.Join(err, b.withdrawAllows(ctx, c))
+	}
+	if err := b.stillActive(ctx, c); err != nil {
+		return errors.Join(err, b.withdrawAllows(ctx, c))
+	}
+	if err := applyProjections(ctx, c, objects[3:]); err != nil {
+		return errors.Join(err, b.withdrawAllows(ctx, c))
+	}
+	return nil
 }
 
 func (b boundPolicy) withdraw(ctx context.Context, c client.Client) error {
@@ -76,7 +85,7 @@ func (b boundPolicy) withdraw(ctx context.Context, c client.Client) error {
 	if b.policy.RouteMode == RouteModeViaAppGateway {
 		return b.withdrawGateway(ctx, c)
 	}
-	return reconcileProjectedPolicy(ctx, c, b.policy)
+	return errors.Join(reconcileProjectedPolicy(ctx, c, b.policy), b.reconcileTransport(ctx, c, true))
 }
 
 func reconcileProjectedPolicy(ctx context.Context, c client.Client, p PolicySpec) error {
