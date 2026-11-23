@@ -119,7 +119,6 @@ type Config struct {
 	SSLServerPort      int
 	SSLProxyServerPort int
 	// AppGatewayMTLS enables L4 client mTLS to the app-gateway channel Service.
-	// Default false preserves legacy cleartext upstreams.
 	AppGatewayMTLS bool
 	// AppGatewayHost is the channel Service DNS name used when AppGatewayMTLS is set.
 	AppGatewayHost string
@@ -190,6 +189,9 @@ func (t *Translator) handleUpdate(key string, resources *message.Resources) {
 func (t *Translator) Translate(resources *message.Resources) *ir.Xds {
 	xds := &ir.Xds{}
 	clusterSet := make(map[string]*ir.ClusterIR)
+	if resources != nil && t.cfg != nil && t.cfg.AppGatewayMTLS {
+		appendEntryMTLSSDS(xds, resources.EntryMTLS)
+	}
 
 	// HTTP redirect listener (port 81 -> HTTPS)
 	xds.Listeners = append(xds.Listeners, t.buildHTTPRedirectListener())

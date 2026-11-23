@@ -61,6 +61,7 @@ type Config struct {
 
 type Provider struct {
 	cache      ctrlcache.Cache
+	api        client.Reader
 	resources  *message.ProviderResources
 	cfg        *Config
 	synced     atomic.Bool
@@ -74,6 +75,12 @@ func New(c ctrlcache.Cache, resources *message.ProviderResources, cfg *Config) *
 		cfg:        cfg,
 		debounceCh: make(chan struct{}, 1),
 	}
+}
+
+// WithAPIReader sets a reader used for Entry mTLS Secret gets (avoids listing all Secrets).
+func (p *Provider) WithAPIReader(r client.Reader) *Provider {
+	p.api = r
+	return p
 }
 
 func (p *Provider) Name() string { return "provider" }
@@ -208,9 +215,25 @@ func (p *Provider) Start(ctx context.Context) error {
 		p.scheduleRetry(ctx)
 	}
 
+	// Entry mTLS Secret is fetched by name (no cluster-wide secret informer).
+	go p.entryMTLSPollLoop(ctx)
+
 	p.debounceLoop(ctx)
 	klog.Info("provider: stopped...")
 	return nil
+}
+
+func (p *Provider) entryMTLSPollLoop(ctx context.Context) {
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			p.notifyChanged()
+		}
+	}
 }
 
 func (p *Provider) notifyChanged() {
@@ -309,8 +332,38 @@ func (p *Provider) buildResources(ctx context.Context) (*message.Resources, erro
 		return nil, err
 	}
 	res.Users = users
+	res.EntryMTLS = p.loadEntryMTLS(ctx)
 
 	return res, nil
+}
+
+const (
+	entryMTLSNamespace = "os-gateway"
+	entryMTLSSecretName = "olares-l4-agw-mtls"
+)
+
+func (p *Provider) loadEntryMTLS(ctx context.Context) *message.EntryMTLSMaterial {
+	reader := p.api
+	if reader == nil {
+		reader = p.cache
+	}
+	var sec corev1.Secret
+	if err := reader.Get(ctx, client.ObjectKey{Namespace: entryMTLSNamespace, Name: entryMTLSSecretName}, &sec); err != nil {
+		if !apierrors.IsNotFound(err) {
+			klog.Errorf("provider: get entry mTLS secret failed: %v", err)
+		}
+		return nil
+	}
+	mat := &message.EntryMTLSMaterial{
+		ClientCert: string(sec.Data["client.crt"]),
+		ClientKey:  string(sec.Data["client.key"]),
+		CA:         string(sec.Data["ca.crt"]),
+	}
+	if !mat.Ready() {
+		klog.Warning("provider: entry mTLS secret present but incomplete")
+		return nil
+	}
+	return mat
 }
 
 // fanOutSharedApps mutates the per-owner apps map so v3 / shared apps

@@ -1,6 +1,9 @@
 package translator
 
-import "github.com/beclab/l4-bfl-proxy/internal/ir"
+import (
+	"github.com/beclab/l4-bfl-proxy/internal/ir"
+	"github.com/beclab/l4-bfl-proxy/internal/message"
+)
 
 // DefaultAppGatewayHost is the cluster DNS of Service app-gateway-l4-mtls
 // (see .olares/config/cluster/deploy/l4-mtls-channel.yaml). Keep in sync with that manifest.
@@ -15,7 +18,8 @@ const (
 )
 
 // clusterForAppGateway returns the upstream cluster when mTLS channel is enabled.
-// Callers keep legacy app clusters when cfg.AppGatewayMTLS is false.
+// Fail-closed: without Entry material, still returns the mTLS cluster so traffic
+// does not fall back to cleartext; Envoy waits for SDS.
 func (t *Translator) clusterForAppGateway(name string) *ir.ClusterIR {
 	if t == nil || t.cfg == nil || !t.cfg.AppGatewayMTLS {
 		return nil
@@ -39,4 +43,22 @@ func (t *Translator) clusterForAppGateway(name string) *ir.ClusterIR {
 			TrustedCACerts: appGatewayTrustedCASDS,
 		},
 	}
+}
+
+// appendEntryMTLSSDS adds client certificate and CA ValidationContext SDS resources.
+func appendEntryMTLSSDS(xds *ir.Xds, mat *message.EntryMTLSMaterial) {
+	if xds == nil || !mat.Ready() {
+		return
+	}
+	xds.Secrets = append(xds.Secrets,
+		&ir.SecretIR{
+			Name:     appGatewayClientCertSDS,
+			CertData: mat.ClientCert,
+			KeyData:  mat.ClientKey,
+		},
+		&ir.SecretIR{
+			Name:      appGatewayTrustedCASDS,
+			TrustedCA: mat.CA,
+		},
+	)
 }
