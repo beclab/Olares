@@ -27,10 +27,10 @@ const (
 	AdmissionServiceName       = "access-admission"
 )
 
-// PromoteAdmissionFailurePolicy ensures webhook TLS exists and, when endState,
-// sets ValidatingWebhookConfiguration failurePolicy to Fail with caBundle filled.
-// When endState is false, leaves failurePolicy as Ignore (install-safe rollback).
-func PromoteAdmissionFailurePolicy(ctx context.Context, c client.Client, endState bool) error {
+// PromoteAdmissionFailurePolicy ensures webhook TLS material exists and sets
+// every webhook's failurePolicy to Fail with caBundle filled.
+// Manifest may ship Ignore only as install bootstrap ordering.
+func PromoteAdmissionFailurePolicy(ctx context.Context, c client.Client) error {
 	caPEM, err := ensureAdmissionTLS(ctx, c, AdmissionTLSNamespace, AdmissionTLSSecretName)
 	if err != nil {
 		return err
@@ -42,10 +42,7 @@ func PromoteAdmissionFailurePolicy(ctx context.Context, c client.Client, endStat
 	if len(wh.Webhooks) == 0 {
 		return fmt.Errorf("webhook config %s has no webhooks", AdmissionWebhookConfigName)
 	}
-	fail := admissionregistrationv1.Ignore
-	if endState {
-		fail = admissionregistrationv1.Fail
-	}
+	fail := admissionregistrationv1.Fail
 	caBundle := []byte(caPEM)
 	for i := range wh.Webhooks {
 		wh.Webhooks[i].FailurePolicy = &fail
@@ -59,7 +56,9 @@ func ensureAdmissionTLS(ctx context.Context, c client.Client, ns, name string) (
 	getErr := c.Get(ctx, types.NamespacedName{Namespace: ns, Name: name}, &sec)
 	if getErr == nil {
 		if ca := sec.Data["ca.crt"]; len(ca) > 0 {
-			return ca, nil
+			if len(sec.Data["tls.crt"]) > 0 && len(sec.Data["tls.key"]) > 0 {
+				return ca, nil
+			}
 		}
 	}
 	if getErr != nil && !apierrors.IsNotFound(getErr) {
@@ -89,7 +88,7 @@ func ensureAdmissionTLS(ctx context.Context, c client.Client, ns, name string) (
 		return caPEM, nil
 	}
 	sec.Data = out.Data
-	sec.Type = corev1.SecretTypeTLS
+	sec.Type = out.Type
 	if err := c.Update(ctx, &sec); err != nil {
 		return nil, err
 	}
@@ -138,7 +137,7 @@ func selfSignedWebhookCert(dnsName string) (caPEM, certPEM, keyPEM []byte, err e
 		NotAfter:     now.Add(365 * 24 * time.Hour),
 		KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
 		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
-		DNSNames:     []string{dnsName, AdmissionServiceName, AdmissionServiceName + "." + AdmissionTLSNamespace},
+		DNSNames:     []string{dnsName, AdmissionServiceName, AdmissionServiceName + "." + AdmissionTLSNamespace, AdmissionServiceName + "." + AdmissionTLSNamespace + ".svc"},
 	}
 	leafDER, err := x509.CreateCertificate(rand.Reader, leafTpl, caCert, &leafKey.PublicKey, caKey)
 	if err != nil {
