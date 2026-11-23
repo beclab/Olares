@@ -101,6 +101,14 @@ func IsTrafficGroupManagedNP(np *netv1.NetworkPolicy) bool {
 			return true
 		}
 	}
+	for _, policy := range BuildPlatformTrafficPolicies(np.Namespace, nil) {
+		if policy.Name == np.Name {
+			return true
+		}
+	}
+	if np.Namespace == "os-gateway" && np.Name == l4HostIngressName {
+		return true
+	}
 	return false
 }
 
@@ -168,10 +176,11 @@ func NPAllowFromL4(namespace string) netv1.NetworkPolicy {
 	return netv1.NetworkPolicy{
 		ObjectMeta: npMeta("olares-traffic-group-from-l4", namespace),
 		Spec: netv1.NetworkPolicySpec{
-			PodSelector: metav1.LabelSelector{},
+			PodSelector: metav1.LabelSelector{MatchLabels: gatewayDataPlanePods("app-gateway")},
 			PolicyTypes: []netv1.PolicyType{netv1.PolicyTypeIngress},
 			Ingress: []netv1.NetworkPolicyIngressRule{{
-				From: []netv1.NetworkPolicyPeer{nsPeer(TrafficGroupL4)},
+				From:  []netv1.NetworkPolicyPeer{platformPeer("os-network", map[string]string{"app": "l4-bfl-proxy", "tier": "bfl"})},
+				Ports: []netv1.NetworkPolicyPort{tcpPort(8443), tcpPort(9444)},
 			}},
 		},
 	}

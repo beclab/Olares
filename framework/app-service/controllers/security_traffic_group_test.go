@@ -176,13 +176,18 @@ func TestTrafficGroupAPIDestinationsRotateWhileMeshIsUnready(t *testing.T) {
 	}
 	check()
 	for _, obj := range []client.Object{service, endpoints} {
-		requests := kubernetesAPINetworkPolicyRequests(ctx, obj)
-		if len(requests) != 2 || requests[0].Name != "kube-system" || requests[1].Name != "os-framework" {
+		requests := trafficGroupNetworkPolicyRequests(ctx, obj)
+		if len(requests) != 5 || requests[0].Name != "kube-system" || requests[1].Name != "os-framework" || requests[2].Name != "os-gateway" || requests[3].Name != "os-mesh" || requests[4].Name != "os-platform" {
 			t.Fatalf("API source event did not enqueue both policy namespaces: %+v", requests)
 		}
 	}
+	nats := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: "os-platform", Name: "nats"}}
+	if got := trafficGroupNetworkPolicyRequests(ctx, nats); len(got) != 2 ||
+		got[0].Name != "os-framework" || got[1].Name != "os-platform" {
+		t.Fatalf("NATS change did not enqueue both peers: %+v", got)
+	}
 	endpoints.Namespace = "user-space-test"
-	if got := kubernetesAPINetworkPolicyRequests(ctx, endpoints); len(got) != 0 {
+	if got := trafficGroupNetworkPolicyRequests(ctx, endpoints); len(got) != 0 {
 		t.Fatalf("unrelated API source enqueued reconciles: %+v", got)
 	}
 }
@@ -200,11 +205,11 @@ func (c *trafficGroupWatchRecorder) Watch(source.Source) error {
 
 func TestTrafficGroupWatchesRegisterBothAPISources(t *testing.T) {
 	c := &trafficGroupWatchRecorder{}
-	if err := watchKubernetesAPINetworkPolicySources(c, nil); err != nil || c.watches != 2 {
-		t.Fatalf("registered %d watches, want 2: %v", c.watches, err)
+	if err := watchTrafficGroupNetworkPolicySources(c, nil); err != nil || c.watches != 3 {
+		t.Fatalf("registered %d watches, want 3: %v", c.watches, err)
 	}
 	c.err = errors.New("watch registration failed")
-	if err := watchKubernetesAPINetworkPolicySources(c, nil); !errors.Is(err, c.err) || c.watches != 3 {
+	if err := watchTrafficGroupNetworkPolicySources(c, nil); !errors.Is(err, c.err) || c.watches != 4 {
 		t.Fatalf("watch registration continued after failure: %v", err)
 	}
 }
