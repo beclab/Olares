@@ -32,6 +32,9 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: access-admission
+      annotations:
+        # The Kubernetes API server reaches this dedicated TLS port outside mesh identity.
+        config.linkerd.io/skip-inbound-ports: "9443"
     spec:
       serviceAccountName: access-admission
       containers:
@@ -42,16 +45,9 @@ spec:
           env:
             - name: ACCESS_ADMISSION_ADDR
               value: ":9443"
-            - name: ACCESS_ADMISSION_CERT
-              value: /tls/tls.crt
-            - name: ACCESS_ADMISSION_KEY
-              value: /tls/tls.key
           ports:
             - containerPort: 9443
               name: webhook
-          volumeMounts:
-            - name: tls
-              mountPath: /tls
           readinessProbe:
             httpGet:
               path: /healthz
@@ -65,10 +61,6 @@ spec:
               port: webhook
               scheme: HTTPS
             periodSeconds: 20
-      volumes:
-        # Process writes tls.crt/tls.key after ensuring Secret (bootstrap-safe).
-        - name: tls
-          emptyDir: {}
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -118,7 +110,10 @@ rules:
     resources: ["appaccesspolicies", "appcapabilitysets"]
     verbs: ["get", "list", "watch"]
   - apiGroups: ["policy.linkerd.io"]
-    resources: ["servers", "authorizationpolicies", "meshtlsauthentications", "httproutes"]
+    resources: ["servers", "authorizationpolicies", "meshtlsauthentications"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources: ["httproutes"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
