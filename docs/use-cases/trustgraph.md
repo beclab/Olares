@@ -144,7 +144,7 @@ Start with a question about a relationship you have found in Graph Navigator.
 
 To view the same question in another layout, select that view and run the query again.
 
-If you have just submitted the documents, allow time for processing and run the query again. If the answer still has no supporting relationships, see [Why does Graph RAG say there is no relevant information?](#why-does-graph-rag-say-there-is-no-relevant-information).
+If you have just submitted the documents, allow time for processing and run the query again. If the answer still has no supporting relationships, see [Troubleshoot missing information in Graph RAG answers](#why-does-graph-rag-say-there-is-no-relevant-information).
 
 ## Change the model connection
 

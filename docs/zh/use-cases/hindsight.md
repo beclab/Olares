@@ -86,7 +86,7 @@ Hindsight 的默认设置可直接连接 Router，无需填写模型地址或 Ro
    {"status":"healthy","database":"connected","db_acquire_ms":1.4,"db_pool_waiting":0,"db_pool_in_use":0,"db_pool_max":100,"db_pool_idle":1}
    ```
 
-   `"status":"healthy"` 和 `"database":"connected"` 表示 Hermes 能够访问 API，且 Hindsight 已连接数据库。如果返回登录页面或重定向，参见[为什么 API 健康检查会显示登录提示？](#为什么-api-健康检查会显示登录提示)。
+   `"status":"healthy"` 和 `"database":"connected"` 表示 Hermes 能够访问 API，且 Hindsight 已连接数据库。如果返回登录页面或重定向，参见[排查 API 健康检查出现登录提示的问题](#为什么-api-健康检查会显示登录提示)。
 
 ## 连接 Hermes Agent
 

@@ -1,6 +1,6 @@
 ---
 outline: [2,3]
-description: Answers to common questions about Olares One.
+description: Find answers about Olares One hardware, SSD requirements, local AI, gaming, and operating systems.
 head:
   - - meta
     - name: keywords
@@ -52,7 +52,7 @@ Here is how the two RTX 5090 variants compare:
 
 The desktop RTX 5090 offers more capacity for larger models and more parallel computing resources. The mobile version balances local AI capability with the power and space requirements of an always-on home device.
 
-GPU specifications are from NVIDIA's [laptop GPU comparison](https://www.nvidia.com/en-us/geforce/laptops/compare/) and [desktop RTX 5090 specifications](https://www.nvidia.com/en-us/geforce/graphics-cards/50-series/rtx-5090/). For Olares One power modes, see [What is the power consumption?](#what-is-the-power-consumption).
+GPU specifications are from NVIDIA's [laptop GPU comparison](https://www.nvidia.com/en-us/geforce/laptops/compare/) and [desktop RTX 5090 specifications](https://www.nvidia.com/en-us/geforce/graphics-cards/50-series/rtx-5090/). For Olares One power modes, see [Power consumption](#what-is-the-power-consumption).
 
 For measured LLM performance, image and video generation times, and test configurations, see [Olares One AI benchmarks](https://www.olares.com/benchmarks/hardware/olares-one).
 
@@ -93,10 +93,24 @@ Olares OS is free and open source, so you can also [install it on compatible har
 ### Is it possible to upgrade or expand the hardware?
 
 Yes. You can modify the hardware through several internal slots and expansion ports:
-* **Storage**: The motherboard includes two PCIe SSD slots, one PCIe 4.0 and one PCIe 5.0. The preinstalled 2TB SSD occupies the PCIe 5.0 slot. The PCIe 4.0 slot remains available for system storage expansion via LVM or for a dual-boot configuration. See [Expand storage with an internal SSD](expand-storage-internal-ssd.md).
+* **Storage**: The motherboard includes two M.2 2280 SSD slots, one PCIe 5.0 x4 and one PCIe 4.0 x4. The preinstalled 2TB SSD occupies the PCIe 5.0 slot. The PCIe 4.0 slot remains available for system storage expansion via LVM or for a dual-boot configuration. See [Expand storage with an internal SSD](expand-storage-internal-ssd.md).
 * **Memory**: The RAM capacity can be upgraded to a maximum of 128GB.
 * **External graphics**: You can connect a compatible Thunderbolt external graphics device. See [Can I use an eGPU with Olares One?](#can-i-use-an-egpu-with-olares-one)
 * **External displays**: The Thunderbolt 5 port supports docking stations with up to two external monitors at up to 8K resolution. The built-in RTX 5090 Mobile handles video output.
+
+### What SSD can I install in Olares One?
+
+When choosing an internal SSD, check the following requirements:
+
+- **Form factor and interface**: M.2 2280 (22 mm wide and 80 mm long), with a Key M connector and the NVMe protocol.
+- **Component layout and thickness**: Choose a single-sided SSD with chips on only one side and a total thickness of no more than 2.38 mm. Double-sided SSDs cannot be installed because their underside chips come into contact with components beneath the drive.
+- **Heatsink**: Choose a version without a preinstalled heatsink. Versions with a heatsink exceed the available height and cannot be installed.
+
+Component layout and thickness can vary between capacities and versions within the same SSD series. Check the exact model against the requirements above before buying.
+
+Only the factory-installed SSD has been validated in Olares One. Thermal performance and compatibility of other models remain unverified.
+
+For slot availability, see [Hardware expansion options](#is-it-possible-to-upgrade-or-expand-the-hardware). To add an installed SSD to Olares OS storage, see [Expand storage with an internal SSD](expand-storage-internal-ssd.md).
 
 ### Can I use an eGPU with Olares One?
 
