@@ -174,10 +174,17 @@ func systemPlaneLabels(srrName string) map[string]string {
 	}
 }
 
+// DeleteSystemPlaneRoutes withdraws only app-service-managed system routes.
+func DeleteSystemPlaneRoutes(ctx context.Context, c client.Client, ns string) error {
+	return pruneSystemPlaneSRRs(ctx, c, ns, nil)
+}
+
 func pruneSystemPlaneSRRs(ctx context.Context, c client.Client, ns string, keep map[string]struct{}) error {
 	list := &srrv1alpha1.SharedRouteRegistryList{}
 	if err := c.List(ctx, list, client.InNamespace(ns), client.MatchingLabels{
-		LabelSystemPlane: LabelSystemPlaneValue,
+		LabelSystemPlane:               LabelSystemPlaneValue,
+		"app.kubernetes.io/managed-by": "app-service",
+		"app.kubernetes.io/instance":   SystemPlaneInstance,
 	}); err != nil {
 		return fmt.Errorf("list system SRRs in %s: %w", ns, err)
 	}

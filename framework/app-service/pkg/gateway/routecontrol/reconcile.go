@@ -217,10 +217,6 @@ func reconcileGatewayMode(ctx context.Context, c client.Client, gw GatewayRef, s
 		}, nil
 	}
 
-	routeName, err := applyHTTPRoute(ctx, c, gw, srr, port)
-	if err != nil {
-		return ReconcileResult{}, fmt.Errorf("apply HTTPRoute: %w", err)
-	}
 	if err := applyReferenceGrant(ctx, c, srr, upstreamNS, srr.Spec.Upstream.ServiceName); err != nil {
 		return ReconcileResult{}, fmt.Errorf("apply ReferenceGrant: %w", err)
 	}
@@ -239,6 +235,11 @@ func reconcileGatewayMode(ctx context.Context, c client.Client, gw GatewayRef, s
 	}
 	if err := applyJWKSReferenceGrant(ctx, c, srr); err != nil {
 		return ReconcileResult{}, fmt.Errorf("apply JWKS ReferenceGrant: %w", err)
+	}
+	// Attach dependencies before making the route available to the data plane.
+	routeName, err := applyHTTPRoute(ctx, c, gw, srr, port)
+	if err != nil {
+		return ReconcileResult{}, fmt.Errorf("apply HTTPRoute: %w", err)
 	}
 	return ReconcileResult{
 		Status:        metav1.ConditionTrue,

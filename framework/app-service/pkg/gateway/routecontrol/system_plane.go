@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -36,12 +37,15 @@ func (r *SystemPlaneRouteReconciler) Reconcile(ctx context.Context, req reconcil
 	}
 	cm := &corev1.ConfigMap{}
 	if err := r.Client.Get(ctx, req.NamespacedName, cm); err != nil {
-		return reconcile.Result{}, client.IgnoreNotFound(err)
+		if apierrors.IsNotFound(err) {
+			return reconcile.Result{}, gateway.DeleteSystemPlaneRoutes(ctx, r.Client, req.Namespace)
+		}
+		return reconcile.Result{}, err
 	}
 	zone := strings.TrimSpace(cm.Data["zone"])
 	if zone == "" {
 		klog.V(4).Infof("system-plane: zone-ssl-config %s/%s missing zone", cm.Namespace, cm.Name)
-		return reconcile.Result{}, nil
+		return reconcile.Result{}, gateway.DeleteSystemPlaneRoutes(ctx, r.Client, req.Namespace)
 	}
 	user := strings.TrimPrefix(cm.Namespace, userSpaceNSPrefix)
 	if user == "" {
