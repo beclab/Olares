@@ -264,12 +264,20 @@ function collectIncludes(text, fromFile, srcDir, seen, out) {
 }
 
 /**
+ * Strict in CI, where the production build must not ship wrong dates silently.
+ * Vercel sets CI too, but only serves previews and always clones shallow, so
+ * it falls back to VitePress's dates instead of failing.
+ */
+export function defaultStrict(env = process.env) {
+  return !!env.CI && !env.VERCEL;
+}
+
+/**
  * @param {{ srcDir: string, strict?: boolean, metadataKeys?: Set<string> }} options
- *   strict: throw instead of falling back to VitePress's dates (CI must not ship
- *   wrong dates silently).
+ *   strict: throw instead of falling back to VitePress's dates.
  * @returns {{ forPage(relativePath: string): number | undefined }} ms timestamps
  */
-export function createContentDates({ srcDir: givenSrcDir, strict = !!process.env.CI, metadataKeys = METADATA_KEYS }) {
+export function createContentDates({ srcDir: givenSrcDir, strict = defaultStrict(), metadataKeys = METADATA_KEYS }) {
   let dates = null;
 
   function compute() {

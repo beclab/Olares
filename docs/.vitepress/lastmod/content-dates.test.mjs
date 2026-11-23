@@ -4,7 +4,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync, renameSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { createContentDates, includedPart, pageView } from './content-dates.mjs';
+import { createContentDates, defaultStrict, includedPart, pageView } from './content-dates.mjs';
 
 // A throwaway repo with docs/ under it; every commit gets a fixed date (day N).
 function repo() {
@@ -149,6 +149,12 @@ test('shallow clones fail in strict mode and fall back otherwise', () => {
   }
   rmSync(shallow, { recursive: true, force: true });
   r.done();
+});
+
+test('strict by default in CI, but not on Vercel previews', () => {
+  assert.equal(defaultStrict({ CI: 'true' }), true);
+  assert.equal(defaultStrict({ CI: '1', VERCEL: '1' }), false);
+  assert.equal(defaultStrict({}), false);
 });
 
 test('pageView keeps rendered keys and drops metadata blocks', () => {
