@@ -5,6 +5,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 )
 
 func TestInferTrafficGroup(t *testing.T) {
@@ -87,5 +88,32 @@ func TestBuildTrafficGroupIsolationBundleSafe(t *testing.T) {
 	}
 	if !fromGW {
 		t.Fatal("app bundle must allow gateway ingress")
+	}
+}
+
+func TestSameTrafficGroupKeepsTenantNamespacesSeparate(t *testing.T) {
+	for _, target := range []string{"user-space-alice", "user-system-alice"} {
+		policy := NPAllowSameTrafficGroup(target, TrafficGroupUserSpace)
+		selector, err := metav1.LabelSelectorAsSelector(policy.Spec.Ingress[0].From[0].NamespaceSelector)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, tc := range []struct {
+			namespace, group string
+			allowed          bool
+		}{
+			{"user-space-alice", TrafficGroupUserSpace, true},
+			{"user-system-alice", TrafficGroupUserSpace, true},
+			{"user-space-bob", TrafficGroupUserSpace, false},
+			{"user-system-bob", TrafficGroupUserSpace, false},
+			{"user-space-alice", TrafficGroupApp, false},
+		} {
+			if matched := selector.Matches(labels.Set{
+				"kubernetes.io/metadata.name": tc.namespace,
+				TrafficGroupLabel:             tc.group,
+			}); matched != tc.allowed {
+				t.Fatalf("%s receiving from %s (%s): matched=%v, want %v", target, tc.namespace, tc.group, matched, tc.allowed)
+			}
+		}
 	}
 }

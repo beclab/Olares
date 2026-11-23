@@ -143,15 +143,31 @@ func NPGroupDefaultDeny(namespace string) netv1.NetworkPolicy {
 	}
 }
 
-// NPAllowSameTrafficGroup permits ingress from namespaces sharing the same group label.
+// NPAllowSameTrafficGroup keeps tenant namespaces scoped to their own system
+// and space namespaces. Cross-tenant access requires a separate policy.
 func NPAllowSameTrafficGroup(namespace, group string) netv1.NetworkPolicy {
+	peer := nsPeer(group)
+	if group == TrafficGroupUserSpace {
+		names := []string{namespace}
+		if tenant, ok := strings.CutPrefix(namespace, "user-system-"); ok && tenant != "" {
+			names = append(names, "user-space-"+tenant)
+		}
+		if tenant, ok := strings.CutPrefix(namespace, "user-space-"); ok && tenant != "" {
+			names = append(names, "user-system-"+tenant)
+		}
+		peer.NamespaceSelector.MatchExpressions = []metav1.LabelSelectorRequirement{{
+			Key:      "kubernetes.io/metadata.name",
+			Operator: metav1.LabelSelectorOpIn,
+			Values:   names,
+		}}
+	}
 	return netv1.NetworkPolicy{
 		ObjectMeta: npMeta("olares-traffic-group-same", namespace),
 		Spec: netv1.NetworkPolicySpec{
 			PodSelector: metav1.LabelSelector{},
 			PolicyTypes: []netv1.PolicyType{netv1.PolicyTypeIngress},
 			Ingress: []netv1.NetworkPolicyIngressRule{{
-				From: []netv1.NetworkPolicyPeer{nsPeer(group)},
+				From: []netv1.NetworkPolicyPeer{peer},
 			}},
 		},
 	}
