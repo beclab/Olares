@@ -2,6 +2,7 @@ package sidecar
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -72,7 +73,7 @@ func parseIfaceList(raw string) []string {
 	for _, p := range strings.FieldsFunc(raw, func(r rune) bool {
 		return r == ',' || r == ';' || r == ' ' || r == '\t'
 	}) {
-		if p == "" || len(p) > 15 || !ifaceNameOK(p) {
+		if !nestedBridgeName.MatchString(p) {
 			continue
 		}
 		if _, dup := seen[p]; dup {
@@ -84,16 +85,9 @@ func parseIfaceList(raw string) []string {
 	return out
 }
 
-func ifaceNameOK(name string) bool {
-	for _, r := range name {
-		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') ||
-			(r >= '0' && r <= '9') || r == '.' || r == '_' || r == '-' {
-			continue
-		}
-		return false
-	}
-	return name != ""
-}
+// Only nested bridge names may be excluded. The pod network interface
+// must stay under Linkerd interception even if an app supplies an annotation.
+var nestedBridgeName = regexp.MustCompile(`^(docker[0-9]{0,9}|br[0-9]{1,13}|br-[[:xdigit:]]{12})$`)
 
 func podHasLinkerdMesh(pod *corev1.Pod) bool {
 	if pod.Annotations != nil &&
@@ -230,8 +224,8 @@ verify() {
   echo "$dump" | grep -Fq -- "-A $c $d $iface -j ACCEPT" || {
     echo "nested-iface-bypass: missing ACCEPT $iface on $t/$c" >&2; exit 1
   }
-  first=$(printf '%s\n' "$dump" | awk -v t="$t" -v c="$c" -v expect="$expect" '
-    BEGIN { n = split(expect, a, "\n"); for (i = 1; i <= n; i++) if (a[i] != "") skip[a[i]] = 1 }
+  first=$(printf '%s\n' "$dump" | EXPECT="$expect" awk -v t="$t" -v c="$c" '
+    BEGIN { n = split(ENVIRON["EXPECT"], a, "\n"); for (i = 1; i <= n; i++) if (a[i] != "") skip[a[i]] = 1 }
     /^-A / { if (t == "nat" && c == "PREROUTING" && ($0 in skip)) next; print; exit }
   ')
   want="-A $c $d $last -j ACCEPT"

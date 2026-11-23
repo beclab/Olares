@@ -95,7 +95,7 @@ func TestApplySharedLinkerdMeshNetworkPolicy_MultiSRRNoDualController(t *testing
 func TestReconcileSharedRoute_GatewayMode_AddsMeshNPAndInject(t *testing.T) {
 	srr := meshGatewaySRR()
 	c := fake.NewClientBuilder().WithScheme(testScheme(t)).
-		WithObjects(meshGatewaySvc(), srr, meshSharedNamespace()).Build()
+		WithObjects(meshedServiceObjects(meshGatewaySvc(), srr, meshSharedNamespace())...).Build()
 
 	if _, err := ReconcileSharedRoute(context.Background(), c, GatewayRef{}, srr); err != nil {
 		t.Fatalf("ReconcileSharedRoute: %v", err)
@@ -124,7 +124,7 @@ func TestReconcileSharedRoute_GatewayMode_AddsMeshNPAndInject(t *testing.T) {
 func TestReconcileSharedRoute_DirectMode_RemovesMeshNPAndDisablesInject(t *testing.T) {
 	srr := meshGatewaySRR()
 	c := fake.NewClientBuilder().WithScheme(testScheme(t)).
-		WithObjects(meshGatewaySvc(), srr, meshSharedNamespace()).Build()
+		WithObjects(meshedServiceObjects(meshGatewaySvc(), srr, meshSharedNamespace())...).Build()
 	if _, err := ReconcileSharedRoute(context.Background(), c, GatewayRef{}, srr); err != nil {
 		t.Fatalf("seed gateway mode: %v", err)
 	}

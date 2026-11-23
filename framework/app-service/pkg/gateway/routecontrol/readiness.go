@@ -3,17 +3,24 @@ package routecontrol
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	srrv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/gateway/v1alpha1"
+	"github.com/beclab/Olares/framework/app-service/pkg/mesh"
 )
 
 const ReasonAwaitingDataPlane = "AwaitingDataPlane"
+
+var entryMeshService = srrv1alpha1.UpstreamRef{ServiceName: "app-gateway-l4-mtls", Port: 8443}
 
 // servingReadiness distinguishes resources accepted by Kubernetes from an
 // observed, programmed listener with meshed backend endpoints.
@@ -64,11 +71,10 @@ func servingReadiness(ctx context.Context, c client.Client, gw GatewayRef, srr *
 	if backendNS == "" {
 		backendNS = srr.Namespace
 	}
-	backend := srr.Spec.Upstream.ServiceName
-	if err := meshedReadyEndpoints(ctx, c, gw.gatewayNamespace(), "app-gateway-l4-mtls"); err != nil {
+	if err := meshedReadyEndpoints(ctx, c, gw.gatewayNamespace(), entryMeshService); err != nil {
 		return err
 	}
-	return meshedReadyEndpoints(ctx, c, backendNS, backend)
+	return meshedReadyEndpoints(ctx, c, backendNS, srr.Spec.Upstream)
 }
 
 func gatewayPolicyReady(ctx context.Context, c client.Client, gvk schema.GroupVersionKind, ns, name string, gw GatewayRef) error {
@@ -136,16 +142,43 @@ func conditionReady(conditions []any, generation int64, kind string) bool {
 	return false
 }
 
-func meshedReadyEndpoints(ctx context.Context, c client.Client, ns, serviceName string) error {
-	var slices discoveryv1.EndpointSliceList
-	if err := c.List(ctx, &slices, client.InNamespace(ns), client.MatchingLabels{discoveryv1.LabelServiceName: serviceName}); err != nil {
+func meshedReadyEndpoints(ctx context.Context, c client.Client, ns string, upstream srrv1alpha1.UpstreamRef) error {
+	serviceName := upstream.ServiceName
+	var service corev1.Service
+	if err := c.Get(ctx, client.ObjectKey{Namespace: ns, Name: serviceName}, &service); err != nil {
+		return err
+	}
+	if service.UID == "" || len(service.Spec.Selector) == 0 {
+		return fmt.Errorf("%s/%s lacks an owned, selector-backed Service", ns, serviceName)
+	}
+	port, err := resolveServicePort(&service, upstream)
+	if err != nil {
+		return err
+	}
+	var portName string
+	for _, servicePort := range service.Spec.Ports {
+		if servicePort.Port == port && (servicePort.Protocol == "" || servicePort.Protocol == corev1.ProtocolTCP) {
+			portName = servicePort.Name
+			break
+		}
+	}
+	selector := labels.SelectorFromSet(service.Spec.Selector)
+	var endpointSlices discoveryv1.EndpointSliceList
+	if err := c.List(ctx, &endpointSlices, client.InNamespace(ns), client.MatchingLabels{discoveryv1.LabelServiceName: serviceName}); err != nil {
 		return err
 	}
 	found := false
-	for _, sl := range slices.Items {
+	for _, sl := range endpointSlices.Items {
+		if owner := metav1.GetControllerOf(&sl); owner == nil || owner.Kind != "Service" ||
+			owner.Name != service.Name || owner.UID != service.UID {
+			return fmt.Errorf("%s/%s has an EndpointSlice with an unexpected owner", ns, serviceName)
+		}
 		for _, endpoint := range sl.Endpoints {
 			if endpoint.Conditions.Ready != nil && !*endpoint.Conditions.Ready {
 				continue
+			}
+			if !hasInterceptedHTTPPort(sl.Ports, portName, serviceName == entryMeshService.ServiceName) {
+				return fmt.Errorf("%s/%s has a serving endpoint without an intercepted HTTP target port", ns, serviceName)
 			}
 			ref := endpoint.TargetRef
 			if endpoint.Conditions.Ready == nil || ref == nil || ref.Kind != "Pod" || ref.UID == "" || (ref.Namespace != "" && ref.Namespace != ns) {
@@ -157,14 +190,25 @@ func meshedReadyEndpoints(ctx context.Context, c client.Client, ns, serviceName 
 			}
 			proxyReady := false
 			for _, s := range pod.Status.ContainerStatuses {
-				if s.Name == "linkerd-proxy" && s.Ready {
+				if s.Name == mesh.LinkerdProxyContainer && s.Ready {
 					proxyReady = true
 					break
 				}
 			}
-			if pod.UID != ref.UID || pod.Spec.HostNetwork || !pod.DeletionTimestamp.IsZero() || !proxyReady ||
-				pod.Annotations["config.linkerd.io/skip-inbound-ports"] != "" || pod.Annotations["config.linkerd.io/skip-outbound-ports"] != "" {
-				return fmt.Errorf("%s/%s has a serving endpoint without a ready Linkerd proxy", ns, serviceName)
+			if pod.UID != ref.UID || !selector.Matches(labels.Set(pod.Labels)) || !pod.DeletionTimestamp.IsZero() ||
+				mesh.CheckHTTPMeshInterception(&pod) != nil || !proxyReady ||
+				pod.Annotations[mesh.LinkerdDefaultInboundPolicyAnnotation] != mesh.InboundPolicyClusterAuthenticated ||
+				!mesh.HasHTTPMeshInit(&pod) ||
+				!mesh.ProxyHasInboundPolicy(&pod, mesh.InboundPolicyClusterAuthenticated) {
+				return fmt.Errorf("%s/%s has a serving endpoint without an enforced Linkerd mesh posture", ns, serviceName)
+			}
+			if len(endpoint.Addresses) == 0 {
+				return fmt.Errorf("%s/%s has a serving endpoint without an address", ns, serviceName)
+			}
+			for _, address := range endpoint.Addresses {
+				if address != pod.Status.PodIP && !slices.Contains(pod.Status.PodIPs, corev1.PodIP{IP: address}) {
+					return fmt.Errorf("%s/%s has a serving endpoint address outside its bound Pod", ns, serviceName)
+				}
 			}
 			found = true
 		}
@@ -173,4 +217,22 @@ func meshedReadyEndpoints(ctx context.Context, c client.Client, ns, serviceName 
 		return fmt.Errorf("%s/%s has no ready mesh endpoints", ns, serviceName)
 	}
 	return nil
+}
+
+func hasInterceptedHTTPPort(ports []discoveryv1.EndpointPort, portName string, entry bool) bool {
+	for _, port := range ports {
+		if ptr.Deref(port.Name, "") != portName || ptr.Deref(port.Protocol, corev1.ProtocolTCP) != corev1.ProtocolTCP || port.Port == nil {
+			continue
+		}
+		if entry {
+			return *port.Port == entryMeshService.Port
+		}
+		switch *port.Port {
+		case 3389, 4190, 4191:
+			return false
+		default:
+			return true
+		}
+	}
+	return false
 }
