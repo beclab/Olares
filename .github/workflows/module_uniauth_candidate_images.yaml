@@ -1,0 +1,79 @@
+name: Build unified access candidate images
+
+on:
+  workflow_dispatch:
+    inputs:
+      candidate_sha:
+        description: Full commit SHA for this run
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  images:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: access-admission
+            context: framework/app-gateway
+            dockerfile: cmd/access-admission/Dockerfile
+          - image: linkerd-pki-guardian
+            context: framework/app-gateway
+            dockerfile: cmd/linkerd-pki-guardian/Dockerfile
+          - image: app-service
+            context: framework/app-service
+            dockerfile: Dockerfile
+          - image: l4-bfl-proxy
+            context: framework/l4-bfl-proxy
+            dockerfile: Dockerfile
+    steps:
+      - name: Check candidate
+        env:
+          CANDIDATE_SHA: ${{ inputs.candidate_sha }}
+        run: |
+          [[ "$CANDIDATE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$CANDIDATE_SHA" = "$GITHUB_SHA"
+
+      - name: Check out candidate
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Enable arm64 builds
+        uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392 # v3.6.0
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
+
+      - name: Publish candidate
+        env:
+          IMAGE_NAME: ${{ matrix.image }}
+          BUILD_CONTEXT: ${{ matrix.context }}
+          DOCKERFILE: ${{ matrix.dockerfile }}
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GO_PRIVATE_TOKEN: ${{ matrix.image == 'app-service' && secrets.GO_PRIVATE_TOKEN || '' }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$REGISTRY_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          image="ghcr.io/${GITHUB_REPOSITORY,,}/$IMAGE_NAME"
+          extra=()
+          if [[ "$IMAGE_NAME" == app-service ]]; then
+            : "${GO_PRIVATE_TOKEN:?Configure the private Go dependency secret}"
+            extra+=(--secret id=github_token,env=GO_PRIVATE_TOKEN)
+          fi
+          metadata="$RUNNER_TEMP/image-$IMAGE_NAME.json"
+          docker buildx build --platform linux/amd64,linux/arm64 \
+            --file "$BUILD_CONTEXT/$DOCKERFILE" \
+            --label "org.opencontainers.image.revision=$GITHUB_SHA" \
+            --label "org.opencontainers.image.source=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" \
+            --tag "$image:$GITHUB_SHA" --provenance=mode=max --sbom=true \
+            --metadata-file "$metadata" "${extra[@]}" --push "$BUILD_CONTEXT"
+          digest=$(jq -er '."containerimage.digest" | select(startswith("sha256:"))' "$metadata")
+          docker buildx imagetools inspect "$image@$digest"
+          printf '%s@%s\n' "$image" "$digest" >> "$GITHUB_STEP_SUMMARY"
