@@ -4,16 +4,17 @@
 package entrypki
 
 import (
+	"bytes"
 	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/sha256"
+	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"encoding/hex"
 	"encoding/pem"
 	"fmt"
+	"maps"
 	"math/big"
 	"time"
 
@@ -25,31 +26,30 @@ import (
 )
 
 const (
-	// SecretName holds Entry CA + server + client PEMs in os-gateway.
-	SecretName = "olares-l4-agw-mtls"
+	// SecretName is the server credential used by the Gateway listener.
+	SecretName       = "olares-l4-agw-mtls"
+	ClientSecretName = "olares-l4-agw-client"
+	signerSecretName = "olares-l4-agw-signer"
 	// DefaultNamespace hosts the L4→AGW channel Service.
 	DefaultNamespace = "os-gateway"
 
-	RotateThreshold = 180 * 24 * time.Hour
+	RotateThreshold  = 180 * 24 * time.Hour
 	CALifetimeDays   = 10950
 	LeafLifetimeDays = 365
 
-	keyCACrt           = "ca.crt"
-	keyCAKey           = "ca.key"
-	keyCACrtPrevious    = "ca.crt.previous"
-	keyServerCrt       = "tls.crt"
-	keyServerKey       = "tls.key"
-	keyClientCrt       = "client.crt"
-	keyClientKey       = "client.key"
-	annotFingerprint   = "gateway.olares.io/entry-mtls-fingerprint"
+	keyCACrt     = "ca.crt"
+	keyCAKey     = "ca.key"
+	keyServerCrt = "tls.crt"
+	keyServerKey = "tls.key"
+	keyClientCrt = "client.crt"
+	keyClientKey = "client.key"
 )
 
 // Material is Entry mTLS vault content.
 type Material struct {
-	CACrt, CAKey             []byte
-	CACrtPrevious            []byte
-	ServerCrt, ServerKey     []byte
-	ClientCrt, ClientKey     []byte
+	CACrt, CAKey         []byte
+	ServerCrt, ServerKey []byte
+	ClientCrt, ClientKey []byte
 }
 
 // Enabled reports whether Entry PKI maintain should run.
@@ -76,35 +76,97 @@ func MaintainEntryMTLS(ctx context.Context, c client.Client, ns string, enabled 
 	if ns == "" {
 		ns = DefaultNamespace
 	}
-	var sec corev1.Secret
-	err := c.Get(ctx, types.NamespacedName{Namespace: ns, Name: SecretName}, &sec)
+	var signer corev1.Secret
+	err := c.Get(ctx, types.NamespacedName{Namespace: ns, Name: signerSecretName}, &signer)
 	if apierrors.IsNotFound(err) {
-		mat, err := bootstrapMaterial(now)
+		// Persist the signer before redacting the legacy combined Secret.
+		// Retain its trust anchor during migration. Publish the isolated
+		// client material before redacting the legacy Secret.
+		var legacy corev1.Secret
+		getErr := c.Get(ctx, types.NamespacedName{Namespace: ns, Name: SecretName}, &legacy)
+		var mat *Material
+		switch {
+		case getErr == nil:
+			mat, err = materialFromSecret(&legacy)
+		case apierrors.IsNotFound(getErr):
+			mat, err = bootstrapMaterial(now)
+		default:
+			return getErr
+		}
 		if err != nil {
 			return err
 		}
-		return writeSecret(ctx, c, ns, mat, nil)
+		signer = corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: signerSecretName},
+			Data: map[string][]byte{keyCACrt: mat.CACrt, keyCAKey: mat.CAKey}}
+		if err := c.Create(ctx, &signer); err != nil {
+			return err
+		}
+	} else if err != nil {
+		return err
 	}
+
+	mat, err := materialFromSecret(&signer)
 	if err != nil {
 		return err
 	}
-	serverCrt := sec.Data[keyServerCrt]
-	need, _, err := NeedsRotation(serverCrt, now)
-	if err != nil {
+	if err := reconcileLeaf(ctx, c, ns, ClientSecretName, corev1.SecretTypeOpaque, mat,
+		keyClientCrt, keyClientKey, "l4-bfl-proxy.entry.client", x509.ExtKeyUsageClientAuth, now); err != nil {
 		return err
 	}
-	if !need {
+	return reconcileLeaf(ctx, c, ns, SecretName, corev1.SecretTypeTLS, mat,
+		keyServerCrt, keyServerKey, "app-gateway-l4-mtls.os-gateway.svc.cluster.local", x509.ExtKeyUsageServerAuth, now)
+}
+
+// reconcileLeaf repairs incomplete credentials and only publishes material
+// intended for the leaf consumer. The signing key never leaves the signer.
+func reconcileLeaf(ctx context.Context, c client.Client, ns, name string, secretType corev1.SecretType,
+	mat *Material, certKey, privateKey, dnsName string, usage x509.ExtKeyUsage, now time.Time) error {
+	var sec corev1.Secret
+	err := c.Get(ctx, types.NamespacedName{Namespace: ns, Name: name}, &sec)
+	isNew := apierrors.IsNotFound(err)
+	if err != nil && !isNew {
+		return err
+	}
+	cert, key := sec.Data[certKey], sec.Data[privateKey]
+	_, pairErr := tls.X509KeyPair(cert, key)
+	roots := x509.NewCertPool()
+	if !roots.AppendCertsFromPEM(mat.CACrt) {
+		return fmt.Errorf("invalid Entry CA certificate")
+	}
+	rotate, _, expiryErr := NeedsRotation(cert, now)
+	if pairErr == nil && expiryErr == nil && !rotate {
+		var leaf *x509.Certificate
+		leaf, err = parseCertificate(cert)
+		if err == nil {
+			_, err = leaf.Verify(x509.VerifyOptions{Roots: roots, DNSName: dnsName,
+				KeyUsages: []x509.ExtKeyUsage{usage}, CurrentTime: now})
+		}
+	}
+	if pairErr != nil || expiryErr != nil || rotate || err != nil {
+		ca, err := parseCertificate(mat.CACrt)
+		if err != nil {
+			return err
+		}
+		caKey, err := parseECPrivateKey(mat.CAKey)
+		if err != nil {
+			return err
+		}
+		cert, key, err = issueLeaf(ca, caKey, dnsName, usage, now)
+		if err != nil {
+			return err
+		}
+	}
+	data := map[string][]byte{keyCACrt: mat.CACrt, certKey: cert, privateKey: key}
+	if isNew {
+		sec = corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: name}, Type: secretType, Data: data}
+		return c.Create(ctx, &sec)
+	}
+	if maps.EqualFunc(sec.Data, data, bytes.Equal) {
 		return nil
 	}
-	mat, err := materialFromSecret(&sec)
-	if err != nil {
-		return err
-	}
-	rotated, err := rotateLeaves(mat, now)
-	if err != nil {
-		return err
-	}
-	return writeSecret(ctx, c, ns, rotated, &sec)
+	// Secret type is immutable. Existing Opaque server Secrets remain Opaque.
+	sec.Data = data
+	return c.Update(ctx, &sec)
 }
 
 func bootstrapMaterial(now time.Time) (*Material, error) {
@@ -120,11 +182,11 @@ func bootstrapMaterial(now time.Time) (*Material, error) {
 	if err != nil {
 		return nil, err
 	}
-	serverCrt, serverKey, err := issueLeaf(caCert, caKey, "app-gateway-l4-mtls.os-gateway.svc.cluster.local", now)
+	serverCrt, serverKey, err := issueLeaf(caCert, caKey, "app-gateway-l4-mtls.os-gateway.svc.cluster.local", x509.ExtKeyUsageServerAuth, now)
 	if err != nil {
 		return nil, err
 	}
-	clientCrt, clientKey, err := issueLeaf(caCert, caKey, "l4-bfl-proxy.entry.client", now)
+	clientCrt, clientKey, err := issueLeaf(caCert, caKey, "l4-bfl-proxy.entry.client", x509.ExtKeyUsageClientAuth, now)
 	if err != nil {
 		return nil, err
 	}
@@ -135,35 +197,9 @@ func bootstrapMaterial(now time.Time) (*Material, error) {
 	}, nil
 }
 
-func rotateLeaves(mat *Material, now time.Time) (*Material, error) {
-	caCert, err := parseCertificate(mat.CACrt)
-	if err != nil {
-		return nil, err
-	}
-	caKey, err := parseECPrivateKey(mat.CAKey)
-	if err != nil {
-		return nil, err
-	}
-	serverCrt, serverKey, err := issueLeaf(caCert, caKey, "app-gateway-l4-mtls.os-gateway.svc.cluster.local", now)
-	if err != nil {
-		return nil, err
-	}
-	clientCrt, clientKey, err := issueLeaf(caCert, caKey, "l4-bfl-proxy.entry.client", now)
-	if err != nil {
-		return nil, err
-	}
-	return &Material{
-		CACrt: mat.CACrt, CAKey: mat.CAKey,
-		CACrtPrevious: mat.CACrt, // dual-trust window
-		ServerCrt: serverCrt, ServerKey: serverKey,
-		ClientCrt: clientCrt, ClientKey: clientKey,
-	}, nil
-}
-
 func materialFromSecret(sec *corev1.Secret) (*Material, error) {
 	m := &Material{
 		CACrt: sec.Data[keyCACrt], CAKey: sec.Data[keyCAKey],
-		CACrtPrevious: sec.Data[keyCACrtPrevious],
 		ServerCrt: sec.Data[keyServerCrt], ServerKey: sec.Data[keyServerKey],
 		ClientCrt: sec.Data[keyClientCrt], ClientKey: sec.Data[keyClientKey],
 	}
@@ -171,40 +207,6 @@ func materialFromSecret(sec *corev1.Secret) (*Material, error) {
 		return nil, fmt.Errorf("entry pki secret missing ca material")
 	}
 	return m, nil
-}
-
-func writeSecret(ctx context.Context, c client.Client, ns string, mat *Material, existing *corev1.Secret) error {
-	fp := fingerprint(mat.ServerCrt)
-	data := map[string][]byte{
-		keyCACrt: mat.CACrt, keyCAKey: mat.CAKey,
-		keyServerCrt: mat.ServerCrt, keyServerKey: mat.ServerKey,
-		keyClientCrt: mat.ClientCrt, keyClientKey: mat.ClientKey,
-	}
-	if len(mat.CACrtPrevious) > 0 {
-		data[keyCACrtPrevious] = mat.CACrtPrevious
-	}
-	if existing == nil {
-		sec := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      SecretName,
-				Namespace: ns,
-				Labels: map[string]string{
-					"app.kubernetes.io/name":      "l4-agw-mtls",
-					"app.kubernetes.io/component": "entry-pki",
-				},
-				Annotations: map[string]string{annotFingerprint: fp},
-			},
-			Type: corev1.SecretTypeOpaque,
-			Data: data,
-		}
-		return c.Create(ctx, sec)
-	}
-	existing.Data = data
-	if existing.Annotations == nil {
-		existing.Annotations = map[string]string{}
-	}
-	existing.Annotations[annotFingerprint] = fp
-	return c.Update(ctx, existing)
 }
 
 func createCA(key *ecdsa.PrivateKey, now time.Time) (*x509.Certificate, []byte, error) {
@@ -233,7 +235,7 @@ func createCA(key *ecdsa.PrivateKey, now time.Time) (*x509.Certificate, []byte, 
 	return cert, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}), nil
 }
 
-func issueLeaf(ca *x509.Certificate, caKey *ecdsa.PrivateKey, cn string, now time.Time) ([]byte, []byte, error) {
+func issueLeaf(ca *x509.Certificate, caKey *ecdsa.PrivateKey, cn string, usage x509.ExtKeyUsage, now time.Time) ([]byte, []byte, error) {
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		return nil, nil, err
@@ -248,7 +250,7 @@ func issueLeaf(ca *x509.Certificate, caKey *ecdsa.PrivateKey, cn string, now tim
 		NotBefore:    now.Add(-time.Hour),
 		NotAfter:     now.Add(time.Duration(LeafLifetimeDays) * 24 * time.Hour),
 		KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
-		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
+		ExtKeyUsage:  []x509.ExtKeyUsage{usage},
 		DNSNames:     []string{cn},
 	}
 	der, err := x509.CreateCertificate(rand.Reader, tpl, ca, &key.PublicKey, caKey)
@@ -307,9 +309,4 @@ func marshalECPrivateKey(key *ecdsa.PrivateKey) ([]byte, error) {
 		return nil, err
 	}
 	return pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: b}), nil
-}
-
-func fingerprint(certPEM []byte) string {
-	sum := sha256.Sum256(certPEM)
-	return hex.EncodeToString(sum[:8])
 }

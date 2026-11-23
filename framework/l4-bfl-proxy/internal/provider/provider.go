@@ -338,8 +338,8 @@ func (p *Provider) buildResources(ctx context.Context) (*message.Resources, erro
 }
 
 const (
-	entryMTLSNamespace = "os-gateway"
-	entryMTLSSecretName = "olares-l4-agw-mtls"
+	entryMTLSNamespace  = "os-gateway"
+	entryMTLSSecretName = "olares-l4-agw-client"
 )
 
 func (p *Provider) loadEntryMTLS(ctx context.Context) *message.EntryMTLSMaterial {

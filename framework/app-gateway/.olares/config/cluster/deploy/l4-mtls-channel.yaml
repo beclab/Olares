@@ -1,5 +1,5 @@
 # L4 → app-gateway Entry mTLS channel (product steady state: always on).
-# Entry CA is separate from Linkerd identity CA. Client certs from olares-l4-agw-mtls.
+# Entry CA is separate from Linkerd identity CA. Client certs from olares-l4-agw-client.
 ---
 apiVersion: v1
 kind: Service
@@ -39,7 +39,7 @@ data:
   enabled: "true"
   sni: "app-gateway-l4-mtls.os-gateway.svc.cluster.local"
   httpMeshPolicy: "entry-mtls"
-  rotationMode: "dual-trust-then-cutover"
+  rotationMode: "same-ca-leaf-rotation"
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: ClientTrafficPolicy
@@ -58,12 +58,16 @@ spec:
   tls:
     clientValidation:
       mode: RequireAndVerify
+      subjectAltNames:
+        dnsNames:
+          - type: Exact
+            value: l4-bfl-proxy.entry.client
       caCertificateRefs:
         - kind: Secret
           group: ""
           name: olares-l4-agw-mtls
 ---
-# Bind per-user L4 ServiceAccount (ClusterRoleBinding) to read Entry material.
+# Bind the L4 ServiceAccount with a RoleBinding in os-gateway to read only the client credential.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -71,5 +75,19 @@ metadata:
 rules:
   - apiGroups: [""]
     resources: ["secrets"]
-    resourceNames: ["olares-l4-agw-mtls"]
+    resourceNames: ["olares-l4-agw-client"]
     verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: olares-entry-mtls-reader
+  namespace: os-gateway
+subjects:
+  - kind: ServiceAccount
+    name: os-network-internal
+    namespace: os-network
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: olares-entry-mtls-reader

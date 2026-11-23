@@ -10,12 +10,12 @@ import (
 
 	accesslogv3 "github.com/envoyproxy/go-control-plane/envoy/config/accesslog/v3"
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
+	mutationrulesv3 "github.com/envoyproxy/go-control-plane/envoy/config/common/mutation_rules/v3"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	rbac_configv3 "github.com/envoyproxy/go-control-plane/envoy/config/rbac/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
-	mutationrulesv3 "github.com/envoyproxy/go-control-plane/envoy/config/common/mutation_rules/v3"
 	accesslogfilev3 "github.com/envoyproxy/go-control-plane/envoy/extensions/access_loggers/file/v3"
 	extauthzv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/ext_authz/v3"
 	headermutationv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/header_mutation/v3"
@@ -712,8 +712,8 @@ func buildMultiUserHTTPSListener(port uint32, proxyProtocol bool, httpListeners 
 					},
 				},
 			},
-			HttpFilters:                    httpFilters,
-			EarlyHeaderMutationExtensions:  buildEarlyClientIdentityStripExtensions(),
+			HttpFilters:                   httpFilters,
+			EarlyHeaderMutationExtensions: buildEarlyClientIdentityStripExtensions(),
 			UpgradeConfigs: []*hcmv3.HttpConnectionManager_UpgradeConfig{
 				{UpgradeType: "websocket"},
 				{UpgradeType: "tailscale-control-protocol"},
@@ -1654,10 +1654,20 @@ func buildUpstreamMTLSTransport(m *ir.UpstreamMTLSIR) *corev3.TransportSocket {
 				Name:      m.ClientCertSDS,
 				SdsConfig: ads,
 			}},
-			ValidationContextType: &tlsv3.CommonTlsContext_ValidationContextSdsSecretConfig{
-				ValidationContextSdsSecretConfig: &tlsv3.SdsSecretConfig{
-					Name:      m.TrustedCACerts,
-					SdsConfig: ads,
+			ValidationContextType: &tlsv3.CommonTlsContext_CombinedValidationContext{
+				CombinedValidationContext: &tlsv3.CommonTlsContext_CombinedCertificateValidationContext{
+					DefaultValidationContext: &tlsv3.CertificateValidationContext{
+						MatchTypedSubjectAltNames: []*tlsv3.SubjectAltNameMatcher{{
+							SanType: tlsv3.SubjectAltNameMatcher_DNS,
+							Matcher: &matcherv3.StringMatcher{
+								MatchPattern: &matcherv3.StringMatcher_Exact{Exact: m.SNI},
+							},
+						}},
+					},
+					ValidationContextSdsSecretConfig: &tlsv3.SdsSecretConfig{
+						Name:      m.TrustedCACerts,
+						SdsConfig: ads,
+					},
 				},
 			},
 			AlpnProtocols: []string{"h2", "http/1.1"},
