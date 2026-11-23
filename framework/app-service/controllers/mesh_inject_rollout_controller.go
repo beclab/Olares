@@ -42,7 +42,7 @@ func (r *MeshInjectRolloutReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	}
 
 	ready := meshinagent.IsMeshControlPlaneReady(ctx, r.Kube)
-	wasReady, epoch, err := meshinagent.LoadMeshInjectRolloutState(ctx, r.Client)
+	wasReady, epoch, posture, err := meshinagent.LoadMeshInjectRolloutStateFull(ctx, r.Client)
 	if err != nil {
 		klog.Errorf("mesh-in-rollout: mesh-inject load state failed: %v", err)
 		return ctrl.Result{RequeueAfter: after}, err
@@ -51,7 +51,7 @@ func (r *MeshInjectRolloutReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	switch {
 	case ready && !wasReady:
 		newEpoch := meshinagent.NextMeshReadyEpoch(epoch)
-		if err := meshinagent.StoreMeshInjectRolloutState(ctx, r.Client, true, newEpoch); err != nil {
+		if err := meshinagent.StoreMeshInjectRolloutStateFull(ctx, r.Client, true, newEpoch, meshinagent.HTTPMeshPostureVersion); err != nil {
 			return ctrl.Result{RequeueAfter: after}, err
 		}
 		klog.Infof("mesh-in-rollout: mesh control plane first ready epoch=%s → sweep", newEpoch)
@@ -64,7 +64,17 @@ func (r *MeshInjectRolloutReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		}
 		klog.Warningf("mesh-in-rollout: mesh control plane became not-ready (epoch=%s retained)", epoch)
 	case ready && wasReady:
-		// Already tracked.
+		// Upgrade path: mesh already ready but HTTP mTLS posture sweep not recorded.
+		if posture != meshinagent.HTTPMeshPostureVersion {
+			newEpoch := meshinagent.NextMeshReadyEpoch(epoch)
+			if err := meshinagent.StoreMeshInjectRolloutStateFull(ctx, r.Client, true, newEpoch, meshinagent.HTTPMeshPostureVersion); err != nil {
+				return ctrl.Result{RequeueAfter: after}, err
+			}
+			klog.Infof("mesh-in-rollout: http-mesh posture sweep epoch=%s", newEpoch)
+			if worker != nil {
+				worker.EnqueueMeshReadySweep(ctx, newEpoch)
+			}
+		}
 	default:
 		if epoch == "" || epoch == "0" {
 			_ = meshinagent.StoreMeshInjectRolloutState(ctx, r.Client, false, "0")

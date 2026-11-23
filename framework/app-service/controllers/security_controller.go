@@ -7,6 +7,7 @@ import (
 
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway/meshinagent"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/security"
 	"github.com/beclab/Olares/framework/app-service/pkg/uniauth"
@@ -26,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -47,6 +49,7 @@ type SecurityReconciler struct {
 	Scheme        *runtime.Scheme
 	Logger        *logr.Logger
 	DynamicClient dynamic.Interface
+	KubeClient    kubernetes.Interface
 }
 
 var loggerKey struct{}
@@ -364,13 +367,16 @@ func (r *SecurityReconciler) reconcileNamespaceLabels(ctx context.Context, ns *c
 	return nil
 }
 
-// reconcileTrafficGroupNetworkPolicies applies the safe isolation bundle.
-// Product steady state always enables the bundle; labels are applied independently.
+// reconcileTrafficGroupNetworkPolicies applies the safe isolation bundle after
+// the mesh control plane is ready (inject before L3 deny), then continuously.
 func (r *SecurityReconciler) reconcileTrafficGroupNetworkPolicies(ctx context.Context, ns *corev1.Namespace) error {
 	if !uniauth.TrafficGroupNPDesired() {
 		return nil
 	}
 	if ns == nil || !ns.DeletionTimestamp.IsZero() {
+		return nil
+	}
+	if r.KubeClient != nil && !meshinagent.IsMeshControlPlaneReady(ctx, r.KubeClient) {
 		return nil
 	}
 	logger := ctx.Value(loggerKey).(logr.Logger)
