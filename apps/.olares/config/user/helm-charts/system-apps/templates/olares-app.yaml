@@ -268,23 +268,12 @@ spec:
       priorityClassName: "system-cluster-critical"
       serviceAccountName: system-frontend
       initContainers:
-        - name: check-auth
-          image: busybox:1.28
+        - args:
+            - -it
+            - authelia-backend.user-system-{{ .Values.bfl.username }}:9091,infisical-service.user-system-{{ .Values.bfl.username }}:8080,system-server.user-system-{{ .Values.bfl.username }}:80,nats.user-system-{{ .Values.bfl.username }}:4222
+          image: owncloudci/wait-for:latest
           imagePullPolicy: IfNotPresent
-          command:
-            - /bin/sh
-            - -ec
-            - |
-              url="http://authelia-backend.user-system-{{ .Values.bfl.username }}:9091/api/health"
-              attempts=0
-              until wget -q -T 5 -O /dev/null --header "X-BFL-USER: {{ .Values.bfl.username }}" "$url"; do
-                attempts=$((attempts + 1))
-                if [ "$attempts" -ge 24 ]; then
-                  echo "Authelia health endpoint is unavailable" >&2
-                  exit 1
-                fi
-                sleep 5
-              done
+          name: check-auth
         - name: olares-app-init
           image: beclab/system-frontend:v1.13.7
           imagePullPolicy: IfNotPresent

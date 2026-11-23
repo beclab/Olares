@@ -12,25 +12,64 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func TestAutheliaStartupProbesSendTheTenantHeader(t *testing.T) {
+func TestAutheliaStartupWaitsForTCPAfterLinkerd(t *testing.T) {
 	_, file, _, _ := runtime.Caller(0)
 	root := filepath.Join(filepath.Dir(file), "../../../..")
-	for _, path := range []string{
-		"framework/authelia/.olares/config/user/helm-charts/auth/templates/auth_deploy.yaml",
-		"apps/.olares/config/user/helm-charts/system-apps/templates/olares-app.yaml",
+	for _, tc := range []struct {
+		path, deployment, targets string
+	}{
+		{
+			path:       "framework/authelia/.olares/config/user/helm-charts/auth/templates/auth_deploy.yaml",
+			deployment: "authelia-deployment",
+			targets:    "authelia-backend.user-system-{{ .Values.bfl.username }}:9091",
+		},
+		{
+			path:       "apps/.olares/config/user/helm-charts/system-apps/templates/olares-app.yaml",
+			deployment: "olares-app-deployment",
+			targets: "authelia-backend.user-system-{{ .Values.bfl.username }}:9091," +
+				"infisical-service.user-system-{{ .Values.bfl.username }}:8080," +
+				"system-server.user-system-{{ .Values.bfl.username }}:80,nats.user-system-{{ .Values.bfl.username }}:4222",
+		},
 	} {
-		t.Run(filepath.Base(path), func(t *testing.T) {
-			data, err := os.ReadFile(filepath.Join(root, path))
+		t.Run(tc.deployment, func(t *testing.T) {
+			data, err := os.ReadFile(filepath.Join(root, tc.path))
 			if err != nil {
 				t.Fatal(err)
 			}
-			_, probe, found := strings.Cut(string(data), "- name: check-auth\n")
-			setup, args, hasProbe := strings.Cut(probe, "until wget ")
-			args, _, _ = strings.Cut(args, "\n")
-			if !found || !hasProbe ||
-				!strings.Contains(setup, `url="http://authelia-backend.user-system-{{ .Values.bfl.username }}:9091/api/health"`) ||
-				!strings.Contains(args, `--header "X-BFL-USER: {{ .Values.bfl.username }}" "$url"; do`) {
-				t.Fatal("check-auth must wait for the tenant Authelia health endpoint using the same tenant in the request header")
+			_, deployment, found := strings.Cut(string(data), "kind: Deployment\nmetadata:\n  name: "+tc.deployment+"\n")
+			metadata, containers, hasInit := strings.Cut(deployment, "      initContainers:\n")
+			init, _, hasApp := strings.Cut(containers, "\n      containers:")
+			if !found || !hasInit || !hasApp {
+				t.Fatal("could not locate the init containers in the deployment template")
+			}
+			for _, annotation := range []string{
+				`linkerd.io/inject: enabled`,
+				`config.linkerd.io/proxy-enable-native-sidecar: "true"`,
+				`config.linkerd.io/default-inbound-policy: cluster-authenticated`,
+				`traffic.olares.io/mtls-mode: Required`,
+			} {
+				if !strings.Contains(metadata, "\n        "+annotation+"\n") {
+					t.Errorf("missing Pod annotation %s", annotation)
+				}
+			}
+			var probes []struct {
+				Name            string   `yaml:"name"`
+				Image           string   `yaml:"image"`
+				ImagePullPolicy string   `yaml:"imagePullPolicy"`
+				Command         []string `yaml:"command"`
+				Args            []string `yaml:"args"`
+			}
+			if err := yaml.Unmarshal([]byte(init), &probes); err != nil {
+				t.Fatal(err)
+			}
+			if len(probes) == 0 {
+				t.Fatal("no init containers found")
+			}
+			probe := probes[0]
+			if probe.Name != "check-auth" || probe.Image != "owncloudci/wait-for:latest" ||
+				probe.ImagePullPolicy != "IfNotPresent" || len(probe.Command) != 0 ||
+				!reflect.DeepEqual(probe.Args, []string{"-it", tc.targets}) {
+				t.Fatalf("unexpected check-auth startup contract: %+v", probe)
 			}
 		})
 	}
