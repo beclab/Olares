@@ -33,3 +33,16 @@ spec:
           - kind: Secret
             group: ""
             name: app-gateway-tls
+    # L4→AGW Entry mTLS (RequireAndVerify via ClientTrafficPolicy app-gateway-l4-entry-mtls).
+    - name: l4-mtls
+      protocol: HTTPS
+      port: 8443
+      allowedRoutes:
+        namespaces:
+          from: All
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            group: ""
+            name: olares-l4-agw-mtls
