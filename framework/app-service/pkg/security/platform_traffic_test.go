@@ -69,8 +69,11 @@ func TestPlatformTrafficUsesPairedServiceAndTargetPorts(t *testing.T) {
 
 func TestPlatformTrafficInventoryOnlyAddsVerifiedPorts(t *testing.T) {
 	for _, flow := range platformServiceFlows {
-		if slices.Contains([]int32{8080, 17170, 17171, 18001, 18002, 8222}, flow.servicePort) ||
-			slices.Contains([]int32{8080, 17170, 17171, 18001, 18002, 8222}, flow.targetPort) {
+		blocked := []int32{8080, 17171, 18001, 18002, 8222}
+		if flow.name != "authelia-lldap-token" {
+			blocked = append(blocked, 17170)
+		}
+		if slices.Contains(blocked, flow.servicePort) || slices.Contains(blocked, flow.targetPort) {
 			t.Fatalf("%s grants an unapproved port", flow.name)
 		}
 	}
@@ -83,6 +86,56 @@ func TestPlatformTrafficInventoryOnlyAddsVerifiedPorts(t *testing.T) {
 	if !reflect.DeepEqual(ingress.PodSelector.MatchLabels, gatewayDataPlanePods("app-gateway")) ||
 		!reflect.DeepEqual(ingress.Ingress[0].Ports, []netv1.NetworkPolicyPort{tcpPort(8443), tcpPort(9444)}) {
 		t.Fatalf("unexpected L4 listener scope: %+v", ingress)
+	}
+}
+
+func TestAutheliaLLDAPTokenTrafficRequiresMatchingService(t *testing.T) {
+	key := types.NamespacedName{Namespace: "os-platform", Name: "lldap-service"}
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Namespace: key.Namespace, Name: key.Name},
+		Spec: corev1.ServiceSpec{
+			Type: corev1.ServiceTypeClusterIP, ClusterIP: "10.233.7.245",
+			Selector: map[string]string{"app": "lldap"},
+			Ports: []corev1.ServicePort{
+				{Port: 3890, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt(3890)},
+				{Port: 17170, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt(17170)},
+				{Port: 17171, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt(17171)},
+			},
+		},
+	}
+	policy := func(namespace, name string, service *corev1.Service) netv1.NetworkPolicy {
+		t.Helper()
+		for _, p := range BuildPlatformTrafficPolicies(namespace, map[types.NamespacedName]*corev1.Service{key: service}) {
+			if p.Name == "olares-platform-"+name {
+				if !IsTrafficGroupManagedNP(&p) {
+					t.Fatalf("legacy sweep would prune %s/%s", namespace, p.Name)
+				}
+				return p
+			}
+		}
+		t.Fatalf("policy %s/%s is missing", namespace, name)
+		return netv1.NetworkPolicy{}
+	}
+	source := map[string]string{"app": "authelia-backend", "traffic.olares.io/platform-mesh": "true"}
+	out := policy("os-framework", "authelia-lldap-token-egress", svc)
+	in := policy(key.Namespace, "authelia-lldap-token-ingress", svc)
+	wantPort := []netv1.NetworkPolicyPort{tcpPort(17170)}
+	wantEgress := []netv1.NetworkPolicyEgressRule{
+		{To: []netv1.NetworkPolicyPeer{platformPeer(key.Namespace, svc.Spec.Selector)}, Ports: wantPort},
+		{To: []netv1.NetworkPolicyPeer{{IPBlock: &netv1.IPBlock{CIDR: "10.233.7.245/32"}}}, Ports: wantPort},
+	}
+	wantIngress := []netv1.NetworkPolicyIngressRule{{
+		From: []netv1.NetworkPolicyPeer{platformPeer("os-framework", source)}, Ports: wantPort,
+	}}
+	if !reflect.DeepEqual(out.Spec.PodSelector.MatchLabels, source) || !reflect.DeepEqual(out.Spec.Egress, wantEgress) ||
+		!reflect.DeepEqual(in.Spec.PodSelector.MatchLabels, svc.Spec.Selector) || !reflect.DeepEqual(in.Spec.Ingress, wantIngress) {
+		t.Fatalf("unexpected LLDAP token API grants: egress=%+v ingress=%+v", out.Spec, in.Spec)
+	}
+	svc.Spec.Ports = slices.Delete(svc.Spec.Ports, 1, 2)
+	if len(policy("os-framework", "authelia-lldap-token-egress", svc).Spec.Egress) != 0 ||
+		len(policy(key.Namespace, "authelia-lldap-token-ingress", svc).Spec.Ingress) != 0 ||
+		len(policy("os-framework", "authelia-ldap-egress", svc).Spec.Egress) != 2 {
+		t.Fatal("removing the token API port must revoke only the token API grants")
 	}
 }
 

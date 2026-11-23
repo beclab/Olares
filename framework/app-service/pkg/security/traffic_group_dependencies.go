@@ -66,7 +66,7 @@ func BuildTrafficGroupDependencyPolicies(namespace string, service *corev1.Servi
 			},
 		})
 	case "os-framework":
-		selector = map[string]string{"app": "authelia-backend", "traffic.olares.io/platform-mesh": "true"}
+		selector = platformAuthelia.selector
 	}
 	rules := kubernetesAPIEgress(service, endpoints)
 	if IsUserSystemNamespaces(namespace) {

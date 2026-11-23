@@ -89,6 +89,18 @@ func (r *SecurityReconciler) reconcileTrafficGroupDependencies(ctx context.Conte
 		}
 		services[key] = &service
 	}
+	if namespace == "os-framework" {
+		var tenantServices corev1.ServiceList
+		if err := r.List(ctx, &tenantServices); err != nil {
+			return fmt.Errorf("list Services for Authelia BFL dependencies: %w", err)
+		}
+		for i := range tenantServices.Items {
+			service := &tenantServices.Items[i]
+			if service.Name == "bfl" && security.IsUserSpaceNamespaces(service.Namespace) {
+				services[client.ObjectKeyFromObject(service)] = service
+			}
+		}
+	}
 	policies := security.BuildPlatformTrafficPolicies(namespace, services)
 	if namespace == "os-gateway" {
 		var l4Pods corev1.PodList

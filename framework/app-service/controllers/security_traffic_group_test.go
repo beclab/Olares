@@ -12,14 +12,107 @@ import (
 	netv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	kubefake "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
+
+func TestAutheliaBFLPolicySurvivesSweepAndRevokesDeletedService(t *testing.T) {
+	ctx := context.Background()
+	newService := func(namespace, ip string) *corev1.Service {
+		return &corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{Name: "bfl", Namespace: namespace},
+			Spec: corev1.ServiceSpec{
+				Type: corev1.ServiceTypeClusterIP, ClusterIP: ip, Selector: map[string]string{"tier": "bfl"},
+				Ports: []corev1.ServicePort{{Port: 80, TargetPort: intstr.FromInt(8080), Protocol: corev1.ProtocolTCP}},
+			},
+		}
+	}
+	alice := newService("user-space-alice", "10.233.1.11")
+	bob := newService("user-space-bob", "10.233.1.12")
+	foreign := newService("user-system-alice", "10.233.1.13")
+	wrongSelector := newService("user-space-other", "10.233.1.14")
+	wrongSelector.Spec.Selector["tier"] = "other"
+	r := &SecurityReconciler{Client: fake.NewClientBuilder().WithScheme(scheme.Scheme).
+		WithObjects(alice, bob, foreign, wrongSelector).Build()}
+	namespaces := []string{"os-framework", alice.Namespace, bob.Namespace}
+	wantRequests := []reconcile.Request{
+		{NamespacedName: client.ObjectKey{Name: alice.Namespace}},
+		{NamespacedName: client.ObjectKey{Name: "os-framework"}},
+	}
+	if got := trafficGroupNetworkPolicyRequests(ctx, alice); !reflect.DeepEqual(got, wantRequests) {
+		t.Fatalf("BFL event enqueues %v, want %v", got, wantRequests)
+	}
+	reconcileDependencies := func() {
+		t.Helper()
+		for _, namespace := range namespaces {
+			if err := r.reconcileTrafficGroupDependencies(ctx, namespace); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	getPolicy := func(namespace, direction string) netv1.NetworkPolicy {
+		t.Helper()
+		var policy netv1.NetworkPolicy
+		key := client.ObjectKey{Namespace: namespace, Name: "olares-platform-authelia-bfl-" + direction}
+		if err := r.Get(ctx, key, &policy); err != nil {
+			t.Fatal(err)
+		}
+		return policy
+	}
+	reconcileDependencies()
+	out := getPolicy("os-framework", "egress")
+	aliceIn := getPolicy(alice.Namespace, "ingress")
+	bobIn := getPolicy(bob.Namespace, "ingress")
+	if len(out.Spec.Egress) != 4 || len(aliceIn.Spec.Ingress) != 1 || len(bobIn.Spec.Ingress) != 1 {
+		t.Fatalf("unexpected BFL grants: egress=%v alice=%v bob=%v", out.Spec, aliceIn.Spec, bobIn.Spec)
+	}
+	autheliaSelector := map[string]string{"app": "authelia-backend", "traffic.olares.io/platform-mesh": "true"}
+	if !reflect.DeepEqual(out.Spec.PodSelector.MatchLabels, autheliaSelector) {
+		t.Fatalf("unexpected BFL caller: %v", out.Spec.PodSelector)
+	}
+	for i, in := range []netv1.NetworkPolicy{aliceIn, bobIn} {
+		rule := in.Spec.Ingress[0]
+		to := out.Spec.Egress[2*i]
+		if len(rule.From) != 1 || len(rule.Ports) != 1 || rule.Ports[0].Port.IntValue() != 8080 ||
+			!reflect.DeepEqual(rule.From[0].NamespaceSelector.MatchLabels, map[string]string{"kubernetes.io/metadata.name": "os-framework"}) ||
+			!reflect.DeepEqual(rule.From[0].PodSelector.MatchLabels, autheliaSelector) ||
+			len(to.To) != 1 || len(to.Ports) != 1 || to.Ports[0].Port.IntValue() != 8080 ||
+			to.To[0].NamespaceSelector.MatchLabels["kubernetes.io/metadata.name"] != in.Namespace ||
+			!reflect.DeepEqual(to.To[0].PodSelector.MatchLabels, map[string]string{"tier": "bfl"}) {
+			t.Fatalf("unexpected BFL peer in %s: ingress=%v egress=%v", in.Namespace, rule, to)
+		}
+	}
+	for _, policy := range []netv1.NetworkPolicy{out, aliceIn, bobIn} {
+		legacy := &netv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "legacy", Namespace: policy.Namespace}}
+		if err := r.createOrUpdateNetworkPolicy(ctx, legacy, nil, &security.NetworkPolicies{legacy}); err != nil {
+			t.Fatal(err)
+		}
+		var current netv1.NetworkPolicy
+		if err := r.Get(ctx, client.ObjectKeyFromObject(&policy), &current); err != nil || current.ResourceVersion != policy.ResourceVersion {
+			t.Fatalf("legacy sweep changed policy %s/%s: %v", policy.Namespace, policy.Name, err)
+		}
+	}
+	if err := r.Delete(ctx, alice); err != nil {
+		t.Fatal(err)
+	}
+	reconcileDependencies()
+	if got := getPolicy("os-framework", "egress"); !reflect.DeepEqual(got.Spec.Egress, out.Spec.Egress[2:]) {
+		t.Fatalf("unexpected egress after deleting Alice's BFL: %v", got.Spec.Egress)
+	}
+	if got := getPolicy(alice.Namespace, "ingress"); len(got.Spec.Ingress) != 0 {
+		t.Fatalf("Alice still has an ingress grant: %v", got.Spec.Ingress)
+	}
+	if got := getPolicy(bob.Namespace, "ingress"); got.ResourceVersion != bobIn.ResourceVersion {
+		t.Fatalf("Bob's policy changed after deleting Alice's BFL: %v", got.Spec)
+	}
+}
 
 func TestTrafficGroupPoliciesSurviveLegacySweep(t *testing.T) {
 	ctx := context.WithValue(context.Background(), loggerKey, logr.Discard())
