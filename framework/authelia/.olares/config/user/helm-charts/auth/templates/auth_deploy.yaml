@@ -36,7 +36,7 @@ spec:
           - |
             url="http://authelia-backend.user-system-{{ .Values.bfl.username }}:9091/api/health"
             attempts=0
-            until wget -q -T 5 -O /dev/null "$url"; do
+            until wget -q -T 5 -O /dev/null --header "X-BFL-USER: {{ .Values.bfl.username }}" "$url"; do
               attempts=$((attempts + 1))
               if [ "$attempts" -ge 24 ]; then
                 echo "Authelia health endpoint is unavailable" >&2
