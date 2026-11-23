@@ -1,4 +1,5 @@
-// Package uniauth provides the single end-state switch for full HTTP mesh.
+// Package uniauth provides the product end-state switch for full HTTP mesh.
+// New install / upgrade steady-state: end-state is ON unless explicitly disabled.
 package uniauth
 
 import (
@@ -7,15 +8,21 @@ import (
 )
 
 const (
-	// EndStateEnv turns on the product end-state in one shot (default off).
+	// EndStateEnv is injected from ConfigMap endState (SSOT) on install/upgrade.
+	// Set to "false" only for emergency rollback to the pre-uniauth baseline.
 	EndStateEnv = "OLARES_UNIAUTH_ENDSTATE"
-	// EndStateWave is the mesh wave used when end-state is enabled (all HTTP + Required inbound).
+	// EndStateWave is the mesh wave for product steady-state.
 	EndStateWave = 4
 )
 
-// EndStateEnabled reports whether operators enabled the full end-state.
+// EndStateEnabled reports whether the cluster should run the product end-state.
+// Resolution: if OLARES_UNIAUTH_ENDSTATE is set, use it; otherwise default true
+// (install/upgrade complete == steady state).
 func EndStateEnabled() bool {
-	return truthy(os.Getenv(EndStateEnv))
+	if v, ok := os.LookupEnv(EndStateEnv); ok {
+		return truthy(v)
+	}
+	return true
 }
 
 // EffectiveHTTPMeshWave returns 4 when end-state is on; otherwise parses waveRaw.

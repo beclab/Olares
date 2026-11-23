@@ -1,13 +1,5 @@
-# Uniauth end-state control. Default off (install-safe).
-#
-# One-shot end-state: set endState="true" (and set the same on component envs
-# OLARES_UNIAUTH_ENDSTATE=true). That enables ALL of:
-#   - HTTP mesh wave 4 (all HTTP + cluster-authenticated inbound)
-#   - traffic-group NP bundles
-#   - L4→app-gateway mTLS
-#   - Entry mTLS PKI maintain
-#   - AppAccessPolicy compilation + reconcile
-# Progressive per-knob envs remain available for lab debugging only.
+# Product steady-state SSOT. New install / upgrade default endState=true.
+# Emergency rollback: set endState=false and restart consumers (or set pod env false).
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -18,11 +10,9 @@ metadata:
     app.kubernetes.io/name: http-mesh-wave
     app.kubernetes.io/part-of: uniauth
 data:
-  # false = install baseline; true = product end-state in one shot
-  endState: "false"
-  # Used only when endState=false (lab progressive path)
-  wave: "0"
-  trafficGroupNP: "false"
-  l4AppGatewayMTLS: "false"
-  entryMTLSPki: "false"
-  policyCompilation: "false"
+  endState: "true"
+  wave: "4"
+  trafficGroupNP: "true"
+  l4AppGatewayMTLS: "true"
+  entryMTLSPki: "true"
+  policyCompilation: "true"

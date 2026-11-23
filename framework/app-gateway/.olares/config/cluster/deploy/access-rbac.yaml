@@ -84,10 +84,8 @@ metadata:
   labels:
     app.kubernetes.io/name: app-access
 data:
-  # Prefer endState=true for one-shot product end-state (also set OLARES_UNIAUTH_ENDSTATE on pods).
-  endState: "false"
-  # When false, controllers must not emit Linkerd authz or deny-by-default NP
-  # for application namespaces (install-base default). Ignored when endState=true.
-  policyCompilationEnabled: "false"
-  l4AppGatewayMTLSEnabled: "false"
-  httpMeshWave: "0"
+  # Install/upgrade steady-state (ADR-SYS-UNIAUTH-STEADY-01).
+  endState: "true"
+  policyCompilationEnabled: "true"
+  l4AppGatewayMTLSEnabled: "true"
+  httpMeshWave: "4"
