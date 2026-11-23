@@ -1,6 +1,5 @@
-# Projection of Chart/OTA SSOT (ADR-SYS-UNIAUTH-CONFIG-01). Not a secret.
-# Integrity: labeled + admission-guarded; mutate only via installer/OTA.
-# Emergency rollback: OTA sets endState=false (or pod env override) then restart consumers.
+# Release projection of fixed HTTP mesh posture (not a kill switch).
+# Product steady state is code-enforced: wave 4 + cluster-authenticated.
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -14,9 +13,9 @@ metadata:
   annotations:
     olares.io/config-integrity: "release-controlled"
 data:
-  endState: "true"
-  wave: "4"
-  trafficGroupNP: "true"
-  l4AppGatewayMTLS: "true"
-  entryMTLSPki: "true"
-  policyCompilation: "true"
+  httpMeshPolicy: "cluster-authenticated"
+  httpMeshWave: "4"
+  trafficGroupNP: "on"
+  l4AppGatewayMTLS: "on"
+  entryMTLSPki: "on"
+  policyCompilation: "on"
