@@ -19,6 +19,7 @@ import (
 	"github.com/beclab/Olares/framework/app-gateway/pkg/uniauth"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -105,17 +106,12 @@ func validateHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func runPolicyReconcileLoop(ctx context.Context) {
-	cfg, err := rest.InClusterConfig()
-	if err != nil {
-		slog.Error("policy reconcile: in-cluster config", "error", err)
-		return
-	}
-	scheme := runtime.NewScheme()
-	cl, err := client.New(cfg, client.Options{Scheme: scheme})
+	cl, err := buildAdmissionClient()
 	if err != nil {
 		slog.Error("policy reconcile: client", "error", err)
 		return
 	}
+	reconcileAllPolicies(ctx, cl)
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
 	for {
@@ -133,7 +129,7 @@ func reconcileAllPolicies(ctx context.Context, cl client.Client) {
 	list.SetGroupVersionKind(schema.GroupVersionKind{
 		Group: "access.olares.io", Version: "v1alpha1", Kind: "AppAccessPolicyList",
 	})
-	if err := cl.List(ctx, list); err != nil {
+	if err := cl.List(ctx, list, client.InNamespace(access.AdmissionTLSNamespace)); err != nil {
 		slog.Warn("list AppAccessPolicy", "error", err)
 		return
 	}
@@ -153,6 +149,9 @@ func buildAdmissionClient() (client.Client, error) {
 	}
 	scheme := runtime.NewScheme()
 	if err := corev1.AddToScheme(scheme); err != nil {
+		return nil, err
+	}
+	if err := discoveryv1.AddToScheme(scheme); err != nil {
 		return nil, err
 	}
 	if err := admissionregistrationv1.AddToScheme(scheme); err != nil {

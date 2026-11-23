@@ -42,18 +42,27 @@ func BuildLinkerdObjects(plan CompiledObjects, p PolicySpec) ([]DesiredObject, e
 	ns := p.Namespace
 	labels := map[string]string{
 		ManagedByLabel:  ManagedByAccessPolicy,
-		PolicyNameLabel: p.Name,
+		PolicyNameLabel: projectionOwner(p),
 	}
 
 	server := &unstructured.Unstructured{}
 	server.SetGroupVersionKind(schema.GroupVersionKind{
-		Group: "policy.linkerd.io", Version: "v1beta1", Kind: "Server",
+		Group: "policy.linkerd.io", Version: "v1beta3", Kind: "Server",
 	})
 	server.SetName(plan.ServerName)
 	server.SetNamespace(ns)
 	server.SetLabels(labels)
+	if p.ServerID != "" {
+		server.SetLabels(map[string]string{ManagedByLabel: ManagedByAccessPolicy, PolicyNameLabel: p.ServerID})
+	}
 	_ = unstructured.SetNestedField(server.Object, int64(p.ServerPort), "spec", "port")
-	_ = unstructured.SetNestedStringMap(server.Object, map[string]string{"app": p.Name}, "spec", "podSelector", "matchLabels")
+	_ = unstructured.SetNestedField(server.Object, "deny", "spec", "accessPolicy")
+	_ = unstructured.SetNestedField(server.Object, "unknown", "spec", "proxyProtocol")
+	selector := p.TargetSelector
+	if len(selector) == 0 {
+		selector = map[string]string{"app": p.Name}
+	}
+	_ = unstructured.SetNestedStringMap(server.Object, selector, "spec", "podSelector", "matchLabels")
 
 	mtls := &unstructured.Unstructured{}
 	mtls.SetGroupVersionKind(schema.GroupVersionKind{
@@ -99,18 +108,7 @@ func BuildLinkerdObjects(plan CompiledObjects, p PolicySpec) ([]DesiredObject, e
 		},
 	}, "spec", "parentRefs")
 
-	matches := make([]any, 0, len(p.Rules))
-	for _, rule := range p.Rules {
-		pathType := rule.PathType
-		if pathType == "" {
-			pathType = PathTypeExact
-		}
-		matches = append(matches, map[string]any{
-			"method": strings.ToUpper(rule.Method),
-			"path":   map[string]any{"type": pathType, "value": rule.Path},
-		})
-	}
-	if err := unstructured.SetNestedSlice(route.Object, []any{map[string]any{"matches": matches}}, "spec", "rules"); err != nil {
+	if err := unstructured.SetNestedSlice(route.Object, []any{map[string]any{"matches": httpMatches(p.Rules)}}, "spec", "rules"); err != nil {
 		return nil, err
 	}
 
@@ -121,6 +119,28 @@ func BuildLinkerdObjects(plan CompiledObjects, p PolicySpec) ([]DesiredObject, e
 		{GVK: authz.GroupVersionKind(), Namespace: ns, Name: plan.AuthorizationPolicyName, Object: authz},
 	}
 	return out, nil
+}
+
+func projectionOwner(p PolicySpec) string {
+	if p.ProjectionID != "" {
+		return p.ProjectionID
+	}
+	return p.Name
+}
+
+func httpMatches(rules []HTTPRule) []any {
+	matches := make([]any, 0, len(rules))
+	for _, rule := range rules {
+		pathType := rule.PathType
+		if pathType == "" {
+			pathType = PathTypeExact
+		}
+		matches = append(matches, map[string]any{
+			"method": strings.ToUpper(rule.Method),
+			"path":   map[string]any{"type": pathType, "value": rule.Path},
+		})
+	}
+	return matches
 }
 
 func deleteMarkers(plan CompiledObjects, p PolicySpec) []DesiredObject {
@@ -148,7 +168,7 @@ func deleteMarkers(plan CompiledObjects, p PolicySpec) []DesiredObject {
 					"namespace": ns,
 					"labels": map[string]any{
 						ManagedByLabel:  ManagedByAccessPolicy,
-						PolicyNameLabel: p.Name,
+						PolicyNameLabel: projectionOwner(p),
 					},
 				},
 			}},
