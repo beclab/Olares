@@ -44,6 +44,25 @@ func TestAccessCRDsAndRBACPresent(t *testing.T) {
 	}
 }
 
+func TestAccessAdmissionManifestSafeDefaults(t *testing.T) {
+	_, file, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("runtime.Caller failed")
+	}
+	deploy := filepath.Clean(filepath.Join(filepath.Dir(file), "../../.olares/config/cluster/deploy"))
+	raw, err := os.ReadFile(filepath.Join(deploy, "access-admission.yaml"))
+	if err != nil {
+		t.Fatalf("access-admission.yaml: %v", err)
+	}
+	body := string(raw)
+	if !strings.Contains(body, "failurePolicy: Ignore") {
+		t.Fatal("admission webhook must default to Ignore")
+	}
+	if !strings.Contains(body, "kind: ValidatingWebhookConfiguration") {
+		t.Fatal("missing ValidatingWebhookConfiguration")
+	}
+}
+
 func TestHTTPMeshWaveConfigDefaultsOff(t *testing.T) {
 	_, file, _, ok := runtime.Caller(0)
 	if !ok {
