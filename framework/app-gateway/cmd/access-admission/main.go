@@ -14,6 +14,8 @@ import (
 
 	"github.com/beclab/Olares/framework/app-gateway/pkg/access"
 	"github.com/beclab/Olares/framework/app-gateway/pkg/uniauth"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -33,6 +35,14 @@ func main() {
 	srv := &http.Server{Addr: addr, Handler: mux, ReadHeaderTimeout: 5 * time.Second}
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer stop()
+
+	if cl, err := buildAdmissionClient(); err != nil {
+		slog.Warn("admission client unavailable; skip promote", "error", err)
+	} else if err := access.PromoteAdmissionFailurePolicy(ctx, cl, uniauth.EndStateEnabled()); err != nil {
+		slog.Warn("promote admission failurePolicy", "error", err)
+	} else {
+		slog.Info("admission webhook policy reconciled", "endState", uniauth.EndStateEnabled())
+	}
 
 	if uniauth.AccessPolicyReconcileDesired(os.Getenv("OLARES_ACCESS_POLICY_RECONCILE")) {
 		go runPolicyReconcileLoop(ctx)
@@ -120,14 +130,24 @@ func readCompilationCM(ctx context.Context, cl client.Client) bool {
 	return access.PolicyCompilationEnabled(data["policyCompilationEnabled"])
 }
 
+func buildAdmissionClient() (client.Client, error) {
+	cfg, err := rest.InClusterConfig()
+	if err != nil {
+		return nil, err
+	}
+	scheme := runtime.NewScheme()
+	if err := corev1.AddToScheme(scheme); err != nil {
+		return nil, err
+	}
+	if err := admissionregistrationv1.AddToScheme(scheme); err != nil {
+		return nil, err
+	}
+	return client.New(cfg, client.Options{Scheme: scheme})
+}
+
 func getenv(k, def string) string {
 	if v := os.Getenv(k); v != "" {
 		return v
 	}
 	return def
-}
-
-func envTruthy(k string) bool {
-	v := os.Getenv(k)
-	return v == "1" || v == "true" || v == "TRUE" || v == "yes"
 }
