@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/beclab/Olares/framework/app-gateway/pkg/access"
+	"github.com/beclab/Olares/framework/app-gateway/pkg/uniauth"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -33,7 +34,7 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer stop()
 
-	if envTruthy("OLARES_ACCESS_POLICY_RECONCILE") {
+	if uniauth.AccessPolicyReconcileDesired(os.Getenv("OLARES_ACCESS_POLICY_RECONCILE")) {
 		go runPolicyReconcileLoop(ctx)
 	}
 
@@ -99,7 +100,7 @@ func reconcileAllPolicies(ctx context.Context, cl client.Client) {
 		slog.Warn("list AppAccessPolicy", "error", err)
 		return
 	}
-	enabled := envTruthy("OLARES_POLICY_COMPILATION") || readCompilationCM(ctx, cl)
+	enabled := uniauth.PolicyCompilationDesired(os.Getenv("OLARES_POLICY_COMPILATION"), readCompilationCM(ctx, cl))
 	for i := range list.Items {
 		item := &list.Items[i]
 		if err := access.ReconcileAccessPolicy(ctx, cl, item, enabled); err != nil {
