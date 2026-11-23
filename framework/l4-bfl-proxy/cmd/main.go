@@ -16,6 +16,7 @@ import (
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	sysv1alpha1 "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
 	iamv1alpha2 "github.com/beclab/api/iam/v1alpha2"
+	"github.com/beclab/l4-bfl-proxy/internal/entryreadiness"
 	"github.com/beclab/l4-bfl-proxy/internal/envoy"
 	"github.com/beclab/l4-bfl-proxy/internal/message"
 	"github.com/beclab/l4-bfl-proxy/internal/provider"
@@ -122,11 +123,9 @@ func main() {
 	if err := mgr.AddReadyzCheck("cache-synced", cacheReadyCheck(mgr)); err != nil {
 		klog.Fatalf("set up ready check failed: %v", err)
 	}
-	// Fail readiness when Envoy rejects the pushed xDS config (e.g. a bad
-	// listener that leaves ports 443/444 not listening).
-	//if err := mgr.AddReadyzCheck("envoy-config", xdsSrv.ReadyCheck); err != nil {
-	//	klog.Fatalf("set up envoy-config ready check failed: %v", err)
-	//}
+	if err := mgr.AddReadyzCheck("envoy-config", xdsSrv.ReadyCheck); err != nil {
+		klog.Fatalf("set up Envoy configuration ready check failed: %v", err)
+	}
 
 	translatorCfg := &translator.Config{
 		SSLServerPort:      sslServerPort,
@@ -135,6 +134,13 @@ func main() {
 		AppGatewayHost:     envOr("OLARES_L4_APP_GATEWAY_HOST", translator.DefaultAppGatewayHost),
 		AppGatewayPort:     translator.DefaultAppGatewayPort,
 	}
+	entryGateway := entryreadiness.Gateway{
+		Host: translatorCfg.AppGatewayHost, EntryPort: translatorCfg.AppGatewayPort, AuthPort: translator.DefaultAppGatewayAuthPort,
+	}
+	if err := mgr.AddReadyzCheck("entry-routes", entryreadiness.Checker(providerResources, mgr.GetAPIReader(), entryGateway)); err != nil {
+		klog.Fatalf("set up Entry routes ready check failed: %v", err)
+	}
+
 	klog.Info("translator: AppGatewayMTLS enabled (product steady state)")
 
 	runners := []runner.Runner{

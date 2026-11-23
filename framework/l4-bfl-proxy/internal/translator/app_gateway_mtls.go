@@ -12,7 +12,8 @@ const DefaultAppGatewayHost = "app-gateway-l4-mtls.os-gateway.svc.cluster.local"
 // DefaultAppGatewayPort is the mTLS channel Service port.
 const DefaultAppGatewayPort = uint32(8443)
 
-const appGatewayAuthPort = uint32(9444)
+// DefaultAppGatewayAuthPort is the dedicated authorization channel Service port.
+const DefaultAppGatewayAuthPort = uint32(9444)
 
 const (
 	appGatewayClientCertSDS = "l4-app-gateway-client"

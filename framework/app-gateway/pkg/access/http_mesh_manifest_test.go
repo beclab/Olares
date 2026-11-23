@@ -147,3 +147,23 @@ func meshField(t *testing.T, object any, path ...string) any {
 	}
 	return object
 }
+
+func TestL4ReadsOnlySystemEntryReadinessNames(t *testing.T) {
+	resources := readMeshManifest(t, "l4-mtls-channel.yaml")
+	role := resources["ClusterRole/olares-l4-system-entry-readiness"]
+	rules := meshField(t, role, "rules").([]any)
+	if len(rules) != 1 ||
+		!reflect.DeepEqual(meshField(t, rules[0], "apiGroups"), []any{"gateway.olares.io"}) ||
+		!reflect.DeepEqual(meshField(t, rules[0], "resources"), []any{"sharedrouteregistries"}) ||
+		!reflect.DeepEqual(meshField(t, rules[0], "resourceNames"), []any{"sys-auth", "sys-desktop"}) ||
+		!reflect.DeepEqual(meshField(t, rules[0], "verbs"), []any{"get"}) {
+		t.Fatalf("L4 received broader access than required: %v", rules)
+	}
+	binding := resources["ClusterRoleBinding/olares-l4-system-entry-readiness"]
+	subjects := meshField(t, binding, "subjects").([]any)
+	if len(subjects) != 1 || meshField(t, subjects[0], "kind") != "ServiceAccount" ||
+		meshField(t, subjects[0], "namespace") != "os-network" || meshField(t, subjects[0], "name") != "os-network-internal" ||
+		meshField(t, binding, "roleRef", "name") != "olares-l4-system-entry-readiness" {
+		t.Fatalf("unexpected role binding: %v", binding)
+	}
+}

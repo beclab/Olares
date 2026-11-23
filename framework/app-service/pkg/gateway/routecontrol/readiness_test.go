@@ -71,6 +71,20 @@ func TestServingReadinessWaitsForPolicyAndMeshedEndpoints(t *testing.T) {
 		}
 		return out
 	}
+	entryPolicy := func(gvk schema.GroupVersionKind, name, section string, status map[string]any) *unstructured.Unstructured {
+		policy := obj(gvk, defaultGatewayNS, name, status)
+		policy.Object["spec"] = map[string]any{
+			"targetRef": map[string]any{
+				"group": "gateway.networking.k8s.io", "kind": "Gateway", "name": defaultGatewayName, "sectionName": section,
+			},
+			"tls": map[string]any{"clientValidation": map[string]any{
+				"mode":              "RequireAndVerify",
+				"caCertificateRefs": []any{map[string]any{"name": "olares-l4-agw-mtls", "kind": "Secret", "group": ""}},
+				"subjectAltNames":   map[string]any{"dnsNames": []any{map[string]any{"type": "Exact", "value": "l4-bfl-proxy.entry.client"}}},
+			}},
+		}
+		return policy
+	}
 	ref := map[string]any{"name": defaultGatewayName, "namespace": defaultGatewayNS, "sectionName": l4MTLSGatewaySectN}
 	owner := "gateway.envoyproxy.io/gatewayclass-controller"
 	gw := obj(gatewayGVK, defaultGatewayNS, defaultGatewayName, map[string]any{
@@ -81,7 +95,7 @@ func TestServingReadinessWaitsForPolicyAndMeshedEndpoints(t *testing.T) {
 	})
 	policyStatus := map[string]any{"ancestors": []any{map[string]any{"ancestorRef": ref, "controllerName": owner, "conditions": cond("Accepted")}}}
 	security := obj(securityPolicyGVK, srr.Namespace, securityPolicyName(srr), policyStatus)
-	ctp := obj(schema.GroupVersionKind{Group: "gateway.envoyproxy.io", Version: "v1alpha1", Kind: "ClientTrafficPolicy"}, defaultGatewayNS, "app-gateway-l4-entry-mtls", policyStatus)
+	ctp := entryPolicy(schema.GroupVersionKind{Group: "gateway.envoyproxy.io", Version: "v1alpha1", Kind: "ClientTrafficPolicy"}, "app-gateway-l4-entry-mtls", l4MTLSGatewaySectN, policyStatus)
 	objects := []client.Object{gw, route, security, ctp}
 	for _, ep := range []struct{ ns, svc string }{{defaultGatewayNS, "app-gateway-l4-mtls"}, {srr.Namespace, "app"}} {
 		uid := types.UID(ep.svc + "-uid")
@@ -168,8 +182,17 @@ func TestServingReadinessWaitsForPolicyAndMeshedEndpoints(t *testing.T) {
 		}
 		check("app-gateway-l4-authz-mtls")
 		authRef := map[string]any{"name": defaultGatewayName, "namespace": defaultGatewayNS, "sectionName": l4AuthzSection}
-		fixtures = append(fixtures, obj(ctp.GroupVersionKind(), defaultGatewayNS, "app-gateway-l4-authz-mtls",
-			map[string]any{"ancestors": []any{map[string]any{"ancestorRef": authRef, "controllerName": owner, "conditions": cond("Accepted")}}}))
+		authPolicy := entryPolicy(ctp.GroupVersionKind(), "app-gateway-l4-authz-mtls", l4AuthzSection,
+			map[string]any{"ancestors": []any{map[string]any{"ancestorRef": authRef, "controllerName": owner, "conditions": cond("Accepted")}}})
+		fixtures = append(fixtures, authPolicy)
+		modePath := []string{"spec", "tls", "clientValidation", "mode"}
+		if err := unstructured.SetNestedField(authPolicy.Object, "AllowInsecure", modePath...); err != nil {
+			t.Fatal(err)
+		}
+		check("does not enforce the expected Entry client identity")
+		if err := unstructured.SetNestedField(authPolicy.Object, "RequireAndVerify", modePath...); err != nil {
+			t.Fatal(err)
+		}
 		check(".l4-authz")
 		authRoute := obj(route.GroupVersionKind(), protected.Namespace, l4AuthzRoute(protected).GetName(), map[string]any{})
 		fixtures = append(fixtures, authRoute)
