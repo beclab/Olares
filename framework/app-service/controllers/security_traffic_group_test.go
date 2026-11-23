@@ -116,7 +116,7 @@ func TestAutheliaBFLPolicySurvivesSweepAndRevokesDeletedService(t *testing.T) {
 
 func TestTrafficGroupPoliciesSurviveLegacySweep(t *testing.T) {
 	ctx := context.WithValue(context.Background(), loggerKey, logr.Discard())
-	for _, ns := range []string{"kube-system", "os-framework"} {
+	for _, ns := range []string{"kube-system", "os-framework", "user-system-alice"} {
 		t.Run(ns, func(t *testing.T) {
 			namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: ns}}
 			baseline := security.NPGroupDefaultDeny(ns)
@@ -145,8 +145,10 @@ func TestTrafficGroupPoliciesSurviveLegacySweep(t *testing.T) {
 			for _, policy := range policies.Items {
 				versions[policy.Name] = policy.ResourceVersion
 			}
-			for _, policy := range append(security.BuildTrafficGroupIsolationBundle(ns),
-				security.BuildTrafficGroupDependencyPolicies(ns, nil, nil)...) {
+			expected := security.BuildTrafficGroupIsolationBundle(ns)
+			expected = append(expected, security.BuildTrafficGroupDependencyPolicies(ns, nil, nil)...)
+			expected = append(expected, security.BuildPlatformTrafficPolicies(ns, nil)...)
+			for _, policy := range expected {
 				if _, ok := versions[policy.Name]; !ok {
 					t.Fatalf("missing policy %s", policy.Name)
 				}
