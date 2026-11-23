@@ -109,7 +109,7 @@ func httpRouteMeshDependenciesReady(ctx context.Context, c client.Client, backen
 	if err := meshedReadyEndpoints(ctx, c, backendNS, srr.Spec.Upstream); err != nil {
 		return err
 	}
-	if !isApplicationSRR(srr) || srrAuthMode(srr) == gateway.AuthModeNone {
+	if !isSystemLoginRoute(srr) && (!isApplicationSRR(srr) || srrAuthMode(srr) == gateway.AuthModeNone) {
 		return nil
 	}
 	authNS := autheliaNSForSRR(srr)
@@ -136,6 +136,9 @@ func gatewayPolicyReadyForSection(ctx context.Context, c client.Client, gvk sche
 	if err := c.Get(ctx, client.ObjectKey{Namespace: ns, Name: name}, policy); err != nil {
 		return err
 	}
+	if gvk.Kind == "ClientTrafficPolicy" && !validEntryClientPolicy(policy, gw, section) {
+		return fmt.Errorf("ClientTrafficPolicy %s does not enforce the expected Entry client identity", name)
+	}
 	ancestors, _, _ := unstructured.NestedSlice(policy.Object, "status", "ancestors")
 	for _, raw := range ancestors {
 		ancestor, _ := raw.(map[string]any)
@@ -157,6 +160,30 @@ func gatewayPolicyReadyForSection(ctx context.Context, c client.Client, gvk sche
 		}
 	}
 	return fmt.Errorf("%s %s has no accepted status for this gateway", gvk.Kind, name)
+}
+
+func validEntryClientPolicy(policy *unstructured.Unstructured, gw GatewayRef, section string) bool {
+	ref, _, _ := unstructured.NestedMap(policy.Object, "spec", "targetRef")
+	if ref["group"] != "gateway.networking.k8s.io" || ref["kind"] != "Gateway" ||
+		ref["name"] != gw.gatewayName() || ref["sectionName"] != section {
+		return false
+	}
+	validation, _, _ := unstructured.NestedMap(policy.Object, "spec", "tls", "clientValidation")
+	if validation["mode"] != "RequireAndVerify" {
+		return false
+	}
+	cas, _, _ := unstructured.NestedSlice(validation, "caCertificateRefs")
+	names, _, _ := unstructured.NestedMap(validation, "subjectAltNames")
+	dnsNames, _, _ := unstructured.NestedSlice(names, "dnsNames")
+	if len(cas) != 1 || len(names) != 1 || len(dnsNames) != 1 {
+		return false
+	}
+	ca, _ := cas[0].(map[string]any)
+	dns, _ := dnsNames[0].(map[string]any)
+	return ca["kind"] == "Secret" && ca["name"] == "olares-l4-agw-mtls" &&
+		(ca["group"] == nil || ca["group"] == "") &&
+		(ca["namespace"] == nil || ca["namespace"] == gw.gatewayNamespace()) &&
+		dns["type"] == "Exact" && dns["value"] == "l4-bfl-proxy.entry.client"
 }
 
 func entryParentReady(route *unstructured.Unstructured, gw GatewayRef) bool {

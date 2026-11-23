@@ -275,7 +275,7 @@ func (t *Translator) Translate(resources *message.Resources) *ir.Xds {
 		// Authelia cluster per user
 		autheliaClName := fmt.Sprintf("%s_%s", autheliaClusterPrefix, user.Name)
 		if auth := t.clusterForAppGateway(autheliaClName); auth != nil {
-			auth.Port = appGatewayAuthPort
+			auth.Port = DefaultAppGatewayAuthPort
 			clusterSet[autheliaClName] = auth
 		} else {
 			clusterSet[autheliaClName] = &ir.ClusterIR{
