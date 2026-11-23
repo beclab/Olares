@@ -2,7 +2,6 @@ package security
 
 import (
 	"cmp"
-	"net/netip"
 	"slices"
 
 	corev1 "k8s.io/api/core/v1"
@@ -16,6 +15,33 @@ const (
 	coreDNSIngressName      = "olares-traffic-group-coredns-ingress"
 	kubernetesAPIEgressName = "olares-traffic-group-kube-api-egress"
 )
+
+var platformAPIClients = []struct {
+	name string
+	pods platformWorkload
+}{
+	{"app-service", workload("os-framework", "tier", "app-service")},
+	{"backup", workload("os-framework", "tier", "backup")},
+	{"envoy-controller", platformWorkload{"os-gateway", envoyControllerPods}},
+	{"linkerd-identity", workload("os-mesh", "linkerd.io/control-plane-component", "identity")},
+	{"linkerd-destination", workload("os-mesh", "linkerd.io/control-plane-component", "destination")},
+	{"linkerd-injector", workload("os-mesh", "linkerd.io/control-plane-component", "proxy-injector")},
+	{"linkerd-pki-guardian", workload("os-mesh", "app.kubernetes.io/component", "linkerd-pki-guardian")},
+	{"middleware-operator", workload("os-platform", "app", "tapr-middleware")},
+	{"hami-scheduler", workload("kube-system", "app.kubernetes.io/component", "hami-scheduler")},
+	{"opa", workload("os-platform", "app", "opa")},
+	{"otel", platformWorkload{"os-platform", map[string]string{"app.kubernetes.io/name": "opentelemetry-operator", "app.kubernetes.io/component": "controller-manager"}}},
+}
+
+func KubernetesAPIPolicyNamespaces() []string {
+	namespaces := []string{metav1.NamespaceSystem, "os-framework"}
+	for _, client := range platformAPIClients {
+		if !slices.Contains(namespaces, client.pods.namespace) {
+			namespaces = append(namespaces, client.pods.namespace)
+		}
+	}
+	return namespaces
+}
 
 func BuildTrafficGroupDependencyPolicies(namespace string, service *corev1.Service, endpoints *corev1.Endpoints) []netv1.NetworkPolicy {
 	var selector map[string]string
@@ -36,17 +62,28 @@ func BuildTrafficGroupDependencyPolicies(namespace string, service *corev1.Servi
 		})
 	case "os-framework":
 		selector = map[string]string{"app": "authelia-backend", "traffic.olares.io/platform-mesh": "true"}
-	default:
-		return nil
 	}
-	return append(policies, netv1.NetworkPolicy{
-		ObjectMeta: npMeta(kubernetesAPIEgressName, namespace),
+	rules := kubernetesAPIEgress(service, endpoints)
+	if selector != nil {
+		policies = append(policies, apiEgressPolicy(namespace, kubernetesAPIEgressName, selector, rules))
+	}
+	for _, client := range platformAPIClients {
+		if client.pods.namespace == namespace {
+			policies = append(policies, apiEgressPolicy(namespace, kubernetesAPIEgressName+"-"+client.name, client.pods.selector, rules))
+		}
+	}
+	return append(policies, platformWebhookPolicies(namespace, service, rules)...)
+}
+
+func apiEgressPolicy(namespace, name string, selector map[string]string, rules []netv1.NetworkPolicyEgressRule) netv1.NetworkPolicy {
+	return netv1.NetworkPolicy{
+		ObjectMeta: npMeta(name, namespace),
 		Spec: netv1.NetworkPolicySpec{
 			PodSelector: metav1.LabelSelector{MatchLabels: selector},
 			PolicyTypes: []netv1.PolicyType{netv1.PolicyTypeEgress},
-			Egress:      kubernetesAPIEgress(service, endpoints),
+			Egress:      rules,
 		},
-	})
+	}
 }
 
 // kubernetesAPIEgress allows only the discovered HTTPS addresses and their own
@@ -64,20 +101,13 @@ func kubernetesAPIEgress(service *corev1.Service, endpoints *corev1.Endpoints) [
 	}
 	destinations := make(map[destination]struct{})
 	add := func(address string, port int32) {
-		ip, err := netip.ParseAddr(address)
-		if err != nil || ip.Zone() != "" || !ip.IsGlobalUnicast() || port < 1 || port > 65535 {
-			return
+		if cidr := exactIPCIDR(address); cidr != "" && port >= 1 && port <= 65535 {
+			destinations[destination{cidr, port}] = struct{}{}
 		}
-		ip = ip.Unmap()
-		destinations[destination{netip.PrefixFrom(ip, ip.BitLen()).String(), port}] = struct{}{}
-	}
-	addresses := service.Spec.ClusterIPs
-	if len(addresses) == 0 {
-		addresses = []string{service.Spec.ClusterIP}
 	}
 	for _, port := range service.Spec.Ports {
 		if port.Name == "https" && port.Protocol == corev1.ProtocolTCP {
-			for _, address := range addresses {
+			for _, address := range serviceClusterIPs(service) {
 				add(address, port.Port)
 			}
 		}
@@ -116,4 +146,58 @@ func kubernetesAPIEgress(service *corev1.Service, endpoints *corev1.Endpoints) [
 		})
 	}
 	return rules
+}
+
+var platformWebhooks = []struct {
+	name string
+	pods platformWorkload
+	port int32
+}{
+	{"app-service", workload("os-framework", "tier", "app-service"), 8433},
+	{"search3-validation", workload("os-framework", "app", "search3-validation"), 8443},
+	{"opa", workload("os-platform", "app", "opa"), 8443},
+	{"otel", platformWorkload{"os-platform", map[string]string{"app.kubernetes.io/name": "opentelemetry-operator", "app.kubernetes.io/component": "controller-manager"}}, 9443},
+	{"envoy-topology", platformWorkload{"os-gateway", envoyControllerPods}, 9443},
+	{"hami-scheduler", workload("kube-system", "app.kubernetes.io/component", "hami-scheduler"), 443},
+	{"linkerd-injector", workload("os-mesh", "linkerd.io/control-plane-component", "proxy-injector"), 8443},
+	{"linkerd-sp-validator", workload("os-mesh", "linkerd.io/control-plane-component", "destination"), 8443},
+	{"linkerd-policy-validator", workload("os-mesh", "linkerd.io/control-plane-component", "destination"), 9443},
+}
+
+// A ClusterIP is a destination, not an API server source. Only the discovered
+// control-plane endpoints are eligible to call these platform webhook ports.
+func platformWebhookPolicies(namespace string, service *corev1.Service, apiRules []netv1.NetworkPolicyEgressRule) []netv1.NetworkPolicy {
+	var peers []netv1.NetworkPolicyPeer
+	if service != nil {
+		serviceIPs := make(map[string]struct{})
+		for _, ip := range serviceClusterIPs(service) {
+			serviceIPs[exactIPCIDR(ip)] = struct{}{}
+		}
+		for _, rule := range apiRules {
+			peer := rule.To[0]
+			if _, virtual := serviceIPs[peer.IPBlock.CIDR]; !virtual && !slices.ContainsFunc(peers, func(existing netv1.NetworkPolicyPeer) bool {
+				return existing.IPBlock.CIDR == peer.IPBlock.CIDR
+			}) {
+				peers = append(peers, peer)
+			}
+		}
+	}
+	var policies []netv1.NetworkPolicy
+	for _, hook := range platformWebhooks {
+		if hook.pods.namespace != namespace {
+			continue
+		}
+		policy := netv1.NetworkPolicy{
+			ObjectMeta: npMeta("olares-platform-webhook-"+hook.name, namespace),
+			Spec: netv1.NetworkPolicySpec{
+				PodSelector: metav1.LabelSelector{MatchLabels: hook.pods.selector},
+				PolicyTypes: []netv1.PolicyType{netv1.PolicyTypeIngress},
+			},
+		}
+		if len(peers) > 0 {
+			policy.Spec.Ingress = []netv1.NetworkPolicyIngressRule{{From: peers, Ports: []netv1.NetworkPolicyPort{tcpPort(hook.port)}}}
+		}
+		policies = append(policies, policy)
+	}
+	return policies
 }

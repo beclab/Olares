@@ -88,7 +88,7 @@ func (r *SecurityReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Mana
 		return err
 	}
 
-	if err := watchKubernetesAPINetworkPolicySources(c, mgr.GetCache()); err != nil {
+	if err := watchTrafficGroupNetworkPolicySources(c, mgr.GetCache()); err != nil {
 		return err
 	}
 

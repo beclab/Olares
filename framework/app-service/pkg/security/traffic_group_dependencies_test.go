@@ -34,7 +34,7 @@ func TestTrafficGroupDependencyPolicies(t *testing.T) {
 	}
 	dns := BuildTrafficGroupDependencyPolicies("kube-system", service, endpoints)
 	auth := BuildTrafficGroupDependencyPolicies("os-framework", service, endpoints)
-	if len(dns) != 2 || len(auth) != 1 || len(BuildTrafficGroupDependencyPolicies("user-space-test", service, endpoints)) != 0 {
+	if len(dns) != 4 || len(auth) != 5 || len(BuildTrafficGroupDependencyPolicies("user-space-test", service, endpoints)) != 0 {
 		t.Fatal("unexpected dependency policy scope")
 	}
 	dnsSelector := map[string]string{"k8s-app": "kube-dns"}
@@ -69,6 +69,17 @@ func TestTrafficGroupDependencyPolicies(t *testing.T) {
 			!reflect.DeepEqual(spec.PolicyTypes, []netv1.PolicyType{netv1.PolicyTypeEgress}) ||
 			len(spec.Egress) != len(want) || !reflect.DeepEqual(got, want) {
 			t.Fatalf("%s: unexpected API destinations: %v", item.policy.Namespace, got)
+		}
+	}
+
+	for _, policy := range auth {
+		if policy.Name != "olares-platform-webhook-app-service" {
+			continue
+		}
+		rules := policy.Spec.Ingress
+		if len(rules) != 1 || !reflect.DeepEqual(rules[0].Ports, []netv1.NetworkPolicyPort{tcpPort(8433)}) ||
+			!reflect.DeepEqual(rules[0].From, []netv1.NetworkPolicyPeer{{IPBlock: &netv1.IPBlock{CIDR: "192.168.128.102/32"}}}) {
+			t.Fatalf("webhook must use real API sources and the Pod target port: %+v", rules)
 		}
 	}
 
