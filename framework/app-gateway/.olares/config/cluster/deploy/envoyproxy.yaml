@@ -16,7 +16,7 @@ spec:
           priorityClassName: system-cluster-critical
           annotations:
             linkerd.io/inject: enabled
-            config.linkerd.io/opaque-ports: "10080,19001"
+            config.linkerd.io/opaque-ports: "10080,18443,19001"
   telemetry:
     accessLog:
       settings:
