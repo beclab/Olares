@@ -208,6 +208,7 @@ spec:
     - protocol: TCP
       port: 80
       targetPort: 91
+      appProtocol: http
 ---
 apiVersion: v1
 kind: Service
@@ -253,6 +254,10 @@ spec:
         io.bytetrade.app: "true"
         traffic.olares.io/platform-mesh: "true"
       annotations:
+        linkerd.io/inject: enabled
+        config.linkerd.io/proxy-enable-native-sidecar: "true"
+        config.linkerd.io/default-inbound-policy: cluster-authenticated
+        traffic.olares.io/mtls-mode: Required
 {{ if .Values.telemetry }}
         instrumentation.opentelemetry.io/inject-nodejs: "olares-instrumentation"
         instrumentation.opentelemetry.io/nodejs-container-names: "user-service"    
@@ -263,12 +268,23 @@ spec:
       priorityClassName: "system-cluster-critical"
       serviceAccountName: system-frontend
       initContainers:
-        - args:
-            - -it
-            - authelia-backend.user-system-{{ .Values.bfl.username }}:9091,infisical-service.user-system-{{ .Values.bfl.username }}:8080,system-server.user-system-{{ .Values.bfl.username }}:80,nats.user-system-{{ .Values.bfl.username }}:4222
-          image: owncloudci/wait-for:latest
+        - name: check-auth
+          image: busybox:1.28
           imagePullPolicy: IfNotPresent
-          name: check-auth
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              url="http://authelia-backend.user-system-{{ .Values.bfl.username }}:9091/api/health"
+              attempts=0
+              until wget -q -T 5 -O /dev/null "$url"; do
+                attempts=$((attempts + 1))
+                if [ "$attempts" -ge 24 ]; then
+                  echo "Authelia health endpoint is unavailable" >&2
+                  exit 1
+                fi
+                sleep 5
+              done
         - name: olares-app-init
           image: beclab/system-frontend:v1.13.6
           imagePullPolicy: IfNotPresent
