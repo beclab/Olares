@@ -121,6 +121,8 @@ type SecretIR struct {
 	Name     string
 	CertData string
 	KeyData  string
+	// TrustedCA, when set, emits an SDS ValidationContext (CA only) instead of a TLS certificate.
+	TrustedCA string
 }
 
 type Xds struct {

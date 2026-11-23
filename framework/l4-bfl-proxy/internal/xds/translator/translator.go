@@ -338,6 +338,19 @@ func (t *XdsTranslator) Translate(xdsIR *ir.Xds) *message.XdsSnapshot {
 	// referenced by name.  This means cert rotation only updates the Secret
 	// resource; the Listener itself is unchanged → no Envoy listener drain.
 	for _, s := range xdsIR.Secrets {
+		if s.TrustedCA != "" {
+			snap.Secrets = append(snap.Secrets, &tlsv3.Secret{
+				Name: s.Name,
+				Type: &tlsv3.Secret_ValidationContext{
+					ValidationContext: &tlsv3.CertificateValidationContext{
+						TrustedCa: &corev3.DataSource{
+							Specifier: &corev3.DataSource_InlineString{InlineString: s.TrustedCA},
+						},
+					},
+				},
+			})
+			continue
+		}
 		snap.Secrets = append(snap.Secrets, &tlsv3.Secret{
 			Name: s.Name,
 			Type: &tlsv3.Secret_TlsCertificate{
