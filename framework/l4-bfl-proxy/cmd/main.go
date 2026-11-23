@@ -131,12 +131,12 @@ func main() {
 	translatorCfg := &translator.Config{
 		SSLServerPort:      sslServerPort,
 		SSLProxyServerPort: sslProxyServerPort,
-		AppGatewayMTLS:     envTruthy("OLARES_L4_APP_GATEWAY_MTLS"),
+		AppGatewayMTLS:     envTruthy("OLARES_L4_APP_GATEWAY_MTLS") || envTruthy("OLARES_UNIAUTH_ENDSTATE"),
 		AppGatewayHost:     envOr("OLARES_L4_APP_GATEWAY_HOST", translator.DefaultAppGatewayHost),
 		AppGatewayPort:     translator.DefaultAppGatewayPort,
 	}
 	if translatorCfg.AppGatewayMTLS {
-		klog.Info("translator: AppGatewayMTLS enabled via OLARES_L4_APP_GATEWAY_MTLS")
+		klog.Info("translator: AppGatewayMTLS enabled (L4 flag or OLARES_UNIAUTH_ENDSTATE)")
 	}
 
 	runners := []runner.Runner{

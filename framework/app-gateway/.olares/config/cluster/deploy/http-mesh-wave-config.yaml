@@ -1,6 +1,13 @@
-# Full-HTTP mesh wave control (default off). Operators raise the wave via
-# app-service env OLARES_HTTP_MESH_WAVE (0–4). This ConfigMap documents the
-# contract and keeps policyCompilation-style fail-closed defaults visible.
+# Uniauth end-state control. Default off (install-safe).
+#
+# One-shot end-state: set endState="true" (and set the same on component envs
+# OLARES_UNIAUTH_ENDSTATE=true). That enables ALL of:
+#   - HTTP mesh wave 4 (all HTTP + cluster-authenticated inbound)
+#   - traffic-group NP bundles
+#   - L4→app-gateway mTLS
+#   - Entry mTLS PKI maintain
+#   - AppAccessPolicy compilation + reconcile
+# Progressive per-knob envs remain available for lab debugging only.
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -11,7 +18,11 @@ metadata:
     app.kubernetes.io/name: http-mesh-wave
     app.kubernetes.io/part-of: uniauth
 data:
-  # 0=off, 1=gateway/mesh, 2=+os-*, 3=+user-space, 4=all HTTP + cluster-authenticated inbound
+  # false = install baseline; true = product end-state in one shot
+  endState: "false"
+  # Used only when endState=false (lab progressive path)
   wave: "0"
   trafficGroupNP: "false"
   l4AppGatewayMTLS: "false"
+  entryMTLSPki: "false"
+  policyCompilation: "false"

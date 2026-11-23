@@ -17,6 +17,7 @@ import (
 
 	"github.com/beclab/Olares/framework/app-gateway/pkg/entrypki"
 	"github.com/beclab/Olares/framework/app-gateway/pkg/linkerdpki"
+	"github.com/beclab/Olares/framework/app-gateway/pkg/uniauth"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -105,7 +106,7 @@ func run() error {
 	metrics := linkerdpki.NewMetrics()
 	ctrl := linkerdpki.NewController(cl, ns, interval, probes, metrics)
 	entryNS := getenv("OLARES_ENTRY_MTLS_NS", entrypki.DefaultNamespace)
-	ctrl.WithEntryMTLS(entrypki.Enabled(os.Getenv("OLARES_ENTRY_MTLS_PKI")), entryNS)
+	ctrl.WithEntryMTLS(uniauth.EntryMTLSDesired(os.Getenv("OLARES_ENTRY_MTLS_PKI")), entryNS)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/startupz", probes.StartupHandler)

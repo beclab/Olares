@@ -10,6 +10,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/security"
+	"github.com/beclab/Olares/framework/app-service/pkg/uniauth"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
@@ -367,7 +368,7 @@ func (r *SecurityReconciler) reconcileNamespaceLabels(ctx context.Context, ns *c
 // reconcileTrafficGroupNetworkPolicies applies the safe isolation bundle when
 // OLARES_TRAFFIC_GROUP_NP is enabled. Labels are applied independently.
 func (r *SecurityReconciler) reconcileTrafficGroupNetworkPolicies(ctx context.Context, ns *corev1.Namespace) error {
-	if !security.TrafficGroupNPEnabled(os.Getenv("OLARES_TRAFFIC_GROUP_NP")) {
+	if !uniauth.TrafficGroupNPDesired(os.Getenv("OLARES_TRAFFIC_GROUP_NP")) {
 		return nil
 	}
 	if ns == nil || !ns.DeletionTimestamp.IsZero() {
