@@ -17,6 +17,7 @@ import (
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway"
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway/callerjwt"
 	gatewaytimeout "github.com/beclab/Olares/framework/app-service/pkg/gateway/timeout"
 	srrv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/gateway/v1alpha1"
@@ -70,6 +71,8 @@ func (g GatewayRef) gatewaySection() string {
 	return defaultGatewaySectN
 }
 
+const l4MTLSGatewaySectN = "l4-mtls"
+
 func gatewaySectionForSRR(gw GatewayRef, srr *srrv1alpha1.SharedRouteRegistry) (string, bool) {
 	if gw.GatewaySection != "" {
 		return gw.GatewaySection, true
@@ -83,6 +86,40 @@ func gatewaySectionForSRR(gw GatewayRef, srr *srrv1alpha1.SharedRouteRegistry) (
 	default:
 		return "", false
 	}
+}
+
+// parentRefsForSRR returns Gateway parentRefs including the L4 Entry mTLS listener
+// so north-south traffic from l4-bfl-proxy reaches the same HTTPRoutes.
+func parentRefsForSRR(gw GatewayRef, srr *srrv1alpha1.SharedRouteRegistry) []any {
+	base := map[string]any{
+		"group":     "gateway.networking.k8s.io",
+		"kind":      "Gateway",
+		"namespace": gw.gatewayNamespace(),
+		"name":      gw.gatewayName(),
+	}
+	var refs []any
+	if section, ok := gatewaySectionForSRR(gw, srr); ok {
+		ref := copyAnyStringMap(base)
+		ref["sectionName"] = section
+		refs = append(refs, ref)
+	} else {
+		// Application class: https listener + l4-mtls for L4 edge forward.
+		httpsRef := copyAnyStringMap(base)
+		httpsRef["sectionName"] = defaultGatewaySectN
+		refs = append(refs, httpsRef)
+	}
+	l4Ref := copyAnyStringMap(base)
+	l4Ref["sectionName"] = l4MTLSGatewaySectN
+	refs = append(refs, l4Ref)
+	return refs
+}
+
+func copyAnyStringMap(in map[string]any) map[string]any {
+	out := make(map[string]any, len(in))
+	for k, v := range in {
+		out[k] = v
+	}
+	return out
 }
 
 // ReconcileResult is written onto SRR.status after a reconcile pass.
@@ -253,15 +290,7 @@ func applyHTTPRoute(ctx context.Context, c client.Client, gw GatewayRef, srr *sr
 		klog.Warningf("effective timeout fell back to %q for srr=%s/%s: %v", effective, srr.Namespace, srr.Name, err)
 	}
 
-	parentRef := map[string]any{
-		"group":     "gateway.networking.k8s.io",
-		"kind":      "Gateway",
-		"namespace": gw.gatewayNamespace(),
-		"name":      gw.gatewayName(),
-	}
-	if section, ok := gatewaySectionForSRR(gw, srr); ok {
-		parentRef["sectionName"] = section
-	}
+	parentRefs := parentRefsForSRR(gw, srr)
 	backendRef := map[string]any{
 		"group":     "",
 		"kind":      "Service",
@@ -287,6 +316,14 @@ func applyHTTPRoute(ctx context.Context, c client.Client, gw GatewayRef, srr *sr
 			})
 		}
 	}
+	headerMod := map[string]any{
+		"remove": []any{callerjwt.CallerJWTHeaderName},
+	}
+	if stamp := stampedBFLUser(srr); stamp != "" {
+		headerMod["set"] = []any{
+			map[string]any{"name": "X-BFL-USER", "value": stamp},
+		}
+	}
 	rule := map[string]any{
 		"matches":     matches,
 		"backendRefs": []any{backendRef},
@@ -296,10 +333,8 @@ func applyHTTPRoute(ctx context.Context, c client.Client, gw GatewayRef, srr *sr
 		},
 		"filters": []any{
 			map[string]any{
-				"type": "RequestHeaderModifier",
-				"requestHeaderModifier": map[string]any{
-					"remove": []any{callerjwt.CallerJWTHeaderName},
-				},
+				"type":                  "RequestHeaderModifier",
+				"requestHeaderModifier": headerMod,
 			},
 		},
 	}
@@ -315,7 +350,7 @@ func applyHTTPRoute(ctx context.Context, c client.Client, gw GatewayRef, srr *sr
 			},
 		},
 		"spec": map[string]any{
-			"parentRefs": []any{parentRef},
+			"parentRefs": parentRefs,
 			"hostnames":  hosts,
 			"rules":      []any{rule},
 		},
@@ -734,6 +769,13 @@ func statusEqual(a, b srrv1alpha1.SharedRouteRegistryStatus) bool {
 		}
 	}
 	return true
+}
+
+func stampedBFLUser(srr *srrv1alpha1.SharedRouteRegistry) string {
+	if srr == nil || srr.Annotations == nil {
+		return ""
+	}
+	return strings.TrimSpace(srr.Annotations[gateway.AnnotationStampBFLUser])
 }
 
 func httpRouteName(srr *srrv1alpha1.SharedRouteRegistry) string {

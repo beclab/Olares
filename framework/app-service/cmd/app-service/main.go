@@ -460,6 +460,11 @@ func main() {
 		os.Exit(1)
 	}
 
+	if err = (&routecontrol.SystemPlaneRouteReconciler{Client: mgr.GetClient()}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "Unable to create controller", "controller", "SystemPlaneRoute")
+		os.Exit(1)
+	}
+
 	if err = (&callerjwt.IssuerReconciler{Client: mgr.GetClient(), Scheme: mgr.GetScheme()}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "Unable to create controller", "controller", "CallerJWTIssuer")
 		os.Exit(1)
