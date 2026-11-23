@@ -39,12 +39,15 @@ func TestAccessCRDsAndRBACPresent(t *testing.T) {
 	if !strings.Contains(rb, "name: os-app-access") {
 		t.Fatal("missing os-app-access namespace")
 	}
-	if !strings.Contains(rb, "policyCompilationEnabled: \"true\"") {
-		t.Fatal("policy compilation must default to true for steady-state")
+	if strings.Contains(rb, "endState:") {
+		t.Fatal("app-access-runtime must not expose endState kill switch")
+	}
+	if !strings.Contains(rb, `httpMeshPolicy: "cluster-authenticated"`) {
+		t.Fatal("runtime CM must project cluster-authenticated")
 	}
 }
 
-func TestAccessAdmissionManifestSafeDefaults(t *testing.T) {
+func TestAccessAdmissionManifestTLSAndSplitWebhooks(t *testing.T) {
 	_, file, _, ok := runtime.Caller(0)
 	if !ok {
 		t.Fatal("runtime.Caller failed")
@@ -56,14 +59,23 @@ func TestAccessAdmissionManifestSafeDefaults(t *testing.T) {
 	}
 	body := string(raw)
 	if !strings.Contains(body, "failurePolicy: Ignore") {
-		t.Fatal("admission webhook must default to Ignore")
+		t.Fatal("admission webhook must bootstrap Ignore")
 	}
-	if !strings.Contains(body, "kind: ValidatingWebhookConfiguration") {
-		t.Fatal("missing ValidatingWebhookConfiguration")
+	if !strings.Contains(body, "name: access.olares.io") {
+		t.Fatal("missing access CRD webhook")
+	}
+	if !strings.Contains(body, "name: posture-config.access.olares.io") {
+		t.Fatal("missing posture configmap webhook")
+	}
+	if !strings.Contains(body, "scheme: HTTPS") {
+		t.Fatal("probes must use HTTPS")
+	}
+	if strings.Contains(body, "OLARES_UNIAUTH_ENDSTATE") {
+		t.Fatal("admission deploy must not carry endState env")
 	}
 }
 
-func TestHTTPMeshWaveConfigDefaultsOff(t *testing.T) {
+func TestHTTPMeshWaveConfigNoKillSwitch(t *testing.T) {
 	_, file, _, ok := runtime.Caller(0)
 	if !ok {
 		t.Fatal("runtime.Caller failed")
@@ -74,30 +86,14 @@ func TestHTTPMeshWaveConfigDefaultsOff(t *testing.T) {
 		t.Fatalf("http-mesh-wave-config.yaml: %v", err)
 	}
 	body := string(raw)
-	if !strings.Contains(body, `endState: "true"`) {
-		t.Fatal("endState must default true for install/upgrade steady-state")
+	if strings.Contains(body, "endState:") {
+		t.Fatal("wave CM must not expose endState")
 	}
-	if !strings.Contains(body, `wave: "4"`) {
-		t.Fatal("wave must default to 4")
+	if !strings.Contains(body, `httpMeshWave: "4"`) {
+		t.Fatal("wave must project 4")
 	}
-}
-
-func TestAccessRuntimeEndStateDefaultsOn(t *testing.T) {
-	_, file, _, ok := runtime.Caller(0)
-	if !ok {
-		t.Fatal("runtime.Caller failed")
-	}
-	deploy := filepath.Clean(filepath.Join(filepath.Dir(file), "../../.olares/config/cluster/deploy"))
-	rbac, err := os.ReadFile(filepath.Join(deploy, "access-rbac.yaml"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	body := string(rbac)
-	if !strings.Contains(body, `endState: "true"`) {
-		t.Fatal("app-access-runtime endState must be true")
-	}
-	if !strings.Contains(body, `policyCompilationEnabled: "true"`) {
-		t.Fatal("policy compilation must be on for steady-state")
+	if !strings.Contains(body, `httpMeshPolicy: "cluster-authenticated"`) {
+		t.Fatal("must project cluster-authenticated")
 	}
 }
 

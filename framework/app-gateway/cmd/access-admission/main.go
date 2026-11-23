@@ -1,5 +1,5 @@
 // Command access-admission serves ValidatingAdmissionWebhook for access.olares.io
-// and optionally reconciles AppAccessPolicy projections.
+// and reconciles AppAccessPolicy projections. Product posture has no kill switch.
 package main
 
 import (
@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -19,12 +20,16 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func main() {
 	addr := getenv("ACCESS_ADMISSION_ADDR", ":9443")
+	certFile := getenv("ACCESS_ADMISSION_CERT", "/tls/tls.crt")
+	keyFile := getenv("ACCESS_ADMISSION_KEY", "/tls/tls.key")
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -36,21 +41,28 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer stop()
 
-	if cl, err := buildAdmissionClient(); err != nil {
-		slog.Warn("admission client unavailable; skip promote", "error", err)
-	} else if err := access.PromoteAdmissionFailurePolicy(ctx, cl, uniauth.EndStateEnabled()); err != nil {
-		slog.Warn("promote admission failurePolicy", "error", err)
-	} else {
-		slog.Info("admission webhook policy reconciled", "endState", uniauth.EndStateEnabled())
+	cl, err := buildAdmissionClient()
+	if err != nil {
+		slog.Error("admission client unavailable", "error", err)
+		os.Exit(1)
 	}
+	if err := access.PromoteAdmissionFailurePolicy(ctx, cl); err != nil {
+		slog.Error("promote admission failurePolicy", "error", err)
+		os.Exit(1)
+	}
+	if err := materializeAdmissionTLS(ctx, cl, certFile, keyFile); err != nil {
+		slog.Error("materialize admission tls files", "error", err)
+		os.Exit(1)
+	}
+	slog.Info("admission webhook policy reconciled to Fail")
 
-	if uniauth.AccessPolicyReconcileDesired(os.Getenv("OLARES_ACCESS_POLICY_RECONCILE")) {
+	if uniauth.AccessPolicyReconcileDesired() {
 		go runPolicyReconcileLoop(ctx)
 	}
 
 	go func() {
-		slog.Info("access-admission listening", "addr", addr)
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		slog.Info("access-admission listening tls", "addr", addr)
+		if err := srv.ListenAndServeTLS(certFile, keyFile); err != nil && err != http.ErrServerClosed {
 			slog.Error("server stopped", "error", err)
 			stop()
 		}
@@ -110,24 +122,13 @@ func reconcileAllPolicies(ctx context.Context, cl client.Client) {
 		slog.Warn("list AppAccessPolicy", "error", err)
 		return
 	}
-	enabled := uniauth.PolicyCompilationDesired(os.Getenv("OLARES_POLICY_COMPILATION"), readCompilationCM(ctx, cl))
+	enabled := uniauth.PolicyCompilationDesired()
 	for i := range list.Items {
 		item := &list.Items[i]
 		if err := access.ReconcileAccessPolicy(ctx, cl, item, enabled); err != nil {
 			slog.Warn("reconcile policy", "name", item.GetName(), "error", err)
 		}
 	}
-}
-
-func readCompilationCM(ctx context.Context, cl client.Client) bool {
-	cm := &unstructured.Unstructured{}
-	cm.SetAPIVersion("v1")
-	cm.SetKind("ConfigMap")
-	if err := cl.Get(ctx, client.ObjectKey{Namespace: "os-app-access", Name: "app-access-runtime"}, cm); err != nil {
-		return false
-	}
-	data, _, _ := unstructured.NestedStringMap(cm.Object, "data")
-	return access.PolicyCompilationEnabled(data["policyCompilationEnabled"])
 }
 
 func buildAdmissionClient() (client.Client, error) {
@@ -143,6 +144,23 @@ func buildAdmissionClient() (client.Client, error) {
 		return nil, err
 	}
 	return client.New(cfg, client.Options{Scheme: scheme})
+}
+
+func materializeAdmissionTLS(ctx context.Context, cl client.Client, certFile, keyFile string) error {
+	var sec corev1.Secret
+	if err := cl.Get(ctx, types.NamespacedName{
+		Namespace: access.AdmissionTLSNamespace,
+		Name:      access.AdmissionTLSSecretName,
+	}, &sec); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(certFile), 0o755); err != nil {
+		return err
+	}
+	if err := os.WriteFile(certFile, sec.Data["tls.crt"], 0o600); err != nil {
+		return err
+	}
+	return os.WriteFile(keyFile, sec.Data["tls.key"], 0o600)
 }
 
 func getenv(k, def string) string {

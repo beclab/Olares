@@ -1,6 +1,5 @@
-# Access ValidatingAdmissionWebhook.
-# Install/upgrade steady-state: endState from app-access-runtime; process promotes
-# failurePolicy to Fail after self-signed caBundle is written.
+# Access ValidatingAdmissionWebhook (product steady state: HTTP mTLS, no kill switch).
+# failurePolicy starts Ignore so install can progress; process promotes to Fail after TLS is ready.
 ---
 apiVersion: v1
 kind: Service
@@ -43,31 +42,33 @@ spec:
           env:
             - name: ACCESS_ADMISSION_ADDR
               value: ":9443"
-            - name: OLARES_UNIAUTH_ENDSTATE
-              valueFrom:
-                configMapKeyRef:
-                  name: app-access-runtime
-                  key: endState
-            - name: OLARES_ACCESS_POLICY_RECONCILE
-              valueFrom:
-                configMapKeyRef:
-                  name: app-access-runtime
-                  key: endState
-            - name: OLARES_POLICY_COMPILATION
-              valueFrom:
-                configMapKeyRef:
-                  name: app-access-runtime
-                  key: policyCompilationEnabled
+            - name: ACCESS_ADMISSION_CERT
+              value: /tls/tls.crt
+            - name: ACCESS_ADMISSION_KEY
+              value: /tls/tls.key
           ports:
             - containerPort: 9443
               name: webhook
+          volumeMounts:
+            - name: tls
+              mountPath: /tls
           readinessProbe:
             httpGet:
               path: /healthz
               port: webhook
-              scheme: HTTP
+              scheme: HTTPS
             initialDelaySeconds: 2
             periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: webhook
+              scheme: HTTPS
+            periodSeconds: 20
+      volumes:
+        # Process writes tls.crt/tls.key after ensuring Secret (bootstrap-safe).
+        - name: tls
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -76,16 +77,43 @@ metadata:
   namespace: os-app-access
 ---
 apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: access-admission-tls
+  namespace: os-app-access
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames: ["access-admission-tls"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
+  # create needs no resourceNames on first bootstrap
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: access-admission-tls
+  namespace: os-app-access
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: access-admission-tls
+subjects:
+  - kind: ServiceAccount
+    name: access-admission
+    namespace: os-app-access
+---
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: access-admission
 rules:
   - apiGroups: ["admissionregistration.k8s.io"]
     resources: ["validatingwebhookconfigurations"]
-    verbs: ["get", "list", "watch", "update", "patch"]
-  - apiGroups: [""]
-    resources: ["secrets"]
-    verbs: ["get", "list", "watch", "create", "update", "patch"]
+    resourceNames: ["access-olares-validate"]
+    verbs: ["get", "update", "patch"]
   - apiGroups: ["access.olares.io"]
     resources: ["appaccesspolicies", "appcapabilitysets"]
     verbs: ["get", "list", "watch"]
@@ -121,7 +149,6 @@ webhooks:
         namespace: os-app-access
         path: /validate
         port: 443
-    # Starts Ignore; access-admission promotes to Fail when endState and caBundle ready.
     failurePolicy: Ignore
     matchPolicy: Equivalent
     sideEffects: None
@@ -132,13 +159,18 @@ webhooks:
         operations: ["CREATE", "UPDATE"]
         resources: ["appcapabilitysets", "appaccesspolicies"]
         scope: Namespaced
-      # Posture ConfigMaps (endState / wave): integrity-only; not secrets.
-      - apiGroups: [""]
-        apiVersions: ["v1"]
-        operations: ["CREATE", "UPDATE", "DELETE"]
-        resources: ["configmaps"]
-        scope: Namespaced
-    # Only posture-labeled ConfigMaps in platform namespaces hit this hook.
+  - name: posture-config.access.olares.io
+    admissionReviewVersions: ["v1"]
+    clientConfig:
+      service:
+        name: access-admission
+        namespace: os-app-access
+        path: /validate
+        port: 443
+    failurePolicy: Ignore
+    matchPolicy: Equivalent
+    sideEffects: None
+    timeoutSeconds: 5
     namespaceSelector:
       matchExpressions:
         - key: kubernetes.k8s.io/metadata.name
@@ -149,3 +181,9 @@ webhooks:
         - key: olares.io/uniauth-posture
           operator: In
           values: ["true"]
+    rules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE", "DELETE"]
+        resources: ["configmaps"]
+        scope: Namespaced
