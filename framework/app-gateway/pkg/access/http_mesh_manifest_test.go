@@ -14,26 +14,40 @@ import (
 func TestEntryMTLSIsScopedToTheDedicatedListener(t *testing.T) {
 	channel := readMeshManifest(t, "l4-mtls-channel.yaml")
 	proxy := readMeshManifest(t, "envoyproxy.yaml")["EnvoyProxy"]
-	server := channel["Server"]
 	service := channel["Service"]
-	policy := channel["ClientTrafficPolicy"]
-
 	ports := meshField(t, service, "spec", "ports").([]any)
-	if len(ports) != 1 || meshField(t, ports[0], "port") != 8443 || meshField(t, ports[0], "targetPort") != 8443 {
+	if len(ports) != 2 {
 		t.Fatalf("unexpected Entry Service ports %v", ports)
 	}
-	if meshField(t, server, "spec", "port") != 8443 || meshField(t, server, "spec", "proxyProtocol") != "TLS" ||
-		meshField(t, server, "spec", "accessPolicy") != "all-unauthenticated" ||
-		!reflect.DeepEqual(meshField(t, server, "spec", "podSelector", "matchLabels"), meshField(t, service, "spec", "selector")) {
-		t.Fatal("Linkerd's Entry exception must select exactly the Entry Service pods and the TLS listener")
+	for i, tc := range []struct {
+		port                    int
+		server, policy, section string
+	}{
+		{8443, "app-gateway-entry-mtls", "app-gateway-l4-entry-mtls", "l4-mtls"},
+		{9444, "app-gateway-entry-authz", "app-gateway-l4-authz-mtls", "l4-authz"},
+	} {
+		server := channel["Server/"+tc.server]
+		policy := channel["ClientTrafficPolicy/"+tc.policy]
+		if meshField(t, ports[i], "port") != tc.port || meshField(t, ports[i], "targetPort") != tc.port ||
+			meshField(t, server, "spec", "port") != tc.port || meshField(t, server, "spec", "proxyProtocol") != "TLS" ||
+			meshField(t, server, "spec", "accessPolicy") != "all-unauthenticated" ||
+			!reflect.DeepEqual(meshField(t, server, "spec", "podSelector", "matchLabels"), meshField(t, service, "spec", "selector")) {
+			t.Fatalf("Entry Service and Linkerd exception disagree for %s", tc.section)
+		}
+		if meshField(t, policy, "spec", "targetRef", "sectionName") != tc.section ||
+			meshField(t, policy, "spec", "tls", "clientValidation", "mode") != "RequireAndVerify" {
+			t.Fatalf("Envoy must require L4 mTLS on %s", tc.section)
+		}
+		names := meshField(t, policy, "spec", "tls", "clientValidation", "subjectAltNames", "dnsNames").([]any)
+		if len(names) != 1 || meshField(t, names[0], "type") != "Exact" || meshField(t, names[0], "value") != "l4-bfl-proxy.entry.client" {
+			t.Fatalf("unexpected Entry client identities %v", names)
+		}
 	}
-	if meshField(t, policy, "spec", "targetRef", "sectionName") != "l4-mtls" ||
-		meshField(t, policy, "spec", "tls", "clientValidation", "mode") != "RequireAndVerify" {
-		t.Fatal("Envoy must authenticate L4 clients on the dedicated Entry listener")
-	}
-	names := meshField(t, policy, "spec", "tls", "clientValidation", "subjectAltNames", "dnsNames").([]any)
-	if len(names) != 1 || meshField(t, names[0], "type") != "Exact" || meshField(t, names[0], "value") != "l4-bfl-proxy.entry.client" {
-		t.Fatalf("unexpected Entry client identities %v", names)
+	gw := readMeshManifest(t, "gateway.yaml")["Gateway"]
+	frontend := meshField(t, gw, "spec", "tls", "frontend", "perPort").([]any)
+	if len(frontend) != 1 || meshField(t, frontend[0], "port") != 9444 ||
+		meshField(t, frontend[0], "tls", "validation", "mode") != "AllowValidOnly" {
+		t.Fatal("the authorization listener must require native frontend TLS validation")
 	}
 	if meshField(t, proxy, "spec", "provider", "kubernetes", "envoyService", "type") != "ClusterIP" {
 		t.Fatal("the gateway must not provision a public LoadBalancer alongside L4")
@@ -93,7 +107,7 @@ func TestHTTPMeshAdmissionIsBoundAndFailClosed(t *testing.T) {
 			t.Fatalf("unexpected resource %v", doc["kind"])
 		}
 	}
-	want := map[string]bool{"olares-http-mesh-pods": true, "olares-entry-mtls-client-validation": true}
+	want := map[string]bool{"olares-http-mesh-pods": true, "olares-entry-mtls-client-validation": true, "olares-l4-authz-route-writer": true}
 	if !reflect.DeepEqual(policies, want) || !reflect.DeepEqual(bindings, want) {
 		t.Fatalf("missing admission policies or bindings: %v %v", policies, bindings)
 	}
@@ -116,7 +130,9 @@ func readMeshManifest(t *testing.T, name string) map[string]map[string]any {
 		} else if err != nil {
 			t.Fatal(err)
 		}
-		resources[meshField(t, doc, "kind").(string)] = doc
+		kind := meshField(t, doc, "kind").(string)
+		resources[kind] = doc
+		resources[kind+"/"+meshField(t, doc, "metadata", "name").(string)] = doc
 	}
 }
 

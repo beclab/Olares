@@ -141,6 +141,9 @@ func ReconcileSharedRoute(ctx context.Context, c client.Client, gw GatewayRef, s
 	}
 	switch srr.Spec.RouteMode {
 	case srrv1alpha1.RouteModeDirect:
+		if err := reconcileL4AuthzRoute(ctx, c, gw, srr, false); err != nil {
+			return ReconcileResult{}, err
+		}
 		if err := deleteHTTPRoute(ctx, c, srr); err != nil {
 			return ReconcileResult{}, fmt.Errorf("delete HTTPRoute: %w", err)
 		}
@@ -183,6 +186,9 @@ func ReconcileSharedRoute(ctx context.Context, c client.Client, gw GatewayRef, s
 }
 
 func reconcileGatewayMode(ctx context.Context, c client.Client, gw GatewayRef, srr *srrv1alpha1.SharedRouteRegistry) (ReconcileResult, error) {
+	if err := validateL4AuthzAuthorities(ctx, c, srr); err != nil {
+		return waitForHTTPRouteMesh(ctx, c, gw, srr, err)
+	}
 	if len(srr.Spec.HostPatterns) == 0 || srr.Spec.Upstream.ServiceName == "" {
 		return ReconcileResult{
 			Status:  metav1.ConditionFalse,
@@ -237,10 +243,10 @@ func reconcileGatewayMode(ctx context.Context, c client.Client, gw GatewayRef, s
 		return ReconcileResult{}, fmt.Errorf("apply JWKS ReferenceGrant: %w", err)
 	}
 	if err := httpRouteMeshDependenciesReady(ctx, c, upstreamNS, srr); err != nil {
-		if withdrawErr := withdrawUnreadyHTTPRoute(ctx, c, srr); withdrawErr != nil {
-			return ReconcileResult{}, fmt.Errorf("withdraw HTTPRoute for unverified mesh endpoints: %w", withdrawErr)
-		}
-		return ReconcileResult{Status: metav1.ConditionFalse, Reason: ReasonAwaitingDataPlane, Message: err.Error()}, nil
+		return waitForHTTPRouteMesh(ctx, c, gw, srr, err)
+	}
+	if err := reconcileL4AuthzRoute(ctx, c, gw, srr, needsL4Authz(srr)); err != nil {
+		return ReconcileResult{}, fmt.Errorf("reconcile L4 authorization route: %w", err)
 	}
 	// Attach dependencies before making the route available to the data plane.
 	routeName, err := applyHTTPRoute(ctx, c, gw, srr, port)
@@ -253,6 +259,16 @@ func reconcileGatewayMode(ctx context.Context, c client.Client, gw GatewayRef, s
 		Message:       "HTTPRoute and NetworkPolicy reconciled",
 		HTTPRouteName: routeName,
 	}, nil
+}
+
+func waitForHTTPRouteMesh(ctx context.Context, c client.Client, gw GatewayRef, srr *srrv1alpha1.SharedRouteRegistry, cause error) (ReconcileResult, error) {
+	if err := reconcileL4AuthzRoute(ctx, c, gw, srr, false); err != nil {
+		return ReconcileResult{}, fmt.Errorf("withdraw L4 authorization route: %w", err)
+	}
+	if err := withdrawUnreadyHTTPRoute(ctx, c, srr); err != nil {
+		return ReconcileResult{}, fmt.Errorf("withdraw HTTPRoute for unverified mesh endpoints: %w", err)
+	}
+	return ReconcileResult{Status: metav1.ConditionFalse, Reason: ReasonAwaitingDataPlane, Message: cause.Error()}, nil
 }
 
 func resolveServicePort(svc *corev1.Service, ref srrv1alpha1.UpstreamRef) (int32, error) {

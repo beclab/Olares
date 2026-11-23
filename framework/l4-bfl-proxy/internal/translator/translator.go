@@ -232,7 +232,17 @@ func (t *Translator) Translate(resources *message.Resources) *ir.Xds {
 		}
 
 		zone := user.SSL.Zone
-		vhosts := t.buildUserVirtualHosts(user, zone, false, clusterSet)
+		var vhosts []*ir.VirtualHostIR
+		if t.cfg.AppGatewayMTLS {
+			var activationHosts []string
+			for _, guest := range ephemeralsByZone[zone] {
+				host := "wizard-" + guest.Name + "." + zone
+				activationHosts = append(activationHosts, host, toLocalDomain(host))
+			}
+			vhosts = t.buildEdgeForwardVirtualHosts(user, zone, clusterSet, activationHosts...)
+		} else {
+			vhosts = t.buildUserVirtualHosts(user, zone, false, clusterSet)
+		}
 		vhosts = append(vhosts, ephemeralVHosts...)
 		t.applyDenyAllRestrictions(user, vhosts, ephemeralVHosts)
 
@@ -264,11 +274,13 @@ func (t *Translator) Translate(resources *message.Resources) *ir.Xds {
 
 		// Authelia cluster per user
 		autheliaClName := fmt.Sprintf("%s_%s", autheliaClusterPrefix, user.Name)
-		clusterSet[autheliaClName] = &ir.ClusterIR{
-			Name:   autheliaClName,
-			Host:   fmt.Sprintf(autheliaHostFormat, user.Name),
-			Port:   autheliaPort,
-			UseDNS: true,
+		if auth := t.clusterForAppGateway(autheliaClName); auth != nil {
+			auth.Port = appGatewayAuthPort
+			clusterSet[autheliaClName] = auth
+		} else {
+			clusterSet[autheliaClName] = &ir.ClusterIR{
+				Name: autheliaClName, Host: fmt.Sprintf(autheliaHostFormat, user.Name), Port: autheliaPort, UseDNS: true,
+			}
 		}
 	}
 
@@ -487,8 +499,7 @@ func (t *Translator) buildUserVirtualHosts(user *message.UserInfo, zone string, 
 	namespace := user.Namespace
 
 	if t.cfg != nil && t.cfg.AppGatewayMTLS {
-		// All user HTTP (apps, custom domains, auth/desktop/wizard/profile):
-		// TLS on L4 only; Host-preserving forward to AGW.
+		// All user HTTP forwards to AGW with the original Host.
 		return t.buildEdgeForwardVirtualHosts(user, zone, clusterSet)
 	}
 
