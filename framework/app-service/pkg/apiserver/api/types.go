@@ -9,6 +9,10 @@ import (
 const (
 	AppTokenKey                      = "bytetrade.io/token"
 	AppRepoURLKey                    = "bytetrade.io/repo-url"
+	// AppChartURLKey / AppChartDigestKey record the exact chart reference
+	// market sent with the last install or upgrade, when it sent one.
+	AppChartURLKey    = "bytetrade.io/chart-url"
+	AppChartDigestKey = "bytetrade.io/chart-digest"
 	AppVersionKey                    = "bytetrade.io/chart-version"
 	AppTargetChartVersionKey         = "bytetrade.io/target-chart-version"
 	AppPreUpgradeConfigKey           = "bytetrade.io/pre-upgrade-config"
@@ -144,6 +148,10 @@ type UpgradeRequest struct {
 	RepoURL string    `json:"repoURL"`
 	Version string    `json:"version"`
 	Source  AppSource `json:"source"`
+	// ChartURL (relative to RepoURL) and ChartDigest ("sha256:<hex>") name
+	// the exact package to install; sent by market builds that know them.
+	ChartURL    string `json:"chartUrl,omitempty"`
+	ChartDigest string `json:"chartDigest,omitempty"`
 }
 
 // InstallRequest represents a request to install an application.
@@ -159,6 +167,18 @@ type InstallRequest struct {
 	Entrances       []EntranceClone         `json:"entrances"`
 	SelectedGpuType string                  `json:"selectedGpuType"`
 	TemplateClone   bool                    `json:"templateClone"`
+	// Version, ChartURL and ChartDigest name the exact package market
+	// rendered. They are honoured only together and only for non-clone
+	// installs; otherwise the chart is resolved from RepoURL's index.
+	Version     string `json:"version,omitempty"`
+	ChartURL    string `json:"chartUrl,omitempty"`
+	ChartDigest string `json:"chartDigest,omitempty"`
+}
+
+// HasChartRef reports whether the request carries a usable exact chart
+// reference.
+func (r *InstallRequest) HasChartRef() bool {
+	return r.RawAppName == "" && r.Version != "" && r.ChartURL != "" && r.ChartDigest != ""
 }
 
 type Image struct {

@@ -88,6 +88,9 @@ type installHandlerHelper struct {
 	insReq     *api.InstallRequest
 	appConfig  *appcfg.ApplicationConfig
 	chartPath  string
+	// downloadedChartPath is the chart root the request downloaded in
+	// GetAppConfigVersion; every later config load reads it.
+	downloadedChartPath string
 	// client is the generated app.bytetrade.io clientset. Typed as the
 	// interface (not the concrete *versioned.Clientset) so unit tests can
 	// inject a fake via appfake.NewSimpleClientset. The runtime install
@@ -350,6 +353,7 @@ func (h *installHandlerHelper) getAppConfig(adminUsers []string, marketSource st
 		MarketSource: marketSource,
 		SelectedGpu:  selectedGpuType,
 		ChartOwner:   chartOwner,
+		ChartPath:    h.downloadedChartPath,
 	})
 	if err != nil {
 		klog.Errorf("Failed to get appconfig err=%v", err)
@@ -546,6 +550,10 @@ func (h *installHandlerHelper) applyAppMgr(name string, extraLabels map[string]s
 			OpType:       v1alpha1.InstallOp,
 		},
 	}
+	if h.insReq.HasChartRef() {
+		appMgr.Annotations[api.AppChartURLKey] = h.insReq.ChartURL
+		appMgr.Annotations[api.AppChartDigestKey] = h.insReq.ChartDigest
+	}
 	appMgr.Labels = labels
 	appMgr.Annotations, opID = stampDurableOperationRequest(appMgr.Annotations)
 
@@ -578,7 +586,15 @@ func (h *installHandlerHelper) applyAppMgr(name string, extraLabels map[string]s
 				api.AppInstallSourceKey:             "app-service",
 				constants.ApplicationTitleLabel:     h.appConfig.Title,
 				domain.AnnotationOperationRequestID: opID,
+				// null removes a reference left by an earlier install.
+				api.AppChartURLKey:    nil,
+				api.AppChartDigestKey: nil,
 			},
+		}
+		if h.insReq.HasChartRef() {
+			ann := metadataPatch["annotations"].(map[string]interface{})
+			ann[api.AppChartURLKey] = h.insReq.ChartURL
+			ann[api.AppChartDigestKey] = h.insReq.ChartDigest
 		}
 		labelsPatch := make(map[string]interface{}, len(labels))
 		for k, v := range labels {
@@ -791,6 +807,7 @@ func (h *installHandlerHelperV2) getAppConfig(adminUsers []string, marketSource 
 		IsAdmin:      isAdmin,
 		SelectedGpu:  selectedGpuType,
 		ChartOwner:   chartOwner,
+		ChartPath:    h.downloadedChartPath,
 	})
 	if err != nil {
 		klog.Errorf("Failed to get appconfig err=%v", err)
@@ -844,6 +861,7 @@ func (h *installHandlerHelperV3) getAppConfig(adminUsers []string, marketSource 
 		MarketSource: marketSource,
 		SelectedGpu:  selectedGpuType,
 		ChartOwner:   chartOwner,
+		ChartPath:    h.downloadedChartPath,
 	})
 	if err != nil {
 		klog.Errorf("Failed to get appconfig err=%v", err)
@@ -946,12 +964,11 @@ func (h *Handler) isDeployAllowed(req *restful.Request, resp *restful.Response) 
 // for this owner (or a shared AM of that name) when the existing AM is not in
 // an InstallOp-allowed state.
 //
-// Why it exists: chart download is not per-request. GetIndexAndDownloadChart
-// always RemoveAll + unpacks into ./charts/{rawAppName}, which is shared by
-// every install of that chart name on this node. If two requests for the same
-// user+app overlap — especially while the first is already Pending /
-// Downloading / Installing — the later download would overwrite the earlier
-// chart mid-lint / helm render.
+// Why it exists: two overlapping installs of the same user+app would race on
+// one ApplicationManager and one Helm release. (It used to also guard the
+// shared ./charts/{rawAppName} directory against being overwritten mid-lint;
+// downloads now land in per-version cache directories, see
+// pkg/utils/app/chart_cache.go.)
 func checkSameAppInstallAllowed(ctx context.Context, app, owner string) error {
 	clientset, err := getAppClient()
 	if err != nil {
