@@ -19,9 +19,6 @@ import (
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 )
 
-// linkerdProxyContainerName is the upstream Linkerd sidecar container name.
-const linkerdProxyContainerName = "linkerd-proxy"
-
 // ListAppWorkloads returns Deployments/StatefulSets owned by the Application
 // (label applications.app.bytetrade.io/name=<appName> in app namespace).
 func ListAppWorkloads(ctx context.Context, c client.Client, appNamespace, appName string) ([]WorkloadRef, error) {
@@ -280,13 +277,11 @@ func workloadNeedsInjectChange(ctx context.Context, c client.Client, ref Workloa
 }
 
 func podNeedsInjectChange(pod *corev1.Pod, want InjectSpec) bool {
-	has := InjectSpec{}
+	has := InjectSpec{Linkerd: mesh.LinkerdProxy(pod) != nil}
 	for _, ctr := range pod.Spec.Containers {
 		switch ctr.Name {
 		case ContainerName:
 			has.MeshIn = true
-		case linkerdProxyContainerName:
-			has.Linkerd = true
 		}
 	}
 	if !want.MeshIn && !want.Linkerd {

@@ -15,7 +15,7 @@ func TestHardenLinkerdProxyAdminProbesConvertsHTTPGet(t *testing.T) {
 			Containers: []corev1.Container{
 				{Name: "app"},
 				{
-					Name: LinkerdProxyContainerName,
+					Name: LinkerdProxyContainer,
 					LivenessProbe: &corev1.Probe{
 						ProbeHandler: corev1.ProbeHandler{
 							HTTPGet: &corev1.HTTPGetAction{
@@ -72,7 +72,7 @@ func TestHardenLinkerdProxyAdminProbesSkipsNonAdmin(t *testing.T) {
 	pod := &corev1.Pod{
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{{
-				Name: LinkerdProxyContainerName,
+				Name: LinkerdProxyContainer,
 				LivenessProbe: &corev1.Probe{
 					ProbeHandler: corev1.ProbeHandler{
 						HTTPGet: &corev1.HTTPGetAction{
@@ -103,5 +103,24 @@ func TestHardenLinkerdProxyAdminProbesNoProxy(t *testing.T) {
 	}
 	if HardenLinkerdProxyAdminProbes(nil) {
 		t.Fatal("nil pod: expect false")
+	}
+}
+
+func TestHardenNativeProxyStartupProbe(t *testing.T) {
+	always := corev1.ContainerRestartPolicyAlways
+	pod := &corev1.Pod{Spec: corev1.PodSpec{InitContainers: []corev1.Container{{
+		Name: LinkerdProxyContainer, RestartPolicy: &always,
+		StartupProbe: &corev1.Probe{ProbeHandler: corev1.ProbeHandler{
+			HTTPGet: &corev1.HTTPGetAction{Path: "/ready", Port: intstr.FromString(LinkerdAdminPortName)},
+		}},
+	}}}}
+	if !HardenLinkerdProxyAdminProbes(pod) {
+		t.Fatal("native proxy startup probe did not change")
+	}
+	if probe := pod.Spec.InitContainers[0].StartupProbe; probe.HTTPGet != nil || !isLinkerdAwaitExec(probe) {
+		t.Fatalf("unexpected native proxy probe: %+v", probe)
+	}
+	if HardenLinkerdProxyAdminProbes(pod) {
+		t.Fatal("a hardened native probe must be idempotent")
 	}
 }

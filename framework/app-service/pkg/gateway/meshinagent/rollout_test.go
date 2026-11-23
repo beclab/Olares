@@ -134,7 +134,7 @@ func TestFilterWorkloadsNeedingInject(t *testing.T) {
 	}
 	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 		mkDeploy("bare"), mkPod("bare"),
-		mkDeploy("meshed"), mkPod("meshed", ContainerName, linkerdProxyContainerName),
+		mkDeploy("meshed"), mkPod("meshed", ContainerName, "linkerd-proxy"),
 		mkDeploy("noPods"),
 	).Build()
 

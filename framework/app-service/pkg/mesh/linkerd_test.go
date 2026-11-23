@@ -161,3 +161,31 @@ func TestShouldSkipOesForSharedCallerUsesLinkerdReady(t *testing.T) {
 		t.Fatal("must not skip Shared-caller oes when Linkerd is not ready")
 	}
 }
+
+func TestControlPlaneReadinessFailsClosedBeforeTenantRollout(t *testing.T) {
+	ctx := context.Background()
+	client := linkerdReadyClient()
+	t.Setenv("OLARES_LINKERD_LAYER1_ENABLED", "false")
+	if IsControlPlaneReady(ctx, client) {
+		t.Fatal("a disabled mesh cannot satisfy the rollout gate")
+	}
+	t.Setenv("OLARES_LINKERD_LAYER1_ENABLED", "true")
+	if IsControlPlaneReady(ctx, nil) {
+		t.Fatal("a missing client cannot satisfy the rollout gate")
+	}
+	if !IsControlPlaneReady(ctx, client) {
+		t.Fatal("the enabled, healthy control plane should satisfy the rollout gate")
+	}
+	deployments := client.AppsV1().Deployments(linkerdNamespace)
+	deployment, err := deployments.Get(ctx, "linkerd-proxy-injector", metav1.GetOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment.Status.ReadyReplicas = 0
+	if _, err := deployments.UpdateStatus(ctx, deployment, metav1.UpdateOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	if IsControlPlaneReady(ctx, client) {
+		t.Fatal("an unavailable injector cannot satisfy the rollout gate")
+	}
+}

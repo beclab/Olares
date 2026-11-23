@@ -181,6 +181,23 @@ func TestServingReadinessWaitsForPolicyAndMeshedEndpoints(t *testing.T) {
 		}
 		check("9444")
 	})
+	t.Run("ready native proxy permits cutover", func(t *testing.T) {
+		fixtures := make([]client.Object, 0, len(objects))
+		for _, item := range objects {
+			fixtures = append(fixtures, item.DeepCopyObject().(client.Object))
+		}
+		pod := fixtures[len(fixtures)-2].(*corev1.Pod)
+		proxy := pod.Spec.Containers[0]
+		proxy.RestartPolicy = ptr.To(corev1.ContainerRestartPolicyAlways)
+		pod.Spec.InitContainers = append(pod.Spec.InitContainers, proxy)
+		pod.Spec.Containers = nil
+		pod.Status.InitContainerStatuses = pod.Status.ContainerStatuses
+		pod.Status.ContainerStatuses = nil
+		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(fixtures...).Build()
+		if err := servingReadiness(ctx, c, GatewayRef{}, srr, "route"); err != nil {
+			t.Fatalf("ready native sidecar rejected at cutover: %v", err)
+		}
+	})
 	for _, tc := range []struct {
 		name   string
 		mutate func(pod *corev1.Pod, slice *discoveryv1.EndpointSlice)

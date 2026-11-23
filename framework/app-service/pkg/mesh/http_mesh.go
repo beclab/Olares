@@ -181,16 +181,50 @@ func HasHTTPMeshInit(pod *corev1.Pod) bool {
 	return false
 }
 
+// LinkerdProxy returns the regular or restartable-init proxy from the Pod spec.
+func LinkerdProxy(pod *corev1.Pod) *corev1.Container {
+	for i := range pod.Spec.Containers {
+		if pod.Spec.Containers[i].Name == LinkerdProxyContainer {
+			return &pod.Spec.Containers[i]
+		}
+	}
+	for i := range pod.Spec.InitContainers {
+		container := &pod.Spec.InitContainers[i]
+		if container.Name == LinkerdProxyContainer && container.RestartPolicy != nil &&
+			*container.RestartPolicy == corev1.ContainerRestartPolicyAlways {
+			return container
+		}
+	}
+	return nil
+}
+
+// LinkerdProxyReady checks the status of the proxy in its actual container class.
+func LinkerdProxyReady(pod *corev1.Pod) bool {
+	proxy := LinkerdProxy(pod)
+	if proxy == nil {
+		return false
+	}
+	statuses := pod.Status.ContainerStatuses
+	if proxy.RestartPolicy != nil && *proxy.RestartPolicy == corev1.ContainerRestartPolicyAlways {
+		statuses = pod.Status.InitContainerStatuses
+	}
+	for _, status := range statuses {
+		if status.Name == LinkerdProxyContainer && status.Ready {
+			return true
+		}
+	}
+	return false
+}
+
 // ProxyHasInboundPolicy checks the configuration delivered to the running proxy.
 func ProxyHasInboundPolicy(pod *corev1.Pod, policy string) bool {
-	for _, container := range pod.Spec.Containers {
-		if container.Name != LinkerdProxyContainer {
-			continue
-		}
-		for _, env := range container.Env {
-			if env.Name == LinkerdProxyInboundPolicyEnv && env.ValueFrom == nil && env.Value == policy {
-				return true
-			}
+	proxy := LinkerdProxy(pod)
+	if proxy == nil {
+		return false
+	}
+	for _, env := range proxy.Env {
+		if env.Name == LinkerdProxyInboundPolicyEnv {
+			return env.ValueFrom == nil && env.Value == policy
 		}
 	}
 	return false
@@ -199,6 +233,11 @@ func ProxyHasInboundPolicy(pod *corev1.Pod, policy string) bool {
 // ConfigurePodHTTPMesh applies the mesh posture before any sandbox admission
 // return, including pods that do not need a legacy application sidecar.
 func ConfigurePodHTTPMesh(pod *corev1.Pod, namespace string, wave int, opaquePorts string, eligible, injectMeshIn bool) (bool, error) {
+	// An explicitly enrolled system workload must retain the required posture
+	// even while other workloads are still in a permissive rollout wave.
+	if pod.Annotations[LinkerdServerTLSModeAnnotation] == MTLSModeRequired && wave < 4 {
+		wave = 4
+	}
 	if !eligible || !ShouldInjectHTTPMesh(injectMeshIn, namespace, wave, pod) {
 		return false, nil
 	}
@@ -207,15 +246,11 @@ func ConfigurePodHTTPMesh(pod *corev1.Pod, namespace string, wave int, opaquePor
 	}
 	AnnotatePodForHTTPMesh(pod, true, wave, opaquePorts)
 	// The injector may have run first when the Pod or namespace was already opted in.
-	for i := range pod.Spec.Containers {
-		container := &pod.Spec.Containers[i]
-		if container.Name != LinkerdProxyContainer {
-			continue
-		}
-		for j := range container.Env {
-			if container.Env[j].Name == LinkerdProxyInboundPolicyEnv {
-				container.Env[j].Value = DesiredInboundPolicy(wave)
-				container.Env[j].ValueFrom = nil
+	if proxy := LinkerdProxy(pod); proxy != nil {
+		for i := range proxy.Env {
+			if proxy.Env[i].Name == LinkerdProxyInboundPolicyEnv {
+				proxy.Env[i].Value = DesiredInboundPolicy(wave)
+				proxy.Env[i].ValueFrom = nil
 			}
 		}
 	}
