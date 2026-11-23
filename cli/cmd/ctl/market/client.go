@@ -326,8 +326,34 @@ func (c *MarketClient) executeRequest(hc *http.Client, req *http.Request) (*APIR
 	return &apiResp, nil
 }
 
+// reformatMarketAuthErr turns an auth-class status into the error the user
+// sees. A 403 that Market itself wrote (its JSON envelope with success=false)
+// is a business refusal, such as "shared apps can only be operated by
+// administrators": its sentence is the answer, so it is passed on as an
+// APIError. Any other 401/403/459 comes from the edge proxy and gets the
+// generic identity hint.
 func reformatMarketAuthErr(status int, respBody []byte, olaresID string) error {
+	if status == http.StatusForbidden {
+		if msg, ok := marketRefusalMessage(respBody); ok {
+			return &APIError{StatusCode: status, Message: msg}
+		}
+	}
 	return credential.FormatHTTPAuthError(status, respBody, olaresID)
+}
+
+// marketRefusalMessage reports the message of a Market error envelope. The
+// envelope is recognised by an explicit "success": false, which the edge
+// proxy's own error pages never carry.
+func marketRefusalMessage(body []byte) (string, bool) {
+	var envelope struct {
+		Success *bool  `json:"success"`
+		Message string `json:"message"`
+	}
+	if err := json.Unmarshal(body, &envelope); err != nil || envelope.Success == nil || *envelope.Success {
+		return "", false
+	}
+	msg := strings.TrimSpace(envelope.Message)
+	return msg, msg != ""
 }
 
 func (c *MarketClient) GetMarketData(ctx context.Context) (*APIResponse, error) {

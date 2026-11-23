@@ -19,9 +19,11 @@ func NewCmdMarketClone(f *cmdutil.Factory) *cobra.Command {
 		Use:   "clone {app-name}",
 		Short: "Clone a multi-instance app under a new desktop title",
 		Long: `Clone a catalog application to create a new instance with a
-different title (POST /apps/{name}/clone). The source app does not need
-to be installed. An app is cloneable when allowMultipleInstall or
-templateOnly is true; pre-flight check the source app first if unsure.
+different title (POST /apps/{name}/clone). An app is cloneable when
+allowMultipleInstall or templateOnly is true; pre-flight check the source
+app first if unsure. A templateOnly app can be cloned without installing
+it; any other app is cloned from your own running instance, so install it
+(and make sure it is running) first.
 
 --title is REQUIRED and feeds the cloned app's desktop shortcut title.
 For apps that expose multiple entrances, use --entrance-title NAME=TITLE
