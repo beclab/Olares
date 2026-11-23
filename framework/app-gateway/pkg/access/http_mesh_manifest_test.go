@@ -6,10 +6,35 @@ import (
 	"path/filepath"
 	"reflect"
 	"runtime"
+	"strings"
 	"testing"
 
 	"gopkg.in/yaml.v3"
 )
+
+func TestAutheliaStartupProbesSendTheTenantHeader(t *testing.T) {
+	_, file, _, _ := runtime.Caller(0)
+	root := filepath.Join(filepath.Dir(file), "../../../..")
+	for _, path := range []string{
+		"framework/authelia/.olares/config/user/helm-charts/auth/templates/auth_deploy.yaml",
+		"apps/.olares/config/user/helm-charts/system-apps/templates/olares-app.yaml",
+	} {
+		t.Run(filepath.Base(path), func(t *testing.T) {
+			data, err := os.ReadFile(filepath.Join(root, path))
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, probe, found := strings.Cut(string(data), "- name: check-auth\n")
+			setup, args, hasProbe := strings.Cut(probe, "until wget ")
+			args, _, _ = strings.Cut(args, "\n")
+			if !found || !hasProbe ||
+				!strings.Contains(setup, `url="http://authelia-backend.user-system-{{ .Values.bfl.username }}:9091/api/health"`) ||
+				!strings.Contains(args, `--header "X-BFL-USER: {{ .Values.bfl.username }}" "$url"; do`) {
+				t.Fatal("check-auth must wait for the tenant Authelia health endpoint using the same tenant in the request header")
+			}
+		})
+	}
+}
 
 func TestEntryMTLSIsScopedToTheDedicatedListener(t *testing.T) {
 	channel := readMeshManifest(t, "l4-mtls-channel.yaml")
