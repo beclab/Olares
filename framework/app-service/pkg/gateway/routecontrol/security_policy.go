@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strings"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -12,15 +13,20 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway"
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway/callerjwt"
 	srrv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/gateway/v1alpha1"
 )
 
 const (
-	SecurityPolicySuffix  = "-jwt-authn"
-	CallerJWTIssuer       = callerjwt.IssuerURL
-	CallerJWTAudience     = "app-gateway-data"
-	CallerJWTProviderName = "caller-jwt"
+	SecurityPolicySuffix       = "-jwt-authn"
+	ApplicationExtAuthSuffix   = "-extauth"
+	AutheliaBackendServiceName = "authelia-backend"
+	AutheliaVerifyPath         = "/api/verify/"
+	AutheliaBackendPort        = int32(9091)
+	CallerJWTIssuer            = callerjwt.IssuerURL
+	CallerJWTAudience          = "app-gateway-data"
+	CallerJWTProviderName      = "caller-jwt"
 	// Claim paths must match callerjwt nested JSON (Envoy treats '.' as path sep).
 	CallerJWTViewerClaim      = callerjwt.ClaimViewer
 	CallerJWTAppidClaim       = callerjwt.ClaimAppid
@@ -50,7 +56,14 @@ var securityPolicyGVK = schema.GroupVersionKind{
 
 // securityPolicyName returns the SecurityPolicy object name for an SRR.
 func securityPolicyName(srr *srrv1alpha1.SharedRouteRegistry) string {
+	if isApplicationSRR(srr) {
+		return srr.Name + ApplicationExtAuthSuffix
+	}
 	return srr.Name + SecurityPolicySuffix
+}
+
+func isApplicationSRR(srr *srrv1alpha1.SharedRouteRegistry) bool {
+	return srr != nil && srr.Spec.EntranceClass == srrv1alpha1.EntranceClassApplication
 }
 
 // desiredSharedRouteSecurityPolicy builds JWT authn for a Shared HTTPRoute.
@@ -123,11 +136,46 @@ func desiredSharedRouteSecurityPolicy(srr *srrv1alpha1.SharedRouteRegistry) *uns
 	}}
 }
 
+func srrAuthMode(srr *srrv1alpha1.SharedRouteRegistry) string {
+	if srr == nil {
+		return ""
+	}
+	if srr.Annotations != nil {
+		if m := strings.TrimSpace(srr.Annotations[gateway.AnnotationAuthMode]); m != "" {
+			return m
+		}
+	}
+	if isApplicationSRR(srr) {
+		return gateway.AuthModeExtAuth
+	}
+	return ""
+}
+
 func applySecurityPolicy(ctx context.Context, c client.Client, srr *srrv1alpha1.SharedRouteRegistry) error {
 	if srr == nil {
 		return fmt.Errorf("srr is nil")
 	}
-	desired := desiredSharedRouteSecurityPolicy(srr)
+	// Drop the alternate policy name if entrance class changed.
+	if isApplicationSRR(srr) {
+		_ = deleteSecurityPolicyByName(ctx, c, srr.Namespace, srr.Name+SecurityPolicySuffix)
+	} else {
+		_ = deleteSecurityPolicyByName(ctx, c, srr.Namespace, srr.Name+ApplicationExtAuthSuffix)
+	}
+
+	if isApplicationSRR(srr) && srrAuthMode(srr) == gateway.AuthModeNone {
+		return deleteSecurityPolicyByName(ctx, c, srr.Namespace, srr.Name+ApplicationExtAuthSuffix)
+	}
+
+	var desired *unstructured.Unstructured
+	if isApplicationSRR(srr) {
+		desired = desiredApplicationExtAuthSecurityPolicy(srr)
+		if desired == nil {
+			return fmt.Errorf("application SRR %s/%s missing %s for Authelia ExtAuth",
+				srr.Namespace, srr.Name, gateway.AnnotationExtAuthUser)
+		}
+	} else {
+		desired = desiredSharedRouteSecurityPolicy(srr)
+	}
 	current := &unstructured.Unstructured{}
 	current.SetGroupVersionKind(securityPolicyGVK)
 	key := types.NamespacedName{Namespace: srr.Namespace, Name: securityPolicyName(srr)}
@@ -151,6 +199,70 @@ func applySecurityPolicy(ctx context.Context, c client.Client, srr *srrv1alpha1.
 	return nil
 }
 
+// desiredApplicationExtAuthSecurityPolicy mirrors legacy L4 Authelia /api/verify/.
+func desiredApplicationExtAuthSecurityPolicy(srr *srrv1alpha1.SharedRouteRegistry) *unstructured.Unstructured {
+	if srr == nil {
+		return nil
+	}
+	user := ""
+	if srr.Annotations != nil {
+		user = strings.TrimSpace(srr.Annotations[gateway.AnnotationExtAuthUser])
+	}
+	if user == "" {
+		return nil
+	}
+	routeName := httpRouteName(srr)
+	autheliaNS := "user-system-" + user
+	return &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": "gateway.envoyproxy.io/v1alpha1",
+		"kind":       "SecurityPolicy",
+		"metadata": map[string]any{
+			"name":      securityPolicyName(srr),
+			"namespace": srr.Namespace,
+			"labels": map[string]any{
+				ManagedByLabel: ManagedByValue,
+				InstanceLabel:  srr.Name,
+			},
+		},
+		"spec": map[string]any{
+			"targetRef": map[string]any{
+				"group": "gateway.networking.k8s.io",
+				"kind":  "HTTPRoute",
+				"name":  routeName,
+			},
+			"extAuth": map[string]any{
+				"failOpen": false,
+				"headersToExtAuth": []any{
+					"authorization", "cookie", "x-forwarded-for", "x-authorization", "x-bfl-user",
+				},
+				"http": map[string]any{
+					"backendRefs": []any{
+						map[string]any{
+							"group":     "",
+							"kind":      "Service",
+							"name":      AutheliaBackendServiceName,
+							"namespace": autheliaNS,
+							"port":      int64(AutheliaBackendPort),
+						},
+					},
+					"path": AutheliaVerifyPath,
+				},
+			},
+		},
+	}}
+}
+
+func deleteSecurityPolicyByName(ctx context.Context, c client.Client, ns, name string) error {
+	obj := &unstructured.Unstructured{}
+	obj.SetGroupVersionKind(securityPolicyGVK)
+	obj.SetName(name)
+	obj.SetNamespace(ns)
+	if err := c.Delete(ctx, obj); err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+	return nil
+}
+
 func mergeSecurityPolicyMetadata(current, desired *unstructured.Unstructured) bool {
 	changed := false
 	labels := current.GetLabels()
@@ -168,14 +280,13 @@ func mergeSecurityPolicyMetadata(current, desired *unstructured.Unstructured) bo
 }
 
 func deleteSecurityPolicy(ctx context.Context, c client.Client, srr *srrv1alpha1.SharedRouteRegistry) error {
-	obj := &unstructured.Unstructured{}
-	obj.SetGroupVersionKind(securityPolicyGVK)
-	obj.SetName(securityPolicyName(srr))
-	obj.SetNamespace(srr.Namespace)
-	if err := c.Delete(ctx, obj); err != nil && !apierrors.IsNotFound(err) {
+	if srr == nil {
+		return nil
+	}
+	if err := deleteSecurityPolicyByName(ctx, c, srr.Namespace, srr.Name+SecurityPolicySuffix); err != nil {
 		return err
 	}
-	return nil
+	return deleteSecurityPolicyByName(ctx, c, srr.Namespace, srr.Name+ApplicationExtAuthSuffix)
 }
 
 // SecurityPolicySpecForTest exposes the built spec for unit tests.
@@ -188,6 +299,29 @@ func SecurityPolicySpecForTest(srr *srrv1alpha1.SharedRouteRegistry) map[string]
 // SecurityPolicyObjectMetaForTest exposes metadata for unit tests.
 func SecurityPolicyObjectMetaForTest(srr *srrv1alpha1.SharedRouteRegistry) metav1.ObjectMeta {
 	obj := desiredSharedRouteSecurityPolicy(srr)
+	return metav1.ObjectMeta{
+		Name:      obj.GetName(),
+		Namespace: obj.GetNamespace(),
+		Labels:    obj.GetLabels(),
+	}
+}
+
+// ApplicationExtAuthSecurityPolicySpecForTest exposes ExtAuth policy for tests.
+func ApplicationExtAuthSecurityPolicySpecForTest(srr *srrv1alpha1.SharedRouteRegistry) map[string]any {
+	obj := desiredApplicationExtAuthSecurityPolicy(srr)
+	if obj == nil {
+		return nil
+	}
+	spec, _ := obj.Object["spec"].(map[string]any)
+	return spec
+}
+
+// ApplicationExtAuthSecurityPolicyMetaForTest exposes ExtAuth metadata for tests.
+func ApplicationExtAuthSecurityPolicyMetaForTest(srr *srrv1alpha1.SharedRouteRegistry) metav1.ObjectMeta {
+	obj := desiredApplicationExtAuthSecurityPolicy(srr)
+	if obj == nil {
+		return metav1.ObjectMeta{}
+	}
 	return metav1.ObjectMeta{
 		Name:      obj.GetName(),
 		Namespace: obj.GetNamespace(),

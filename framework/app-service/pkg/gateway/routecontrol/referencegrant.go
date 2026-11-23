@@ -11,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway"
 	srrv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/gateway/v1alpha1"
 )
 
@@ -126,6 +127,22 @@ func applyJWKSReferenceGrant(ctx context.Context, c client.Client, srr *srrv1alp
 	if srr == nil {
 		return fmt.Errorf("srr is nil")
 	}
+	if isApplicationSRR(srr) {
+		if err := deleteJWKSReferenceGrantOnly(ctx, c, srr); err != nil {
+			return err
+		}
+		if srrAuthMode(srr) == gateway.AuthModeNone {
+			return deleteAutheliaReferenceGrant(ctx, c, srr)
+		}
+		return applyAutheliaReferenceGrant(ctx, c, srr)
+	}
+	if err := deleteAutheliaReferenceGrant(ctx, c, srr); err != nil {
+		return err
+	}
+	return applyJWKSReferenceGrantOnly(ctx, c, srr)
+}
+
+func applyJWKSReferenceGrantOnly(ctx context.Context, c client.Client, srr *srrv1alpha1.SharedRouteRegistry) error {
 	name := jwksReferenceGrantName(srr)
 	ns := CallerJWTJWKSServiceNamespace
 	desired := &unstructured.Unstructured{Object: map[string]any{
@@ -185,12 +202,116 @@ func deleteJWKSReferenceGrant(ctx context.Context, c client.Client, srr *srrv1al
 	if srr == nil {
 		return nil
 	}
+	if err := deleteJWKSReferenceGrantOnly(ctx, c, srr); err != nil {
+		return err
+	}
+	return deleteAutheliaReferenceGrant(ctx, c, srr)
+}
+
+func deleteJWKSReferenceGrantOnly(ctx context.Context, c client.Client, srr *srrv1alpha1.SharedRouteRegistry) error {
 	obj := &unstructured.Unstructured{}
 	obj.SetGroupVersionKind(referenceGrantGVK)
 	obj.SetName(jwksReferenceGrantName(srr))
 	obj.SetNamespace(CallerJWTJWKSServiceNamespace)
 	if err := c.Delete(ctx, obj); err != nil && !apierrors.IsNotFound(err) {
 		return fmt.Errorf("delete JWKS ReferenceGrant %s/%s: %w", obj.GetNamespace(), obj.GetName(), err)
+	}
+	return nil
+}
+
+func autheliaNSForSRR(srr *srrv1alpha1.SharedRouteRegistry) string {
+	if srr == nil || srr.Annotations == nil {
+		return ""
+	}
+	user := strings.TrimSpace(srr.Annotations[gateway.AnnotationExtAuthUser])
+	if user == "" {
+		return ""
+	}
+	return "user-system-" + user
+}
+
+func autheliaReferenceGrantName(srr *srrv1alpha1.SharedRouteRegistry) string {
+	const prefix = "allow-securitypolicy-authelia-"
+	raw := prefix + srr.Namespace
+	if len(raw) <= 63 {
+		return raw
+	}
+	return strings.TrimRight(raw[:63], "-")
+}
+
+// applyAutheliaReferenceGrant allows SecurityPolicy in the app namespace to
+// reference authelia-backend in user-system-<owner> (Envoy Gateway ExtAuth).
+func applyAutheliaReferenceGrant(ctx context.Context, c client.Client, srr *srrv1alpha1.SharedRouteRegistry) error {
+	ns := autheliaNSForSRR(srr)
+	if ns == "" {
+		return fmt.Errorf("application SRR %s/%s missing %s for Authelia ReferenceGrant",
+			srr.Namespace, srr.Name, gateway.AnnotationExtAuthUser)
+	}
+	name := autheliaReferenceGrantName(srr)
+	desired := &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": referenceGrantAPIVersion,
+		"kind":       "ReferenceGrant",
+		"metadata": map[string]any{
+			"name":      name,
+			"namespace": ns,
+			"labels": map[string]any{
+				ManagedByLabel: ManagedByValue,
+				InstanceLabel:  srr.Name,
+			},
+		},
+		"spec": map[string]any{
+			"from": []any{
+				map[string]any{
+					"group":     "gateway.envoyproxy.io",
+					"kind":      "SecurityPolicy",
+					"namespace": srr.Namespace,
+				},
+			},
+			"to": []any{
+				map[string]any{
+					"group": "",
+					"kind":  "Service",
+					"name":  AutheliaBackendServiceName,
+				},
+			},
+		},
+	}}
+	desired.SetGroupVersionKind(referenceGrantGVK)
+
+	current := &unstructured.Unstructured{}
+	current.SetGroupVersionKind(referenceGrantGVK)
+	err := c.Get(ctx, types.NamespacedName{Namespace: ns, Name: name}, current)
+	switch {
+	case apierrors.IsNotFound(err):
+		return c.Create(ctx, desired)
+	case err != nil:
+		return err
+	}
+	if !unstructuredSpecEqual(current.Object["spec"], desired.Object["spec"]) {
+		current.Object["spec"] = desired.Object["spec"]
+		labels := current.GetLabels()
+		if labels == nil {
+			labels = map[string]string{}
+		}
+		labels[ManagedByLabel] = ManagedByValue
+		labels[InstanceLabel] = srr.Name
+		current.SetLabels(labels)
+		return c.Update(ctx, current)
+	}
+	return nil
+}
+
+func deleteAutheliaReferenceGrant(ctx context.Context, c client.Client, srr *srrv1alpha1.SharedRouteRegistry) error {
+	ns := autheliaNSForSRR(srr)
+	if ns == "" {
+		return nil
+	}
+	obj := &unstructured.Unstructured{}
+	obj.SetGroupVersionKind(referenceGrantGVK)
+	obj.SetName(autheliaReferenceGrantName(srr))
+	obj.SetNamespace(ns)
+	if err := c.Delete(ctx, obj); err != nil && !apierrors.IsNotFound(err) {
+		return fmt.Errorf("delete Authelia ReferenceGrant %s/%s: %w", obj.GetNamespace(), obj.GetName(), err)
 	}
 	return nil
 }

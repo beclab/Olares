@@ -247,6 +247,7 @@ func ReconcileForEntrance(ctx context.Context, c client.Client, app *appv1alpha1
 					"gateway.olares.io/appid":      appid,
 					"gateway.olares.io/entrance":   entrance.Name,
 				},
+				Annotations: extAuthAnnotations(app),
 				OwnerReferences: ownerRefs(app),
 			},
 			Spec: spec,
@@ -271,6 +272,12 @@ func ReconcileForEntrance(ctx context.Context, c client.Client, app *appv1alpha1
 	patched.Labels["app.kubernetes.io/instance"] = app.Spec.Name
 	patched.Labels["gateway.olares.io/appid"] = appid
 	patched.Labels["gateway.olares.io/entrance"] = entrance.Name
+	if patched.Annotations == nil {
+		patched.Annotations = map[string]string{}
+	}
+	for k, v := range extAuthAnnotations(app) {
+		patched.Annotations[k] = v
+	}
 
 	if err := c.Patch(ctx, patched, client.MergeFrom(got)); err != nil {
 		return nil, fmt.Errorf("patch SRR %s/%s: %w", ns, name, err)
@@ -346,6 +353,28 @@ func DeleteAllForApp(ctx context.Context, c client.Client, app *appv1alpha1.Appl
 		}
 	}
 	return nil
+}
+
+const (
+	AnnotationExtAuthUser   = "gateway.olares.io/extauth-user"
+	AnnotationAuthMode      = "gateway.olares.io/auth-mode"
+	AnnotationStampBFLUser  = "gateway.olares.io/stamp-x-bfl-user"
+	AuthModeExtAuth         = "extauth"
+	AuthModeNone            = "none"
+	LabelSystemPlane        = "gateway.olares.io/system-plane"
+	LabelSystemPlaneValue   = "true"
+	SystemPlaneInstance     = "system-plane"
+)
+
+func extAuthAnnotations(app *appv1alpha1.Application) map[string]string {
+	if app == nil {
+		return nil
+	}
+	owner := strings.TrimSpace(app.Spec.Owner)
+	if owner == "" {
+		return nil
+	}
+	return map[string]string{AnnotationExtAuthUser: owner}
 }
 
 func ownerRefs(app *appv1alpha1.Application) []metav1.OwnerReference {
