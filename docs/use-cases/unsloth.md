@@ -351,7 +351,7 @@ Unloading does not change the app's Olares Memory slicing quota. To make that qu
 
 ### What happens to existing models when I upgrade?
 
-Upgrades retain downloaded model files, application data, and saved Studio settings. The service restarts during the upgrade, so reload your model afterward. Saved automatic unloading settings continue to override the app's default timeout. See [Why is VRAM still occupied after a response finishes?](#why-is-vram-still-occupied-after-a-response-finishes).
+Upgrades retain downloaded model files, application data, and saved Studio settings. The service restarts during the upgrade, so reload your model afterward. Saved automatic unloading settings continue to override the app's default timeout. See [VRAM usage after a response finishes](#why-is-vram-still-occupied-after-a-response-finishes).
 
 ### Can I update llama.cpp inside Unsloth?
 

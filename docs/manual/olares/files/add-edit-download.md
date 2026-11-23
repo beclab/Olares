@@ -169,7 +169,7 @@ Deleted files cannot be recovered.
    - Click <i class="material-symbols-outlined">more_horiz</i> in the top right corner and select **Delete**.
 3. Confirm the deletion in the popup window.
 
-   If the folder is shared or contains shared folders, Files also asks you to confirm that the affected shares will be canceled. Continue only if you want to cancel those shares and delete the folder. See [What happens to shares when I rename, move, or delete a folder?](share-files.md#what-happens-to-shares-when-i-rename-move-or-delete-a-folder).
+   If the folder is shared or contains shared folders, Files also asks you to confirm that the affected shares will be canceled. Continue only if you want to cancel those shares and delete the folder. See [How renaming, moving, or deleting folders affects shares](share-files.md#what-happens-to-shares-when-i-rename-move-or-delete-a-folder).
 
 ## Shortcuts
 

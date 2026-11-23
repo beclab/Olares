@@ -82,7 +82,7 @@ Hindsight connects to Router with its default settings. You do not need to enter
    {"status":"healthy","database":"connected","db_acquire_ms":1.4,"db_pool_waiting":0,"db_pool_in_use":0,"db_pool_max":100,"db_pool_idle":1}
    ```
 
-   The values `"status":"healthy"` and `"database":"connected"` confirm that Hermes can reach the API and Hindsight can connect to its database. For a sign-in page or redirect, see [Why does the API health check show a login prompt?](#why-does-the-api-health-check-show-a-login-prompt).
+   The values `"status":"healthy"` and `"database":"connected"` confirm that Hermes can reach the API and Hindsight can connect to its database. For a sign-in page or redirect, see [Troubleshoot login prompts during API health checks](#why-does-the-api-health-check-show-a-login-prompt).
 
 ## Connect Hermes Agent
 

@@ -52,7 +52,7 @@ Here is how the two RTX 5090 variants compare:
 
 The desktop RTX 5090 offers more capacity for larger models and more parallel computing resources. The mobile version balances local AI capability with the power and space requirements of an always-on home device.
 
-GPU specifications are from NVIDIA's [laptop GPU comparison](https://www.nvidia.com/en-us/geforce/laptops/compare/) and [desktop RTX 5090 specifications](https://www.nvidia.com/en-us/geforce/graphics-cards/50-series/rtx-5090/). For Olares One power modes, see [What is the power consumption?](#what-is-the-power-consumption).
+GPU specifications are from NVIDIA's [laptop GPU comparison](https://www.nvidia.com/en-us/geforce/laptops/compare/) and [desktop RTX 5090 specifications](https://www.nvidia.com/en-us/geforce/graphics-cards/50-series/rtx-5090/). For Olares One power modes, see [Power consumption](#what-is-the-power-consumption).
 
 For measured LLM performance, image and video generation times, and test configurations, see [Olares One AI benchmarks](https://www.olares.com/benchmarks/hardware/olares-one).
 
@@ -110,7 +110,7 @@ Component layout and thickness can vary between capacities and versions within t
 
 Only the factory-installed SSD has been validated in Olares One. Thermal performance and compatibility of other models remain unverified.
 
-For slot availability, see [Is it possible to upgrade or expand the hardware?](#is-it-possible-to-upgrade-or-expand-the-hardware). To add an installed SSD to Olares OS storage, see [Expand storage with an internal SSD](expand-storage-internal-ssd.md).
+For slot availability, see [Hardware expansion options](#is-it-possible-to-upgrade-or-expand-the-hardware). To add an installed SSD to Olares OS storage, see [Expand storage with an internal SSD](expand-storage-internal-ssd.md).
 
 ### Can I use an eGPU with Olares One?
 
