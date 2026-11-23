@@ -84,3 +84,31 @@ func TestBuildUserVirtualHostsEdgeModeOnlyEdgeForward(t *testing.T) {
 		}
 	}
 }
+
+func TestEdgeForwardDenyAllUsesExactPublicHosts(t *testing.T) {
+	tr := &Translator{cfg: &Config{AppGatewayMTLS: true}}
+	user := &message.UserInfo{
+		Name: "alice", DenyAll: true,
+		AllowedDomains:    []string{"PUBLIC.alice.olares.com", "*.alice.olares.com", "other.example.org", "blog.example.com"},
+		CustomDomainCerts: []*message.CertInfo{{Domain: "blog.example.com"}},
+	}
+	vhosts := tr.buildEdgeForwardVirtualHosts(user, "alice.olares.com", make(map[string]*ir.ClusterIR))
+	tr.applyDenyAllRestrictions(user, vhosts, nil)
+	got := make(map[string]bool)
+	for _, vh := range vhosts {
+		for _, host := range vh.Domains {
+			got[host] = len(vh.SourceCIDRs) == 0
+		}
+	}
+	for host, want := range map[string]bool{
+		"public.alice.olares.com": true, "blog.example.com": true,
+		"*.alice.olares.com": false, "alice.olares.com": false, "*.alice.olares.local": false,
+	} {
+		if allowed, exists := got[host]; !exists || allowed != want {
+			t.Errorf("host %s: exists=%v public=%v, want public=%v", host, exists, allowed, want)
+		}
+	}
+	if _, ok := got["other.example.org"]; ok {
+		t.Fatal("foreign host was added to the route table")
+	}
+}
