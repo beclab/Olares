@@ -93,6 +93,9 @@ func reconcileProjectedPolicy(ctx context.Context, c client.Client, p PolicySpec
 
 func applyProjections(ctx context.Context, c client.Client, desired []DesiredObject) error {
 	for _, d := range desired {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		existing := &unstructured.Unstructured{}
 		existing.SetGroupVersionKind(d.GVK)
 		err := c.Get(ctx, types.NamespacedName{Namespace: d.Namespace, Name: d.Name}, existing)

@@ -8,6 +8,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/access"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 
 	restfulspec "github.com/emicklei/go-restful-openapi/v2"
@@ -88,7 +89,10 @@ func (s *APIServer) PrepareRun(ksHost string, kubeConfig *rest.Config, client cl
 	s.installAPIDocs()
 
 	s.Server.Handler = s.container
-	s.SSLServer.Handler = s.container
+	tlsMux := http.NewServeMux()
+	tlsMux.HandleFunc(access.CatalogWebhookPath, access.CatalogAdmissionHandler)
+	tlsMux.Handle("/", s.container)
+	s.SSLServer.Handler = tlsMux
 
 	return nil
 }

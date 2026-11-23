@@ -12,6 +12,7 @@ import (
 	iamv1alpha2 "github.com/beclab/api/iam/v1alpha2"
 
 	"github.com/beclab/Olares/framework/app-service/controllers"
+	"github.com/beclab/Olares/framework/app-service/pkg/access"
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/appinstaller"
@@ -62,6 +63,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 var (
@@ -89,6 +91,7 @@ const (
 )
 
 func main() {
+	accessWriterPodUID := os.Getenv("APP_SERVICE_POD_UID")
 	var metricsAddr string
 	var enableLeaderElection bool
 	var probeAddr string
@@ -211,7 +214,6 @@ func main() {
 		setupLog.Error(err, "Unable to create controller", "controller", "DeviceInventory")
 		os.Exit(1)
 	}
-
 
 	// ---------------------------------------------------------------
 	// applifecycle Runner wiring — LIVE MODE (cutover complete).
@@ -541,6 +543,13 @@ func main() {
 		epInterval,
 	); err != nil {
 		setupLog.Error(err, "Waiting for webhook service endpoint interrupted")
+		os.Exit(1)
+	}
+
+	if err := mgr.Add(manager.RunnableFunc(func(ctx context.Context) error {
+		return access.RunCoordinator(ctx, config, scheme, accessWriterPodUID)
+	})); err != nil {
+		setupLog.Error(err, "Unable to register access policy coordinator")
 		os.Exit(1)
 	}
 

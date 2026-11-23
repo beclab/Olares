@@ -64,10 +64,14 @@ type boundPolicy struct {
 }
 
 func readBinding(u *unstructured.Unstructured) (boundPolicy, error) {
-	if u == nil || u.GetNamespace() != AdmissionTLSNamespace || u.GetUID() == "" || u.GroupVersionKind() != accessGVK("AppAccessPolicy") {
-		return boundPolicy{}, fmt.Errorf("expected a persisted AppAccessPolicy in %s", AdmissionTLSNamespace)
+	if u == nil || u.GetNamespace() != PolicyNamespace || u.GetUID() == "" || u.GroupVersionKind() != accessGVK("AppAccessPolicy") {
+		return boundPolicy{}, fmt.Errorf("expected a persisted AppAccessPolicy in %s", PolicyNamespace)
 	}
 	b := objectMap(u.Object, "spec", "binding")
+	requestUID := bindingRef(b, "requestRef").UID
+	if requestUID == "" || u.GetName() != "request-"+requestUID {
+		return boundPolicy{}, fmt.Errorf("grant name must be bound to its approval request UID")
+	}
 	source, target, scope := objectMap(b, "source"), objectMap(b, "target"), objectMap(b, "accessScope")
 	p := PolicySpec{
 		Name:              u.GetName(),
@@ -91,7 +95,7 @@ func readBinding(u *unstructured.Unstructured) (boundPolicy, error) {
 }
 
 func (b boundPolicy) stillActive(ctx context.Context, c client.Client) error {
-	u, err := boundObject(ctx, c, AdmissionTLSNamespace, accessGVK("AppAccessPolicy"), objectBinding{b.policy.Name, b.uid})
+	u, err := boundObject(ctx, c, PolicyNamespace, accessGVK("AppAccessPolicy"), objectBinding{b.policy.Name, b.uid})
 	if err != nil {
 		return err
 	}
@@ -108,7 +112,7 @@ func (b *boundPolicy) resolve(ctx context.Context, c client.Client) error {
 	if value(b.scope, "userContext") != "WorkloadOnly" || objectMap(b.binding, "systemRuleRef") != nil {
 		return fmt.Errorf("grant requires a verified-user or signed-system authority that is not configured")
 	}
-	req, err := boundObject(ctx, c, AdmissionTLSNamespace, accessGVK("AppAccessRequest"), bindingRef(b.binding, "requestRef"))
+	req, err := boundObject(ctx, c, PolicyNamespace, accessGVK("AppAccessRequest"), bindingRef(b.binding, "requestRef"))
 	if err != nil {
 		return err
 	}
@@ -116,7 +120,7 @@ func (b *boundPolicy) resolve(ctx context.Context, c client.Client) error {
 		return err
 	}
 
-	catalog, err := boundObject(ctx, c, AdmissionTLSNamespace, accessGVK("AppCapabilitySet"), bindingRef(b.target, "capabilitySetRef"))
+	catalog, err := boundObject(ctx, c, PolicyNamespace, accessGVK("AppCapabilitySet"), bindingRef(b.target, "capabilitySetRef"))
 	if err != nil {
 		return err
 	}
