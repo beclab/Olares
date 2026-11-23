@@ -318,7 +318,9 @@ func (t *Translator) applyDenyAllRestrictions(user *message.UserInfo, vhosts []*
 
 	allowedSet := make(map[string]bool, len(user.AllowedDomains))
 	for _, d := range user.AllowedDomains {
-		allowedSet[d] = true
+		if d = strings.ToLower(strings.TrimSpace(d)); !strings.Contains(d, "*") {
+			allowedSet[d] = true
+		}
 	}
 	ephemeralDomainSet := make(map[string]bool)
 	for _, vh := range extraVHosts {
@@ -339,7 +341,7 @@ func (t *Translator) applyDenyAllRestrictions(user *message.UserInfo, vhosts []*
 	for _, vh := range vhosts {
 		isAllowed := false
 		for _, d := range vh.Domains {
-			if allowedSet[d] || ephemeralDomainSet[d] {
+			if allowedSet[strings.ToLower(d)] || ephemeralDomainSet[d] {
 				isAllowed = true
 				break
 			}

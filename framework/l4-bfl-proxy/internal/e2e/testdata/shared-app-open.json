@@ -55,33 +55,6 @@
       }
     },
     {
-      "name": "app_admin_shareme_web",
-      "type": "STRICT_DNS",
-      "connectTimeout": "5s",
-      "loadAssignment": {
-        "clusterName": "app_admin_shareme_web",
-        "endpoints": [
-          {
-            "lbEndpoints": [
-              {
-                "endpoint": {
-                  "address": {
-                    "socketAddress": {
-                      "address": "shareme-svc.shareme-shared.svc.cluster.local",
-                      "portValue": 8080
-                    }
-                  }
-                }
-              }
-            ]
-          }
-        ]
-      },
-      "commonHttpProtocolOptions": {
-        "idleTimeout": "10s"
-      }
-    },
-    {
       "name": "nonapp_auth_admin",
       "type": "STRICT_DNS",
       "connectTimeout": "5s",
@@ -163,6 +136,33 @@
       }
     },
     {
+      "name": "app_admin_shareme_web",
+      "type": "STRICT_DNS",
+      "connectTimeout": "5s",
+      "loadAssignment": {
+        "clusterName": "app_admin_shareme_web",
+        "endpoints": [
+          {
+            "lbEndpoints": [
+              {
+                "endpoint": {
+                  "address": {
+                    "socketAddress": {
+                      "address": "shareme-svc.shareme-shared.svc.cluster.local",
+                      "portValue": 8080
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "commonHttpProtocolOptions": {
+        "idleTimeout": "10s"
+      }
+    },
+    {
       "name": "profile_service_alice",
       "type": "STRICT_DNS",
       "connectTimeout": "5s",
@@ -204,33 +204,6 @@
                     "socketAddress": {
                       "address": "authelia-backend.user-system-alice.svc.cluster.local",
                       "portValue": 9091
-                    }
-                  }
-                }
-              }
-            ]
-          }
-        ]
-      },
-      "commonHttpProtocolOptions": {
-        "idleTimeout": "10s"
-      }
-    },
-    {
-      "name": "app_alice_shareme_web",
-      "type": "STRICT_DNS",
-      "connectTimeout": "5s",
-      "loadAssignment": {
-        "clusterName": "app_alice_shareme_web",
-        "endpoints": [
-          {
-            "lbEndpoints": [
-              {
-                "endpoint": {
-                  "address": {
-                    "socketAddress": {
-                      "address": "shareme-svc.shareme-shared.svc.cluster.local",
-                      "portValue": 8080
                     }
                   }
                 }
@@ -325,6 +298,33 @@
       }
     },
     {
+      "name": "app_alice_shareme_web",
+      "type": "STRICT_DNS",
+      "connectTimeout": "5s",
+      "loadAssignment": {
+        "clusterName": "app_alice_shareme_web",
+        "endpoints": [
+          {
+            "lbEndpoints": [
+              {
+                "endpoint": {
+                  "address": {
+                    "socketAddress": {
+                      "address": "shareme-svc.shareme-shared.svc.cluster.local",
+                      "portValue": 8080
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "commonHttpProtocolOptions": {
+        "idleTimeout": "10s"
+      }
+    },
+    {
       "name": "profile_service_bob",
       "type": "STRICT_DNS",
       "connectTimeout": "5s",
@@ -366,33 +366,6 @@
                     "socketAddress": {
                       "address": "authelia-backend.user-system-bob.svc.cluster.local",
                       "portValue": 9091
-                    }
-                  }
-                }
-              }
-            ]
-          }
-        ]
-      },
-      "commonHttpProtocolOptions": {
-        "idleTimeout": "10s"
-      }
-    },
-    {
-      "name": "app_bob_shareme_web",
-      "type": "STRICT_DNS",
-      "connectTimeout": "5s",
-      "loadAssignment": {
-        "clusterName": "app_bob_shareme_web",
-        "endpoints": [
-          {
-            "lbEndpoints": [
-              {
-                "endpoint": {
-                  "address": {
-                    "socketAddress": {
-                      "address": "shareme-svc.shareme-shared.svc.cluster.local",
-                      "portValue": 8080
                     }
                   }
                 }
@@ -474,6 +447,33 @@
                     "socketAddress": {
                       "address": "wizard.user-space-bob.svc.cluster.local",
                       "portValue": 80
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "commonHttpProtocolOptions": {
+        "idleTimeout": "10s"
+      }
+    },
+    {
+      "name": "app_bob_shareme_web",
+      "type": "STRICT_DNS",
+      "connectTimeout": "5s",
+      "loadAssignment": {
+        "clusterName": "app_bob_shareme_web",
+        "endpoints": [
+          {
+            "lbEndpoints": [
+              {
+                "endpoint": {
+                  "address": {
+                    "socketAddress": {
+                      "address": "shareme-svc.shareme-shared.svc.cluster.local",
+                      "portValue": 8080
                     }
                   }
                 }
@@ -2100,45 +2100,6 @@
           }
         },
         {
-          "name": "app_admin_shareme_web",
-          "domains": [
-            "shareme.admin.snowinning.com",
-            "shareme.admin.olares.local"
-          ],
-          "routes": [
-            {
-              "name": "default_admin_shareme_web",
-              "match": {
-                "prefix": "/"
-              },
-              "route": {
-                "cluster": "app_admin_shareme_web",
-                "timeout": "300s",
-                "upgradeConfigs": [
-                  {
-                    "upgradeType": "websocket"
-                  },
-                  {
-                    "upgradeType": "tailscale-control-protocol"
-                  }
-                ]
-              },
-              "typedPerFilterConfig": {
-                "envoy.filters.http.ext_authz": {
-                  "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
-                  "checkSettings": {}
-                }
-              }
-            }
-          ],
-          "typedPerFilterConfig": {
-            "envoy.filters.http.ext_authz": {
-              "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
-              "disabled": true
-            }
-          }
-        },
-        {
           "name": "nonapp_auth_admin",
           "domains": [
             "auth.admin.snowinning.com",
@@ -2252,6 +2213,45 @@
                   "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
                 }
               ]
+            }
+          ],
+          "typedPerFilterConfig": {
+            "envoy.filters.http.ext_authz": {
+              "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+              "disabled": true
+            }
+          }
+        },
+        {
+          "name": "app_admin_shareme_web",
+          "domains": [
+            "shareme.admin.snowinning.com",
+            "shareme.admin.olares.local"
+          ],
+          "routes": [
+            {
+              "name": "default_admin_shareme_web",
+              "match": {
+                "prefix": "/"
+              },
+              "route": {
+                "cluster": "app_admin_shareme_web",
+                "timeout": "300s",
+                "upgradeConfigs": [
+                  {
+                    "upgradeType": "websocket"
+                  },
+                  {
+                    "upgradeType": "tailscale-control-protocol"
+                  }
+                ]
+              },
+              "typedPerFilterConfig": {
+                "envoy.filters.http.ext_authz": {
+                  "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+                  "checkSettings": {}
+                }
+              }
             }
           ],
           "typedPerFilterConfig": {
@@ -2410,45 +2410,6 @@
           }
         },
         {
-          "name": "app_alice_shareme_web",
-          "domains": [
-            "shareme.alice.snowinning.com",
-            "shareme.alice.olares.local"
-          ],
-          "routes": [
-            {
-              "name": "default_alice_shareme_web",
-              "match": {
-                "prefix": "/"
-              },
-              "route": {
-                "cluster": "app_alice_shareme_web",
-                "timeout": "300s",
-                "upgradeConfigs": [
-                  {
-                    "upgradeType": "websocket"
-                  },
-                  {
-                    "upgradeType": "tailscale-control-protocol"
-                  }
-                ]
-              },
-              "typedPerFilterConfig": {
-                "envoy.filters.http.ext_authz": {
-                  "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
-                  "checkSettings": {}
-                }
-              }
-            }
-          ],
-          "typedPerFilterConfig": {
-            "envoy.filters.http.ext_authz": {
-              "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
-              "disabled": true
-            }
-          }
-        },
-        {
           "name": "nonapp_auth_alice",
           "domains": [
             "auth.alice.snowinning.com",
@@ -2562,6 +2523,45 @@
                   "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
                 }
               ]
+            }
+          ],
+          "typedPerFilterConfig": {
+            "envoy.filters.http.ext_authz": {
+              "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+              "disabled": true
+            }
+          }
+        },
+        {
+          "name": "app_alice_shareme_web",
+          "domains": [
+            "shareme.alice.snowinning.com",
+            "shareme.alice.olares.local"
+          ],
+          "routes": [
+            {
+              "name": "default_alice_shareme_web",
+              "match": {
+                "prefix": "/"
+              },
+              "route": {
+                "cluster": "app_alice_shareme_web",
+                "timeout": "300s",
+                "upgradeConfigs": [
+                  {
+                    "upgradeType": "websocket"
+                  },
+                  {
+                    "upgradeType": "tailscale-control-protocol"
+                  }
+                ]
+              },
+              "typedPerFilterConfig": {
+                "envoy.filters.http.ext_authz": {
+                  "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+                  "checkSettings": {}
+                }
+              }
             }
           ],
           "typedPerFilterConfig": {
@@ -2720,45 +2720,6 @@
           }
         },
         {
-          "name": "app_bob_shareme_web",
-          "domains": [
-            "shareme.bob.snowinning.com",
-            "shareme.bob.olares.local"
-          ],
-          "routes": [
-            {
-              "name": "default_bob_shareme_web",
-              "match": {
-                "prefix": "/"
-              },
-              "route": {
-                "cluster": "app_bob_shareme_web",
-                "timeout": "300s",
-                "upgradeConfigs": [
-                  {
-                    "upgradeType": "websocket"
-                  },
-                  {
-                    "upgradeType": "tailscale-control-protocol"
-                  }
-                ]
-              },
-              "typedPerFilterConfig": {
-                "envoy.filters.http.ext_authz": {
-                  "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
-                  "checkSettings": {}
-                }
-              }
-            }
-          ],
-          "typedPerFilterConfig": {
-            "envoy.filters.http.ext_authz": {
-              "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
-              "disabled": true
-            }
-          }
-        },
-        {
           "name": "nonapp_auth_bob",
           "domains": [
             "auth.bob.snowinning.com",
@@ -2872,6 +2833,45 @@
                   "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
                 }
               ]
+            }
+          ],
+          "typedPerFilterConfig": {
+            "envoy.filters.http.ext_authz": {
+              "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+              "disabled": true
+            }
+          }
+        },
+        {
+          "name": "app_bob_shareme_web",
+          "domains": [
+            "shareme.bob.snowinning.com",
+            "shareme.bob.olares.local"
+          ],
+          "routes": [
+            {
+              "name": "default_bob_shareme_web",
+              "match": {
+                "prefix": "/"
+              },
+              "route": {
+                "cluster": "app_bob_shareme_web",
+                "timeout": "300s",
+                "upgradeConfigs": [
+                  {
+                    "upgradeType": "websocket"
+                  },
+                  {
+                    "upgradeType": "tailscale-control-protocol"
+                  }
+                ]
+              },
+              "typedPerFilterConfig": {
+                "envoy.filters.http.ext_authz": {
+                  "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+                  "checkSettings": {}
+                }
+              }
             }
           ],
           "typedPerFilterConfig": {
@@ -3030,45 +3030,6 @@
           }
         },
         {
-          "name": "app_admin_shareme_web",
-          "domains": [
-            "shareme.admin.snowinning.com",
-            "shareme.admin.olares.local"
-          ],
-          "routes": [
-            {
-              "name": "default_admin_shareme_web",
-              "match": {
-                "prefix": "/"
-              },
-              "route": {
-                "cluster": "app_admin_shareme_web",
-                "timeout": "300s",
-                "upgradeConfigs": [
-                  {
-                    "upgradeType": "websocket"
-                  },
-                  {
-                    "upgradeType": "tailscale-control-protocol"
-                  }
-                ]
-              },
-              "typedPerFilterConfig": {
-                "envoy.filters.http.ext_authz": {
-                  "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
-                  "checkSettings": {}
-                }
-              }
-            }
-          ],
-          "typedPerFilterConfig": {
-            "envoy.filters.http.ext_authz": {
-              "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
-              "disabled": true
-            }
-          }
-        },
-        {
           "name": "nonapp_auth_admin",
           "domains": [
             "auth.admin.snowinning.com",
@@ -3182,6 +3143,45 @@
                   "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
                 }
               ]
+            }
+          ],
+          "typedPerFilterConfig": {
+            "envoy.filters.http.ext_authz": {
+              "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+              "disabled": true
+            }
+          }
+        },
+        {
+          "name": "app_admin_shareme_web",
+          "domains": [
+            "shareme.admin.snowinning.com",
+            "shareme.admin.olares.local"
+          ],
+          "routes": [
+            {
+              "name": "default_admin_shareme_web",
+              "match": {
+                "prefix": "/"
+              },
+              "route": {
+                "cluster": "app_admin_shareme_web",
+                "timeout": "300s",
+                "upgradeConfigs": [
+                  {
+                    "upgradeType": "websocket"
+                  },
+                  {
+                    "upgradeType": "tailscale-control-protocol"
+                  }
+                ]
+              },
+              "typedPerFilterConfig": {
+                "envoy.filters.http.ext_authz": {
+                  "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+                  "checkSettings": {}
+                }
+              }
             }
           ],
           "typedPerFilterConfig": {
@@ -3340,45 +3340,6 @@
           }
         },
         {
-          "name": "app_alice_shareme_web",
-          "domains": [
-            "shareme.alice.snowinning.com",
-            "shareme.alice.olares.local"
-          ],
-          "routes": [
-            {
-              "name": "default_alice_shareme_web",
-              "match": {
-                "prefix": "/"
-              },
-              "route": {
-                "cluster": "app_alice_shareme_web",
-                "timeout": "300s",
-                "upgradeConfigs": [
-                  {
-                    "upgradeType": "websocket"
-                  },
-                  {
-                    "upgradeType": "tailscale-control-protocol"
-                  }
-                ]
-              },
-              "typedPerFilterConfig": {
-                "envoy.filters.http.ext_authz": {
-                  "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
-                  "checkSettings": {}
-                }
-              }
-            }
-          ],
-          "typedPerFilterConfig": {
-            "envoy.filters.http.ext_authz": {
-              "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
-              "disabled": true
-            }
-          }
-        },
-        {
           "name": "nonapp_auth_alice",
           "domains": [
             "auth.alice.snowinning.com",
@@ -3492,6 +3453,45 @@
                   "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
                 }
               ]
+            }
+          ],
+          "typedPerFilterConfig": {
+            "envoy.filters.http.ext_authz": {
+              "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+              "disabled": true
+            }
+          }
+        },
+        {
+          "name": "app_alice_shareme_web",
+          "domains": [
+            "shareme.alice.snowinning.com",
+            "shareme.alice.olares.local"
+          ],
+          "routes": [
+            {
+              "name": "default_alice_shareme_web",
+              "match": {
+                "prefix": "/"
+              },
+              "route": {
+                "cluster": "app_alice_shareme_web",
+                "timeout": "300s",
+                "upgradeConfigs": [
+                  {
+                    "upgradeType": "websocket"
+                  },
+                  {
+                    "upgradeType": "tailscale-control-protocol"
+                  }
+                ]
+              },
+              "typedPerFilterConfig": {
+                "envoy.filters.http.ext_authz": {
+                  "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+                  "checkSettings": {}
+                }
+              }
             }
           ],
           "typedPerFilterConfig": {
@@ -3650,45 +3650,6 @@
           }
         },
         {
-          "name": "app_bob_shareme_web",
-          "domains": [
-            "shareme.bob.snowinning.com",
-            "shareme.bob.olares.local"
-          ],
-          "routes": [
-            {
-              "name": "default_bob_shareme_web",
-              "match": {
-                "prefix": "/"
-              },
-              "route": {
-                "cluster": "app_bob_shareme_web",
-                "timeout": "300s",
-                "upgradeConfigs": [
-                  {
-                    "upgradeType": "websocket"
-                  },
-                  {
-                    "upgradeType": "tailscale-control-protocol"
-                  }
-                ]
-              },
-              "typedPerFilterConfig": {
-                "envoy.filters.http.ext_authz": {
-                  "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
-                  "checkSettings": {}
-                }
-              }
-            }
-          ],
-          "typedPerFilterConfig": {
-            "envoy.filters.http.ext_authz": {
-              "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
-              "disabled": true
-            }
-          }
-        },
-        {
           "name": "nonapp_auth_bob",
           "domains": [
             "auth.bob.snowinning.com",
@@ -3802,6 +3763,45 @@
                   "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
                 }
               ]
+            }
+          ],
+          "typedPerFilterConfig": {
+            "envoy.filters.http.ext_authz": {
+              "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+              "disabled": true
+            }
+          }
+        },
+        {
+          "name": "app_bob_shareme_web",
+          "domains": [
+            "shareme.bob.snowinning.com",
+            "shareme.bob.olares.local"
+          ],
+          "routes": [
+            {
+              "name": "default_bob_shareme_web",
+              "match": {
+                "prefix": "/"
+              },
+              "route": {
+                "cluster": "app_bob_shareme_web",
+                "timeout": "300s",
+                "upgradeConfigs": [
+                  {
+                    "upgradeType": "websocket"
+                  },
+                  {
+                    "upgradeType": "tailscale-control-protocol"
+                  }
+                ]
+              },
+              "typedPerFilterConfig": {
+                "envoy.filters.http.ext_authz": {
+                  "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+                  "checkSettings": {}
+                }
+              }
             }
           ],
           "typedPerFilterConfig": {
