@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -30,9 +31,11 @@ func (r *SharedRouteReconciler) Reconcile(ctx context.Context, req reconcile.Req
 	}
 	srr := &srrv1alpha1.SharedRouteRegistry{}
 	if err := r.Client.Get(ctx, req.NamespacedName, srr); err != nil {
-		// Deleted: owner-ref GC removes the HTTPRoute; the shared NP/RG are
-		// reclaimed when sibling SRRs reconcile.
-		return reconcile.Result{}, client.IgnoreNotFound(err)
+		if apierrors.IsNotFound(err) {
+			// Owner references cannot cover transport policies in another namespace.
+			return reconcile.Result{}, pruneMeshTransport(ctx, r.Client, req.NamespacedName, nil)
+		}
+		return reconcile.Result{}, err
 	}
 
 	res, rerr := ReconcileSharedRoute(ctx, r.Client, GatewayRef{}, srr)
