@@ -2,9 +2,13 @@ package routecontrol
 
 import (
 	"context"
+	"fmt"
+	"net/netip"
+	"slices"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/mesh"
-	"github.com/beclab/Olares/framework/app-service/pkg/security"
+	"github.com/beclab/Olares/framework/app-service/pkg/utils"
+	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -58,7 +62,11 @@ func (r *GatewayInClusterIngressNPReconciler) Reconcile(ctx context.Context, _ r
 
 // EnsureInClusterCallerIngressNP creates or updates the managed ingress NP.
 func EnsureInClusterCallerIngressNP(ctx context.Context, c client.Client) error {
-	desired := desiredInClusterCallerIngressNP()
+	var nodes corev1.NodeList
+	if err := c.List(ctx, &nodes); err != nil {
+		return fmt.Errorf("list nodes for gateway ingress: %w", err)
+	}
+	desired := desiredInClusterCallerIngressNP(nodes.Items)
 	current := &networkingv1.NetworkPolicy{}
 	key := types.NamespacedName{Namespace: defaultGatewayNS, Name: InClusterCallerIngressNPName}
 	err := c.Get(ctx, key, current)
@@ -77,9 +85,9 @@ func EnsureInClusterCallerIngressNP(ctx context.Context, c client.Client) error 
 	return c.Update(ctx, current)
 }
 
-func desiredInClusterCallerIngressNP() *networkingv1.NetworkPolicy {
+func desiredInClusterCallerIngressNP(nodes []corev1.Node) *networkingv1.NetworkPolicy {
 	existsOp := metav1.LabelSelectorOpExists
-	return &networkingv1.NetworkPolicy{
+	desired := &networkingv1.NetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      InClusterCallerIngressNPName,
 			Namespace: defaultGatewayNS,
@@ -117,12 +125,27 @@ func desiredInClusterCallerIngressNP() *networkingv1.NetworkPolicy {
 						},
 					},
 				},
-				{
-					From: security.NodeTunnelRule(),
-				},
 			},
 		},
 	}
+	// An ingress rule with no peers admits every source. Only add this
+	// rule when the node inventory provides at least one valid tunnel IP.
+	var cidrs []string
+	for _, node := range nodes {
+		ip, err := netip.ParseAddr(node.Annotations[utils.CalicoTunnelAddrAnnotation])
+		if err == nil && ip.Zone() == "" {
+			cidrs = append(cidrs, netip.PrefixFrom(ip, ip.BitLen()).String())
+		}
+	}
+	if len(cidrs) != 0 {
+		slices.Sort(cidrs)
+		rule := networkingv1.NetworkPolicyIngressRule{}
+		for _, cidr := range slices.Compact(cidrs) {
+			rule.From = append(rule.From, networkingv1.NetworkPolicyPeer{IPBlock: &networkingv1.IPBlock{CIDR: cidr}})
+		}
+		desired.Spec.Ingress = append(desired.Spec.Ingress, rule)
+	}
+	return desired
 }
 
 // SetupWithManager watches the app-gateway Gateway in os-gateway.
