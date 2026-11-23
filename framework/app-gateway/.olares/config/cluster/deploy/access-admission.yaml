@@ -1,5 +1,5 @@
 # Access ValidatingAdmissionWebhook (default failurePolicy=Ignore for safe install).
-# Set OLARES_ACCESS_ADMISSION=true and rotate caBundle before switching to Fail.
+# End-state (OLARES_UNIAUTH_ENDSTATE=true): fill caBundle then set failurePolicy=Fail.
 ---
 apiVersion: v1
 kind: Service
@@ -42,6 +42,9 @@ spec:
           env:
             - name: ACCESS_ADMISSION_ADDR
               value: ":9443"
+            # One-shot end-state: set to "true" (drives reconcile + compilation).
+            - name: OLARES_UNIAUTH_ENDSTATE
+              value: "false"
             - name: OLARES_ACCESS_POLICY_RECONCILE
               value: "false"
             - name: OLARES_POLICY_COMPILATION

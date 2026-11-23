@@ -74,6 +74,9 @@ func TestHTTPMeshWaveConfigDefaultsOff(t *testing.T) {
 		t.Fatalf("http-mesh-wave-config.yaml: %v", err)
 	}
 	body := string(raw)
+	if !strings.Contains(body, `endState: "false"`) {
+		t.Fatal("endState must default false")
+	}
 	if !strings.Contains(body, `wave: "0"`) {
 		t.Fatal("wave must default to 0")
 	}

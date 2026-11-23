@@ -25,6 +25,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/provider"
 	"github.com/beclab/Olares/framework/app-service/pkg/sandbox/sidecar"
 	"github.com/beclab/Olares/framework/app-service/pkg/security"
+	"github.com/beclab/Olares/framework/app-service/pkg/uniauth"
 	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	"github.com/beclab/api/pkg/generated/clientset/versioned"
 
@@ -260,7 +261,8 @@ func (wh *Webhook) CreatePatch(
 	} // end of inject sidecar
 
 	// Full-HTTP mesh waves apply across eligible namespaces (not only app NS).
-	httpWave := mesh.ParseHTTPMeshWave(os.Getenv("OLARES_HTTP_MESH_WAVE"))
+	// OLARES_UNIAUTH_ENDSTATE=true forces wave 4 (all HTTP + cluster-authenticated).
+	httpWave := uniauth.EffectiveHTTPMeshWave(os.Getenv("OLARES_HTTP_MESH_WAVE"), mesh.ParseHTTPMeshWave)
 	if mesh.ShouldInjectHTTPMesh(injectMeshInAgent, req.Namespace, httpWave, pod) {
 		mesh.AnnotatePodForHTTPMesh(pod, true, httpWave, os.Getenv("OLARES_LINKERD_OPAQUE_PORTS"))
 		klog.Infof("mesh-http: annotate pod=%s/%s wave=%d inject=enabled", req.Namespace, pod.Name, httpWave)
