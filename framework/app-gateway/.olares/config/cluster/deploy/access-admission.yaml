@@ -132,3 +132,20 @@ webhooks:
         operations: ["CREATE", "UPDATE"]
         resources: ["appcapabilitysets", "appaccesspolicies"]
         scope: Namespaced
+      # Posture ConfigMaps (endState / wave): integrity-only; not secrets.
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE", "DELETE"]
+        resources: ["configmaps"]
+        scope: Namespaced
+    # Only posture-labeled ConfigMaps in platform namespaces hit this hook.
+    namespaceSelector:
+      matchExpressions:
+        - key: kubernetes.k8s.io/metadata.name
+          operator: In
+          values: ["os-app-access", "os-gateway"]
+    objectSelector:
+      matchExpressions:
+        - key: olares.io/uniauth-posture
+          operator: In
+          values: ["true"]

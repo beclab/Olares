@@ -1,5 +1,6 @@
-# Product steady-state SSOT. New install / upgrade default endState=true.
-# Emergency rollback: set endState=false and restart consumers (or set pod env false).
+# Projection of Chart/OTA SSOT (ADR-SYS-UNIAUTH-CONFIG-01). Not a secret.
+# Integrity: labeled + admission-guarded; mutate only via installer/OTA.
+# Emergency rollback: OTA sets endState=false (or pod env override) then restart consumers.
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -9,6 +10,9 @@ metadata:
   labels:
     app.kubernetes.io/name: http-mesh-wave
     app.kubernetes.io/part-of: uniauth
+    olares.io/uniauth-posture: "true"
+  annotations:
+    olares.io/config-integrity: "release-controlled"
 data:
   endState: "true"
   wave: "4"

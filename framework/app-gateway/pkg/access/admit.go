@@ -37,18 +37,33 @@ func AdmitHTTPRulesJSON(raw []byte) (AdmissionResponse, error) {
 	return AdmitHTTPRules(req), nil
 }
 
-// admissionReview is the Kubernetes admission.k8s.io/v1 subset we need.
 type admissionReview struct {
-	APIVersion string             `json:"apiVersion"`
-	Kind       string             `json:"kind"`
-	Request    *admissionRequest  `json:"request,omitempty"`
-	Response   *admissionResponse  `json:"response,omitempty"`
+	APIVersion string            `json:"apiVersion"`
+	Kind       string            `json:"kind"`
+	Request    *admissionRequest `json:"request,omitempty"`
+	Response   *admissionResponse `json:"response,omitempty"`
 }
 
 type admissionRequest struct {
 	UID       string          `json:"uid"`
+	Kind      *metav1GVK      `json:"kind,omitempty"`
+	Resource  *metav1Resource `json:"resource,omitempty"`
 	Operation string          `json:"operation"`
+	UserInfo  *userInfo       `json:"userInfo,omitempty"`
 	Object    json.RawMessage `json:"object"`
+	OldObject json.RawMessage `json:"oldObject"`
+}
+
+type metav1GVK struct {
+	Kind string `json:"kind"`
+}
+
+type metav1Resource struct {
+	Resource string `json:"resource"`
+}
+
+type userInfo struct {
+	Username string `json:"username"`
 }
 
 type admissionResponse struct {
@@ -68,8 +83,7 @@ type capabilityObject struct {
 	} `json:"spec"`
 }
 
-// AdmitAdmissionReview validates an AdmissionReview body for access.olares.io objects.
-// Fail-closed: empty/malformed reviews are denied.
+// AdmitAdmissionReview validates access.olares.io objects and protected posture ConfigMaps.
 func AdmitAdmissionReview(raw []byte) ([]byte, error) {
 	if len(raw) == 0 {
 		return encodeReviewResponse("", false, "empty admission review")
@@ -82,6 +96,31 @@ func AdmitAdmissionReview(raw []byte) ([]byte, error) {
 		return encodeReviewResponse("", false, "missing admission request")
 	}
 	uid := review.Request.UID
+	username := ""
+	if review.Request.UserInfo != nil {
+		username = review.Request.UserInfo.Username
+	}
+
+	isConfigMap := false
+	if review.Request.Resource != nil && review.Request.Resource.Resource == "configmaps" {
+		isConfigMap = true
+	}
+	if review.Request.Kind != nil && review.Request.Kind.Kind == "ConfigMap" {
+		isConfigMap = true
+	}
+	if isConfigMap {
+		rawObj := review.Request.Object
+		if len(rawObj) == 0 || string(rawObj) == "null" {
+			rawObj = review.Request.OldObject
+		}
+		_, name, ok := configMapNameFromObject(rawObj)
+		if !ok {
+			return encodeReviewResponse(uid, false, "protected configmap name required")
+		}
+		dec := AdmitProtectedConfigMap(username, name)
+		return encodeReviewResponse(uid, dec.Allowed, dec.Message)
+	}
+
 	if len(review.Request.Object) == 0 || string(review.Request.Object) == "null" {
 		return encodeReviewResponse(uid, false, "missing object")
 	}
@@ -98,7 +137,6 @@ func AdmitAdmissionReview(raw []byte) ([]byte, error) {
 		}
 	}
 	if len(rules) == 0 {
-		// Objects without HTTP rules (e.g. non-capability types) are allowed.
 		return encodeReviewResponse(uid, true, "")
 	}
 	dec := AdmitHTTPRules(AdmissionHTTPRulesRequest{Rules: rules})
