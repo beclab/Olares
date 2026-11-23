@@ -185,3 +185,49 @@ func TestAutheliaFrontendTransportStaysWithinTenant(t *testing.T) {
 		t.Fatalf("retargeting the Service must withdraw ingress: %+v", got.Spec)
 	}
 }
+
+func TestSystemFrontendGrantsUseOnlyVerifiedServicePorts(t *testing.T) {
+	space, system := "user-space-alice", "user-system-alice"
+	bflKey := types.NamespacedName{Namespace: space, Name: "bfl"}
+	natsKey := types.NamespacedName{Namespace: system, Name: "nats"}
+	services := map[types.NamespacedName]*corev1.Service{
+		bflKey: {
+			ObjectMeta: metav1.ObjectMeta{Namespace: space, Name: bflKey.Name},
+			Spec: corev1.ServiceSpec{Type: corev1.ServiceTypeClusterIP,
+				Selector: map[string]string{"tier": "bfl"}, ClusterIP: "10.96.0.13",
+				Ports: []corev1.ServicePort{
+					{Port: 80, TargetPort: intstr.FromInt(8080), Protocol: corev1.ProtocolTCP},
+					{Port: 443, TargetPort: intstr.FromInt(443), Protocol: corev1.ProtocolTCP},
+				}},
+		},
+		natsKey: {
+			ObjectMeta: metav1.ObjectMeta{Namespace: system, Name: natsKey.Name},
+			Spec: corev1.ServiceSpec{Type: corev1.ServiceTypeClusterIP,
+				Selector: map[string]string{"app": "systemserver"},
+				Ports:    []corev1.ServicePort{{Port: 4222, TargetPort: intstr.FromInt(4222), Protocol: corev1.ProtocolTCP}}},
+		},
+	}
+	policies := map[string]netv1.NetworkPolicy{}
+	for _, p := range BuildPlatformTrafficPolicies(space, services) {
+		policies[p.Name] = p
+	}
+	for _, tc := range []struct {
+		name, app, namespace string
+		servicePort, target  int32
+	}{
+		{"login-bfl", "authelia", space, 80, 8080},
+		{"desktop-bfl", "olares-app", space, 80, 8080},
+		{"desktop-nats", "olares-app", system, 0, 4222},
+	} {
+		p := policies["olares-platform-"+tc.name+"-egress"]
+		if p.Spec.PodSelector.MatchLabels["app"] != tc.app || len(p.Spec.Egress) == 0 ||
+			p.Spec.Egress[0].To[0].NamespaceSelector.MatchLabels["kubernetes.io/metadata.name"] != tc.namespace ||
+			!reflect.DeepEqual(p.Spec.Egress[0].Ports, []netv1.NetworkPolicyPort{tcpPort(tc.target), tcpPort(4143)}) {
+			t.Fatalf("unexpected transport for %s: %+v", tc.name, p.Spec)
+		}
+		if tc.servicePort != 0 &&
+			(len(p.Spec.Egress) != 2 || !reflect.DeepEqual(p.Spec.Egress[1].Ports, []netv1.NetworkPolicyPort{tcpPort(tc.servicePort)})) {
+			t.Fatalf("unexpected virtual Service ports for %s: %+v", tc.name, p.Spec)
+		}
+	}
+}

@@ -5,12 +5,15 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway"
+
 	srrv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/gateway/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	netv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -136,5 +139,139 @@ func TestTransportRejectsReservedProxyPortsAndInvalidService(t *testing.T) {
 		if _, err := transportBackend(ctx, nil, svc, 80); err == nil {
 			t.Fatalf("invalid selector or non-TCP service enabled: %+v", svc.Spec)
 		}
+	}
+}
+
+func TestSystemLoginStartsBackendTransportBeforeFrontend(t *testing.T) {
+	ctx := context.Background()
+	authBackends := autheliaMeshServiceObjects("user-system-alice")
+	for _, object := range authBackends {
+		if svc, ok := object.(*corev1.Service); ok {
+			svc.Spec.Type = corev1.ServiceTypeClusterIP
+			if svc.Namespace == "user-system-alice" {
+				svc.Spec.Selector["app"] = "systemserver"
+			}
+		}
+	}
+	c := fake.NewClientBuilder().WithScheme(testSchemeWithSecurityPolicy(t)).WithObjects(authBackends...).Build()
+	if err := gateway.EnsureSystemPlaneRoutes(ctx, c, "alice", "alice.olares.com", "user-space-alice", false); err != nil {
+		t.Fatal(err)
+	}
+	key := client.ObjectKey{Namespace: "user-space-alice", Name: "sys-auth"}
+	srr := &srrv1alpha1.SharedRouteRegistry{}
+	if err := c.Get(ctx, key, srr); err != nil {
+		t.Fatal(err)
+	}
+	selector := client.MatchingLabels(transportLabels(key))
+	policies := &netv1.NetworkPolicyList{}
+	verify := func(count int) {
+		t.Helper()
+		if err := c.List(ctx, policies, selector); err != nil || len(policies.Items) != count {
+			t.Fatalf("want %d login transport policies, got %d: %v", count, len(policies.Items), err)
+		}
+	}
+	checkRoute := func(want string) {
+		t.Helper()
+		result, err := ReconcileSharedRoute(ctx, c, GatewayRef{}, srr)
+		if err != nil || result.Reason != want {
+			t.Fatalf("login reconcile = %+v, %v; want %q", result, err, want)
+		}
+	}
+	checkRoute(ReasonAwaitingDataPlane)
+	verify(2)
+	for _, p := range policies.Items {
+		if p.Namespace == "os-framework" &&
+			(p.Spec.PodSelector.MatchLabels["app"] != "authelia-backend" ||
+				p.Spec.Ingress[0].From[0].NamespaceSelector.MatchLabels["kubernetes.io/metadata.name"] != "user-system-alice" ||
+				p.Spec.Ingress[0].From[0].PodSelector.MatchLabels["app"] != "systemserver") {
+			t.Fatalf("bootstrap ingress grants an unexpected identity: %+v", p.Spec)
+		}
+	}
+	frontend := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: key.Namespace, Name: "authelia-svc"},
+		Spec: corev1.ServiceSpec{Ports: []corev1.ServicePort{{Port: 80, Protocol: corev1.ProtocolTCP}}}}
+	for _, object := range meshedServiceObjects(frontend) {
+		if err := c.Create(ctx, object); err != nil {
+			t.Fatal(err)
+		}
+	}
+	checkRoute(ReasonReconciled)
+	verify(4)
+
+	desktop := &srrv1alpha1.SharedRouteRegistry{}
+	if err := c.Get(ctx, client.ObjectKey{Namespace: key.Namespace, Name: "sys-desktop"}, desktop); err != nil {
+		t.Fatal(err)
+	}
+	desktopService := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: key.Namespace, Name: "edge-desktop"},
+		Spec: corev1.ServiceSpec{Ports: []corev1.ServicePort{{Name: "http", Port: 80, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt(91)}}}}
+	desktopBackend := meshedServiceObjects(desktopService)
+	desktopBackend[2].(*discoveryv1.EndpointSlice).Ports[0].Port = ptr.To(int32(91))
+	for _, object := range desktopBackend {
+		if err := c.Create(ctx, object); err != nil {
+			t.Fatal(err)
+		}
+	}
+	result, err := ReconcileSharedRoute(ctx, c, GatewayRef{}, desktop)
+	if err != nil || result.Reason != ReasonReconciled {
+		t.Fatalf("desktop reconcile = %+v, %v", result, err)
+	}
+	for _, name := range []string{"sys-auth", "sys-desktop"} {
+		httpRoute := &unstructured.Unstructured{}
+		httpRoute.SetGroupVersionKind(l4AuthzRoute(desktop).GroupVersionKind())
+		if err := c.Get(ctx, client.ObjectKey{Namespace: key.Namespace, Name: name}, httpRoute); err != nil {
+			t.Fatal(err)
+		}
+		mustIncludeParentSection(t, httpRoute, l4MTLSGatewaySectN)
+		parents, _, _ := unstructured.NestedSlice(httpRoute.Object, "spec", "parentRefs")
+		if len(parents) != 1 {
+			t.Fatalf("%s is also attached outside Entry mTLS: %v", name, parents)
+		}
+	}
+	authRoute := l4AuthzRoute(desktop)
+	if err := c.Get(ctx, client.ObjectKeyFromObject(authRoute), authRoute); err != nil {
+		t.Fatal(err)
+	}
+	mustIncludeParentSection(t, authRoute, l4AuthzSection)
+	hosts, _, _ := unstructured.NestedStringSlice(authRoute.Object, "spec", "hostnames")
+	rules, _, _ := unstructured.NestedSlice(authRoute.Object, "spec", "rules")
+	refs, _, _ := unstructured.NestedSlice(rules[0].(map[string]any), "backendRefs")
+	ref := refs[0].(map[string]any)
+	if !reflect.DeepEqual(hosts, []string{"desktop.alice.olares.com", "desktop.alice.olares.local"}) ||
+		ref["namespace"] != "user-system-alice" || ref["name"] != AutheliaBackendServiceName {
+		t.Fatalf("desktop authorizer is not bound to its canonical tenant: hosts=%v ref=%v", hosts, ref)
+	}
+
+	backend := &corev1.Service{}
+	if err := c.Get(ctx, client.ObjectKey{Namespace: "os-framework", Name: AutheliaBackendServiceName}, backend); err != nil {
+		t.Fatal(err)
+	}
+	backend.Spec.Selector["app"] = "unexpected"
+	if err := c.Update(ctx, backend); err != nil {
+		t.Fatal(err)
+	}
+	checkRoute(ReasonAwaitingDataPlane)
+	verify(0)
+	backend.Spec.Selector["app"] = "authelia-backend"
+	if err := c.Update(ctx, backend); err != nil {
+		t.Fatal(err)
+	}
+	checkRoute(ReasonReconciled)
+	verify(4)
+}
+
+func TestSystemLoginBootstrapDoesNotTrustForeignTenant(t *testing.T) {
+	srr := &srrv1alpha1.SharedRouteRegistry{ObjectMeta: metav1.ObjectMeta{
+		Name: "sys-auth", Namespace: "user-space-alice",
+		Labels: map[string]string{
+			ManagedByLabel: ManagedByValue, InstanceLabel: gateway.SystemPlaneInstance,
+			gateway.LabelSystemPlane: gateway.LabelSystemPlaneValue,
+		},
+		Annotations: map[string]string{gateway.AnnotationExtAuthUser: "bob", gateway.AnnotationAuthMode: gateway.AuthModeNone},
+	}, Spec: srrv1alpha1.SharedRouteRegistrySpec{
+		EntranceClass: srrv1alpha1.EntranceClassApplication,
+		Upstream:      srrv1alpha1.UpstreamRef{ServiceName: "authelia-svc", Port: 80},
+	}}
+	policies, err := systemLoginTransport(context.Background(), nil, srr)
+	if err != nil || len(policies) != 0 {
+		t.Fatalf("foreign tenant received login transport: %+v %v", policies, err)
 	}
 }

@@ -34,7 +34,7 @@ func TestTrafficGroupDependencyPolicies(t *testing.T) {
 	}
 	dns := BuildTrafficGroupDependencyPolicies("kube-system", service, endpoints)
 	auth := BuildTrafficGroupDependencyPolicies("os-framework", service, endpoints)
-	if len(dns) != 4 || len(auth) != 5 || len(BuildTrafficGroupDependencyPolicies("user-space-test", service, endpoints)) != 0 {
+	if len(dns) != 4 || len(auth) != 5 || len(BuildTrafficGroupDependencyPolicies("wordpress-test", service, endpoints)) != 0 {
 		t.Fatal("unexpected dependency policy scope")
 	}
 	dnsSelector := map[string]string{"k8s-app": "kube-dns"}
@@ -130,5 +130,28 @@ func TestTrafficGroupPolicyOwnership(t *testing.T) {
 		if IsTrafficGroupManagedNP(&netv1.NetworkPolicy{ObjectMeta: meta}) {
 			t.Fatalf("unexpected policy %s/%s protected", meta.Namespace, meta.Name)
 		}
+	}
+}
+
+func TestTenantControlPlaneAllowsOnlySystemWorkloads(t *testing.T) {
+	service := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "kubernetes"},
+		Spec: corev1.ServiceSpec{Type: corev1.ServiceTypeClusterIP, ClusterIP: "10.96.0.1",
+			Ports: []corev1.ServicePort{{Name: "https", Port: 443, Protocol: corev1.ProtocolTCP}}},
+	}
+	for _, tc := range []struct{ namespace, key, value string }{
+		{"user-system-alice", "app", "systemserver"},
+		{"user-space-alice", "tier", "bfl"},
+	} {
+		policies := BuildTrafficGroupDependencyPolicies(tc.namespace, service, nil)
+		if len(policies) != 1 || !UsesKubernetesAPIPolicy(tc.namespace) ||
+			!reflect.DeepEqual(policies[0].Spec.PodSelector.MatchLabels, map[string]string{tc.key: tc.value}) ||
+			!reflect.DeepEqual(policies[0].Spec.Egress, kubernetesAPIEgress(service, nil)) ||
+			!IsTrafficGroupManagedNP(&policies[0]) {
+			t.Fatalf("unexpected tenant Kubernetes API permit in %s: %+v", tc.namespace, policies)
+		}
+	}
+	if UsesKubernetesAPIPolicy("third-party-alice") || len(BuildTrafficGroupDependencyPolicies("third-party-alice", service, nil)) != 0 {
+		t.Fatal("a third-party namespace received the tenant API policy")
 	}
 }

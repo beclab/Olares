@@ -43,6 +43,11 @@ func KubernetesAPIPolicyNamespaces() []string {
 	return namespaces
 }
 
+func UsesKubernetesAPIPolicy(namespace string) bool {
+	return IsUserSystemNamespaces(namespace) || IsUserSpaceNamespaces(namespace) ||
+		slices.Contains(KubernetesAPIPolicyNamespaces(), namespace)
+}
+
 func BuildTrafficGroupDependencyPolicies(namespace string, service *corev1.Service, endpoints *corev1.Endpoints) []netv1.NetworkPolicy {
 	var selector map[string]string
 	var policies []netv1.NetworkPolicy
@@ -64,6 +69,14 @@ func BuildTrafficGroupDependencyPolicies(namespace string, service *corev1.Servi
 		selector = map[string]string{"app": "authelia-backend", "traffic.olares.io/platform-mesh": "true"}
 	}
 	rules := kubernetesAPIEgress(service, endpoints)
+	if IsUserSystemNamespaces(namespace) {
+		policies = append(policies, apiEgressPolicy(namespace, kubernetesAPIEgressName+"-systemserver",
+			map[string]string{"app": "systemserver"}, rules))
+	}
+	if IsUserSpaceNamespaces(namespace) {
+		policies = append(policies, apiEgressPolicy(namespace, kubernetesAPIEgressName+"-bfl",
+			map[string]string{"tier": "bfl"}, rules))
+	}
 	if selector != nil {
 		policies = append(policies, apiEgressPolicy(namespace, kubernetesAPIEgressName, selector, rules))
 	}

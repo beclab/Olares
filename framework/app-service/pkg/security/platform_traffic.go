@@ -81,15 +81,23 @@ func platformTrafficFlows(namespace string) []platformServiceFlow {
 	if tenant == "" {
 		return platformServiceFlows
 	}
-	return []platformServiceFlow{{
-		name: "authelia-frontend-auth",
-		from: platformWorkload{"user-space-" + tenant, map[string]string{
-			"app": "authelia", platformMeshControlPlaneLabel: "os-mesh",
-		}},
-		service: types.NamespacedName{Namespace: "user-system-" + tenant, Name: "authelia-backend"},
-		to:      map[string]string{"app": "systemserver"}, servicePort: 9091, targetPort: 9091,
-		targetName: "auth-proxy",
-	}}
+	space, system := "user-space-"+tenant, "user-system-"+tenant
+	frontend := func(app string) platformWorkload {
+		return platformWorkload{space, map[string]string{"app": app, platformMeshControlPlaneLabel: "os-mesh"}}
+	}
+	auth := types.NamespacedName{Namespace: system, Name: "authelia-backend"}
+	bfl := types.NamespacedName{Namespace: space, Name: "bfl"}
+	systemProxy := map[string]string{"app": "systemserver"}
+	bflPods := map[string]string{"tier": "bfl"}
+	return []platformServiceFlow{
+		{"authelia-frontend-auth", frontend("authelia"), auth, systemProxy, 9091, 9091, "auth-proxy"},
+		{"desktop-auth", frontend("olares-app"), auth, systemProxy, 9091, 9091, "auth-proxy"},
+		{"desktop-logout", frontend("olares-app"), types.NamespacedName{Namespace: space, Name: "authelia-svc"}, map[string]string{"app": "authelia"}, 80, 80, ""},
+		{"login-bfl", frontend("authelia"), bfl, bflPods, 80, 8080, ""},
+		{"desktop-bfl", frontend("olares-app"), bfl, bflPods, 80, 8080, ""},
+		{"desktop-app-service", frontend("olares-app"), types.NamespacedName{Namespace: system, Name: "app-service"}, systemProxy, 28080, 28080, ""},
+		{"desktop-nats", frontend("olares-app"), types.NamespacedName{Namespace: system, Name: "nats"}, systemProxy, 4222, 4222, ""},
+	}
 }
 
 func (flow platformServiceFlow) destination() (map[string]string, []netv1.NetworkPolicyPort) {
