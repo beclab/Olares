@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -58,6 +59,18 @@ func TestSystemPlaneRouteReconcilerCreatesSRRs(t *testing.T) {
 	if desktop.Annotations[gateway.AnnotationAuthMode] != gateway.AuthModeExtAuth {
 		t.Fatalf("desktop mode=%s", desktop.Annotations[gateway.AnnotationAuthMode])
 	}
+	if err := c.Delete(context.Background(), cm); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := r.Reconcile(context.Background(), reconcile.Request{
+		NamespacedName: types.NamespacedName{Namespace: cm.Namespace, Name: cm.Name},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Get(context.Background(), types.NamespacedName{Namespace: cm.Namespace, Name: "sys-desktop"}, desktop); !apierrors.IsNotFound(err) {
+		t.Fatalf("deleted user zone retained Desktop route: %v", err)
+	}
+
 }
 
 func TestSystemPlaneRouteReconcilerEphemeralWizardOnly(t *testing.T) {

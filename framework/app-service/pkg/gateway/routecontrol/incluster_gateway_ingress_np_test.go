@@ -4,7 +4,10 @@ import (
 	"context"
 	"testing"
 
+	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+
+	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
@@ -14,7 +17,10 @@ import (
 
 func TestEnsureInClusterCallerIngressNP_creates(t *testing.T) {
 	s := testScheme(t)
-	c := fake.NewClientBuilder().WithScheme(s).Build()
+	node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{
+		Name: "node", Annotations: map[string]string{utils.CalicoTunnelAddrAnnotation: "192.0.2.10"},
+	}}
+	c := fake.NewClientBuilder().WithScheme(s).WithObjects(node).Build()
 
 	if err := EnsureInClusterCallerIngressNP(context.Background(), c); err != nil {
 		t.Fatalf("EnsureInClusterCallerIngressNP: %v", err)
@@ -44,7 +50,7 @@ func TestEnsureInClusterCallerIngressNP_creates(t *testing.T) {
 	if len(sys) != 1 || sys[0].Key != "bytetrade.io/ns-type" || sys[0].Operator != metav1.LabelSelectorOpIn {
 		t.Fatalf("system selector = %+v", sys)
 	}
-	if len(np.Spec.Ingress[1].From) < 1 {
+	if peers := np.Spec.Ingress[1].From; len(peers) != 1 || peers[0].IPBlock == nil || peers[0].IPBlock.CIDR != "192.0.2.10/32" {
 		t.Fatalf("node tunnel ingress missing: %+v", np.Spec.Ingress[1])
 	}
 	if len(np.Spec.PolicyTypes) != 1 || np.Spec.PolicyTypes[0] != networkingv1.PolicyTypeIngress {
@@ -70,6 +76,10 @@ func TestEnsureInClusterCallerIngressNP_idempotent(t *testing.T) {
 	}
 	if len(list.Items) != 1 {
 		t.Fatalf("NP count = %d, want 1", len(list.Items))
+	}
+	rules := list.Items[0].Spec.Ingress
+	if len(rules) != 1 || len(rules[0].From) != 2 {
+		t.Fatalf("no tunnel IP must not publish an unrestricted ingress rule: %v", rules)
 	}
 }
 
