@@ -343,7 +343,7 @@ spec:
             - name: NATS_SUBJECT
               value: os.files-notify
             - name: apiServerURL
-              value: http://bfl.{{ .Release.Namespace }}:8080
+              value: http://bfl.{{ .Release.Namespace }}:80
             - name: NATS_USERNAME_USERSERVICE
               value: user-service-{{ .Values.bfl.username }}
             - name: NATS_PASSWORD_USERSESRVICE

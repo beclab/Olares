@@ -35,7 +35,7 @@ spec:
         - containerPort: 80
         env:
           - name: apiServerURL
-            value: http://bfl.{{ .Release.Namespace }}:8080
+            value: http://bfl.{{ .Release.Namespace }}:80
       volumes:
       - name: userspace-dir
         hostPath:
