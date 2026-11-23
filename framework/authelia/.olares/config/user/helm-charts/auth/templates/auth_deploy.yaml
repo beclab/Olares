@@ -66,6 +66,7 @@ spec:
       name: authelia
       port: 80
       targetPort: 80
+      appProtocol: http
     
 
 ---
