@@ -93,7 +93,7 @@ Olares OS is free and open source, so you can also [install it on compatible har
 ### Is it possible to upgrade or expand the hardware?
 
 Yes. You can modify the hardware through several internal slots and expansion ports:
-* **Storage**: The motherboard includes two PCIe SSD slots, one PCIe 4.0 and one PCIe 5.0. The preinstalled 2TB SSD occupies the PCIe 5.0 slot. The PCIe 4.0 slot remains available for system storage expansion via LVM or for a dual-boot configuration. See [Expand storage with an internal SSD](expand-storage-internal-ssd.md).
+* **Storage**: The motherboard includes two M.2 2280 SSD slots, one PCIe 5.0 x4 and one PCIe 4.0 x4. The preinstalled 2TB SSD occupies the PCIe 5.0 slot. The PCIe 4.0 slot remains available for system storage expansion via LVM or for a dual-boot configuration. See [Expand storage with an internal SSD](expand-storage-internal-ssd.md).
 * **Memory**: The RAM capacity can be upgraded to a maximum of 128GB.
 * **External graphics**: You can connect a compatible Thunderbolt external graphics device. See [Can I use an eGPU with Olares One?](#can-i-use-an-egpu-with-olares-one)
 * **External displays**: The Thunderbolt 5 port supports docking stations with up to two external monitors at up to 8K resolution. The built-in RTX 5090 Mobile handles video output.
@@ -102,11 +102,13 @@ Yes. You can modify the hardware through several internal slots and expansion po
 
 When choosing an internal SSD, check the following requirements:
 
-- **Form factor and interface**: M.2 2280 (22 mm wide and 80 mm long), using PCIe NVMe.
-- **Component layout**: Single-sided, with chips on only one side of the SSD. Double-sided SSDs can interfere with internal components.
-- **Heatsink**: Choose a version without a preinstalled heatsink to fit the available space.
+- **Form factor and interface**: M.2 2280 (22 mm wide and 80 mm long), with a Key M connector and the NVMe protocol.
+- **Component layout and thickness**: Single-sided, with chips on only one side of the SSD and a total thickness of no more than 2.38 mm. Double-sided SSDs cannot be installed because their underside chips interfere with components beneath the drive.
+- **Heatsink**: Choose a version without a preinstalled heatsink. Versions with a heatsink exceed the available height and cannot be installed.
 
 Component layout and thickness can vary between capacities and versions within the same SSD series. Check the exact model against the requirements above before buying.
+
+Only the factory-installed SSD has been tested in Olares One. Other models have not undergone system-level testing, so their thermal performance and compatibility remain unverified.
 
 For slot availability, see [Is it possible to upgrade or expand the hardware?](#is-it-possible-to-upgrade-or-expand-the-hardware). To add an installed SSD to Olares OS storage, see [Expand storage with an internal SSD](expand-storage-internal-ssd.md).
 
