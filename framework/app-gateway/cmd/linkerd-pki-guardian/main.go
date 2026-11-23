@@ -106,7 +106,7 @@ func run() error {
 	metrics := linkerdpki.NewMetrics()
 	ctrl := linkerdpki.NewController(cl, ns, interval, probes, metrics)
 	entryNS := getenv("OLARES_ENTRY_MTLS_NS", entrypki.DefaultNamespace)
-	ctrl.WithEntryMTLS(uniauth.EntryMTLSDesired(os.Getenv("OLARES_ENTRY_MTLS_PKI")), entryNS)
+	ctrl.WithEntryMTLS(uniauth.EntryMTLSDesired(), entryNS)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/startupz", probes.StartupHandler)

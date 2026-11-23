@@ -52,9 +52,7 @@ spec:
               value: os-mesh
             - name: GUARDIAN_HTTP_ADDR
               value: ":8080"
-            # Install/upgrade steady-state: Entry mTLS PKI on (emergency: set false).
-            - name: OLARES_UNIAUTH_ENDSTATE
-              value: "true"
+            # Entry mTLS PKI is always maintained (product steady state).
             - name: OLARES_ENTRY_MTLS_NS
               value: os-gateway
             - name: GOMEMLIMIT

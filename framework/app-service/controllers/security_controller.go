@@ -3,7 +3,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
@@ -365,10 +364,10 @@ func (r *SecurityReconciler) reconcileNamespaceLabels(ctx context.Context, ns *c
 	return nil
 }
 
-// reconcileTrafficGroupNetworkPolicies applies the safe isolation bundle when
-// OLARES_TRAFFIC_GROUP_NP is enabled. Labels are applied independently.
+// reconcileTrafficGroupNetworkPolicies applies the safe isolation bundle.
+// Product steady state always enables the bundle; labels are applied independently.
 func (r *SecurityReconciler) reconcileTrafficGroupNetworkPolicies(ctx context.Context, ns *corev1.Namespace) error {
-	if !uniauth.TrafficGroupNPDesired(os.Getenv("OLARES_TRAFFIC_GROUP_NP")) {
+	if !uniauth.TrafficGroupNPDesired() {
 		return nil
 	}
 	if ns == nil || !ns.DeletionTimestamp.IsZero() {
