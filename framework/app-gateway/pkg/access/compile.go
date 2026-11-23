@@ -15,6 +15,9 @@ const (
 // PolicySpec is the compiler input projected from AppAccessPolicy.
 type PolicySpec struct {
 	Name              string
+	ProjectionID      string
+	TargetSelector    map[string]string
+	ServerID          string
 	Namespace         string // target application namespace
 	DesiredState      string
 	RouteMode         string
@@ -28,6 +31,8 @@ type PolicySpec struct {
 // CompiledObjects are deterministic names for Linkerd/Gateway/NP projections.
 type CompiledObjects struct {
 	ServerName              string
+	ProjectionID            string
+	TargetSelector          map[string]string
 	HTTPRouteName           string
 	AuthorizationPolicyName string
 	MeshTLSAuthName         string
@@ -50,7 +55,13 @@ func CompilePolicy(p PolicySpec, compilationEnabled bool) (CompiledObjects, erro
 		return out, fmt.Errorf("policy name and namespace are required")
 	}
 	base := sanitizeDNSLabel(p.Name)
+	if p.ProjectionID != "" {
+		base = p.ProjectionID
+	}
 	out.ServerName = base + "-server"
+	if p.ServerID != "" {
+		out.ServerName = p.ServerID + "-server"
+	}
 	out.HTTPRouteName = base + "-route"
 	out.AuthorizationPolicyName = base + "-authz"
 	out.MeshTLSAuthName = base + "-mtls"
