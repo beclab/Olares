@@ -260,9 +260,8 @@ func (wh *Webhook) CreatePatch(
 		}
 	} // end of inject sidecar
 
-	// Full-HTTP mesh waves apply across eligible namespaces (not only app NS).
-	// OLARES_UNIAUTH_ENDSTATE=true forces wave 4 (all HTTP + cluster-authenticated).
-	httpWave := uniauth.EffectiveHTTPMeshWave(os.Getenv("OLARES_HTTP_MESH_WAVE"), mesh.ParseHTTPMeshWave)
+	// Product steady state: all HTTP namespaces, cluster-authenticated inbound (mTLS).
+	httpWave := uniauth.EffectiveHTTPMeshWave()
 	if mesh.ShouldInjectHTTPMesh(injectMeshInAgent, req.Namespace, httpWave, pod) {
 		mesh.AnnotatePodForHTTPMesh(pod, true, httpWave, os.Getenv("OLARES_LINKERD_OPAQUE_PORTS"))
 		klog.Infof("mesh-http: annotate pod=%s/%s wave=%d inject=enabled", req.Namespace, pod.Name, httpWave)

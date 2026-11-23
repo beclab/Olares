@@ -223,12 +223,7 @@ spec:
           value: "beclab/mesh-in-agent:1.30.0-r5"
         - name: MESH_OUT_AGENT_IMAGE
           value: "beclab/mesh-out-agent:1.30.0-r4"
-        # Install/upgrade product steady-state (wave-4 mesh + traffic-group NP).
-        # Emergency rollback: set to "false".
-        - name: OLARES_UNIAUTH_ENDSTATE
-          value: "true"
-        - name: OLARES_TRAFFIC_GROUP_NP
-          value: "true"
+        # Product steady state is code-fixed (HTTP mTLS wave 4 + traffic-group NP).
         - name: SHARED_LIB_PATH
           value: {{ .Values.sharedlib }}
         - name: CLUSTER_CPU_THRESHOLD

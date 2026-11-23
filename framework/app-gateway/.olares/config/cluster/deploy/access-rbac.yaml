@@ -87,8 +87,9 @@ metadata:
   annotations:
     olares.io/config-integrity: "release-controlled"
 data:
-  # Projection of Chart/OTA SSOT (ADR-SYS-UNIAUTH-CONFIG-01). Not a secret.
-  endState: "true"
-  policyCompilationEnabled: "true"
-  l4AppGatewayMTLSEnabled: "true"
+  # Release projection only (not a kill switch). Posture is fixed in code.
+  httpMeshPolicy: "cluster-authenticated"
   httpMeshWave: "4"
+  policyCompilation: "on"
+  l4AppGatewayMTLS: "on"
+  entryMTLSPki: "on"
