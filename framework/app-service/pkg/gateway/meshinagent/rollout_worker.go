@@ -246,8 +246,20 @@ func (w *RolloutWorker) EnqueueMeshReadySweep(ctx context.Context, epoch string)
 			ReadyEpoch: epoch,
 		})
 	}
-	klog.Infof("mesh-in-rollout: sweep enqueued epoch=%s apps=%d dataplane=%d",
-		epoch, len(apps), len(dataplane))
+	httpMesh, err := ListHTTPMeshWorkloadsNeedingMTLS(ctx, w.Client)
+	if err != nil {
+		klog.Errorf("mesh-in-rollout: http-mesh sweep list failed: %v", err)
+	}
+	for _, ref := range httpMesh {
+		w.Enqueue(RolloutJob{
+			Key:        "http-mtls/" + epoch + "/" + ref.Key(),
+			Reason:     ReasonHTTPMeshMTLS,
+			Workloads:  []WorkloadRef{ref},
+			ReadyEpoch: epoch,
+		})
+	}
+	klog.Infof("mesh-in-rollout: sweep enqueued epoch=%s apps=%d dataplane=%d http-mtls=%d",
+		epoch, len(apps), len(dataplane), len(httpMesh))
 }
 
 // runJob bumps the pod templates once, then polls until the replacement pods are
@@ -362,8 +374,14 @@ func (w *RolloutWorker) markFailed(ctx context.Context, job RolloutJob) {
 
 // LoadMeshInjectRolloutState reads ready flag and epoch from the state ConfigMap.
 func LoadMeshInjectRolloutState(ctx context.Context, c client.Client) (ready bool, epoch string, err error) {
+	ready, epoch, _, err = LoadMeshInjectRolloutStateFull(ctx, c)
+	return ready, epoch, err
+}
+
+// LoadMeshInjectRolloutStateFull also returns the HTTP mesh posture marker.
+func LoadMeshInjectRolloutStateFull(ctx context.Context, c client.Client) (ready bool, epoch, posture string, err error) {
 	if c == nil {
-		return false, "0", nil
+		return false, "0", "", nil
 	}
 	var cm corev1.ConfigMap
 	if err := c.Get(ctx, types.NamespacedName{
@@ -371,21 +389,28 @@ func LoadMeshInjectRolloutState(ctx context.Context, c client.Client) (ready boo
 		Name:      MeshInjectRolloutStateCMName,
 	}, &cm); err != nil {
 		if apierrors.IsNotFound(err) {
-			return false, "0", nil
+			return false, "0", "", nil
 		}
 		klog.Errorf("mesh-in-rollout: get mesh-inject state cm failed: %v", err)
-		return false, "0", err
+		return false, "0", "", err
 	}
 	ready = strings.EqualFold(strings.TrimSpace(cm.Data[MeshInjectStateReadyKey]), "true")
 	epoch = strings.TrimSpace(cm.Data[MeshInjectStateEpochKey])
 	if epoch == "" {
 		epoch = "0"
 	}
-	return ready, epoch, nil
+	posture = strings.TrimSpace(cm.Data[MeshInjectStateHTTPMeshPostureKey])
+	return ready, epoch, posture, nil
 }
 
 // StoreMeshInjectRolloutState persists ready/epoch (create or update).
 func StoreMeshInjectRolloutState(ctx context.Context, c client.Client, ready bool, epoch string) error {
+	return StoreMeshInjectRolloutStateFull(ctx, c, ready, epoch, "")
+}
+
+// StoreMeshInjectRolloutStateFull persists ready/epoch and optional HTTP mesh posture.
+// Empty posture leaves the existing key unchanged on update.
+func StoreMeshInjectRolloutStateFull(ctx context.Context, c client.Client, ready bool, epoch, posture string) error {
 	if c == nil {
 		return nil
 	}
@@ -402,15 +427,19 @@ func StoreMeshInjectRolloutState(ctx context.Context, c client.Client, ready boo
 		Name:      MeshInjectRolloutStateCMName,
 	}, &cm)
 	if apierrors.IsNotFound(err) {
+		data := map[string]string{
+			MeshInjectStateReadyKey: readyStr,
+			MeshInjectStateEpochKey: epoch,
+		}
+		if posture != "" {
+			data[MeshInjectStateHTTPMeshPostureKey] = posture
+		}
 		cm = corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: MeshInjectRolloutStateCMNamespace,
 				Name:      MeshInjectRolloutStateCMName,
 			},
-			Data: map[string]string{
-				MeshInjectStateReadyKey: readyStr,
-				MeshInjectStateEpochKey: epoch,
-			},
+			Data: data,
 		}
 		if cerr := c.Create(ctx, &cm); cerr != nil {
 			klog.Errorf("mesh-in-rollout: create mesh-inject state cm failed: %v", cerr)
@@ -428,6 +457,9 @@ func StoreMeshInjectRolloutState(ctx context.Context, c client.Client, ready boo
 	}
 	cm.Data[MeshInjectStateReadyKey] = readyStr
 	cm.Data[MeshInjectStateEpochKey] = epoch
+	if posture != "" {
+		cm.Data[MeshInjectStateHTTPMeshPostureKey] = posture
+	}
 	if err := c.Patch(ctx, &cm, client.MergeFrom(base)); err != nil {
 		klog.Errorf("mesh-in-rollout: patch mesh-inject state cm failed: %v", err)
 		return err

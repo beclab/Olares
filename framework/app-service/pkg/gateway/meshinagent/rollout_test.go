@@ -3,6 +3,7 @@ package meshinagent
 import (
 	"context"
 	"errors"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -531,8 +532,19 @@ func TestEnqueueSweepSplitsDataplanePerWorkload(t *testing.T) {
 		}
 	}
 	w.mu.Unlock()
-	if len(keys) != 4 {
-		t.Fatalf("pending keys=%v, want one app job plus three dataplane jobs", keys)
+	// App + shared/EG dataplane + HTTP-mTLS posture jobs (shared litellm pods need inbound policy).
+	if len(keys) < 4 {
+		t.Fatalf("pending keys=%v, want at least app + dataplane sweep jobs", keys)
+	}
+	hasHTTP := false
+	for _, k := range keys {
+		if strings.HasPrefix(k, "http-mtls/") {
+			hasHTTP = true
+			break
+		}
+	}
+	if !hasHTTP {
+		t.Fatalf("pending keys=%v, want http-mtls posture jobs", keys)
 	}
 }
 

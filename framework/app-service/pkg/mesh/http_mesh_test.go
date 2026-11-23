@@ -34,12 +34,13 @@ func TestDesiredInboundPolicy(t *testing.T) {
 	}
 }
 
-func TestShouldInjectHTTPMeshRespectsDisable(t *testing.T) {
+func TestShouldInjectHTTPMeshIgnoresDisableInSteadyState(t *testing.T) {
 	pod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{
 		LinkerdInjectAnnotation: LinkerdInjectDisabled,
 	}}}
-	if ShouldInjectHTTPMesh(true, "os-gateway", 4, pod) {
-		t.Fatal("explicit disable must win")
+	// Product steady state: HTTP mTLS is mandatory; opaque-ports cover non-HTTP.
+	if !ShouldInjectHTTPMesh(false, "os-gateway", 4, pod) {
+		t.Fatal("wave-4 must inject even when annotation says disabled")
 	}
 }
 
