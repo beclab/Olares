@@ -512,19 +512,22 @@ func (t *Translator) buildUserVirtualHosts(user *message.UserInfo, zone string, 
 	}
 	vhosts = append(vhosts, profileVHost)
 
-	// Application servers
-	for _, app := range user.Apps {
-		appVhosts := t.buildAppVirtualHosts(user, app, zone, isEphemeral, clusterSet)
-		vhosts = append(vhosts, appVhosts...)
-	}
-
-	// System services (auth, desktop, wizard)
+	// System services (auth, desktop, wizard) stay on L4 (edge IdP / desktop).
 	for _, def := range systemServices {
 		vhost := t.buildSystemVirtualHost(user, def, zone, isEphemeral, namespace, clusterSet)
 		vhosts = append(vhosts, vhost)
 	}
 
-	// Custom domain virtual hosts
+	if t.cfg != nil && t.cfg.AppGatewayMTLS {
+		// Application + custom-domain HTTP: TLS on L4, routing/backends on AGW.
+		vhosts = append(vhosts, t.buildEdgeForwardVirtualHosts(user, zone, clusterSet)...)
+		return vhosts
+	}
+
+	for _, app := range user.Apps {
+		appVhosts := t.buildAppVirtualHosts(user, app, zone, isEphemeral, clusterSet)
+		vhosts = append(vhosts, appVhosts...)
+	}
 	for _, app := range user.Apps {
 		cvhosts := t.buildCustomDomainVirtualHosts(user, app, clusterSet)
 		vhosts = append(vhosts, cvhosts...)
