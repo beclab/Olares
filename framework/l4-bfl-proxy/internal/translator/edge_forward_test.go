@@ -34,21 +34,25 @@ func TestBuildEdgeForwardVirtualHosts(t *testing.T) {
 	if r.Cluster != edgeForwardClusterName {
 		t.Fatalf("cluster=%s", r.Cluster)
 	}
-	foundWild, foundCustom := false, false
+	foundApex, foundWild, foundLocal, foundCustom := false, false, false, false
 	for _, d := range vhosts[0].Domains {
-		if d == "*.alice.olares.com" {
+		switch d {
+		case "alice.olares.com":
+			foundApex = true
+		case "*.alice.olares.com":
 			foundWild = true
-		}
-		if d == "blog.example.com" {
+		case "alice.olares.local", "*.alice.olares.local":
+			foundLocal = true
+		case "blog.example.com":
 			foundCustom = true
 		}
 	}
-	if !foundWild || !foundCustom {
+	if !foundApex || !foundWild || !foundLocal || !foundCustom {
 		t.Fatalf("domains=%v", vhosts[0].Domains)
 	}
 }
 
-func TestBuildUserVirtualHostsEdgeModeSkipsAppBackends(t *testing.T) {
+func TestBuildUserVirtualHostsEdgeModeOnlyEdgeForward(t *testing.T) {
 	tr := &Translator{cfg: &Config{AppGatewayMTLS: true, SSLServerPort: 443}}
 	user := &message.UserInfo{
 		Name:      "alice",
@@ -61,15 +65,22 @@ func TestBuildUserVirtualHostsEdgeModeSkipsAppBackends(t *testing.T) {
 	}
 	cs := make(map[string]*ir.ClusterIR)
 	vhosts := tr.buildUserVirtualHosts(user, "alice.olares.com", false, cs)
+	if len(vhosts) != 1 || vhosts[0].Name != "edge_forward_alice" {
+		t.Fatalf("want single edge_forward vhost, got %#v", vhosts)
+	}
+	for name := range cs {
+		if name != edgeForwardClusterName {
+			t.Fatalf("unexpected cluster %s in edge mode", name)
+		}
+	}
 	for _, vh := range vhosts {
 		for _, r := range vh.Routes {
-			if r.Cluster == "app_alice_myapp_web" {
-				t.Fatal("must not build direct app cluster in edge mode")
+			if r.ExtAuth != nil {
+				t.Fatal("edge mode must not attach ExtAuth")
+			}
+			if r.Cluster != edgeForwardClusterName {
+				t.Fatalf("must not build local backend cluster %s", r.Cluster)
 			}
 		}
 	}
-	if cs[edgeForwardClusterName] == nil {
-		t.Fatal("missing edge forward cluster")
-	}
-	_ = vhosts
 }
