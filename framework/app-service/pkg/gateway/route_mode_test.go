@@ -96,7 +96,9 @@ func TestComputeRouteModePatch_settingsOverride(t *testing.T) {
 func TestComputeRouteModePatch_autoGatewayForSharedApp(t *testing.T) {
 	resetGatewayReadyCacheForTest()
 	cluster.PrimeInClusterGatewayEnabledForTest(true)
+	cluster.PrimePlatformDomainForTest("olares.com")
 	defer cluster.ResetInClusterGatewayEnabledForTest()
+	defer cluster.ResetPlatformDomainForTest()
 
 	ctx := context.Background()
 	c := newFakeClient(t, newAcceptedGateway())
@@ -107,35 +109,59 @@ func TestComputeRouteModePatch_autoGatewayForSharedApp(t *testing.T) {
 	}
 }
 
-func TestComputeRouteModePatch_skipsNonSharedApp(t *testing.T) {
+func TestComputeRouteModePatch_autoGatewayForApplicationApp(t *testing.T) {
 	resetGatewayReadyCacheForTest()
 	cluster.PrimeInClusterGatewayEnabledForTest(true)
+	cluster.PrimePlatformDomainForTest("olares.com")
 	defer cluster.ResetInClusterGatewayEnabledForTest()
+	defer cluster.ResetPlatformDomainForTest()
 
 	ctx := context.Background()
 	c := newFakeClient(t, newAcceptedGateway())
 
-	// Per-user app: no options.shared label, no clusterScoped setting.
+	// Per-user application entrance: auto gateway (L4 edge TLS + AGW routing).
+	app := &appv1alpha1.Application{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "blog",
+			Labels: map[string]string{constants.AppApiVersionLabel: constants.AppVersionV3},
+		},
+		Spec: appv1alpha1.ApplicationSpec{
+			Name:      "blog",
+			Namespace: "blog-alice",
+			Entrances: []appv1alpha1.Entrance{{Name: "web", Host: "svc", Port: 80}},
+		},
+	}
+	need, mode, err := ComputeRouteModePatch(ctx, c, app)
+	if err != nil || !need || mode != AnnotationRouteModeGateway {
+		t.Fatalf("application app: got need=%v mode=%q err=%v, want gateway patch", need, mode, err)
+	}
+}
+
+func TestComputeRouteModePatch_skipsNoEntrances(t *testing.T) {
+	resetGatewayReadyCacheForTest()
+	cluster.PrimeInClusterGatewayEnabledForTest(true)
+	cluster.PrimePlatformDomainForTest("olares.com")
+	defer cluster.ResetInClusterGatewayEnabledForTest()
+	defer cluster.ResetPlatformDomainForTest()
+
+	ctx := context.Background()
+	c := newFakeClient(t, newAcceptedGateway())
+
 	app := newSharedApp()
-	app.Labels = map[string]string{constants.AppApiVersionLabel: constants.AppVersionV3}
+	app.Spec.SharedEntrances = nil
+	app.Spec.Entrances = nil
 	need, mode, err := ComputeRouteModePatch(ctx, c, app)
 	if err != nil || need || mode != "" {
-		t.Fatalf("non-shared app: got need=%v mode=%q err=%v, want no patch", need, mode, err)
-	}
-
-	// Shared label without sharedEntrances still qualifies (entrances-only shared singleton).
-	app = newSharedApp()
-	app.Spec.SharedEntrances = nil
-	need, mode, err = ComputeRouteModePatch(ctx, c, app)
-	if err != nil || !need || mode != AnnotationRouteModeGateway {
-		t.Fatalf("shared without sharedEntrances: got need=%v mode=%q err=%v, want gateway patch", need, mode, err)
+		t.Fatalf("no entrances: got need=%v mode=%q err=%v, want no patch", need, mode, err)
 	}
 }
 
 func TestComputeRouteModePatch_gateDisabled(t *testing.T) {
 	resetGatewayReadyCacheForTest()
 	cluster.PrimeInClusterGatewayEnabledForTest(false)
+	cluster.PrimePlatformDomainForTest("olares.com")
 	defer cluster.ResetInClusterGatewayEnabledForTest()
+	defer cluster.ResetPlatformDomainForTest()
 
 	ctx := context.Background()
 	c := newFakeClient(t, newAcceptedGateway())
@@ -149,7 +175,9 @@ func TestComputeRouteModePatch_gateDisabled(t *testing.T) {
 func TestComputeRouteModePatch_gatewayNotReady(t *testing.T) {
 	resetGatewayReadyCacheForTest()
 	cluster.PrimeInClusterGatewayEnabledForTest(true)
+	cluster.PrimePlatformDomainForTest("olares.com")
 	defer cluster.ResetInClusterGatewayEnabledForTest()
+	defer cluster.ResetPlatformDomainForTest()
 
 	ctx := context.Background()
 	c := newFakeClient(t) // no Gateway object
@@ -163,7 +191,9 @@ func TestComputeRouteModePatch_gatewayNotReady(t *testing.T) {
 func TestApplyRouteModeAnnotation_mutatesApp(t *testing.T) {
 	resetGatewayReadyCacheForTest()
 	cluster.PrimeInClusterGatewayEnabledForTest(true)
+	cluster.PrimePlatformDomainForTest("olares.com")
 	defer cluster.ResetInClusterGatewayEnabledForTest()
+	defer cluster.ResetPlatformDomainForTest()
 
 	ctx := context.Background()
 	c := newFakeClient(t, newAcceptedGateway())

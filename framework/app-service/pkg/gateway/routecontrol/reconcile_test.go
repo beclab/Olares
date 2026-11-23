@@ -14,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway"
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway/callerjwt"
 	srrv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/gateway/v1alpha1"
 )
@@ -48,12 +49,32 @@ func mustHTTPRouteParentRef(t *testing.T, route *unstructured.Unstructured) map[
 	return parentRef
 }
 
-func mustHTTPRouteSectionNameAbsent(t *testing.T, route *unstructured.Unstructured) {
+func mustHTTPRouteParentSections(t *testing.T, route *unstructured.Unstructured) []string {
 	t.Helper()
-	parentRef := mustHTTPRouteParentRef(t, route)
-	if _, exists := parentRef["sectionName"]; exists {
-		t.Fatalf("parentRefs[0].sectionName exists, want absent for application")
+	parentRefs, found, err := unstructured.NestedSlice(route.Object, "spec", "parentRefs")
+	if err != nil || !found || len(parentRefs) == 0 {
+		t.Fatalf("spec.parentRefs missing: found=%v err=%v", found, err)
 	}
+	out := make([]string, 0, len(parentRefs))
+	for i, item := range parentRefs {
+		ref, ok := item.(map[string]any)
+		if !ok {
+			t.Fatalf("parentRefs[%d] type = %T", i, item)
+		}
+		section, _ := ref["sectionName"].(string)
+		out = append(out, section)
+	}
+	return out
+}
+
+func mustIncludeParentSection(t *testing.T, route *unstructured.Unstructured, want string) {
+	t.Helper()
+	for _, s := range mustHTTPRouteParentSections(t, route) {
+		if s == want {
+			return
+		}
+	}
+	t.Fatalf("parentRefs sections = %v, want include %q", mustHTTPRouteParentSections(t, route), want)
 }
 
 func testScheme(t *testing.T) *runtime.Scheme {
@@ -147,6 +168,7 @@ func TestReconcileSharedRouteGatewayMode(t *testing.T) {
 	if got := mustHTTPRouteSectionName(t, route); got != "http" {
 		t.Fatalf("HTTPRoute sectionName = %q, want http", got)
 	}
+	mustIncludeParentSection(t, route, l4MTLSGatewaySectN)
 
 	np := &networkingv1.NetworkPolicy{}
 	if err := c.Get(context.Background(), types.NamespacedName{Namespace: "demo-shared", Name: NetworkPolicyName}, np); err != nil {
@@ -169,7 +191,14 @@ func TestReconcileSharedRouteGatewayModeApplicationSection(t *testing.T) {
 		Spec:       corev1.ServiceSpec{Ports: []corev1.ServicePort{{Port: 8080, Protocol: corev1.ProtocolTCP}}},
 	}
 	srr := &srrv1alpha1.SharedRouteRegistry{
-		ObjectMeta: metav1.ObjectMeta{Name: "shared-demo-app", Namespace: "demo-shared", UID: "uid-app"},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "shared-demo-app",
+			Namespace: "demo-shared",
+			UID:       "uid-app",
+			Annotations: map[string]string{
+				gateway.AnnotationExtAuthUser: "alice",
+			},
+		},
 		Spec: srrv1alpha1.SharedRouteRegistrySpec{
 			RouteMode:     srrv1alpha1.RouteModeGateway,
 			EntranceClass: srrv1alpha1.EntranceClassApplication,
@@ -199,7 +228,18 @@ func TestReconcileSharedRouteGatewayModeApplicationSection(t *testing.T) {
 	if got := parentRef["name"]; got != "app-gateway" {
 		t.Fatalf("parentRefs[0].name = %v, want app-gateway", got)
 	}
-	mustHTTPRouteSectionNameAbsent(t, route)
+	if got := mustHTTPRouteSectionName(t, route); got != "https" {
+		t.Fatalf("HTTPRoute sectionName = %q, want https", got)
+	}
+	mustIncludeParentSection(t, route, l4MTLSGatewaySectN)
+
+	policy := &unstructured.Unstructured{}
+	policy.SetGroupVersionKind(securityPolicyGVK)
+	if err := c.Get(context.Background(), types.NamespacedName{
+		Namespace: "demo-shared", Name: "shared-demo-app-extauth",
+	}, policy); err != nil {
+		t.Fatalf("ExtAuth SecurityPolicy not created: %v", err)
+	}
 }
 
 func TestReconcileSharedRouteGatewayModeEmptyEntranceClassDefaultsToShared(t *testing.T) {
@@ -230,6 +270,7 @@ func TestReconcileSharedRouteGatewayModeEmptyEntranceClassDefaultsToShared(t *te
 	if got := mustHTTPRouteSectionName(t, route); got != "http" {
 		t.Fatalf("HTTPRoute sectionName = %q, want http for empty EntranceClass", got)
 	}
+	mustIncludeParentSection(t, route, l4MTLSGatewaySectN)
 }
 
 func TestReconcileSharedRouteGatewayModeApplicationHostContracts(t *testing.T) {
@@ -240,7 +281,14 @@ func TestReconcileSharedRouteGatewayModeApplicationHostContracts(t *testing.T) {
 	}
 	const pattern = "ab12cd34.*.olares.com"
 	srr := &srrv1alpha1.SharedRouteRegistry{
-		ObjectMeta: metav1.ObjectMeta{Name: "shared-demo-app-host", Namespace: "demo-shared", UID: "uid-app-host"},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "shared-demo-app-host",
+			Namespace: "demo-shared",
+			UID:       "uid-app-host",
+			Annotations: map[string]string{
+				gateway.AnnotationExtAuthUser: "alice",
+			},
+		},
 		Spec: srrv1alpha1.SharedRouteRegistrySpec{
 			RouteMode:     srrv1alpha1.RouteModeGateway,
 			EntranceClass: srrv1alpha1.EntranceClassApplication,
@@ -309,7 +357,14 @@ func TestReconcileSharedRouteGatewayModeApplicationMultiEntranceHostPattern(t *t
 	}
 	const pattern = "e31111940.*.olares.cn"
 	srr := &srrv1alpha1.SharedRouteRegistry{
-		ObjectMeta: metav1.ObjectMeta{Name: "app-e3111194-terminal", Namespace: "demo-shared", UID: "uid-app-multi"},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "app-e3111194-terminal",
+			Namespace: "demo-shared",
+			UID:       "uid-app-multi",
+			Annotations: map[string]string{
+				gateway.AnnotationExtAuthUser: "alice",
+			},
+		},
 		Spec: srrv1alpha1.SharedRouteRegistrySpec{
 			RouteMode:     srrv1alpha1.RouteModeGateway,
 			EntranceClass: srrv1alpha1.EntranceClassApplication,
@@ -362,7 +417,14 @@ func TestReconcileSharedRouteGatewayModeApplicationBootstrapReady(t *testing.T) 
 		Spec:       corev1.ServiceSpec{Ports: []corev1.ServicePort{{Port: 8080, Protocol: corev1.ProtocolTCP}}},
 	}
 	srr := &srrv1alpha1.SharedRouteRegistry{
-		ObjectMeta: metav1.ObjectMeta{Name: "shared-demo-app-bootstrap", Namespace: "demo-shared", UID: "uid-app-bootstrap"},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "shared-demo-app-bootstrap",
+			Namespace: "demo-shared",
+			UID:       "uid-app-bootstrap",
+			Annotations: map[string]string{
+				gateway.AnnotationExtAuthUser: "alice",
+			},
+		},
 		Spec: srrv1alpha1.SharedRouteRegistrySpec{
 			RouteMode:     srrv1alpha1.RouteModeGateway,
 			EntranceClass: srrv1alpha1.EntranceClassApplication,
@@ -385,7 +447,8 @@ func TestReconcileSharedRouteGatewayModeApplicationBootstrapReady(t *testing.T) 
 	if err := c.Get(context.Background(), types.NamespacedName{Namespace: "demo-shared", Name: "shared-demo-app-bootstrap"}, route); err != nil {
 		t.Fatalf("HTTPRoute not created: %v", err)
 	}
-	mustHTTPRouteSectionNameAbsent(t, route)
+	mustIncludeParentSection(t, route, "https")
+	mustIncludeParentSection(t, route, l4MTLSGatewaySectN)
 }
 
 func TestReconcileSharedRouteDirectMode(t *testing.T) {

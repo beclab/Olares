@@ -13,7 +13,6 @@ import (
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/cluster"
 )
 
@@ -54,7 +53,9 @@ func ComputeRouteModePatch(ctx context.Context, c client.Client, app *appv1alpha
 	if s := settingsRouteMode(app); s == AnnotationRouteModeGateway || s == AnnotationRouteModeDirect {
 		return true, s, nil
 	}
-	if !appcfg.IsGatewaySharedApp(app) {
+	// Product steady state: all apps with entrances use AGW for HTTP routing
+	// (L4 is edge TLS only). Shared and application classes share this gate.
+	if len(app.Spec.Entrances) == 0 && len(app.Spec.SharedEntrances) == 0 {
 		return false, "", nil
 	}
 	if !cluster.GetInClusterGatewayEnabled(ctx) {

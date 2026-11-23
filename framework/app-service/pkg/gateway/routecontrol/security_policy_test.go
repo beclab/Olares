@@ -15,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway"
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway/callerjwt"
 	srrv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/gateway/v1alpha1"
 )
@@ -231,6 +232,192 @@ func walkJWTClaimPath(t *testing.T, token, claimPath string) string {
 		t.Fatalf("path %q: got %#v", claimPath, cur)
 	}
 	return got
+}
+
+func TestDesiredApplicationExtAuthSecurityPolicy(t *testing.T) {
+	srr := &srrv1alpha1.SharedRouteRegistry{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "app-blog-web",
+			Namespace: "blog-alice",
+			Annotations: map[string]string{
+				"gateway.olares.io/extauth-user": "alice",
+			},
+		},
+		Spec: srrv1alpha1.SharedRouteRegistrySpec{
+			EntranceClass: srrv1alpha1.EntranceClassApplication,
+			HostPatterns:  []string{"blog.*.olares.com"},
+			Upstream:      srrv1alpha1.UpstreamRef{ServiceName: "web"},
+		},
+	}
+	meta := ApplicationExtAuthSecurityPolicyMetaForTest(srr)
+	if meta.Name != "app-blog-web-extauth" {
+		t.Fatalf("name = %q, want app-blog-web-extauth", meta.Name)
+	}
+	spec := ApplicationExtAuthSecurityPolicySpecForTest(srr)
+	if spec == nil {
+		t.Fatal("expected ExtAuth policy")
+	}
+	if _, hasJWT := spec["jwt"]; hasJWT {
+		t.Fatal("application policy must not use JWT")
+	}
+	ext, ok := spec["extAuth"].(map[string]any)
+	if !ok {
+		t.Fatalf("extAuth missing: %#v", spec)
+	}
+	if ext["failOpen"] != false {
+		t.Fatalf("failOpen = %#v", ext["failOpen"])
+	}
+	httpCfg, ok := ext["http"].(map[string]any)
+	if !ok || httpCfg["path"] != AutheliaVerifyPath {
+		t.Fatalf("http = %#v", ext["http"])
+	}
+	backends, ok := httpCfg["backendRefs"].([]any)
+	if !ok || len(backends) != 1 {
+		t.Fatalf("backendRefs = %#v", httpCfg["backendRefs"])
+	}
+	be := backends[0].(map[string]any)
+	if be["name"] != AutheliaBackendServiceName || be["namespace"] != "user-system-alice" {
+		t.Fatalf("backend = %#v", be)
+	}
+	if be["port"] != int64(AutheliaBackendPort) {
+		t.Fatalf("port = %#v", be["port"])
+	}
+}
+
+func TestReconcileSharedRouteAuthModeNoneSkipsExtAuthAndStampsUser(t *testing.T) {
+	ctx := context.Background()
+	srr := &srrv1alpha1.SharedRouteRegistry{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "sys-auth",
+			Namespace: "user-space-alice",
+			Annotations: map[string]string{
+				gateway.AnnotationExtAuthUser:  "alice",
+				gateway.AnnotationAuthMode:     gateway.AuthModeNone,
+				gateway.AnnotationStampBFLUser: "alice",
+			},
+		},
+		Spec: srrv1alpha1.SharedRouteRegistrySpec{
+			RouteMode:     srrv1alpha1.RouteModeGateway,
+			EntranceClass: srrv1alpha1.EntranceClassApplication,
+			HostPatterns:  []string{"auth.alice.olares.com"},
+			Upstream:      srrv1alpha1.UpstreamRef{ServiceName: "authelia-svc", Port: 80},
+		},
+	}
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Name: "authelia-svc", Namespace: "user-space-alice"},
+		Spec: corev1.ServiceSpec{
+			Ports: []corev1.ServicePort{{Port: 80, Protocol: corev1.ProtocolTCP}},
+		},
+	}
+	c := fake.NewClientBuilder().WithScheme(testSchemeWithSecurityPolicy(t)).WithObjects(srr, svc).Build()
+
+	res, err := ReconcileSharedRoute(ctx, c, GatewayRef{}, srr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Reason != ReasonReconciled {
+		t.Fatalf("reason = %q", res.Reason)
+	}
+
+	policy := &unstructured.Unstructured{}
+	policy.SetGroupVersionKind(securityPolicyGVK)
+	err = c.Get(ctx, types.NamespacedName{Namespace: "user-space-alice", Name: "sys-auth-extauth"}, policy)
+	if err == nil {
+		t.Fatal("auth-mode=none must not create ExtAuth SecurityPolicy")
+	}
+
+	route := &unstructured.Unstructured{}
+	route.SetGroupVersionKind(schema.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1", Kind: "HTTPRoute"})
+	if err := c.Get(ctx, types.NamespacedName{Namespace: "user-space-alice", Name: "sys-auth"}, route); err != nil {
+		t.Fatalf("HTTPRoute: %v", err)
+	}
+	mustIncludeParentSection(t, route, l4MTLSGatewaySectN)
+	rules, found, err := unstructured.NestedSlice(route.Object, "spec", "rules")
+	if err != nil || !found || len(rules) == 0 {
+		t.Fatalf("rules missing: %v", err)
+	}
+	rule, _ := rules[0].(map[string]any)
+	filters, _ := rule["filters"].([]any)
+	foundStamp := false
+	for _, f := range filters {
+		fm, _ := f.(map[string]any)
+		mod, _ := fm["requestHeaderModifier"].(map[string]any)
+		set, _ := mod["set"].([]any)
+		for _, item := range set {
+			h, _ := item.(map[string]any)
+			if h["name"] == "X-BFL-USER" && h["value"] == "alice" {
+				foundStamp = true
+			}
+		}
+	}
+	if !foundStamp {
+		t.Fatalf("filters=%#v want X-BFL-USER stamp", filters)
+	}
+}
+
+func TestReconcileSharedRouteGatewayModeCreatesApplicationExtAuth(t *testing.T) {
+	ctx := context.Background()
+	srr := &srrv1alpha1.SharedRouteRegistry{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "app-blog-web",
+			Namespace: "blog-alice",
+			Annotations: map[string]string{
+				"gateway.olares.io/extauth-user": "alice",
+			},
+		},
+		Spec: srrv1alpha1.SharedRouteRegistrySpec{
+			RouteMode:     srrv1alpha1.RouteModeGateway,
+			EntranceClass: srrv1alpha1.EntranceClassApplication,
+			HostPatterns:  []string{"blog.*.olares.com"},
+			Upstream:      srrv1alpha1.UpstreamRef{ServiceName: "web", Port: 80},
+		},
+	}
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Name: "web", Namespace: "blog-alice"},
+		Spec: corev1.ServiceSpec{
+			Ports: []corev1.ServicePort{{Port: 80, Protocol: corev1.ProtocolTCP}},
+		},
+	}
+	c := fake.NewClientBuilder().WithScheme(testSchemeWithSecurityPolicy(t)).WithObjects(srr, svc).Build()
+
+	res, err := ReconcileSharedRoute(ctx, c, GatewayRef{}, srr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Reason != ReasonReconciled {
+		t.Fatalf("reason = %q", res.Reason)
+	}
+
+	got := &unstructured.Unstructured{}
+	got.SetGroupVersionKind(securityPolicyGVK)
+	if err := c.Get(ctx, types.NamespacedName{Namespace: "blog-alice", Name: "app-blog-web-extauth"}, got); err != nil {
+		t.Fatalf("get ExtAuth SecurityPolicy: %v", err)
+	}
+	if _, found, _ := unstructured.NestedMap(got.Object, "spec", "jwt"); found {
+		t.Fatal("application SecurityPolicy must not contain jwt")
+	}
+	path, found, err := unstructured.NestedString(got.Object, "spec", "extAuth", "http", "path")
+	if err != nil || !found || path != AutheliaVerifyPath {
+		t.Fatalf("extAuth path = %q found=%v err=%v", path, found, err)
+	}
+
+	grant := &unstructured.Unstructured{}
+	grant.SetGroupVersionKind(referenceGrantGVK)
+	if err := c.Get(ctx, types.NamespacedName{
+		Namespace: "user-system-alice",
+		Name:      autheliaReferenceGrantName(srr),
+	}, grant); err != nil {
+		t.Fatalf("get Authelia ReferenceGrant: %v", err)
+	}
+
+	jwks := &unstructured.Unstructured{}
+	jwks.SetGroupVersionKind(referenceGrantGVK)
+	if err := c.Get(ctx, types.NamespacedName{
+		Namespace: CallerJWTJWKSServiceNamespace,
+		Name:      jwksReferenceGrantName(srr),
+	}, jwks); err == nil {
+		t.Fatal("application SRR must not create JWKS ReferenceGrant")
+	}
 }
 
 func TestReconcileSharedRouteGatewayModeCreatesSecurityPolicy(t *testing.T) {
