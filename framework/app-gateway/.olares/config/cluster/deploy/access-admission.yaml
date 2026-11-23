@@ -1,5 +1,6 @@
-# Access ValidatingAdmissionWebhook (default failurePolicy=Ignore for safe install).
-# End-state (OLARES_UNIAUTH_ENDSTATE=true): fill caBundle then set failurePolicy=Fail.
+# Access ValidatingAdmissionWebhook.
+# Install/upgrade steady-state: endState from app-access-runtime; process promotes
+# failurePolicy to Fail after self-signed caBundle is written.
 ---
 apiVersion: v1
 kind: Service
@@ -42,13 +43,21 @@ spec:
           env:
             - name: ACCESS_ADMISSION_ADDR
               value: ":9443"
-            # One-shot end-state: set to "true" (drives reconcile + compilation).
             - name: OLARES_UNIAUTH_ENDSTATE
-              value: "false"
+              valueFrom:
+                configMapKeyRef:
+                  name: app-access-runtime
+                  key: endState
             - name: OLARES_ACCESS_POLICY_RECONCILE
-              value: "false"
+              valueFrom:
+                configMapKeyRef:
+                  name: app-access-runtime
+                  key: endState
             - name: OLARES_POLICY_COMPILATION
-              value: "false"
+              valueFrom:
+                configMapKeyRef:
+                  name: app-access-runtime
+                  key: policyCompilationEnabled
           ports:
             - containerPort: 9443
               name: webhook
@@ -66,6 +75,37 @@ metadata:
   name: access-admission
   namespace: os-app-access
 ---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: access-admission
+rules:
+  - apiGroups: ["admissionregistration.k8s.io"]
+    resources: ["validatingwebhookconfigurations"]
+    verbs: ["get", "list", "watch", "update", "patch"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
+  - apiGroups: ["access.olares.io"]
+    resources: ["appaccesspolicies", "appcapabilitysets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["policy.linkerd.io"]
+    resources: ["servers", "authorizationpolicies", "meshtlsauthentications", "httproutes"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: access-admission
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: access-admission
+subjects:
+  - kind: ServiceAccount
+    name: access-admission
+    namespace: os-app-access
+---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
@@ -81,7 +121,7 @@ webhooks:
         namespace: os-app-access
         path: /validate
         port: 443
-      # caBundle filled by install/certgen before switching failurePolicy to Fail
+    # Starts Ignore; access-admission promotes to Fail when endState and caBundle ready.
     failurePolicy: Ignore
     matchPolicy: Equivalent
     sideEffects: None

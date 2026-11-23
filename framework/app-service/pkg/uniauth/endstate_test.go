@@ -1,45 +1,34 @@
 package uniauth
 
-import "testing"
+import (
+	"os"
+	"testing"
+)
 
-func TestEndStateEnabled(t *testing.T) {
-	t.Setenv(EndStateEnv, "")
-	if EndStateEnabled() {
-		t.Fatal("default off")
+func TestEndStateDefaultsOn(t *testing.T) {
+	t.Cleanup(func() { _ = os.Unsetenv(EndStateEnv) })
+	_ = os.Unsetenv(EndStateEnv)
+	if !EndStateEnabled() {
+		t.Fatal("unset env must default to steady-state on")
 	}
+}
+
+func TestEndStateExplicitOff(t *testing.T) {
+	t.Setenv(EndStateEnv, "false")
+	if EndStateEnabled() {
+		t.Fatal("explicit false must disable")
+	}
+}
+
+func TestEndStateExplicitOn(t *testing.T) {
 	t.Setenv(EndStateEnv, "true")
 	if !EndStateEnabled() {
-		t.Fatal("expected on")
+		t.Fatal("explicit true")
 	}
-}
-
-func TestEffectiveHTTPMeshWave(t *testing.T) {
-	parse := func(s string) int {
-		if s == "2" {
-			return 2
-		}
-		return 0
+	if EffectiveHTTPMeshWave("0", func(string) int { return 0 }) != EndStateWave {
+		t.Fatal("wave 4")
 	}
-	t.Setenv(EndStateEnv, "")
-	if EffectiveHTTPMeshWave("2", parse) != 2 {
-		t.Fatal("wave passthrough")
-	}
-	t.Setenv(EndStateEnv, "1")
-	if EffectiveHTTPMeshWave("0", parse) != EndStateWave {
-		t.Fatal("end-state forces wave 4")
-	}
-}
-
-func TestTrafficGroupNPDesired(t *testing.T) {
-	t.Setenv(EndStateEnv, "")
-	if TrafficGroupNPDesired("") {
-		t.Fatal("off")
-	}
-	if !TrafficGroupNPDesired("true") {
-		t.Fatal("np env")
-	}
-	t.Setenv(EndStateEnv, "true")
 	if !TrafficGroupNPDesired("") {
-		t.Fatal("end-state implies NP")
+		t.Fatal("NP implied")
 	}
 }

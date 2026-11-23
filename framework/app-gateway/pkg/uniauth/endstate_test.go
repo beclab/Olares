@@ -1,20 +1,24 @@
 package uniauth
 
-import "testing"
+import (
+	"os"
+	"testing"
+)
 
-func TestEndStateImpliesAll(t *testing.T) {
-	t.Setenv(EndStateEnv, "")
-	if EndStateEnabled() || EntryMTLSDesired("") || AccessPolicyReconcileDesired("") {
-		t.Fatal("default off")
-	}
-	t.Setenv(EndStateEnv, "true")
+func TestEndStateDefaultsOn(t *testing.T) {
+	t.Cleanup(func() { _ = os.Unsetenv(EndStateEnv) })
+	_ = os.Unsetenv(EndStateEnv)
 	if !EndStateEnabled() {
-		t.Fatal("end-state")
+		t.Fatal("default on")
 	}
-	if !EntryMTLSDesired("") || !AccessPolicyReconcileDesired("") {
-		t.Fatal("end-state must imply entry PKI and policy reconcile")
+	if !EntryMTLSDesired("") || !AccessPolicyReconcileDesired("") || !PolicyCompilationDesired("", false) {
+		t.Fatal("default end-state implies control-plane features")
 	}
-	if !PolicyCompilationDesired("", false) {
-		t.Fatal("end-state must imply policy compilation")
+}
+
+func TestEndStateExplicitOff(t *testing.T) {
+	t.Setenv(EndStateEnv, "false")
+	if EndStateEnabled() || EntryMTLSDesired("") {
+		t.Fatal("explicit off")
 	}
 }
