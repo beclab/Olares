@@ -97,6 +97,11 @@ func parentRefsForSRR(gw GatewayRef, srr *srrv1alpha1.SharedRouteRegistry) []any
 		"namespace": gw.gatewayNamespace(),
 		"name":      gw.gatewayName(),
 	}
+	l4Ref := copyAnyStringMap(base)
+	l4Ref["sectionName"] = l4MTLSGatewaySectN
+	if isMainSystemEntry(srr) {
+		return []any{l4Ref}
+	}
 	var refs []any
 	if section, ok := gatewaySectionForSRR(gw, srr); ok {
 		ref := copyAnyStringMap(base)
@@ -108,10 +113,7 @@ func parentRefsForSRR(gw GatewayRef, srr *srrv1alpha1.SharedRouteRegistry) []any
 		httpsRef["sectionName"] = defaultGatewaySectN
 		refs = append(refs, httpsRef)
 	}
-	l4Ref := copyAnyStringMap(base)
-	l4Ref["sectionName"] = l4MTLSGatewaySectN
-	refs = append(refs, l4Ref)
-	return refs
+	return append(refs, l4Ref)
 }
 
 func copyAnyStringMap(in map[string]any) map[string]any {
@@ -180,8 +182,27 @@ func ReconcileSharedRoute(ctx context.Context, c client.Client, gw GatewayRef, s
 	case "", srrv1alpha1.RouteModeGateway:
 		return reconcileGatewayMode(ctx, c, gw, srr)
 	default:
-		return routeUnavailable(ctx, c, gw, srr, ReasonInvalidSpec, fmt.Sprintf("unknown routeMode %q", srr.Spec.RouteMode))
+		return routeUnavailable(ctx, c, gw, srr, ReasonInvalidSpec, fmt.Sprintf("unknown routeMode %q", srr.Spec.RouteMode), nil)
 	}
+}
+
+func isMainSystemEntry(srr *srrv1alpha1.SharedRouteRegistry) bool {
+	if srr == nil {
+		return false
+	}
+	owner := strings.TrimSpace(srr.Annotations[gateway.AnnotationExtAuthUser])
+	return owner != "" && srr.Namespace == "user-space-"+owner &&
+		(srr.Name == gateway.SystemPlaneSRRName("auth") || srr.Name == gateway.SystemPlaneSRRName("desktop")) &&
+		srr.Labels[ManagedByLabel] == ManagedByValue &&
+		srr.Labels[gateway.LabelSystemPlane] == gateway.LabelSystemPlaneValue &&
+		srr.Labels[InstanceLabel] == gateway.SystemPlaneInstance &&
+		isApplicationSRR(srr)
+}
+
+func isSystemLoginRoute(srr *srrv1alpha1.SharedRouteRegistry) bool {
+	return isMainSystemEntry(srr) && srr.Name == gateway.SystemPlaneSRRName("auth") &&
+		srrAuthMode(srr) == gateway.AuthModeNone && srr.Spec.Upstream.ServiceNamespace == "" &&
+		srr.Spec.Upstream.ServiceName == "authelia-svc" && srr.Spec.Upstream.Port == 80
 }
 
 func reconcileGatewayMode(ctx context.Context, c client.Client, gw GatewayRef, srr *srrv1alpha1.SharedRouteRegistry) (ReconcileResult, error) {
@@ -189,7 +210,19 @@ func reconcileGatewayMode(ctx context.Context, c client.Client, gw GatewayRef, s
 		return waitForHTTPRouteMesh(ctx, c, gw, srr, err)
 	}
 	if len(srr.Spec.HostPatterns) == 0 || srr.Spec.Upstream.ServiceName == "" {
-		return routeUnavailable(ctx, c, gw, srr, ReasonInvalidSpec, "hostPatterns or upstream.serviceName missing")
+		return routeUnavailable(ctx, c, gw, srr, ReasonInvalidSpec, "hostPatterns or upstream.serviceName missing", nil)
+	}
+
+	bootstrap, err := systemLoginTransport(ctx, c, srr)
+	if err != nil {
+		return waitForHTTPRouteMesh(ctx, c, gw, srr, err)
+	}
+	keep, err := upsertMeshTransports(ctx, c, client.ObjectKeyFromObject(srr), bootstrap)
+	if err != nil {
+		return waitForHTTPRouteMesh(ctx, c, gw, srr, err)
+	}
+	wait := func(err error) (ReconcileResult, error) {
+		return routeUnavailable(ctx, c, gw, srr, ReasonAwaitingDataPlane, err.Error(), keep)
 	}
 
 	upstreamNS := srr.Spec.Upstream.ServiceNamespace
@@ -200,15 +233,18 @@ func reconcileGatewayMode(ctx context.Context, c client.Client, gw GatewayRef, s
 	svc := &corev1.Service{}
 	if err := c.Get(ctx, types.NamespacedName{Namespace: upstreamNS, Name: srr.Spec.Upstream.ServiceName}, svc); err != nil {
 		if apierrors.IsNotFound(err) {
+			if len(keep) > 0 {
+				return wait(err)
+			}
 			return routeUnavailable(ctx, c, gw, srr, ReasonBackendMissing,
-				fmt.Sprintf("backend Service %s/%s not found", upstreamNS, srr.Spec.Upstream.ServiceName))
+				fmt.Sprintf("backend Service %s/%s not found", upstreamNS, srr.Spec.Upstream.ServiceName), keep)
 		}
 		return ReconcileResult{}, fmt.Errorf("get backend Service: %w", err)
 	}
 
 	port, err := resolveServicePort(svc, srr.Spec.Upstream)
 	if err != nil {
-		return routeUnavailable(ctx, c, gw, srr, ReasonInvalidSpec, err.Error())
+		return routeUnavailable(ctx, c, gw, srr, ReasonInvalidSpec, err.Error(), keep)
 	}
 
 	if err := applyReferenceGrant(ctx, c, srr, upstreamNS, srr.Spec.Upstream.ServiceName); err != nil {
@@ -228,13 +264,13 @@ func reconcileGatewayMode(ctx context.Context, c client.Client, gw GatewayRef, s
 		return ReconcileResult{}, fmt.Errorf("apply JWKS ReferenceGrant: %w", err)
 	}
 	if err := httpRouteMeshDependenciesReady(ctx, c, upstreamNS, srr); err != nil {
-		return waitForHTTPRouteMesh(ctx, c, gw, srr, err)
+		return wait(err)
 	}
-	if err := applyMeshTransport(ctx, c, gw, srr, svc, port); err != nil {
-		return waitForHTTPRouteMesh(ctx, c, gw, srr, err)
+	if err := applyMeshTransport(ctx, c, gw, srr, svc, port, keep); err != nil {
+		return wait(err)
 	}
 	if err := removeLegacyGatewayIngress(ctx, c, upstreamNS); err != nil {
-		return waitForHTTPRouteMesh(ctx, c, gw, srr, fmt.Errorf("remove legacy gateway ingress: %w", err))
+		return wait(fmt.Errorf("remove legacy gateway ingress: %w", err))
 	}
 	if err := reconcileL4AuthzRoute(ctx, c, gw, srr, needsL4Authz(srr)); err != nil {
 		return ReconcileResult{}, fmt.Errorf("reconcile L4 authorization route: %w", err)
@@ -253,17 +289,17 @@ func reconcileGatewayMode(ctx context.Context, c client.Client, gw GatewayRef, s
 }
 
 func waitForHTTPRouteMesh(ctx context.Context, c client.Client, gw GatewayRef, srr *srrv1alpha1.SharedRouteRegistry, cause error) (ReconcileResult, error) {
-	return routeUnavailable(ctx, c, gw, srr, ReasonAwaitingDataPlane, cause.Error())
+	return routeUnavailable(ctx, c, gw, srr, ReasonAwaitingDataPlane, cause.Error(), nil)
 }
 
-func routeUnavailable(ctx context.Context, c client.Client, gw GatewayRef, srr *srrv1alpha1.SharedRouteRegistry, reason, message string) (ReconcileResult, error) {
+func routeUnavailable(ctx context.Context, c client.Client, gw GatewayRef, srr *srrv1alpha1.SharedRouteRegistry, reason, message string, keep map[client.ObjectKey]bool) (ReconcileResult, error) {
 	if err := reconcileL4AuthzRoute(ctx, c, gw, srr, false); err != nil {
 		return ReconcileResult{}, fmt.Errorf("withdraw L4 authorization route: %w", err)
 	}
 	if err := withdrawUnreadyHTTPRoute(ctx, c, srr); err != nil {
 		return ReconcileResult{}, fmt.Errorf("withdraw HTTPRoute for unverified mesh endpoints: %w", err)
 	}
-	if err := pruneMeshTransport(ctx, c, client.ObjectKeyFromObject(srr), nil); err != nil {
+	if err := pruneMeshTransport(ctx, c, client.ObjectKeyFromObject(srr), keep); err != nil {
 		return ReconcileResult{}, fmt.Errorf("withdraw route transport NetworkPolicies: %w", err)
 	}
 	return ReconcileResult{Status: metav1.ConditionFalse, Reason: reason, Message: message}, nil

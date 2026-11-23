@@ -3,11 +3,11 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"slices"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/security"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -40,8 +40,25 @@ func trafficGroupNetworkPolicyRequests(_ context.Context, obj client.Object) []r
 }
 
 func watchTrafficGroupNetworkPolicySources(c controller.Controller, sourceCache cache.Cache) error {
+	requestsFor := func(ctx context.Context, obj client.Object) []reconcile.Request {
+		requests := trafficGroupNetworkPolicyRequests(ctx, obj)
+		if client.ObjectKeyFromObject(obj) != kubernetesAPIKey {
+			return requests
+		}
+		var namespaces corev1.NamespaceList
+		if err := sourceCache.List(ctx, &namespaces); err != nil {
+			klog.Errorf("list tenant namespaces for Kubernetes API policy refresh: %v", err)
+			return requests
+		}
+		for _, ns := range namespaces.Items {
+			if tenant, _ := security.IsUserInternalNamespaces(ns.Name); tenant && ns.DeletionTimestamp.IsZero() {
+				requests = append(requests, reconcile.Request{NamespacedName: client.ObjectKey{Name: ns.Name}})
+			}
+		}
+		return requests
+	}
 	for _, obj := range []client.Object{&corev1.Service{}, &corev1.Endpoints{}, &corev1.Pod{}} {
-		if err := c.Watch(source.Kind(sourceCache, obj, handler.EnqueueRequestsFromMapFunc(trafficGroupNetworkPolicyRequests))); err != nil {
+		if err := c.Watch(source.Kind(sourceCache, obj, handler.EnqueueRequestsFromMapFunc(requestsFor))); err != nil {
 			return err
 		}
 	}
@@ -49,7 +66,7 @@ func watchTrafficGroupNetworkPolicySources(c controller.Controller, sourceCache 
 }
 
 func (r *SecurityReconciler) reconcileTrafficGroupDependencies(ctx context.Context, namespace string) error {
-	if slices.Contains(security.KubernetesAPIPolicyNamespaces(), namespace) {
+	if security.UsesKubernetesAPIPolicy(namespace) {
 		var service corev1.Service
 		if err := r.Get(ctx, kubernetesAPIKey, &service); err != nil && !apierrors.IsNotFound(err) {
 			return fmt.Errorf("read Kubernetes API Service: %w", err)
