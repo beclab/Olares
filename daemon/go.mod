@@ -4,7 +4,7 @@ go 1.26.0
 
 replace (
 	bytetrade.io/web3os/backups-sdk => github.com/Above-Os/backups-sdk v0.1.17
-	bytetrade.io/web3os/bfl => github.com/beclab/bfl v0.3.36
+	bytetrade.io/web3os/bfl => ../framework/bfl
 	github.com/beclab/Olares/cli => ../cli
 	github.com/beclab/Olares/framework/app-service => ../framework/app-service
 	github.com/labstack/echo/v4 => github.com/eball/echo/v4 v4.13.4-patch
