@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
@@ -197,6 +198,14 @@ func (r *SecurityReconciler) Reconcile(rootCtx context.Context, req ctrl.Request
 		return ctrl.Result{}, err
 	}
 
+	if err := r.reconcileTrafficGroupNetworkPolicies(ctx, namespace); err != nil {
+		if apierrors.IsConflict(err) {
+			logger.Info("Conflict while update traffic-group network policy.")
+			return ctrl.Result{Requeue: true}, nil
+		}
+		return ctrl.Result{}, err
+	}
+
 	return ctrl.Result{}, nil
 }
 
@@ -338,6 +347,12 @@ func (r *SecurityReconciler) reconcileNamespaceLabels(ctx context.Context, ns *c
 		}
 
 	}
+	// Soft traffic-group label for uniauth isolation (idempotent).
+	if _, ok := ns.Labels[security.TrafficGroupLabel]; !ok {
+		security.LabelNamespaceTrafficGroup(ns)
+		updated = true
+	}
+
 	if updated {
 		logger.Info("Update labels of namespace")
 		err := r.Update(ctx, ns)
@@ -347,6 +362,45 @@ func (r *SecurityReconciler) reconcileNamespaceLabels(ctx context.Context, ns *c
 	}
 
 	return nil
+}
+
+// reconcileTrafficGroupNetworkPolicies applies the safe isolation bundle when
+// OLARES_TRAFFIC_GROUP_NP is enabled. Labels are applied independently.
+func (r *SecurityReconciler) reconcileTrafficGroupNetworkPolicies(ctx context.Context, ns *corev1.Namespace) error {
+	if !security.TrafficGroupNPEnabled(os.Getenv("OLARES_TRAFFIC_GROUP_NP")) {
+		return nil
+	}
+	if ns == nil || !ns.DeletionTimestamp.IsZero() {
+		return nil
+	}
+	logger := ctx.Value(loggerKey).(logr.Logger)
+	for _, np := range security.BuildTrafficGroupIsolationBundle(ns.Name) {
+		policy := np
+		if err := r.upsertNetworkPolicy(ctx, &policy); err != nil {
+			logger.Error(err, "upsert traffic-group network policy", "name", policy.Name)
+			return err
+		}
+	}
+	return nil
+}
+
+func (r *SecurityReconciler) upsertNetworkPolicy(ctx context.Context, desired *netv1.NetworkPolicy) error {
+	var existing netv1.NetworkPolicy
+	err := r.Get(ctx, types.NamespacedName{Namespace: desired.Namespace, Name: desired.Name}, &existing)
+	if apierrors.IsNotFound(err) {
+		return r.Create(ctx, desired)
+	}
+	if err != nil {
+		return err
+	}
+	existing.Spec = *desired.Spec.DeepCopy()
+	if existing.Labels == nil {
+		existing.Labels = map[string]string{}
+	}
+	for k, v := range desired.Labels {
+		existing.Labels[k] = v
+	}
+	return r.Update(ctx, &existing)
 }
 
 func (r *SecurityReconciler) createOrUpdateNetworkPolicy(ctx context.Context,
