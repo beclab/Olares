@@ -55,33 +55,6 @@
       }
     },
     {
-      "name": "app_alice_wireguard_wg",
-      "type": "STRICT_DNS",
-      "connectTimeout": "5s",
-      "loadAssignment": {
-        "clusterName": "app_alice_wireguard_wg",
-        "endpoints": [
-          {
-            "lbEndpoints": [
-              {
-                "endpoint": {
-                  "address": {
-                    "socketAddress": {
-                      "address": "wireguard-svc.wireguard-alice.svc.cluster.local",
-                      "portValue": 51820
-                    }
-                  }
-                }
-              }
-            ]
-          }
-        ]
-      },
-      "commonHttpProtocolOptions": {
-        "idleTimeout": "10s"
-      }
-    },
-    {
       "name": "nonapp_auth_alice",
       "type": "STRICT_DNS",
       "connectTimeout": "5s",
@@ -150,6 +123,33 @@
                     "socketAddress": {
                       "address": "wizard.user-space-alice.svc.cluster.local",
                       "portValue": 80
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "commonHttpProtocolOptions": {
+        "idleTimeout": "10s"
+      }
+    },
+    {
+      "name": "app_alice_wireguard_wg",
+      "type": "STRICT_DNS",
+      "connectTimeout": "5s",
+      "loadAssignment": {
+        "clusterName": "app_alice_wireguard_wg",
+        "endpoints": [
+          {
+            "lbEndpoints": [
+              {
+                "endpoint": {
+                  "address": {
+                    "socketAddress": {
+                      "address": "wireguard-svc.wireguard-alice.svc.cluster.local",
+                      "portValue": 51820
                     }
                   }
                 }
@@ -840,45 +840,6 @@
           }
         },
         {
-          "name": "app_alice_wireguard_wg",
-          "domains": [
-            "wireguard.alice.snowinning.com",
-            "wireguard.alice.olares.local"
-          ],
-          "routes": [
-            {
-              "name": "default_alice_wireguard_wg",
-              "match": {
-                "prefix": "/"
-              },
-              "route": {
-                "cluster": "app_alice_wireguard_wg",
-                "timeout": "300s",
-                "upgradeConfigs": [
-                  {
-                    "upgradeType": "websocket"
-                  },
-                  {
-                    "upgradeType": "tailscale-control-protocol"
-                  }
-                ]
-              },
-              "typedPerFilterConfig": {
-                "envoy.filters.http.ext_authz": {
-                  "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
-                  "checkSettings": {}
-                }
-              }
-            }
-          ],
-          "typedPerFilterConfig": {
-            "envoy.filters.http.ext_authz": {
-              "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
-              "disabled": true
-            }
-          }
-        },
-        {
           "name": "nonapp_auth_alice",
           "domains": [
             "auth.alice.snowinning.com",
@@ -992,6 +953,45 @@
                   "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
                 }
               ]
+            }
+          ],
+          "typedPerFilterConfig": {
+            "envoy.filters.http.ext_authz": {
+              "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+              "disabled": true
+            }
+          }
+        },
+        {
+          "name": "app_alice_wireguard_wg",
+          "domains": [
+            "wireguard.alice.snowinning.com",
+            "wireguard.alice.olares.local"
+          ],
+          "routes": [
+            {
+              "name": "default_alice_wireguard_wg",
+              "match": {
+                "prefix": "/"
+              },
+              "route": {
+                "cluster": "app_alice_wireguard_wg",
+                "timeout": "300s",
+                "upgradeConfigs": [
+                  {
+                    "upgradeType": "websocket"
+                  },
+                  {
+                    "upgradeType": "tailscale-control-protocol"
+                  }
+                ]
+              },
+              "typedPerFilterConfig": {
+                "envoy.filters.http.ext_authz": {
+                  "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+                  "checkSettings": {}
+                }
+              }
             }
           ],
           "typedPerFilterConfig": {
@@ -1150,45 +1150,6 @@
           }
         },
         {
-          "name": "app_alice_wireguard_wg",
-          "domains": [
-            "wireguard.alice.snowinning.com",
-            "wireguard.alice.olares.local"
-          ],
-          "routes": [
-            {
-              "name": "default_alice_wireguard_wg",
-              "match": {
-                "prefix": "/"
-              },
-              "route": {
-                "cluster": "app_alice_wireguard_wg",
-                "timeout": "300s",
-                "upgradeConfigs": [
-                  {
-                    "upgradeType": "websocket"
-                  },
-                  {
-                    "upgradeType": "tailscale-control-protocol"
-                  }
-                ]
-              },
-              "typedPerFilterConfig": {
-                "envoy.filters.http.ext_authz": {
-                  "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
-                  "checkSettings": {}
-                }
-              }
-            }
-          ],
-          "typedPerFilterConfig": {
-            "envoy.filters.http.ext_authz": {
-              "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
-              "disabled": true
-            }
-          }
-        },
-        {
           "name": "nonapp_auth_alice",
           "domains": [
             "auth.alice.snowinning.com",
@@ -1302,6 +1263,45 @@
                   "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
                 }
               ]
+            }
+          ],
+          "typedPerFilterConfig": {
+            "envoy.filters.http.ext_authz": {
+              "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+              "disabled": true
+            }
+          }
+        },
+        {
+          "name": "app_alice_wireguard_wg",
+          "domains": [
+            "wireguard.alice.snowinning.com",
+            "wireguard.alice.olares.local"
+          ],
+          "routes": [
+            {
+              "name": "default_alice_wireguard_wg",
+              "match": {
+                "prefix": "/"
+              },
+              "route": {
+                "cluster": "app_alice_wireguard_wg",
+                "timeout": "300s",
+                "upgradeConfigs": [
+                  {
+                    "upgradeType": "websocket"
+                  },
+                  {
+                    "upgradeType": "tailscale-control-protocol"
+                  }
+                ]
+              },
+              "typedPerFilterConfig": {
+                "envoy.filters.http.ext_authz": {
+                  "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+                  "checkSettings": {}
+                }
+              }
             }
           ],
           "typedPerFilterConfig": {

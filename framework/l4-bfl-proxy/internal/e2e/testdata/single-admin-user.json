@@ -55,33 +55,6 @@
       }
     },
     {
-      "name": "app_alice_vault_vault-frontend",
-      "type": "STRICT_DNS",
-      "connectTimeout": "5s",
-      "loadAssignment": {
-        "clusterName": "app_alice_vault_vault-frontend",
-        "endpoints": [
-          {
-            "lbEndpoints": [
-              {
-                "endpoint": {
-                  "address": {
-                    "socketAddress": {
-                      "address": "vault-svc.vault-alice.svc.cluster.local",
-                      "portValue": 8080
-                    }
-                  }
-                }
-              }
-            ]
-          }
-        ]
-      },
-      "commonHttpProtocolOptions": {
-        "idleTimeout": "10s"
-      }
-    },
-    {
       "name": "nonapp_auth_alice",
       "type": "STRICT_DNS",
       "connectTimeout": "5s",
@@ -150,6 +123,33 @@
                     "socketAddress": {
                       "address": "wizard.user-space-alice.svc.cluster.local",
                       "portValue": 80
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "commonHttpProtocolOptions": {
+        "idleTimeout": "10s"
+      }
+    },
+    {
+      "name": "app_alice_vault_vault-frontend",
+      "type": "STRICT_DNS",
+      "connectTimeout": "5s",
+      "loadAssignment": {
+        "clusterName": "app_alice_vault_vault-frontend",
+        "endpoints": [
+          {
+            "lbEndpoints": [
+              {
+                "endpoint": {
+                  "address": {
+                    "socketAddress": {
+                      "address": "vault-svc.vault-alice.svc.cluster.local",
+                      "portValue": 8080
                     }
                   }
                 }
@@ -857,45 +857,6 @@
           }
         },
         {
-          "name": "app_alice_vault_vault-frontend",
-          "domains": [
-            "vault.alice.snowinning.com",
-            "vault.alice.olares.local"
-          ],
-          "routes": [
-            {
-              "name": "default_alice_vault_vault-frontend",
-              "match": {
-                "prefix": "/"
-              },
-              "route": {
-                "cluster": "app_alice_vault_vault-frontend",
-                "timeout": "300s",
-                "upgradeConfigs": [
-                  {
-                    "upgradeType": "websocket"
-                  },
-                  {
-                    "upgradeType": "tailscale-control-protocol"
-                  }
-                ]
-              },
-              "typedPerFilterConfig": {
-                "envoy.filters.http.ext_authz": {
-                  "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
-                  "checkSettings": {}
-                }
-              }
-            }
-          ],
-          "typedPerFilterConfig": {
-            "envoy.filters.http.ext_authz": {
-              "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
-              "disabled": true
-            }
-          }
-        },
-        {
           "name": "nonapp_auth_alice",
           "domains": [
             "auth.alice.snowinning.com",
@@ -1009,6 +970,45 @@
                   "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
                 }
               ]
+            }
+          ],
+          "typedPerFilterConfig": {
+            "envoy.filters.http.ext_authz": {
+              "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+              "disabled": true
+            }
+          }
+        },
+        {
+          "name": "app_alice_vault_vault-frontend",
+          "domains": [
+            "vault.alice.snowinning.com",
+            "vault.alice.olares.local"
+          ],
+          "routes": [
+            {
+              "name": "default_alice_vault_vault-frontend",
+              "match": {
+                "prefix": "/"
+              },
+              "route": {
+                "cluster": "app_alice_vault_vault-frontend",
+                "timeout": "300s",
+                "upgradeConfigs": [
+                  {
+                    "upgradeType": "websocket"
+                  },
+                  {
+                    "upgradeType": "tailscale-control-protocol"
+                  }
+                ]
+              },
+              "typedPerFilterConfig": {
+                "envoy.filters.http.ext_authz": {
+                  "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+                  "checkSettings": {}
+                }
+              }
             }
           ],
           "typedPerFilterConfig": {
@@ -1167,45 +1167,6 @@
           }
         },
         {
-          "name": "app_alice_vault_vault-frontend",
-          "domains": [
-            "vault.alice.snowinning.com",
-            "vault.alice.olares.local"
-          ],
-          "routes": [
-            {
-              "name": "default_alice_vault_vault-frontend",
-              "match": {
-                "prefix": "/"
-              },
-              "route": {
-                "cluster": "app_alice_vault_vault-frontend",
-                "timeout": "300s",
-                "upgradeConfigs": [
-                  {
-                    "upgradeType": "websocket"
-                  },
-                  {
-                    "upgradeType": "tailscale-control-protocol"
-                  }
-                ]
-              },
-              "typedPerFilterConfig": {
-                "envoy.filters.http.ext_authz": {
-                  "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
-                  "checkSettings": {}
-                }
-              }
-            }
-          ],
-          "typedPerFilterConfig": {
-            "envoy.filters.http.ext_authz": {
-              "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
-              "disabled": true
-            }
-          }
-        },
-        {
           "name": "nonapp_auth_alice",
           "domains": [
             "auth.alice.snowinning.com",
@@ -1319,6 +1280,45 @@
                   "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
                 }
               ]
+            }
+          ],
+          "typedPerFilterConfig": {
+            "envoy.filters.http.ext_authz": {
+              "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+              "disabled": true
+            }
+          }
+        },
+        {
+          "name": "app_alice_vault_vault-frontend",
+          "domains": [
+            "vault.alice.snowinning.com",
+            "vault.alice.olares.local"
+          ],
+          "routes": [
+            {
+              "name": "default_alice_vault_vault-frontend",
+              "match": {
+                "prefix": "/"
+              },
+              "route": {
+                "cluster": "app_alice_vault_vault-frontend",
+                "timeout": "300s",
+                "upgradeConfigs": [
+                  {
+                    "upgradeType": "websocket"
+                  },
+                  {
+                    "upgradeType": "tailscale-control-protocol"
+                  }
+                ]
+              },
+              "typedPerFilterConfig": {
+                "envoy.filters.http.ext_authz": {
+                  "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute",
+                  "checkSettings": {}
+                }
+              }
             }
           ],
           "typedPerFilterConfig": {
