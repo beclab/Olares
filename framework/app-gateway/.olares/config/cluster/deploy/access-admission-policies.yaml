@@ -1,0 +1,159 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: olares-access-posture
+  annotations:
+    helm.sh/resource-policy: keep
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE", "DELETE"]
+        resources: ["configmaps"]
+        scope: Namespaced
+  matchConditions:
+    - name: protected-config
+      expression: >-
+        (request.namespace == 'os-app-access' &&
+        (request.operation == 'DELETE' ? oldObject.metadata.name : object.metadata.name) == 'app-access-runtime') ||
+        (request.namespace == 'os-gateway' &&
+        (request.operation == 'DELETE' ? oldObject.metadata.name : object.metadata.name) == 'olares-http-mesh-wave')
+  validations:
+    - expression: >-
+        request.userInfo.groups.exists(g, g == 'system:masters') ||
+        request.userInfo.username in [
+          'system:serviceaccount:kube-system:olares-cli',
+          'system:serviceaccount:os-platform:olares-app'
+        ]
+      message: Access posture is release controlled.
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: olares-access-posture
+  annotations:
+    helm.sh/resource-policy: keep
+spec:
+  policyName: olares-access-posture
+  validationActions: [Deny, Audit]
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: olares-access-grant-lifecycle
+  annotations:
+    helm.sh/resource-policy: keep
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: ["access.olares.io"]
+        apiVersions: ["v1alpha1"]
+        operations: ["CREATE", "UPDATE", "DELETE"]
+        resources: ["appaccesspolicies"]
+        scope: Namespaced
+  validations:
+    - expression: "request.namespace == 'os-app-access'"
+      message: AppAccessPolicies belong in os-app-access.
+    - expression: "request.operation != 'DELETE'"
+      message: Revoke grants through desiredState to retain the revocation record.
+    - expression: >-
+        request.operation == 'DELETE' ||
+        (has(object.spec.binding.requestRef) &&
+        object.metadata.name == 'request-' + object.spec.binding.requestRef.uid)
+      message: Each user approval request has exactly one durable grant name.
+    - expression: "request.operation != 'UPDATE' || oldObject.spec.desiredState != 'Revoked' || object.spec.desiredState == 'Revoked'"
+      message: Revoked grants cannot be reactivated.
+    - expression: "request.operation != 'UPDATE' || object.spec.binding == oldObject.spec.binding"
+      message: Approved grant bindings are immutable.
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: olares-access-grant-lifecycle
+  annotations:
+    helm.sh/resource-policy: keep
+spec:
+  policyName: olares-access-grant-lifecycle
+  validationActions: [Deny, Audit]
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: olares-app-access-catalog
+webhooks:
+  - name: catalog.access.olares.io
+    failurePolicy: Fail
+    sideEffects: None
+    admissionReviewVersions: ["v1"]
+    timeoutSeconds: 5
+    clientConfig:
+      service:
+        namespace: os-framework
+        name: app-service
+        port: 8433
+        path: /app-service/v1/access/catalog/validate
+    namespaceSelector:
+      matchLabels:
+        kubernetes.io/metadata.name: os-app-access
+    rules:
+      - apiGroups: ["access.olares.io"]
+        apiVersions: ["v1alpha1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["appcapabilitysets"]
+        scope: Namespaced
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: olares-access-projection-writer
+  annotations:
+    helm.sh/resource-policy: keep
+spec:
+  failurePolicy: Fail
+  paramKind:
+    apiVersion: coordination.k8s.io/v1
+    kind: Lease
+  matchConstraints:
+    resourceRules:
+      - apiGroups: ["policy.linkerd.io"]
+        apiVersions: ["*"]
+        operations: ["CREATE", "UPDATE", "DELETE"]
+        resources: ["servers", "authorizationpolicies", "meshtlsauthentications"]
+      - apiGroups: ["gateway.networking.k8s.io"]
+        apiVersions: ["*"]
+        operations: ["CREATE", "UPDATE", "DELETE"]
+        resources: ["httproutes", "referencegrants"]
+  matchConditions:
+    - name: managed-projection
+      expression: >-
+        (request.operation != 'DELETE' && has(object.metadata.labels) &&
+        'app.kubernetes.io/managed-by' in object.metadata.labels &&
+        object.metadata.labels['app.kubernetes.io/managed-by'] == 'access-policy') ||
+        (request.operation != 'CREATE' && has(oldObject.metadata.labels) &&
+        'app.kubernetes.io/managed-by' in oldObject.metadata.labels &&
+        oldObject.metadata.labels['app.kubernetes.io/managed-by'] == 'access-policy')
+  validations:
+    - expression: >-
+        request.userInfo.username == 'system:serviceaccount:os-framework:os-internal' &&
+        params != null && has(params.spec.holderIdentity) &&
+        has(request.userInfo.extra) &&
+        'authentication.kubernetes.io/pod-uid' in request.userInfo.extra &&
+        request.userInfo.extra['authentication.kubernetes.io/pod-uid'] == [params.spec.holderIdentity]
+      message: Only the app-service Pod that holds the policy writer Lease can modify managed access projections.
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: olares-access-projection-writer
+  annotations:
+    helm.sh/resource-policy: keep
+spec:
+  policyName: olares-access-projection-writer
+  paramRef:
+    name: app-service-access-policy-writer
+    namespace: os-app-access
+    parameterNotFoundAction: Deny
+  validationActions: [Deny, Audit]

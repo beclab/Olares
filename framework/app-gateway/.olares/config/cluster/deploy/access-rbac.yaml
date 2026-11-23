@@ -1,5 +1,4 @@
-# Access authorization control-plane RBAC. Business policy compilation stays
-# disabled until AppAccessPolicy desiredState is explicitly Active.
+# Access approval API RBAC. The app-service Lease holder owns projections.
 ---
 apiVersion: v1
 kind: Namespace
@@ -33,15 +32,6 @@ rules:
       - appaccessrequests/status
       - appaccesspolicies
       - appaccesspolicies/status
-    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-  - apiGroups: ["policy.linkerd.io"]
-    resources: ["servers", "serverauthorizations", "authorizationpolicies", "meshtlsauthentications", "networkauthentications"]
-    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-  - apiGroups: ["gateway.networking.k8s.io"]
-    resources: ["httproutes"]
-    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-  - apiGroups: ["networking.k8s.io"]
-    resources: ["networkpolicies"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
   - apiGroups: [""]
     resources: ["namespaces", "services", "serviceaccounts", "pods", "endpoints"]

@@ -47,31 +47,24 @@ func TestAccessCRDsAndRBACPresent(t *testing.T) {
 	}
 }
 
-func TestAccessAdmissionManifestTLSAndSplitWebhooks(t *testing.T) {
-	_, file, _, ok := runtime.Caller(0)
-	if !ok {
-		t.Fatal("runtime.Caller failed")
+func TestAccessAdmissionPoliciesRemainFailClosed(t *testing.T) {
+	_, file, _, _ := runtime.Caller(0)
+	deploy := filepath.Join(filepath.Dir(file), "../../.olares/config/cluster/deploy")
+	if _, err := os.Stat(filepath.Join(deploy, "access-admission.yaml")); !os.IsNotExist(err) {
+		t.Fatalf("standalone admission workload is still shipped: %v", err)
 	}
-	deploy := filepath.Clean(filepath.Join(filepath.Dir(file), "../../.olares/config/cluster/deploy"))
-	raw, err := os.ReadFile(filepath.Join(deploy, "access-admission.yaml"))
+	raw, err := os.ReadFile(filepath.Join(deploy, "access-admission-policies.yaml"))
 	if err != nil {
-		t.Fatalf("access-admission.yaml: %v", err)
+		t.Fatal(err)
 	}
 	body := string(raw)
-	if !strings.Contains(body, "failurePolicy: Ignore") {
-		t.Fatal("admission webhook must bootstrap Ignore")
+	for _, required := range []string{"olares-access-posture", "olares-access-grant-lifecycle", "olares-access-projection-writer", "authentication.kubernetes.io/pod-uid", "parameterNotFoundAction: Deny", "validationActions: [Deny, Audit]", "failurePolicy: Fail", "helm.sh/resource-policy: keep"} {
+		if !strings.Contains(body, required) {
+			t.Errorf("missing access guard %s", required)
+		}
 	}
-	if !strings.Contains(body, "name: access.olares.io") {
-		t.Fatal("missing access CRD webhook")
-	}
-	if !strings.Contains(body, "name: posture-config.access.olares.io") {
-		t.Fatal("missing posture configmap webhook")
-	}
-	if !strings.Contains(body, "scheme: HTTPS") {
-		t.Fatal("probes must use HTTPS")
-	}
-	if strings.Contains(body, "OLARES_UNIAUTH_ENDSTATE") {
-		t.Fatal("admission deploy must not carry endState env")
+	if strings.Contains(body, "failurePolicy: Ignore") {
+		t.Fatal("access guards must fail closed even on bootstrap")
 	}
 }
 

@@ -51,7 +51,7 @@ func (b boundPolicy) gatewayRoute() DesiredObject {
 	host := b.host()
 	svc := bindingRef(b.target, "service").Name
 	port, _, _ := unstructured.NestedInt64(b.target, "service", "servicePort")
-	return b.gatewayObject(routeGVK, AdmissionTLSNamespace, "edge", map[string]any{
+	return b.gatewayObject(routeGVK, PolicyNamespace, "edge", map[string]any{
 		"parentRefs": []any{map[string]any{"group": policyRouteGroup, "kind": "Gateway", "namespace": internalNamespace, "name": internalGateway, "sectionName": internalListener}},
 		"hostnames":  []any{host},
 		"rules": []any{map[string]any{
@@ -67,7 +67,7 @@ func (b boundPolicy) gatewayRoute() DesiredObject {
 
 func (b boundPolicy) referenceGrant() DesiredObject {
 	return b.gatewayObject(grantGVK, b.policy.Namespace, "ref", map[string]any{
-		"from": []any{map[string]any{"group": policyRouteGroup, "kind": "HTTPRoute", "namespace": AdmissionTLSNamespace}},
+		"from": []any{map[string]any{"group": policyRouteGroup, "kind": "HTTPRoute", "namespace": PolicyNamespace}},
 		"to":   []any{map[string]any{"group": "", "kind": "Service", "name": bindingRef(b.target, "service").Name}},
 	})
 }
@@ -202,7 +202,7 @@ func (b boundPolicy) checkGateway(ctx context.Context, c client.Client) error {
 	if value(config, "name") != internalListener || value(config, "protocol") != "HTTP" ||
 		value(config, "hostname") != "*.access.olares.internal" || portNumber != 8080 ||
 		value(config, "allowedRoutes", "namespaces", "from") != "Selector" ||
-		value(config, "allowedRoutes", "namespaces", "selector", "matchLabels", "kubernetes.io/metadata.name") != AdmissionTLSNamespace ||
+		value(config, "allowedRoutes", "namespaces", "selector", "matchLabels", "kubernetes.io/metadata.name") != PolicyNamespace ||
 		value(gw.Object, "spec", "infrastructure", "parametersRef", "name") != internalGateway {
 		return fmt.Errorf("internal gateway listener is not isolated")
 	}

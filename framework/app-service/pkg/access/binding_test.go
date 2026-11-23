@@ -141,16 +141,16 @@ func bindingFixture(t *testing.T, mode string) (client.Client, *unstructured.Uns
 		"serviceAccount": ref("caller"), "release": release, "requestDigest": "sha256:intent",
 	}
 	approval := "2026-11-01T10:00:00Z"
-	req := makeObj(accessGVK("AppAccessRequest"), AdmissionTLSNamespace, "request", "request-uid", map[string]any{
+	req := makeObj(accessGVK("AppAccessRequest"), PolicyNamespace, "request", "request-uid", map[string]any{
 		"requesterUserId": "alice", "requestDigest": "sha256:intent", "sourceRelease": release, "accessScope": scope,
 		"target": target, "expiresAt": "2026-11-01T11:00:00Z",
 	})
 	req.Object["status"] = map[string]any{"decision": map[string]any{"outcome": "Approved", "receiptId": "receipt", "actorUserId": "alice", "decidedAt": approval, "intentDigest": "sha256:approved", "intentDigestVersion": "v4"}}
-	catalog := makeObj(accessGVK("AppCapabilitySet"), AdmissionTLSNamespace, "catalog", "catalog-uid", map[string]any{
+	catalog := makeObj(accessGVK("AppCapabilitySet"), PolicyNamespace, "catalog", "catalog-uid", map[string]any{
 		"release": targetRelease, "reviewRef": "review", "capabilities": []any{map[string]any{"id": "read", "protocol": "HTTP", "portName": "http", "serviceKey": "backend",
 			"rules": []any{map[string]any{"method": "GET", "path": "/read", "pathType": "Exact"}}}},
 	})
-	policy := makeObj(accessGVK("AppAccessPolicy"), AdmissionTLSNamespace, "binding", "binding-uid", map[string]any{
+	policy := makeObj(accessGVK("AppAccessPolicy"), PolicyNamespace, "request-request-uid", "binding-uid", map[string]any{
 		"desiredState": "Active", "binding": map[string]any{"accessScope": scope, "source": source, "target": target, "requestRef": ref("request"),
 			"consent": map[string]any{"receiptId": "receipt", "userId": "alice", "confirmedAt": approval, "intentDigest": "sha256:approved", "intentDigestVersion": "v4"}},
 	})
@@ -181,7 +181,7 @@ func bindingFixture(t *testing.T, mode string) (client.Client, *unstructured.Uns
 			"listeners": []any{map[string]any{
 				"name": internalListener, "protocol": "HTTP", "hostname": "*.access.olares.internal", "port": int64(8080),
 				"allowedRoutes": map[string]any{"namespaces": map[string]any{"from": "Selector",
-					"selector": map[string]any{"matchLabels": map[string]any{"kubernetes.io/metadata.name": AdmissionTLSNamespace}},
+					"selector": map[string]any{"matchLabels": map[string]any{"kubernetes.io/metadata.name": PolicyNamespace}},
 				}},
 			}},
 		})
@@ -195,7 +195,7 @@ func bindingFixture(t *testing.T, mode string) (client.Client, *unstructured.Uns
 		objs = append(objs, gw, server)
 	}
 	c := fake.NewClientBuilder().WithScheme(s).WithObjects(objs...).Build()
-	u := mustObject(t, c, accessGVK("AppAccessPolicy"), AdmissionTLSNamespace, "binding")
+	u := mustObject(t, c, accessGVK("AppAccessPolicy"), PolicyNamespace, "request-request-uid")
 	return c, u
 }
 
@@ -274,7 +274,7 @@ func TestBindingRequiresApprovalForSameScopeAndCatalogService(t *testing.T) {
 				t.Fatal(err)
 			}
 			if tc.resource == "request" {
-				req := mustObject(t, c, accessGVK("AppAccessRequest"), AdmissionTLSNamespace, tc.resource)
+				req := mustObject(t, c, accessGVK("AppAccessRequest"), PolicyNamespace, tc.resource)
 				if err := unstructured.SetNestedField(req.Object, tc.replacement, "status", "decision", tc.field); err != nil {
 					t.Fatal(err)
 				}
@@ -282,7 +282,7 @@ func TestBindingRequiresApprovalForSameScopeAndCatalogService(t *testing.T) {
 					t.Fatal(err)
 				}
 			} else {
-				catalog := mustObject(t, c, accessGVK("AppCapabilitySet"), AdmissionTLSNamespace, tc.resource)
+				catalog := mustObject(t, c, accessGVK("AppCapabilitySet"), PolicyNamespace, tc.resource)
 				items, _, _ := unstructured.NestedSlice(catalog.Object, "spec", "capabilities")
 				items[0].(map[string]any)[tc.field] = tc.replacement
 				if err := unstructured.SetNestedSlice(catalog.Object, items, "spec", "capabilities"); err != nil {
@@ -299,4 +299,56 @@ func TestBindingRequiresApprovalForSameScopeAndCatalogService(t *testing.T) {
 			mustAbsent(t, c, plan.AuthorizationPolicyName, b.policy.Namespace)
 		})
 	}
+}
+
+func TestGrantCannotBeRenamedToReuseItsApproval(t *testing.T) {
+	_, u := bindingFixture(t, RouteModeDirect)
+	u.SetName("second-grant-for-the-same-request")
+	if _, err := readBinding(u); err == nil {
+		t.Fatal("a renamed grant could replay a revoked approval")
+	}
+}
+
+func TestAdmissionOutageWithdrawsExistingAllowAndPreservesRevocation(t *testing.T) {
+	ctx := context.Background()
+	c, u := bindingFixture(t, RouteModeDirect)
+	b, err := readBinding(u)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ReconcileAccessPolicy(ctx, c, u, true); err != nil {
+		t.Fatal(err)
+	}
+	plan, err := CompilePolicy(revoked(b.policy), true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ReconcileAccessPolicy(ctx, c, u, true); err == nil {
+		t.Fatal("unobserved Linkerd route approved")
+	}
+	observeRoute(t, c, b.policy.Namespace, plan.HTTPRouteName, "policy.linkerd.io", "Server", b.policy.Namespace, plan.ServerName, "")
+	if err := ReconcileAccessPolicy(ctx, c, u, true); err != nil {
+		t.Fatal(err)
+	}
+	mustObject(t, c, authzGVK(), b.policy.Namespace, plan.AuthorizationPolicyName)
+
+	if err := reconcilePolicyPass(ctx, c, false); err != nil {
+		t.Fatal(err)
+	}
+	mustAbsent(t, c, plan.AuthorizationPolicyName, b.policy.Namespace)
+	grant := mustObject(t, c, accessGVK("AppAccessPolicy"), PolicyNamespace, u.GetName())
+	if value(grant.Object, "spec", "desiredState") != DesiredActive {
+		t.Fatal("an admission outage changed the approved desired state")
+	}
+	if err := unstructured.SetNestedField(grant.Object, DesiredRevoked, "spec", "desiredState"); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Update(ctx, grant); err != nil {
+		t.Fatal(err)
+	}
+	if err := reconcilePolicyPass(ctx, c, true); err != nil {
+		t.Fatal(err)
+	}
+	mustAbsent(t, c, plan.AuthorizationPolicyName, b.policy.Namespace)
+	mustObject(t, c, schema.GroupVersionKind{Group: "policy.linkerd.io", Version: "v1beta3", Kind: "Server"}, b.policy.Namespace, plan.ServerName)
 }
