@@ -11,7 +11,7 @@ import (
 const edgeForwardClusterName = "app_gateway_edge_forward"
 
 // buildEdgeForwardVirtualHosts builds Host-preserving reverse-proxy vhosts to AGW.
-// Used when AppGatewayMTLS is on: L4 terminates user TLS only; AGW owns app routing.
+// Used when AppGatewayMTLS is on: L4 terminates user TLS only; AGW owns all HTTP routing.
 func (t *Translator) buildEdgeForwardVirtualHosts(user *message.UserInfo, zone string, clusterSet map[string]*ir.ClusterIR) []*ir.VirtualHostIR {
 	if user == nil || t == nil {
 		return nil
@@ -32,7 +32,6 @@ func (t *Translator) buildEdgeForwardVirtualHosts(user *message.UserInfo, zone s
 		Language: user.Language,
 		UserZone: zone,
 		UserName: user.Name,
-		// Below system services so auth/desktop/wizard/profile keep L4 backends.
 		Priority: 0,
 		Routes: []*ir.HTTPRouteIR{{
 			Name:             fmt.Sprintf("edge_forward_root_%s", user.Name),
@@ -59,10 +58,13 @@ func edgeForwardDomains(user *message.UserInfo, zone string) []string {
 	}
 
 	if zone != "" {
+		// Zone apex serves profile; wildcards cover auth/desktop/wizard/apps.
+		add(zone)
 		add("*." + zone)
 		tokens := strings.Split(zone, ".")
 		if len(tokens) > 1 {
 			localZone := tokens[0] + ".olares.local"
+			add(localZone)
 			add("*." + localZone)
 		}
 	}

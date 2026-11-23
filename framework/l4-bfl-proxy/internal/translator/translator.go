@@ -221,10 +221,13 @@ func (t *Translator) Translate(resources *message.Resources) *ir.Xds {
 
 		// Build wizard virtual hosts for any ephemeral users whose zone
 		// matches this owner's zone, to be merged into the owner's HCM.
+		// Edge mode: *.zone already edge-forwards; AGW owns wizard routing.
 		var ephemeralVHosts []*ir.VirtualHostIR
-		for _, ephUser := range ephemeralsByZone[user.SSL.Zone] {
-			if wvh := t.buildEphemeralWizardVHost(ephUser, user.SSL.Zone, clusterSet); wvh != nil {
-				ephemeralVHosts = append(ephemeralVHosts, wvh)
+		if t.cfg == nil || !t.cfg.AppGatewayMTLS {
+			for _, ephUser := range ephemeralsByZone[user.SSL.Zone] {
+				if wvh := t.buildEphemeralWizardVHost(ephUser, user.SSL.Zone, clusterSet); wvh != nil {
+					ephemeralVHosts = append(ephemeralVHosts, wvh)
+				}
 			}
 		}
 
@@ -481,6 +484,12 @@ func (t *Translator) buildUserVirtualHosts(user *message.UserInfo, zone string, 
 	var vhosts []*ir.VirtualHostIR
 	namespace := user.Namespace
 
+	if t.cfg != nil && t.cfg.AppGatewayMTLS {
+		// All user HTTP (apps, custom domains, auth/desktop/wizard/profile):
+		// TLS on L4 only; Host-preserving forward to AGW.
+		return t.buildEdgeForwardVirtualHosts(user, zone, clusterSet)
+	}
+
 	// Profile/root server
 	profileCluster := fmt.Sprintf("profile_service_%s", user.Name)
 	profileHost := fmt.Sprintf("profile-service.%s.svc.cluster.local", namespace)
@@ -512,16 +521,9 @@ func (t *Translator) buildUserVirtualHosts(user *message.UserInfo, zone string, 
 	}
 	vhosts = append(vhosts, profileVHost)
 
-	// System services (auth, desktop, wizard) stay on L4 (edge IdP / desktop).
 	for _, def := range systemServices {
 		vhost := t.buildSystemVirtualHost(user, def, zone, isEphemeral, namespace, clusterSet)
 		vhosts = append(vhosts, vhost)
-	}
-
-	if t.cfg != nil && t.cfg.AppGatewayMTLS {
-		// Application + custom-domain HTTP: TLS on L4, routing/backends on AGW.
-		vhosts = append(vhosts, t.buildEdgeForwardVirtualHosts(user, zone, clusterSet)...)
-		return vhosts
 	}
 
 	for _, app := range user.Apps {
