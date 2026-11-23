@@ -45,6 +45,9 @@ func (r *SharedRouteReconciler) Reconcile(ctx context.Context, req reconcile.Req
 		}
 	}
 	var retry time.Duration
+	if rerr == nil && res.Reason == ReasonAwaitingDataPlane {
+		retry = 5 * time.Second
+	}
 	if rerr == nil && res.HTTPRouteName != "" {
 		if err := servingReadiness(ctx, r.Client, GatewayRef{}, srr, res.HTTPRouteName); err != nil {
 			res.Status, res.Reason, res.Message = metav1.ConditionFalse, ReasonAwaitingDataPlane, err.Error()

@@ -236,6 +236,12 @@ func reconcileGatewayMode(ctx context.Context, c client.Client, gw GatewayRef, s
 	if err := applyJWKSReferenceGrant(ctx, c, srr); err != nil {
 		return ReconcileResult{}, fmt.Errorf("apply JWKS ReferenceGrant: %w", err)
 	}
+	if err := meshedReadyEndpoints(ctx, c, upstreamNS, srr.Spec.Upstream); err != nil {
+		if withdrawErr := withdrawUnreadyHTTPRoute(ctx, c, srr); withdrawErr != nil {
+			return ReconcileResult{}, fmt.Errorf("withdraw HTTPRoute for unverified mesh endpoints: %w", withdrawErr)
+		}
+		return ReconcileResult{Status: metav1.ConditionFalse, Reason: ReasonAwaitingDataPlane, Message: err.Error()}, nil
+	}
 	// Attach dependencies before making the route available to the data plane.
 	routeName, err := applyHTTPRoute(ctx, c, gw, srr, port)
 	if err != nil {
@@ -575,6 +581,21 @@ func extractRouteTimeoutFloor(route *unstructured.Unstructured) (time.Duration, 
 		}
 	}
 	return floor, nil
+}
+
+// withdrawUnreadyHTTPRoute only removes the route owned by this registry.
+func withdrawUnreadyHTTPRoute(ctx context.Context, c client.Client, srr *srrv1alpha1.SharedRouteRegistry) error {
+	obj := &unstructured.Unstructured{}
+	obj.SetGroupVersionKind(schema.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1", Kind: "HTTPRoute"})
+	if err := c.Get(ctx, types.NamespacedName{Namespace: srr.Namespace, Name: httpRouteName(srr)}, obj); err != nil {
+		return client.IgnoreNotFound(err)
+	}
+	owner := metav1.GetControllerOf(obj)
+	if owner == nil || owner.Kind != "SharedRouteRegistry" || owner.UID != srr.UID {
+		return fmt.Errorf("HTTPRoute %s/%s is not owned by SharedRouteRegistry %s", obj.GetNamespace(), obj.GetName(), srr.Name)
+	}
+	uid, version := obj.GetUID(), obj.GetResourceVersion()
+	return client.IgnoreNotFound(c.Delete(ctx, obj, client.Preconditions{UID: &uid, ResourceVersion: &version}))
 }
 
 func deleteHTTPRoute(ctx context.Context, c client.Client, srr *srrv1alpha1.SharedRouteRegistry) error {

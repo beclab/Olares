@@ -3,6 +3,7 @@ package routecontrol
 import (
 	"context"
 	srrv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/gateway/v1alpha1"
+	"github.com/beclab/Olares/framework/app-service/pkg/mesh"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -81,27 +82,71 @@ func TestServingReadinessWaitsForPolicyAndMeshedEndpoints(t *testing.T) {
 	objects := []client.Object{gw, route, security, ctp}
 	for _, ep := range []struct{ ns, svc string }{{defaultGatewayNS, "app-gateway-l4-mtls"}, {srr.Namespace, "app"}} {
 		uid := types.UID(ep.svc + "-uid")
-		pod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Namespace: ep.ns, Name: ep.svc, UID: uid},
-			Status: corev1.PodStatus{ContainerStatuses: []corev1.ContainerStatus{{Name: "linkerd-proxy", Ready: true}}}}
+		selector := map[string]string{"app": ep.svc}
+		port := int32(8080)
+		if ep.svc == entryMeshService.ServiceName {
+			port = entryMeshService.Port
+		}
+		service := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: ep.ns, Name: ep.svc, UID: uid + "-service"},
+			Spec: corev1.ServiceSpec{Selector: selector, Ports: []corev1.ServicePort{{Port: port}}}}
+		pod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Namespace: ep.ns, Name: ep.svc, UID: uid, Labels: selector,
+			Annotations: map[string]string{mesh.LinkerdDefaultInboundPolicyAnnotation: mesh.InboundPolicyClusterAuthenticated}},
+			Spec: corev1.PodSpec{
+				InitContainers: []corev1.Container{{Name: "linkerd-init", Args: []string{"--inbound-ports-to-ignore", "3389,4190,4191"}}},
+				Containers: []corev1.Container{{Name: mesh.LinkerdProxyContainer,
+					Env: []corev1.EnvVar{{Name: mesh.LinkerdProxyInboundPolicyEnv, Value: mesh.InboundPolicyClusterAuthenticated}}}}},
+			Status: corev1.PodStatus{PodIP: "10.0.1.2",
+				ContainerStatuses: []corev1.ContainerStatus{{Name: mesh.LinkerdProxyContainer, Ready: true}}}}
 		slice := &discoveryv1.EndpointSlice{ObjectMeta: metav1.ObjectMeta{Namespace: ep.ns, Name: ep.svc,
-			Labels: map[string]string{discoveryv1.LabelServiceName: ep.svc}},
+			Labels:          map[string]string{discoveryv1.LabelServiceName: ep.svc},
+			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(service, corev1.SchemeGroupVersion.WithKind("Service"))}},
+			Ports: []discoveryv1.EndpointPort{{Port: ptr.To(port)}},
 			Endpoints: []discoveryv1.Endpoint{{TargetRef: &corev1.ObjectReference{Kind: "Pod", Namespace: ep.ns, Name: ep.svc, UID: uid},
-				Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)}}}}
-		objects = append(objects, pod, slice)
+				Addresses: []string{"10.0.1.2"}, Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)}}}}
+		objects = append(objects, service, pod, slice)
 	}
-	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
-	if err := servingReadiness(ctx, c, GatewayRef{}, srr, "route"); err != nil {
-		t.Fatal(err)
-	}
-	pod := &corev1.Pod{}
-	if err := c.Get(ctx, client.ObjectKey{Namespace: srr.Namespace, Name: "app"}, pod); err != nil {
-		t.Fatal(err)
-	}
-	pod.Status.ContainerStatuses[0].Ready = false
-	if err := c.Status().Update(ctx, pod); err != nil {
-		t.Fatal(err)
-	}
-	if err := servingReadiness(ctx, c, GatewayRef{}, srr, "route"); err == nil {
-		t.Fatal("an unready proxy on a serving endpoint must stop cutover")
+	for _, tc := range []struct {
+		name   string
+		mutate func(pod *corev1.Pod, slice *discoveryv1.EndpointSlice)
+	}{
+		{name: "ready"},
+		{name: "proxy not ready", mutate: func(p *corev1.Pod, _ *discoveryv1.EndpointSlice) {
+			p.Status.ContainerStatuses[0].Ready = false
+		}},
+		{name: "annotation drift", mutate: func(p *corev1.Pod, _ *discoveryv1.EndpointSlice) {
+			p.Annotations[mesh.LinkerdDefaultInboundPolicyAnnotation] = mesh.InboundPolicyAllUnauthenticated
+		}},
+		{name: "proxy configured permissive", mutate: func(p *corev1.Pod, _ *discoveryv1.EndpointSlice) {
+			p.Spec.Containers[0].Env[0].Value = mesh.InboundPolicyAllUnauthenticated
+		}},
+		{name: "proxy interception bypass", mutate: func(p *corev1.Pod, _ *discoveryv1.EndpointSlice) {
+			p.Annotations[mesh.LinkerdSkipSubnetsAnnotation] = "10.0.1.0/24"
+		}},
+		{name: "old interception exclusions", mutate: func(p *corev1.Pod, _ *discoveryv1.EndpointSlice) {
+			p.Spec.InitContainers[0].Args[1] += ",4568"
+		}},
+		{name: "HTTP route to a reserved plaintext port", mutate: func(_ *corev1.Pod, sl *discoveryv1.EndpointSlice) {
+			sl.Ports[0].Port = ptr.To(int32(3389))
+		}},
+		{name: "forged slice address", mutate: func(_ *corev1.Pod, sl *discoveryv1.EndpointSlice) {
+			sl.Endpoints[0].Addresses = []string{"10.0.1.3"}
+		}},
+		{name: "unowned slice", mutate: func(_ *corev1.Pod, sl *discoveryv1.EndpointSlice) {
+			sl.OwnerReferences = nil
+		}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			fixtures := make([]client.Object, 0, len(objects))
+			for _, object := range objects {
+				fixtures = append(fixtures, object.DeepCopyObject().(client.Object))
+			}
+			if tc.mutate != nil {
+				tc.mutate(fixtures[len(fixtures)-2].(*corev1.Pod), fixtures[len(fixtures)-1].(*discoveryv1.EndpointSlice))
+			}
+			c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(fixtures...).Build()
+			if err := servingReadiness(ctx, c, GatewayRef{}, srr, "route"); (err == nil) != (tc.mutate == nil) {
+				t.Fatalf("unexpected servingReadiness result: %v", err)
+			}
+		})
 	}
 }

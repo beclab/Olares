@@ -907,17 +907,43 @@ func (t *Translator) buildStreamListeners(resources *message.Resources, clusterS
 	// or overwrite another user's cluster for that port.
 	portOwnerUser := make(map[string]string)
 
+	type endpoint struct {
+		namespace, service string
+		port               int32
+	}
+	httpEndpoints := make(map[endpoint]struct{})
+	if t.cfg != nil && t.cfg.AppGatewayMTLS {
+		for _, user := range resources.Users {
+			for _, app := range user.Apps {
+				for _, entrance := range app.Entrances {
+					if entrance != nil && entrance.Host != "" && entrance.Port > 0 {
+						httpEndpoints[endpoint{app.Namespace, entrance.Host, entrance.Port}] = struct{}{}
+					}
+				}
+			}
+		}
+	}
+
 	for _, user := range resources.Users {
 		for _, app := range user.Apps {
 			for _, port := range app.Ports {
+				if port == nil {
+					continue
+				}
 				if port.Host == "" || port.ExposePort < 1 || port.ExposePort > 65535 {
 					klog.Warningf("buildStreamListeners: user: %s, app: %s, invalid port (host=%q exposePort=%d), skipping", user.Name, app.Name, port.Host, port.ExposePort)
 					continue
 				}
 
-				proto := strings.ToLower(port.Protocol)
+				proto := strings.ToLower(strings.TrimSpace(port.Protocol))
 				if proto == "" {
 					proto = "tcp"
+				}
+
+				if _, isHTTPEndpoint := httpEndpoints[endpoint{app.Namespace, port.Host, port.Port}]; proto == "tcp" && isHTTPEndpoint {
+					klog.Warningf("buildStreamListeners: skipping TCP exposure %d of HTTP entrance %s/%s:%d; use the app-gateway route",
+						port.ExposePort, app.Namespace, port.Host, port.Port)
+					continue
 				}
 
 				portKey := fmt.Sprintf("%s:%d", proto, port.ExposePort)

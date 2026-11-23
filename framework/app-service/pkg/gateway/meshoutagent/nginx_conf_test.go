@@ -64,6 +64,9 @@ func TestInitContainerSpec(t *testing.T) {
 		t.Fatal("iptables init must run as root")
 	}
 	script := strings.Join(c.Command, " ")
+	if strings.Contains(script, "-j RETURN") || !strings.Contains(script, `! --uid-owner $LINKERD_UID`) {
+		t.Fatal("mesh-out rules must allow proxy upstream traffic to reach Linkerd without a redirect loop")
+	}
 	for _, want := range []string{`NGINX_UID="1652"`, "REDIRECT", "--dport", "15001", "ENVOY_UID"} {
 		if !strings.Contains(script, want) {
 			t.Fatalf("init script missing %q", want)

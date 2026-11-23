@@ -6,17 +6,22 @@ import (
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway"
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway/callerjwt"
 	srrv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/gateway/v1alpha1"
+	"github.com/beclab/Olares/framework/app-service/pkg/mesh"
 )
 
 func mustHTTPRouteSectionName(t *testing.T, route *unstructured.Unstructured) string {
@@ -86,6 +91,9 @@ func testScheme(t *testing.T) *runtime.Scheme {
 	if err := corev1.AddToScheme(s); err != nil {
 		t.Fatal(err)
 	}
+	if err := discoveryv1.AddToScheme(s); err != nil {
+		t.Fatal(err)
+	}
 	if err := networkingv1.AddToScheme(s); err != nil {
 		t.Fatal(err)
 	}
@@ -150,7 +158,7 @@ func TestReconcileSharedRouteGatewayMode(t *testing.T) {
 			Upstream:      srrv1alpha1.UpstreamRef{ServiceName: "demo-svc", Port: 8080},
 		},
 	}
-	c := fake.NewClientBuilder().WithScheme(s).WithObjects(svc, srr).Build()
+	c := fake.NewClientBuilder().WithScheme(s).WithObjects(meshedServiceObjects(svc, srr)...).Build()
 
 	res, err := ReconcileSharedRoute(context.Background(), c, GatewayRef{}, srr)
 	if err != nil {
@@ -206,7 +214,7 @@ func TestReconcileSharedRouteGatewayModeApplicationSection(t *testing.T) {
 			Upstream:      srrv1alpha1.UpstreamRef{ServiceName: "demo-svc", Port: 8080},
 		},
 	}
-	c := fake.NewClientBuilder().WithScheme(s).WithObjects(svc, srr).Build()
+	c := fake.NewClientBuilder().WithScheme(s).WithObjects(meshedServiceObjects(svc, srr)...).Build()
 
 	res, err := ReconcileSharedRoute(context.Background(), c, GatewayRef{}, srr)
 	if err != nil {
@@ -256,7 +264,7 @@ func TestReconcileSharedRouteGatewayModeEmptyEntranceClassDefaultsToShared(t *te
 			Upstream:     srrv1alpha1.UpstreamRef{ServiceName: "demo-svc", Port: 8080},
 		},
 	}
-	c := fake.NewClientBuilder().WithScheme(s).WithObjects(svc, srr).Build()
+	c := fake.NewClientBuilder().WithScheme(s).WithObjects(meshedServiceObjects(svc, srr)...).Build()
 
 	if _, err := ReconcileSharedRoute(context.Background(), c, GatewayRef{}, srr); err != nil {
 		t.Fatalf("ReconcileSharedRoute: %v", err)
@@ -296,7 +304,7 @@ func TestReconcileSharedRouteGatewayModeApplicationHostContracts(t *testing.T) {
 			Upstream:      srrv1alpha1.UpstreamRef{ServiceName: "demo-svc", Port: 8080},
 		},
 	}
-	c := fake.NewClientBuilder().WithScheme(s).WithObjects(svc, srr).Build()
+	c := fake.NewClientBuilder().WithScheme(s).WithObjects(meshedServiceObjects(svc, srr)...).Build()
 
 	if _, err := ReconcileSharedRoute(context.Background(), c, GatewayRef{}, srr); err != nil {
 		t.Fatalf("ReconcileSharedRoute: %v", err)
@@ -372,7 +380,7 @@ func TestReconcileSharedRouteGatewayModeApplicationMultiEntranceHostPattern(t *t
 			Upstream:      srrv1alpha1.UpstreamRef{ServiceName: "demo-svc", Port: 8080},
 		},
 	}
-	c := fake.NewClientBuilder().WithScheme(s).WithObjects(svc, srr).Build()
+	c := fake.NewClientBuilder().WithScheme(s).WithObjects(meshedServiceObjects(svc, srr)...).Build()
 
 	res, err := ReconcileSharedRoute(context.Background(), c, GatewayRef{}, srr)
 	if err != nil {
@@ -432,7 +440,7 @@ func TestReconcileSharedRouteGatewayModeApplicationBootstrapReady(t *testing.T) 
 			Upstream:      srrv1alpha1.UpstreamRef{ServiceName: "demo-svc", Port: 8080},
 		},
 	}
-	c := fake.NewClientBuilder().WithScheme(s).WithObjects(svc, srr).Build()
+	c := fake.NewClientBuilder().WithScheme(s).WithObjects(meshedServiceObjects(svc, srr)...).Build()
 
 	res, err := ReconcileSharedRoute(context.Background(), c, GatewayRef{}, srr)
 	if err != nil {
@@ -482,7 +490,7 @@ func TestApplyHTTPRouteMaterializesTimeouts(t *testing.T) {
 			Upstream:      srrv1alpha1.UpstreamRef{ServiceName: "demo-svc", Port: 8080},
 		},
 	}
-	c := fake.NewClientBuilder().WithScheme(s).WithObjects(svc, srr).Build()
+	c := fake.NewClientBuilder().WithScheme(s).WithObjects(meshedServiceObjects(svc, srr)...).Build()
 
 	if _, err := ReconcileSharedRoute(context.Background(), c, GatewayRef{}, srr); err != nil {
 		t.Fatalf("ReconcileSharedRoute: %v", err)
@@ -572,7 +580,7 @@ func TestApplyHTTPRouteProbeFailureStillWritesTimeouts(t *testing.T) {
 		},
 	}}
 	existingRoute.SetGroupVersionKind(schema.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1", Kind: "HTTPRoute"})
-	c := fake.NewClientBuilder().WithScheme(s).WithObjects(svc, srr, existingRoute).Build()
+	c := fake.NewClientBuilder().WithScheme(s).WithObjects(meshedServiceObjects(svc, srr, existingRoute)...).Build()
 
 	if _, err := ReconcileSharedRoute(context.Background(), c, GatewayRef{}, srr); err != nil {
 		t.Fatalf("ReconcileSharedRoute: %v", err)
@@ -652,7 +660,7 @@ func TestApplyHTTPRouteDiffOnlyTimeouts(t *testing.T) {
 		},
 	}}
 	existingRoute.SetGroupVersionKind(schema.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1", Kind: "HTTPRoute"})
-	c := fake.NewClientBuilder().WithScheme(s).WithObjects(svc, srr, existingRoute).Build()
+	c := fake.NewClientBuilder().WithScheme(s).WithObjects(meshedServiceObjects(svc, srr, existingRoute)...).Build()
 
 	before := &unstructured.Unstructured{}
 	before.SetGroupVersionKind(schema.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1", Kind: "HTTPRoute"})
@@ -761,7 +769,7 @@ func TestProbePreservesExternalFloorAcrossReconcile(t *testing.T) {
 		},
 	}}
 	existingRoute.SetGroupVersionKind(schema.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1", Kind: "HTTPRoute"})
-	c := fake.NewClientBuilder().WithScheme(s).WithObjects(svc, srr, existingRoute).Build()
+	c := fake.NewClientBuilder().WithScheme(s).WithObjects(meshedServiceObjects(svc, srr, existingRoute)...).Build()
 
 	for i := 0; i < 2; i++ {
 		if _, err := ReconcileSharedRoute(context.Background(), c, GatewayRef{}, srr); err != nil {
@@ -862,7 +870,7 @@ func TestProbeBTPParseErrorKeepsRouteFloor(t *testing.T) {
 		},
 	}}
 	btp.SetGroupVersionKind(schema.GroupVersionKind{Group: "gateway.envoyproxy.io", Version: "v1alpha1", Kind: "BackendTrafficPolicy"})
-	c := fake.NewClientBuilder().WithScheme(s).WithObjects(svc, srr, existingRoute, btp).Build()
+	c := fake.NewClientBuilder().WithScheme(s).WithObjects(meshedServiceObjects(svc, srr, existingRoute, btp)...).Build()
 
 	if _, err := ReconcileSharedRoute(context.Background(), c, GatewayRef{}, srr); err != nil {
 		t.Fatalf("ReconcileSharedRoute: %v", err)
@@ -944,7 +952,7 @@ func TestEffectiveRespectsAnnotationWhenManaged(t *testing.T) {
 		},
 	}}
 	existingRoute.SetGroupVersionKind(schema.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1", Kind: "HTTPRoute"})
-	c := fake.NewClientBuilder().WithScheme(s).WithObjects(svc, srr, existingRoute).Build()
+	c := fake.NewClientBuilder().WithScheme(s).WithObjects(meshedServiceObjects(svc, srr, existingRoute)...).Build()
 
 	if _, err := ReconcileSharedRoute(context.Background(), c, GatewayRef{}, srr); err != nil {
 		t.Fatalf("ReconcileSharedRoute: %v", err)
@@ -1019,7 +1027,7 @@ func TestApplyHTTPRoutePersistsFloorAnnotationWhenSpecUnchanged(t *testing.T) {
 		},
 	}}
 	existingRoute.SetGroupVersionKind(schema.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1", Kind: "HTTPRoute"})
-	c := fake.NewClientBuilder().WithScheme(s).WithObjects(svc, srr, existingRoute).Build()
+	c := fake.NewClientBuilder().WithScheme(s).WithObjects(meshedServiceObjects(svc, srr, existingRoute)...).Build()
 
 	if _, err := ReconcileSharedRoute(context.Background(), c, GatewayRef{}, srr); err != nil {
 		t.Fatalf("ReconcileSharedRoute: %v", err)
@@ -1042,4 +1050,91 @@ func TestApplyHTTPRoutePersistsFloorAnnotationWhenSpecUnchanged(t *testing.T) {
 	if got := mustRouteRequestTimeout(t, route); got != "1800s" {
 		t.Fatalf("timeouts.request=%s, want 1800s", got)
 	}
+}
+
+func TestReconcileSharedRouteWithdrawsUnverifiedBackendAndRecovers(t *testing.T) {
+	ctx := context.Background()
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Name: "web", Namespace: "web-alice"},
+		Spec:       corev1.ServiceSpec{Ports: []corev1.ServicePort{{Port: 8080, Protocol: corev1.ProtocolTCP}}},
+	}
+	srr := &srrv1alpha1.SharedRouteRegistry{
+		ObjectMeta: metav1.ObjectMeta{Name: "web-app", Namespace: svc.Namespace, UID: "web-registry"},
+		Spec: srrv1alpha1.SharedRouteRegistrySpec{
+			RouteMode:    srrv1alpha1.RouteModeGateway,
+			HostPatterns: []string{"web.example.com"},
+			Upstream:     srrv1alpha1.UpstreamRef{ServiceName: svc.Name, Port: 8080},
+		},
+	}
+	objects := meshedServiceObjects(svc, srr)
+	slice := objects[2].(*discoveryv1.EndpointSlice)
+	slice.Endpoints[0].Conditions.Ready = ptr.To(false)
+	c := fake.NewClientBuilder().WithScheme(testScheme(t)).WithObjects(objects...).Build()
+	route := &unstructured.Unstructured{}
+	route.SetGroupVersionKind(schema.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1", Kind: "HTTPRoute"})
+	assertRoute := func(present bool) {
+		t.Helper()
+		result, err := ReconcileSharedRoute(ctx, c, GatewayRef{}, srr)
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = c.Get(ctx, client.ObjectKeyFromObject(srr), route)
+		if present {
+			if result.HTTPRouteName != srr.Name || err != nil {
+				t.Fatalf("ready mesh backend did not publish the route: %+v, %v", result, err)
+			}
+		} else if result.Reason != ReasonAwaitingDataPlane || !apierrors.IsNotFound(err) {
+			t.Fatalf("unverified mesh backend must not have a route: %+v, %v", result, err)
+		}
+	}
+	assertRoute(false)
+	if err := c.Get(ctx, client.ObjectKeyFromObject(slice), slice); err != nil {
+		t.Fatal(err)
+	}
+	slice.Endpoints[0].Conditions.Ready = ptr.To(true)
+	if err := c.Update(ctx, slice); err != nil {
+		t.Fatal(err)
+	}
+	assertRoute(true)
+	slice.Endpoints[0].Addresses = []string{"10.0.1.9"}
+	if err := c.Update(ctx, slice); err != nil {
+		t.Fatal(err)
+	}
+	assertRoute(false)
+}
+
+func meshedServiceObjects(svc *corev1.Service, extras ...client.Object) []client.Object {
+	if svc.UID == "" {
+		svc.UID = types.UID(svc.Name + "-service")
+	}
+	if len(svc.Spec.Selector) == 0 {
+		svc.Spec.Selector = map[string]string{"app": svc.Name}
+	}
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: svc.Namespace, Name: svc.Name, UID: types.UID(svc.Name + "-pod"),
+			Labels: svc.Spec.Selector, Annotations: map[string]string{mesh.LinkerdDefaultInboundPolicyAnnotation: mesh.InboundPolicyClusterAuthenticated},
+		},
+		Spec: corev1.PodSpec{
+			InitContainers: []corev1.Container{{Name: "linkerd-init"}},
+			Containers: []corev1.Container{{Name: mesh.LinkerdProxyContainer,
+				Env: []corev1.EnvVar{{Name: mesh.LinkerdProxyInboundPolicyEnv, Value: mesh.InboundPolicyClusterAuthenticated}}}},
+		},
+		Status: corev1.PodStatus{PodIP: "10.0.1.2", ContainerStatuses: []corev1.ContainerStatus{{Name: mesh.LinkerdProxyContainer, Ready: true}}},
+	}
+	var endpointPorts []discoveryv1.EndpointPort
+	for _, port := range svc.Spec.Ports {
+		endpointPorts = append(endpointPorts, discoveryv1.EndpointPort{Name: ptr.To(port.Name), Port: ptr.To(port.Port)})
+	}
+	slice := &discoveryv1.EndpointSlice{
+		ObjectMeta: metav1.ObjectMeta{Namespace: svc.Namespace, Name: svc.Name,
+			Labels:          map[string]string{discoveryv1.LabelServiceName: svc.Name},
+			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(svc, corev1.SchemeGroupVersion.WithKind("Service"))}},
+		Ports: endpointPorts,
+		Endpoints: []discoveryv1.Endpoint{{
+			TargetRef: &corev1.ObjectReference{Kind: "Pod", Namespace: pod.Namespace, Name: pod.Name, UID: pod.UID},
+			Addresses: []string{pod.Status.PodIP}, Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)},
+		}},
+	}
+	return append([]client.Object{svc, pod, slice}, extras...)
 }

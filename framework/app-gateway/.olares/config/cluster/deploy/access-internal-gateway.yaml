@@ -28,12 +28,6 @@ spec:
               template:
                 spec:
                   serviceAccountName: app-access-envoy
-                  containers:
-                    - name: envoy
-                      ports:
-                        - name: access
-                          containerPort: 18080
-                          protocol: TCP
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
@@ -74,7 +68,7 @@ spec:
   ports:
     - name: http
       port: 8080
-      targetPort: 18080
+      targetPort: 8080
       protocol: TCP
 ---
 apiVersion: policy.linkerd.io/v1beta3
@@ -89,6 +83,6 @@ spec:
       gateway.envoyproxy.io/owning-gateway-namespace: os-gateway
       app.kubernetes.io/component: proxy
       app.kubernetes.io/managed-by: envoy-gateway
-  port: 18080
+  port: 8080
   proxyProtocol: HTTP/1
   accessPolicy: deny

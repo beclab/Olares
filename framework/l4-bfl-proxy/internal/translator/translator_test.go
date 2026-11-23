@@ -1084,3 +1084,27 @@ func TestBuildFileserverRoutes_ShareAPIOnMaster(t *testing.T) {
 		assert.Equal(t, cluster, r.Cluster, "route for %s", path)
 	}
 }
+
+func TestEntryMTLSRejectsRawTCPExposureOfHTTPEndpoint(t *testing.T) {
+	tr := &Translator{cfg: &Config{AppGatewayMTLS: true}}
+	resources := &message.Resources{Users: []*message.UserInfo{
+		{Name: "alice", Apps: []*message.AppInfo{{Namespace: "shared",
+			Entrances: []*message.EntranceInfo{{Host: "frontend", Port: 8080}},
+		}}},
+		{Name: "bob", Apps: []*message.AppInfo{{Namespace: "shared",
+			Ports: []*message.PortInfo{
+				{Host: "frontend", Port: 8080, ExposePort: 30080},
+				{Host: "frontend", Port: 8080, ExposePort: 30081, Protocol: " TCP "},
+				{Host: "frontend", Port: 8080, ExposePort: 30082, Protocol: "udp"},
+				{Host: "frontend", Port: 3389, ExposePort: 33389, Protocol: "tcp"},
+			},
+		}}},
+	}}
+	clusters := make(map[string]*ir.ClusterIR)
+	listeners := tr.buildStreamListeners(resources, clusters)
+	require.Len(t, listeners, 2)
+	assert.NotContains(t, clusters, "stream_tcp_bob_30080")
+	assert.NotContains(t, clusters, "stream_tcp_bob_30081")
+	assert.Contains(t, clusters, "stream_udp_bob_30082")
+	assert.Contains(t, clusters, "stream_tcp_bob_33389")
+}

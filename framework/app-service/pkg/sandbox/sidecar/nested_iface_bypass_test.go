@@ -30,6 +30,10 @@ func TestResolveNestedIfaceBypass(t *testing.T) {
 		wantIF []string
 	}{
 		{
+			name: "primary interface cannot be excluded",
+			pod:  linkerdPod(map[string]string{AnnotMeshBypassInterfaces: "eth0"}, corev1.PodSpec{}),
+		},
+		{
 			name:   "annot CSV",
 			pod:    linkerdPod(map[string]string{AnnotMeshBypassInterfaces: "docker, br0"}, corev1.PodSpec{}),
 			wantOK: true, wantIF: []string{"docker", "br0"},

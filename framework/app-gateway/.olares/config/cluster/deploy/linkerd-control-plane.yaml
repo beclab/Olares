@@ -312,8 +312,8 @@ data:
       waitBeforeExitSeconds: 0
     proxyInit:
       closeWaitTimeoutSecs: 0
-      ignoreInboundPorts: 3389,4567,4568
-      ignoreOutboundPorts: 4567,4568
+      ignoreInboundPorts: "3389"
+      ignoreOutboundPorts: ""
       iptablesMode: nft
       kubeAPIServerPorts: 443,6443
       logFormat: ""
@@ -1657,6 +1657,7 @@ spec:
     metadata:
       annotations:
         checksum/config: 0f99ce58625f120ef9ca1dd6ffeae1e0a06a120d678eb9d015b8d8724e3a54b1
+        traffic.olares.io/proxy-interception-revision: "2"
         linkerd.io/created-by: linkerd/helm edge-26.9.1
         linkerd.io/proxy-version: edge-26.9.1
         cluster-autoscaler.kubernetes.io/safe-to-evict: "true"

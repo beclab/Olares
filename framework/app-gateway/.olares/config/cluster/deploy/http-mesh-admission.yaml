@@ -1,0 +1,114 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: olares-http-mesh-pods
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["pods"]
+        scope: Namespaced
+  matchConditions:
+    - name: enrolled-http-pod
+      expression: >-
+        (has(object.metadata.annotations) &&
+         'traffic.olares.io/mtls-mode' in object.metadata.annotations &&
+         object.metadata.annotations['traffic.olares.io/mtls-mode'] == 'Required') ||
+        (oldObject != null && has(oldObject.metadata.annotations) &&
+         'traffic.olares.io/mtls-mode' in oldObject.metadata.annotations &&
+         oldObject.metadata.annotations['traffic.olares.io/mtls-mode'] == 'Required') ||
+        (request.namespace == 'os-gateway' && has(object.metadata.labels) &&
+         'gateway.envoyproxy.io/owning-gateway-name' in object.metadata.labels &&
+         object.metadata.labels['gateway.envoyproxy.io/owning-gateway-name'] in ['app-gateway', 'app-access-internal'])
+  variables:
+    - name: internalGateway
+      expression: >-
+        request.namespace == 'os-gateway' && has(object.metadata.labels) &&
+        'gateway.envoyproxy.io/owning-gateway-name' in object.metadata.labels &&
+        object.metadata.labels['gateway.envoyproxy.io/owning-gateway-name'] == 'app-access-internal'
+    - name: inboundPolicy
+      expression: "variables.internalGateway ? 'deny' : 'cluster-authenticated'"
+  validations:
+    - expression: >-
+        has(object.metadata.annotations) &&
+        'linkerd.io/inject' in object.metadata.annotations &&
+        object.metadata.annotations['linkerd.io/inject'] == 'enabled' &&
+        'config.linkerd.io/default-inbound-policy' in object.metadata.annotations &&
+        object.metadata.annotations['config.linkerd.io/default-inbound-policy'] == variables.inboundPolicy &&
+        !(oldObject != null && has(oldObject.metadata.annotations) &&
+          'traffic.olares.io/mtls-mode' in oldObject.metadata.annotations &&
+          oldObject.metadata.annotations['traffic.olares.io/mtls-mode'] == 'Required' &&
+          (!('traffic.olares.io/mtls-mode' in object.metadata.annotations) ||
+           object.metadata.annotations['traffic.olares.io/mtls-mode'] != 'Required'))
+      message: Enrolled HTTP Pods must retain their required Linkerd inbound policy.
+    - expression: >-
+        (!has(object.spec.hostNetwork) || !object.spec.hostNetwork) &&
+        object.spec.containers.all(c, !has(c.ports) || c.ports.all(p, !has(p.hostPort) || p.hostPort == 0)) &&
+        (!has(object.spec.initContainers) || object.spec.initContainers.all(c, !has(c.ports) || c.ports.all(p, !has(p.hostPort) || p.hostPort == 0))) &&
+        ['config.linkerd.io/skip-inbound-ports', 'config.linkerd.io/skip-outbound-ports', 'config.linkerd.io/skip-subnets'].all(
+          a, !(a in object.metadata.annotations) || object.metadata.annotations[a] == '')
+      message: Enrolled HTTP Pods may not bypass Linkerd interception.
+    - expression: >-
+        has(object.spec.initContainers) &&
+        object.spec.initContainers.exists(c, c.name == 'linkerd-init') &&
+        object.spec.containers.exists(c, c.name == 'linkerd-proxy' && has(c.env) &&
+          c.env.exists(e, e.name == 'LINKERD2_PROXY_INBOUND_DEFAULT_POLICY' &&
+            !has(e.valueFrom) && has(e.value) && e.value == variables.inboundPolicy))
+      message: Enrolled HTTP Pods require an injected Linkerd init container and a configured proxy.
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: olares-http-mesh-pods
+spec:
+  policyName: olares-http-mesh-pods
+  validationActions: [Deny, Audit]
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: olares-entry-mtls-client-validation
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: ["gateway.envoyproxy.io"]
+        apiVersions: ["v1alpha1"]
+        operations: ["CREATE", "UPDATE", "DELETE"]
+        resources: ["clienttrafficpolicies"]
+        scope: Namespaced
+  matchConditions:
+    - name: entry-listener-policy
+      expression: >-
+        request.namespace == 'os-gateway' &&
+        (request.operation == 'DELETE' ? oldObject.metadata.name : object.metadata.name) == 'app-gateway-l4-entry-mtls'
+  validations:
+    - expression: "request.operation != 'DELETE'"
+      message: Keep client validation installed on the active Entry mTLS listener.
+    - expression: >-
+        request.operation == 'DELETE' ||
+        (has(object.spec.targetRef) && object.spec.targetRef.group == 'gateway.networking.k8s.io' &&
+          object.spec.targetRef.kind == 'Gateway' && object.spec.targetRef.name == 'app-gateway' &&
+          object.spec.targetRef.sectionName == 'l4-mtls' &&
+          has(object.spec.tls) && has(object.spec.tls.clientValidation) &&
+          object.spec.tls.clientValidation.mode == 'RequireAndVerify' &&
+          object.spec.tls.clientValidation.caCertificateRefs.size() == 1 &&
+          object.spec.tls.clientValidation.caCertificateRefs.all(
+            ca, ca.kind == 'Secret' && ca.group == '' && ca.name == 'olares-l4-agw-mtls' &&
+            (!has(ca.namespace) || ca.namespace == 'os-gateway')) &&
+          has(object.spec.tls.clientValidation.subjectAltNames) &&
+          object.spec.tls.clientValidation.subjectAltNames.dnsNames.size() == 1 &&
+          object.spec.tls.clientValidation.subjectAltNames.dnsNames.all(
+            san, san.type == 'Exact' && san.value == 'l4-bfl-proxy.entry.client'))
+      message: The Entry listener must require the L4 client identity from the Entry trust bundle.
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: olares-entry-mtls-client-validation
+spec:
+  policyName: olares-entry-mtls-client-validation
+  validationActions: [Deny, Audit]

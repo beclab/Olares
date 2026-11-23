@@ -260,13 +260,6 @@ func (wh *Webhook) CreatePatch(
 		}
 	} // end of inject sidecar
 
-	// Product steady state: all HTTP namespaces, cluster-authenticated inbound (mTLS).
-	httpWave := uniauth.EffectiveHTTPMeshWave()
-	if mesh.ShouldInjectHTTPMesh(injectMeshInAgent, req.Namespace, httpWave, pod) {
-		mesh.AnnotatePodForHTTPMesh(pod, true, httpWave, os.Getenv("OLARES_LINKERD_OPAQUE_PORTS"))
-		klog.Infof("mesh-http: annotate pod=%s/%s wave=%d inject=enabled", req.Namespace, pod.Name, httpWave)
-	}
-
 	// The macvlan bypass must stay behind every iptables writer in the init
 	// sequence (mesh-in agent iptables is appended above, linkerd-init comes
 	// from a later admission pass), so re-place it after the sidecar block.
@@ -311,14 +304,33 @@ func (wh *Webhook) CreatePatch(
 	return makePatches(req, pod)
 }
 
-// PatchLinkerdAdminProbesOnly hardens linkerd-proxy admin probes when no other
-// sidecar work is required. Returns patched=false when nothing changed.
-func (wh *Webhook) PatchLinkerdAdminProbesOnly(
+// IsSystemHTTPBackend uses the same Services as the per-user gateway routes.
+func (wh *Webhook) IsSystemHTTPBackend(ctx context.Context, pod *corev1.Pod, namespace string) (bool, error) {
+	if !security.IsUserSpaceNamespaces(namespace) {
+		return false, nil
+	}
+	for _, backend := range gateway.SystemPlaneServices {
+		matches, err := wh.isAppEntrancePod(ctx, "system plane", backend.Service, pod, namespace)
+		if err != nil || matches {
+			return matches, err
+		}
+	}
+	return false, nil
+}
+
+func ConfigurePodHTTPMesh(pod *corev1.Pod, namespace string, eligible, injectMeshIn bool) (bool, error) {
+	return mesh.ConfigurePodHTTPMesh(pod, namespace, uniauth.EffectiveHTTPMeshWave(),
+		os.Getenv("OLARES_LINKERD_OPAQUE_PORTS"), eligible, injectMeshIn)
+}
+
+// PatchMeshOnly emits mesh and probe changes for pods without other sidecar work.
+func (wh *Webhook) PatchMeshOnly(
 	ctx context.Context,
 	req *admissionv1.AdmissionRequest,
 	pod *corev1.Pod,
+	meshConfigured bool,
 ) (patchBytes []byte, patched bool, err error) {
-	changed := mesh.HardenLinkerdProxyAdminProbes(pod)
+	changed := mesh.HardenLinkerdProxyAdminProbes(pod) || meshConfigured
 	if sidecar.ApplyNestedIfaceBypass(pod) {
 		changed = true
 		klog.Infof("nested-iface-bypass: inject (probe-only) pod=%s/%s", req.Namespace, pod.Name)
@@ -326,9 +338,11 @@ func (wh *Webhook) PatchLinkerdAdminProbesOnly(
 	if !changed {
 		return nil, false, nil
 	}
-	if err := wh.patchProbeHeaders(ctx, pod); err != nil {
-		klog.Errorf("Failed to patch probe headers after linkerd harden pod=%s/%s err=%v", pod.Namespace, pod.Name, err)
-		return nil, false, err
+	if pod.Annotations[UUIDAnnotation] != "" {
+		if err := wh.patchProbeHeaders(ctx, pod); err != nil {
+			klog.Errorf("Failed to patch probe headers after Linkerd hardening for pod=%s/%s err=%v", pod.Namespace, pod.Name, err)
+			return nil, false, err
+		}
 	}
 	patchBytes, err = makePatches(req, pod)
 	if err != nil {
@@ -641,6 +655,10 @@ func (wh *Webhook) isAppEntrancePod(ctx context.Context, appname, host string, p
 			return false, nil
 		}
 		return false, err
+	}
+
+	if len(service.Spec.Selector) == 0 {
+		return false, nil
 	}
 
 	selector, err := labels.ValidatedSelectorFromSet(service.Spec.Selector)
