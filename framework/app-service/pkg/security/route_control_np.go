@@ -1,6 +1,10 @@
 package security
 
-import netv1 "k8s.io/api/networking/v1"
+import (
+	"strings"
+
+	netv1 "k8s.io/api/networking/v1"
+)
 
 const (
 	// RouteControlManagedByLabel marks NetworkPolicies owned by app-service
@@ -15,7 +19,8 @@ const (
 	CallerJWTComponentValue = "caller-jwt"
 	// AppGatewayMeshComponentValue marks app-gateway-mesh-np (os-mesh / os-gateway).
 	// Must match labels on NewAppGatewayMeshNP* so security-controller sweeps skip them.
-	AppGatewayMeshComponentValue = "linkerd-mesh"
+	AppGatewayMeshComponentValue  = "linkerd-mesh"
+	AccessTransportComponentValue = "access-transport"
 )
 
 // IsRouteControlManagedNP reports whether np is owned by routecontrol and must
@@ -51,5 +56,10 @@ func IsAppGatewayMeshManagedNP(np *netv1.NetworkPolicy) bool {
 // IsAppServiceManagedExternalNP reports whether np is owned by an app-service
 // controller other than security-controller templates.
 func IsAppServiceManagedExternalNP(np *netv1.NetworkPolicy) bool {
-	return IsRouteControlManagedNP(np) || IsCallerJWTManagedNP(np) || IsAppGatewayMeshManagedNP(np)
+	return IsRouteControlManagedNP(np) || IsCallerJWTManagedNP(np) || IsAppGatewayMeshManagedNP(np) ||
+		(np != nil && np.Labels[RouteControlManagedByLabel] == "access-policy" &&
+			np.Labels[RouteControlComponentLabel] == AccessTransportComponentValue &&
+			np.Labels["access.olares.io/policy"] != "" && strings.HasPrefix(np.Name, "grant-") &&
+			(strings.HasSuffix(np.Name, "-transport-target-egress") || strings.HasSuffix(np.Name, "-transport-target-ingress") ||
+				strings.HasSuffix(np.Name, "-transport-gateway-ingress") || strings.HasSuffix(np.Name, "-transport-gateway-egress")))
 }

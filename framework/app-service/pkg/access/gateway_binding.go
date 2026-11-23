@@ -131,6 +131,12 @@ func (b boundPolicy) reconcileGateway(ctx context.Context, c client.Client) erro
 	if err := b.stillActive(ctx, c); err != nil {
 		return errors.Join(err, b.withdrawAllows(ctx, c))
 	}
+	if err := b.reconcileTransport(ctx, c, false); err != nil {
+		return errors.Join(err, b.withdrawAllows(ctx, c))
+	}
+	if err := b.stillActive(ctx, c); err != nil {
+		return errors.Join(err, b.withdrawAllows(ctx, c))
+	}
 	if err := applyProjections(ctx, c, []DesiredObject{out[3]}); err != nil {
 		return errors.Join(err, b.withdrawAllows(ctx, c))
 	}
@@ -138,7 +144,10 @@ func (b boundPolicy) reconcileGateway(ctx context.Context, c client.Client) erro
 	if err := b.stillActive(ctx, c); err != nil {
 		return errors.Join(err, b.withdrawAllows(ctx, c))
 	}
-	return applyProjections(ctx, c, []DesiredObject{in[3]})
+	if err := applyProjections(ctx, c, []DesiredObject{in[3]}); err != nil {
+		return errors.Join(err, b.withdrawAllows(ctx, c))
+	}
+	return nil
 }
 
 func buildHostProjections(p PolicySpec, host string) ([]DesiredObject, error) {
@@ -171,7 +180,7 @@ func (b boundPolicy) withdrawAllows(ctx context.Context, c client.Client) error 
 			}
 		}
 	}
-	return result
+	return errors.Join(result, b.reconcileTransport(ctx, c, true))
 }
 
 func (b boundPolicy) withdrawGateway(ctx context.Context, c client.Client) error {
