@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/beclab/Olares/framework/app-gateway/pkg/entrypki"
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -30,12 +31,14 @@ const (
 // then one pass per interval, with exponential backoff on transient failures.
 // It never calls os.Exit; the process exits only when ctx is cancelled.
 type Controller struct {
-	client   client.Client
-	ns       string
-	interval time.Duration
-	probes   *ProbeState
-	metrics  *Metrics
-	limiter  workqueue.TypedRateLimiter[string]
+	client          client.Client
+	ns              string
+	interval        time.Duration
+	probes          *ProbeState
+	metrics         *Metrics
+	limiter         workqueue.TypedRateLimiter[string]
+	entryMTLSEnabled bool
+	entryNamespace  string
 }
 
 // NewController wires the reconcile loop to its client, probes and metrics.
@@ -48,6 +51,13 @@ func NewController(c client.Client, ns string, interval time.Duration, probes *P
 		metrics:  metrics,
 		limiter:  workqueue.NewTypedItemExponentialFailureRateLimiter[string](backoffBaseDelay, backoffMaxDelay),
 	}
+}
+
+// WithEntryMTLS enables the optional L4→AGW Entry PKI maintain loop (separate CA).
+func (c *Controller) WithEntryMTLS(enabled bool, entryNamespace string) *Controller {
+	c.entryMTLSEnabled = enabled
+	c.entryNamespace = entryNamespace
+	return c
 }
 
 // Run drives reconciliation until ctx is cancelled, returning on graceful
@@ -101,6 +111,12 @@ func (c *Controller) reconcileOnce(ctx context.Context) error {
 	}
 	c.metrics.MarkSuccess(time.Now())
 	c.probes.MarkSuccess()
+	if c.entryMTLSEnabled {
+		if err := entrypki.MaintainEntryMTLS(ctx, c.client, c.entryNamespace, true, time.Now().UTC()); err != nil {
+			slog.Warn("entry mTLS PKI maintain failed", "error", err)
+			// Do not fail mesh reconcile on entry PKI errors; domains are isolated.
+		}
+	}
 	return nil
 }
 
