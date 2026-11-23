@@ -179,7 +179,7 @@ func TestReconcileSharedRouteGatewayMode(t *testing.T) {
 	mustIncludeParentSection(t, route, l4MTLSGatewaySectN)
 
 	np := &networkingv1.NetworkPolicy{}
-	if err := c.Get(context.Background(), types.NamespacedName{Namespace: "demo-shared", Name: NetworkPolicyName}, np); err != nil {
+	if err := c.Get(context.Background(), types.NamespacedName{Namespace: "demo-shared", Name: "olares-route-" + transportLabels(client.ObjectKeyFromObject(srr))[routeTransportLabel] + "-http-ingress"}, np); err != nil {
 		t.Fatalf("NetworkPolicy not created: %v", err)
 	}
 	// The NP must carry the route-control component label so the

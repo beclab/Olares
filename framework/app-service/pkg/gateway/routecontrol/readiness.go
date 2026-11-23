@@ -289,7 +289,7 @@ func hasInterceptedHTTPPort(ports []discoveryv1.EndpointPort, portName string, e
 			return *port.Port == entryPort
 		}
 		switch *port.Port {
-		case 3389, 4190, 4191:
+		case 3389, 4140, 4143, 4190, 4191:
 			return false
 		default:
 			return true

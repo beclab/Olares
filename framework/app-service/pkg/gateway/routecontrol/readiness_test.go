@@ -2,6 +2,9 @@ package routecontrol
 
 import (
 	"context"
+	"strings"
+
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway"
 	srrv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/gateway/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/mesh"
 	corev1 "k8s.io/api/core/v1"
@@ -105,6 +108,79 @@ func TestServingReadinessWaitsForPolicyAndMeshedEndpoints(t *testing.T) {
 				Addresses: []string{"10.0.1.2"}, Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)}}}}
 		objects = append(objects, service, pod, slice)
 	}
+	for _, index := range []int{0, 1, 2, 3, 4} {
+		t.Run("missing "+objects[index].GetName(), func(t *testing.T) {
+			var fixtures []client.Object
+			for i, item := range objects {
+				if i != index {
+					fixtures = append(fixtures, item.DeepCopyObject().(client.Object))
+				}
+			}
+			c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(fixtures...).Build()
+			if err := servingReadiness(ctx, c, GatewayRef{}, srr, "route"); err == nil {
+				t.Fatal("missing dependency was accepted for cutover")
+			}
+		})
+	}
+	for _, field := range []string{"gateway", "listener", "route"} {
+		t.Run("unobserved "+field, func(t *testing.T) {
+			var fixtures []client.Object
+			for _, item := range objects {
+				fixtures = append(fixtures, item.DeepCopyObject().(client.Object))
+			}
+			switch field {
+			case "gateway":
+				fixtures[0].(*unstructured.Unstructured).Object["status"] = nil
+			case "listener":
+				unstructured.RemoveNestedField(fixtures[0].(*unstructured.Unstructured).Object, "status", "listeners")
+			case "route":
+				fixtures[1].(*unstructured.Unstructured).Object["status"] = nil
+			}
+			c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(fixtures...).Build()
+			if err := servingReadiness(ctx, c, GatewayRef{}, srr, "route"); err == nil {
+				t.Fatal("unobserved dependency was accepted for cutover")
+			}
+		})
+	}
+	t.Run("protected entry requires the separate authorization channel", func(t *testing.T) {
+		protected := srr.DeepCopy()
+		protected.Spec.EntranceClass = srrv1alpha1.EntranceClassApplication
+		protected.Annotations = map[string]string{gateway.AnnotationAuthMode: gateway.AuthModeExtAuth, gateway.AnnotationExtAuthUser: "alice"}
+		fixtures := make([]client.Object, 0, len(objects))
+		for _, item := range objects {
+			fixtures = append(fixtures, item.DeepCopyObject().(client.Object))
+		}
+		fixtures[2].SetName(securityPolicyName(protected))
+		check := func(message string) {
+			t.Helper()
+			c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(fixtures...).Build()
+			err := servingReadiness(ctx, c, GatewayRef{}, protected, "route")
+			if err == nil || !strings.Contains(err.Error(), message) {
+				t.Fatalf("readiness = %v, expected %q", err, message)
+			}
+		}
+		check("authorization listener is not programmed")
+		newGateway := fixtures[0].(*unstructured.Unstructured)
+		listeners, _, _ := unstructured.NestedSlice(newGateway.Object, "status", "listeners")
+		listeners = append(listeners, map[string]any{"name": l4AuthzSection, "conditions": cond("Programmed", "ResolvedRefs")})
+		if err := unstructured.SetNestedSlice(newGateway.Object, listeners, "status", "listeners"); err != nil {
+			t.Fatal(err)
+		}
+		check("app-gateway-l4-authz-mtls")
+		authRef := map[string]any{"name": defaultGatewayName, "namespace": defaultGatewayNS, "sectionName": l4AuthzSection}
+		fixtures = append(fixtures, obj(ctp.GroupVersionKind(), defaultGatewayNS, "app-gateway-l4-authz-mtls",
+			map[string]any{"ancestors": []any{map[string]any{"ancestorRef": authRef, "controllerName": owner, "conditions": cond("Accepted")}}}))
+		check(".l4-authz")
+		authRoute := obj(route.GroupVersionKind(), protected.Namespace, l4AuthzRoute(protected).GetName(), map[string]any{})
+		fixtures = append(fixtures, authRoute)
+		check("authorization route is not accepted")
+		if err := unstructured.SetNestedSlice(authRoute.Object,
+			[]any{map[string]any{"parentRef": authRef, "controllerName": owner, "conditions": cond("Accepted", "ResolvedRefs")}},
+			"status", "parents"); err != nil {
+			t.Fatal(err)
+		}
+		check("9444")
+	})
 	for _, tc := range []struct {
 		name   string
 		mutate func(pod *corev1.Pod, slice *discoveryv1.EndpointSlice)

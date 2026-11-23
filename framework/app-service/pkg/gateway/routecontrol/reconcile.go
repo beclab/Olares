@@ -147,6 +147,9 @@ func ReconcileSharedRoute(ctx context.Context, c client.Client, gw GatewayRef, s
 		if err := deleteHTTPRoute(ctx, c, srr); err != nil {
 			return ReconcileResult{}, fmt.Errorf("delete HTTPRoute: %w", err)
 		}
+		if err := pruneMeshTransport(ctx, c, client.ObjectKeyFromObject(srr), nil); err != nil {
+			return ReconcileResult{}, fmt.Errorf("withdraw route transport NetworkPolicies: %w", err)
+		}
 		if err := deleteNetworkPolicy(ctx, c, srr); err != nil {
 			return ReconcileResult{}, fmt.Errorf("delete NetworkPolicy: %w", err)
 		}
@@ -177,11 +180,7 @@ func ReconcileSharedRoute(ctx context.Context, c client.Client, gw GatewayRef, s
 	case "", srrv1alpha1.RouteModeGateway:
 		return reconcileGatewayMode(ctx, c, gw, srr)
 	default:
-		return ReconcileResult{
-			Status:  metav1.ConditionFalse,
-			Reason:  ReasonInvalidSpec,
-			Message: fmt.Sprintf("unknown routeMode %q", srr.Spec.RouteMode),
-		}, nil
+		return routeUnavailable(ctx, c, gw, srr, ReasonInvalidSpec, fmt.Sprintf("unknown routeMode %q", srr.Spec.RouteMode))
 	}
 }
 
@@ -190,11 +189,7 @@ func reconcileGatewayMode(ctx context.Context, c client.Client, gw GatewayRef, s
 		return waitForHTTPRouteMesh(ctx, c, gw, srr, err)
 	}
 	if len(srr.Spec.HostPatterns) == 0 || srr.Spec.Upstream.ServiceName == "" {
-		return ReconcileResult{
-			Status:  metav1.ConditionFalse,
-			Reason:  ReasonInvalidSpec,
-			Message: "hostPatterns or upstream.serviceName missing",
-		}, nil
+		return routeUnavailable(ctx, c, gw, srr, ReasonInvalidSpec, "hostPatterns or upstream.serviceName missing")
 	}
 
 	upstreamNS := srr.Spec.Upstream.ServiceNamespace
@@ -205,29 +200,19 @@ func reconcileGatewayMode(ctx context.Context, c client.Client, gw GatewayRef, s
 	svc := &corev1.Service{}
 	if err := c.Get(ctx, types.NamespacedName{Namespace: upstreamNS, Name: srr.Spec.Upstream.ServiceName}, svc); err != nil {
 		if apierrors.IsNotFound(err) {
-			return ReconcileResult{
-				Status:  metav1.ConditionFalse,
-				Reason:  ReasonBackendMissing,
-				Message: fmt.Sprintf("backend Service %s/%s not found", upstreamNS, srr.Spec.Upstream.ServiceName),
-			}, nil
+			return routeUnavailable(ctx, c, gw, srr, ReasonBackendMissing,
+				fmt.Sprintf("backend Service %s/%s not found", upstreamNS, srr.Spec.Upstream.ServiceName))
 		}
 		return ReconcileResult{}, fmt.Errorf("get backend Service: %w", err)
 	}
 
 	port, err := resolveServicePort(svc, srr.Spec.Upstream)
 	if err != nil {
-		return ReconcileResult{
-			Status:  metav1.ConditionFalse,
-			Reason:  ReasonInvalidSpec,
-			Message: err.Error(),
-		}, nil
+		return routeUnavailable(ctx, c, gw, srr, ReasonInvalidSpec, err.Error())
 	}
 
 	if err := applyReferenceGrant(ctx, c, srr, upstreamNS, srr.Spec.Upstream.ServiceName); err != nil {
 		return ReconcileResult{}, fmt.Errorf("apply ReferenceGrant: %w", err)
-	}
-	if err := applyNetworkPolicy(ctx, c, gw, srr, svc, port); err != nil {
-		return ReconcileResult{}, fmt.Errorf("apply NetworkPolicy: %w", err)
 	}
 	if err := applySharedLinkerdMeshNetworkPolicy(ctx, c, srr, svc); err != nil {
 		return ReconcileResult{}, fmt.Errorf("apply shared linkerd mesh NetworkPolicy: %w", err)
@@ -244,6 +229,12 @@ func reconcileGatewayMode(ctx context.Context, c client.Client, gw GatewayRef, s
 	}
 	if err := httpRouteMeshDependenciesReady(ctx, c, upstreamNS, srr); err != nil {
 		return waitForHTTPRouteMesh(ctx, c, gw, srr, err)
+	}
+	if err := applyMeshTransport(ctx, c, gw, srr, svc, port); err != nil {
+		return waitForHTTPRouteMesh(ctx, c, gw, srr, err)
+	}
+	if err := removeLegacyGatewayIngress(ctx, c, upstreamNS); err != nil {
+		return waitForHTTPRouteMesh(ctx, c, gw, srr, fmt.Errorf("remove legacy gateway ingress: %w", err))
 	}
 	if err := reconcileL4AuthzRoute(ctx, c, gw, srr, needsL4Authz(srr)); err != nil {
 		return ReconcileResult{}, fmt.Errorf("reconcile L4 authorization route: %w", err)
@@ -262,13 +253,20 @@ func reconcileGatewayMode(ctx context.Context, c client.Client, gw GatewayRef, s
 }
 
 func waitForHTTPRouteMesh(ctx context.Context, c client.Client, gw GatewayRef, srr *srrv1alpha1.SharedRouteRegistry, cause error) (ReconcileResult, error) {
+	return routeUnavailable(ctx, c, gw, srr, ReasonAwaitingDataPlane, cause.Error())
+}
+
+func routeUnavailable(ctx context.Context, c client.Client, gw GatewayRef, srr *srrv1alpha1.SharedRouteRegistry, reason, message string) (ReconcileResult, error) {
 	if err := reconcileL4AuthzRoute(ctx, c, gw, srr, false); err != nil {
 		return ReconcileResult{}, fmt.Errorf("withdraw L4 authorization route: %w", err)
 	}
 	if err := withdrawUnreadyHTTPRoute(ctx, c, srr); err != nil {
 		return ReconcileResult{}, fmt.Errorf("withdraw HTTPRoute for unverified mesh endpoints: %w", err)
 	}
-	return ReconcileResult{Status: metav1.ConditionFalse, Reason: ReasonAwaitingDataPlane, Message: cause.Error()}, nil
+	if err := pruneMeshTransport(ctx, c, client.ObjectKeyFromObject(srr), nil); err != nil {
+		return ReconcileResult{}, fmt.Errorf("withdraw route transport NetworkPolicies: %w", err)
+	}
+	return ReconcileResult{Status: metav1.ConditionFalse, Reason: reason, Message: message}, nil
 }
 
 func resolveServicePort(svc *corev1.Service, ref srrv1alpha1.UpstreamRef) (int32, error) {
@@ -650,56 +648,19 @@ func networkPolicyNamespacesToClean(srr *srrv1alpha1.SharedRouteRegistry) []stri
 	return []string{upstream, srr.Namespace}
 }
 
-// applyNetworkPolicy reconciles a single ingress NetworkPolicy per upstream
-// namespace that admits app-gateway traffic into the shared workload namespace.
-// PodSelector and Ports are intentionally empty so any pod/port in the upstream
-// namespace is reachable from the gateway namespace.
-func applyNetworkPolicy(ctx context.Context, c client.Client, gw GatewayRef, srr *srrv1alpha1.SharedRouteRegistry, svc *corev1.Service, port int32) error {
-	npNS := networkPolicyNamespace(srr, svc)
-	desired := &networkingv1.NetworkPolicy{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      NetworkPolicyName,
-			Namespace: npNS,
-			Labels: map[string]string{
-				ManagedByLabel:             ManagedByValue,
-				RouteControlComponentLabel: RouteControlComponentValue,
-			},
-		},
-		Spec: networkingv1.NetworkPolicySpec{
-			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress},
-			PodSelector: metav1.LabelSelector{},
-			Ingress: []networkingv1.NetworkPolicyIngressRule{
-				{
-					From: []networkingv1.NetworkPolicyPeer{
-						{
-							NamespaceSelector: &metav1.LabelSelector{
-								MatchLabels: map[string]string{
-									"kubernetes.io/metadata.name": gw.gatewayNamespace(),
-								},
-							},
-						},
-					},
-				},
-			},
-		},
+// removeLegacyGatewayIngress retires the old namespace-wide gateway grant
+// once a verified route has projected scoped transport policies.
+func removeLegacyGatewayIngress(ctx context.Context, c client.Client, namespace string) error {
+	var policy networkingv1.NetworkPolicy
+	key := client.ObjectKey{Namespace: namespace, Name: NetworkPolicyName}
+	if err := c.Get(ctx, key, &policy); err != nil {
+		return client.IgnoreNotFound(err)
 	}
-
-	current := &networkingv1.NetworkPolicy{}
-	err := c.Get(ctx, types.NamespacedName{Namespace: npNS, Name: NetworkPolicyName}, current)
-	switch {
-	case apierrors.IsNotFound(err):
-		return c.Create(ctx, desired)
-	case err != nil:
-		return err
+	if policy.Labels[ManagedByLabel] != ManagedByValue ||
+		policy.Labels[RouteControlComponentLabel] != RouteControlComponentValue {
+		return fmt.Errorf("legacy gateway NetworkPolicy %s has another owner", key)
 	}
-	current.Spec = desired.Spec
-	if current.Labels == nil {
-		current.Labels = map[string]string{}
-	}
-	current.Labels[ManagedByLabel] = ManagedByValue
-	delete(current.Labels, InstanceLabel)
-	current.SetOwnerReferences(nil)
-	return c.Update(ctx, current)
+	return client.IgnoreNotFound(c.Delete(ctx, &policy, client.Preconditions{UID: &policy.UID, ResourceVersion: &policy.ResourceVersion}))
 }
 
 // deleteNetworkPolicy removes the per-NS shared ingress NP only when no other
