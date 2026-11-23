@@ -153,7 +153,48 @@ func transportPair(labels map[string]string, leg string, source meshTransportPee
 	return []netv1.NetworkPolicy{out, in}
 }
 
-func applyMeshTransport(ctx context.Context, c client.Client, gw GatewayRef, srr *srrv1alpha1.SharedRouteRegistry, service *corev1.Service, port int32) error {
+// systemLoginTransport runs before the frontend readiness check. The login
+// frontend needs this hop to finish its own HTTP health check.
+func systemLoginTransport(ctx context.Context, c client.Client, srr *srrv1alpha1.SharedRouteRegistry) ([]netv1.NetworkPolicy, error) {
+	if !isSystemLoginRoute(srr) {
+		return nil, nil
+	}
+	authNS := autheliaNSForSRR(srr)
+	services := []struct {
+		namespace string
+		selector  map[string]string
+	}{
+		{authNS, map[string]string{"app": "systemserver"}},
+		{"os-framework", map[string]string{"app": "authelia-backend"}},
+	}
+	var backends []meshTransportBackend
+	for _, target := range services {
+		ref := srrv1alpha1.UpstreamRef{ServiceName: AutheliaBackendServiceName, Port: AutheliaBackendPort}
+		var svc corev1.Service
+		if err := c.Get(ctx, client.ObjectKey{Namespace: target.namespace, Name: ref.ServiceName}, &svc); err != nil {
+			return nil, err
+		}
+		if svc.Spec.Type != corev1.ServiceTypeClusterIP || !maps.Equal(svc.Spec.Selector, target.selector) {
+			return nil, fmt.Errorf("login dependency %s/%s has an unexpected Service configuration", svc.Namespace, svc.Name)
+		}
+		if err := meshedReadyEndpoints(ctx, c, target.namespace, ref); err != nil {
+			return nil, err
+		}
+		backend, err := transportBackend(ctx, c, &svc, ref.Port)
+		if err != nil {
+			return nil, err
+		}
+		if !slices.EqualFunc(backend.targetPorts, []netv1.NetworkPolicyPort{meshTransportPort(4143), meshTransportPort(AutheliaBackendPort)}, func(a, b netv1.NetworkPolicyPort) bool {
+			return *a.Port == *b.Port
+		}) {
+			return nil, fmt.Errorf("login dependency %s/%s has an unexpected target port", svc.Namespace, svc.Name)
+		}
+		backends = append(backends, backend)
+	}
+	return transportPair(transportLabels(client.ObjectKeyFromObject(srr)), "login-backend", backends[0].peer, backends[1]), nil
+}
+
+func applyMeshTransport(ctx context.Context, c client.Client, gw GatewayRef, srr *srrv1alpha1.SharedRouteRegistry, service *corev1.Service, port int32, bootstrap map[client.ObjectKey]bool) error {
 	key := client.ObjectKeyFromObject(srr)
 	labels := transportLabels(key)
 	gatewayPeer := meshTransportPeer{namespace: gw.gatewayNamespace(), selector: map[string]string{
@@ -183,6 +224,16 @@ func applyMeshTransport(ctx context.Context, c client.Client, gw GatewayRef, srr
 		policies = append(policies, transportPair(labels, "auth-server", auth[0].peer, auth[1])...)
 	}
 
+	keep, err := upsertMeshTransports(ctx, c, key, policies)
+	if err != nil {
+		return err
+	}
+	maps.Copy(keep, bootstrap)
+	return pruneMeshTransport(ctx, c, key, keep)
+}
+
+func upsertMeshTransports(ctx context.Context, c client.Client, key client.ObjectKey, policies []netv1.NetworkPolicy) (map[client.ObjectKey]bool, error) {
+	labels := transportLabels(key)
 	keep := make(map[client.ObjectKey]bool, len(policies))
 	for _, policy := range policies {
 		policyKey := client.ObjectKeyFromObject(&policy)
@@ -193,7 +244,7 @@ func applyMeshTransport(ctx context.Context, c client.Client, gw GatewayRef, srr
 			err = c.Create(ctx, &policy)
 		case err == nil:
 			if !ownsTransportPolicy(&current, labels) {
-				return fmt.Errorf("transport NetworkPolicy %s has another owner", policyKey)
+				return nil, fmt.Errorf("transport NetworkPolicy %s has another owner", policyKey)
 			}
 			if !apiequality.Semantic.DeepEqual(current.Spec, policy.Spec) {
 				current.Spec = policy.Spec
@@ -201,11 +252,11 @@ func applyMeshTransport(ctx context.Context, c client.Client, gw GatewayRef, srr
 			}
 		}
 		if err != nil {
-			return err
+			return nil, err
 		}
 		keep[policyKey] = true
 	}
-	return pruneMeshTransport(ctx, c, key, keep)
+	return keep, nil
 }
 
 func ownsTransportPolicy(policy *netv1.NetworkPolicy, labels map[string]string) bool {
