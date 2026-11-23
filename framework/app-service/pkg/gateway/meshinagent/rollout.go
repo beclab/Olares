@@ -27,6 +27,7 @@ const (
 	ReasonDecideEdges       = "decide_edges_changed"
 	ReasonMeshReady         = "mesh_ready"
 	ReasonAppCreateInject   = "app_create_inject"
+	ReasonHTTPMeshMTLS      = "http_mesh_mtls"
 
 	RestartedAtAnnotation = "kubectl.kubernetes.io/restartedAt"
 
@@ -37,6 +38,9 @@ const (
 	MeshInjectRolloutStateCMName      = "olares-mesh-inject-rollout"
 	MeshInjectStateReadyKey           = "ready"
 	MeshInjectStateEpochKey           = "epoch"
+	MeshInjectStateHTTPMeshPostureKey = "httpMeshPosture"
+	// HTTPMeshPostureVersion marks completed upgrade sweep to cluster-authenticated.
+	HTTPMeshPostureVersion = "http-mtls-v1"
 
 	EGDataplaneNamespace = "os-gateway"
 )

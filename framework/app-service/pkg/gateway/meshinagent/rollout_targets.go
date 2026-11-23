@@ -2,6 +2,7 @@ package meshinagent
 
 import (
 	"context"
+	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -71,6 +72,101 @@ func ListSharedInjectWorkloads(ctx context.Context, c client.Client) ([]Workload
 		out = append(out, refs...)
 	}
 	return out, nil
+}
+
+// ListHTTPMeshWorkloadsNeedingMTLS lists Deployments/StatefulSets in wave-4
+// namespaces whose live pods lack linkerd-proxy or cluster-authenticated inbound.
+func ListHTTPMeshWorkloadsNeedingMTLS(ctx context.Context, c client.Client) ([]WorkloadRef, error) {
+	if c == nil {
+		return nil, nil
+	}
+	var nss corev1.NamespaceList
+	if err := c.List(ctx, &nss); err != nil {
+		klog.Errorf("mesh-in-rollout: list namespaces for http-mesh failed: %v", err)
+		return nil, err
+	}
+	var candidates []WorkloadRef
+	for i := range nss.Items {
+		ns := nss.Items[i].Name
+		if !httpMeshRolloutNamespace(ns) {
+			continue
+		}
+		refs, err := listAllWorkloadsInNamespace(ctx, c, ns)
+		if err != nil {
+			return nil, err
+		}
+		candidates = append(candidates, refs...)
+	}
+	return FilterWorkloadsNeedingHTTPMTLS(ctx, c, candidates), nil
+}
+
+func httpMeshRolloutNamespace(ns string) bool {
+	if ns == "" || strings.HasPrefix(ns, "kube-") {
+		return false
+	}
+	switch ns {
+	case "default", "local-path-storage":
+		return false
+	}
+	return mesh.NamespaceWaveEligible(ns, 4)
+}
+
+// FilterWorkloadsNeedingHTTPMTLS keeps workloads whose pods are missing mesh
+// identity or the cluster-authenticated inbound annotation.
+func FilterWorkloadsNeedingHTTPMTLS(ctx context.Context, c client.Client, refs []WorkloadRef) []WorkloadRef {
+	if c == nil {
+		return nil
+	}
+	var out []WorkloadRef
+	for _, ref := range refs {
+		need, err := workloadNeedsHTTPMTLS(ctx, c, ref)
+		if err != nil {
+			klog.Warningf("mesh-in-rollout: skip http-mtls %s: %v", ref.Key(), err)
+			continue
+		}
+		if need {
+			out = append(out, ref)
+		}
+	}
+	return out
+}
+
+func workloadNeedsHTTPMTLS(ctx context.Context, c client.Client, ref WorkloadRef) (bool, error) {
+	selector, err := workloadPodSelector(ctx, c, ref)
+	if err != nil {
+		return false, err
+	}
+	if selector == nil {
+		return false, nil
+	}
+	var pods corev1.PodList
+	if err := c.List(ctx, &pods, client.InNamespace(ref.Namespace), client.MatchingLabelsSelector{Selector: selector}); err != nil {
+		return false, err
+	}
+	if len(pods.Items) == 0 {
+		return false, nil
+	}
+	for i := range pods.Items {
+		pod := &pods.Items[i]
+		if pod.DeletionTimestamp != nil {
+			continue
+		}
+		hasProxy := false
+		for _, ctr := range pod.Spec.Containers {
+			if ctr.Name == linkerdProxyContainerName {
+				hasProxy = true
+				break
+			}
+		}
+		policy := ""
+		if pod.Annotations != nil {
+			policy = pod.Annotations[mesh.LinkerdDefaultInboundPolicyAnnotation]
+		}
+		if !hasProxy || policy != mesh.InboundPolicyClusterAuthenticated {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // ListEGDataplaneWorkloads lists os-gateway Deployments whose pod template asks for Linkerd inject.

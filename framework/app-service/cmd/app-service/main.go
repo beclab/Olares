@@ -190,6 +190,7 @@ func main() {
 		Client:        mgr.GetClient(),
 		Scheme:        mgr.GetScheme(),
 		DynamicClient: dynamic.NewForConfigOrDie(config),
+		KubeClient:    kubeClient,
 	}).SetupWithManager(ictx, mgr); err != nil {
 		setupLog.Error(err, "Unable to create controller", "controller", "Security")
 		os.Exit(1)

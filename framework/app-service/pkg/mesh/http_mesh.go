@@ -91,12 +91,10 @@ func DesiredInboundPolicy(wave int) string {
 }
 
 // ShouldInjectHTTPMesh combines legacy mesh-in with full-HTTP wave eligibility.
-// Explicit linkerd.io/inject=disabled always wins. Non-HTTP-only pods can pass
-// opaquePorts to keep TCP opaque while still injecting for HTTP ports.
+// Product steady state requires HTTP mTLS: inject=disabled does not skip wave
+//=4. Use opaque-ports for non-HTTP TCP instead of opting out of the mesh.
 func ShouldInjectHTTPMesh(injectMeshIn bool, namespace string, wave int, pod *corev1.Pod) bool {
-	if pod != nil && pod.Annotations != nil && pod.Annotations[LinkerdInjectAnnotation] == LinkerdInjectDisabled {
-		return false
-	}
+	_ = pod
 	if injectMeshIn {
 		return true
 	}
