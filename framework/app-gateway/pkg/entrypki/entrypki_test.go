@@ -1,11 +1,14 @@
 package entrypki
 
 import (
+	"bytes"
 	"context"
+	"crypto/x509"
 	"testing"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -34,62 +37,55 @@ func TestMaintainDisabledNoop(t *testing.T) {
 	}
 }
 
-func TestMaintainBootstrapAndRotate(t *testing.T) {
+func TestMaintainSeparatesLegacyCredentialsAndRepairsMissingClient(t *testing.T) {
+	ctx := context.Background()
 	scheme := runtime.NewScheme()
 	_ = corev1.AddToScheme(scheme)
-	c := fake.NewClientBuilder().WithScheme(scheme).Build()
 	now := time.Now().UTC()
-	if err := MaintainEntryMTLS(context.Background(), c, DefaultNamespace, true, now); err != nil {
-		t.Fatalf("bootstrap: %v", err)
-	}
-	var sec corev1.Secret
-	if err := c.Get(context.Background(), types.NamespacedName{Namespace: DefaultNamespace, Name: SecretName}, &sec); err != nil {
-		t.Fatal(err)
-	}
-	if len(sec.Data[keyCACrt]) == 0 || len(sec.Data[keyServerCrt]) == 0 || len(sec.Data[keyClientCrt]) == 0 {
-		t.Fatal("missing pem material")
-	}
-	fp1 := sec.Annotations[annotFingerprint]
-
-	// Force near-expiry leaf so NeedsRotation trips.
-	short, err := bootstrapMaterial(now.Add(-200 * 24 * time.Hour))
+	legacy, err := bootstrapMaterial(now)
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Re-issue leaves with NotAfter soon by patching server cert via rotateLeaves with old now
-	mat := &Material{CACrt: short.CACrt, CAKey: short.CAKey}
-	// Build a leaf that expires in 10 days
-	caCert, _ := parseCertificate(mat.CACrt)
-	caKey, _ := parseECPrivateKey(mat.CAKey)
-	leafCrt, leafKey, err := issueLeaf(caCert, caKey, "app-gateway-l4-mtls.os-gateway.svc.cluster.local", now.Add(-355*24*time.Hour))
-	if err != nil {
+	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(&corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Namespace: DefaultNamespace, Name: SecretName},
+		Data: map[string][]byte{keyCACrt: legacy.CACrt, keyCAKey: legacy.CAKey,
+			keyServerCrt: legacy.ServerCrt, keyServerKey: legacy.ServerKey,
+			keyClientCrt: legacy.ClientCrt, keyClientKey: legacy.ClientKey},
+	}).Build()
+	if err := MaintainEntryMTLS(ctx, c, DefaultNamespace, true, now); err != nil {
 		t.Fatal(err)
 	}
-	sec.Data[keyServerCrt] = leafCrt
-	sec.Data[keyServerKey] = leafKey
-	sec.Data[keyClientCrt] = leafCrt
-	sec.Data[keyClientKey] = leafKey
-	if err := c.Update(context.Background(), &sec); err != nil {
-		t.Fatal(err)
-	}
-	need, _, err := NeedsRotation(leafCrt, now)
-	if err != nil || !need {
-		t.Fatalf("expected rotation need=%v err=%v", need, err)
-	}
-	if err := MaintainEntryMTLS(context.Background(), c, DefaultNamespace, true, now); err != nil {
-		t.Fatalf("rotate: %v", err)
-	}
-	if err := c.Get(context.Background(), types.NamespacedName{Namespace: DefaultNamespace, Name: SecretName}, &sec); err != nil {
-		t.Fatal(err)
-	}
-	if sec.Annotations[annotFingerprint] == fp1 {
-		// may collide rarely; ensure previous CA dual-trust key present after rotate
-		if len(sec.Data[keyCACrtPrevious]) == 0 && sec.Annotations[annotFingerprint] == fp1 {
-			t.Fatal("expected rotation to change material or set previous ca")
+	get := func(name string) *corev1.Secret {
+		t.Helper()
+		sec := &corev1.Secret{}
+		if err := c.Get(ctx, types.NamespacedName{Namespace: DefaultNamespace, Name: name}, sec); err != nil {
+			t.Fatal(err)
 		}
+		return sec
 	}
-	if len(sec.Data[keyCACrtPrevious]) == 0 {
-		t.Fatal("dual-trust previous ca expected after leaf rotation")
+	signer, server, client := get(signerSecretName), get(SecretName), get(ClientSecretName)
+	if len(signer.Data) != 2 || len(signer.Data[keyCAKey]) == 0 ||
+		len(server.Data) != 3 || len(server.Data[keyServerKey]) == 0 ||
+		len(client.Data) != 3 || len(client.Data[keyClientKey]) == 0 {
+		t.Fatal("credentials were not separated by consumer")
+	}
+	if !bytes.Equal(server.Data[keyCACrt], legacy.CACrt) || !bytes.Equal(client.Data[keyCACrt], legacy.CACrt) {
+		t.Fatal("migration changed the trust anchor")
+	}
+	if err := c.Delete(ctx, client); err != nil {
+		t.Fatal(err)
+	}
+	if err := MaintainEntryMTLS(ctx, c, DefaultNamespace, true, now); err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Equal(get(ClientSecretName).Data[keyClientCrt], client.Data[keyClientCrt]) {
+		t.Fatal("missing client credential was not reissued")
+	}
+	if err := MaintainEntryMTLS(ctx, c, DefaultNamespace, true, now.Add(200*24*time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Equal(get(SecretName).Data[keyServerCrt], server.Data[keyServerCrt]) {
+		t.Fatal("expiring server credential was not rotated")
 	}
 }
 
@@ -105,5 +101,44 @@ func TestNeedsRotationThreshold(t *testing.T) {
 	}
 	if need {
 		t.Fatalf("fresh leaf should not need rotation, rem=%s", rem)
+	}
+}
+
+func TestBootstrapLeafIdentityAndPurpose(t *testing.T) {
+	now := time.Now().UTC()
+	mat, err := bootstrapMaterial(now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	roots := x509.NewCertPool()
+	if !roots.AppendCertsFromPEM(mat.CACrt) {
+		t.Fatal("could not load issuer")
+	}
+	for _, tc := range []struct {
+		pem      []byte
+		name     string
+		usage    x509.ExtKeyUsage
+		wrongUse x509.ExtKeyUsage
+	}{
+		{mat.ServerCrt, "app-gateway-l4-mtls.os-gateway.svc.cluster.local", x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
+		{mat.ClientCrt, "l4-bfl-proxy.entry.client", x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
+	} {
+		cert, err := parseCertificate(tc.pem)
+		if err != nil {
+			t.Fatal(err)
+		}
+		opts := x509.VerifyOptions{Roots: roots, DNSName: tc.name, KeyUsages: []x509.ExtKeyUsage{tc.usage}, CurrentTime: now}
+		if _, err := cert.Verify(opts); err != nil {
+			t.Fatalf("%s certificate unexpectedly rejected: %v", tc.name, err)
+		}
+		opts.DNSName = "unrelated.example"
+		if _, err := cert.Verify(opts); err == nil {
+			t.Fatalf("%s certificate accepted for the wrong peer", tc.name)
+		}
+		opts.DNSName = tc.name
+		opts.KeyUsages = []x509.ExtKeyUsage{tc.wrongUse}
+		if _, err := cert.Verify(opts); err == nil {
+			t.Fatalf("%s certificate accepted for the wrong TLS role", tc.name)
+		}
 	}
 }
