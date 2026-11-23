@@ -4,7 +4,10 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/errcode"
+	"github.com/beclab/Olares/framework/app-service/pkg/helm"
+	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	"k8s.io/klog/v2"
 )
@@ -32,8 +35,8 @@ func (h *HelmOpsV2) ApplyEnv() error {
 		return err
 	}
 
-	if err := h.upgrade(values); err != nil {
-		klog.Errorf("Failed to upgrade app %s err=%v", h.App().AppName, err)
+	if err := h.applyEnvFromReleases(values); err != nil {
+		klog.Errorf("Failed to apply env to app %s err=%v", h.App().AppName, err)
 		return err
 	}
 
@@ -64,5 +67,52 @@ func (h *HelmOpsV2) ApplyEnv() error {
 	}
 
 	klog.Infof("App (V2) %s applyenv successfully", h.App().AppName)
+	return nil
+}
+
+// applyEnvFromReleases updates env values on each sub-chart release using the
+// chart already stored in that release. It does not read ChartsName from disk,
+// and it does not call upgrade(), which loads a new chart for version upgrades.
+func (h *HelmOpsV2) applyEnvFromReleases(values map[string]interface{}) error {
+	for _, chart := range h.App().SubCharts {
+		if chart.Shared {
+			isAdmin, err := kubesphere.IsAdmin(h.Context(), h.KubeConfig(), h.App().OwnerName)
+			if err != nil {
+				klog.Errorf("Failed to check if user is admin for chart %s: %v", chart.Name, err)
+				return err
+			}
+			if !isAdmin {
+				klog.Infof("Skipping apply env of shared chart %s for non-admin user %s", chart.Name, h.App().OwnerName)
+				continue
+			}
+		}
+
+		release, err := h.status(chart.Name)
+		if err != nil {
+			klog.Errorf("Failed to get status for chart %s: %v", chart.Name, err)
+			return err
+		}
+
+		actionConfig := h.ActionConfig()
+		namespace := release.Namespace
+		if chart.Shared {
+			ns := appcfg.ChartNamespace(&chart, h.App().OwnerName)
+			actionConfig, _, err = helm.InitConfig(h.KubeConfig(), ns)
+			if err != nil {
+				klog.Errorf("Failed to create action config for shared chart %s: %v", chart.Name, err)
+				return err
+			}
+			if namespace == "" {
+				namespace = ns
+			}
+		} else if namespace == "" {
+			namespace = h.App().Namespace
+		}
+
+		if err := helm.UpgradeReleaseCharts(h.Context(), actionConfig, chart.Name, namespace, release.Chart, values); err != nil {
+			klog.Errorf("Failed to apply env to chart name=%s err=%v", chart.Name, err)
+			return err
+		}
+	}
 	return nil
 }
