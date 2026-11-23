@@ -8,17 +8,22 @@ on:
     - cron: "30 18 * * *"
   workflow_dispatch:
 
+env:
+  RELEASE_BRANCH: release-1.12.9
+
 jobs:
 
   daily-version:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.generate.outputs.version }}
+      branch: ${{ steps.generate.outputs.branch }}
     steps:
       - id: generate
         run: |
-          v=1.12.10-$(date +"%Y%m%d")
+          v=1.12.9-$(date +"%Y%m%d")
           echo "version=$v" >> "$GITHUB_OUTPUT"
+          echo "branch=$RELEASE_BRANCH" >> "$GITHUB_OUTPUT"
 
   release-id:
     runs-on: ubuntu-latest
@@ -27,6 +32,8 @@ jobs:
     steps:
       - name: 'Checkout source code'
         uses: actions/checkout@v3
+        with:
+          ref: ${{ env.RELEASE_BRANCH }}
       - id: generate
         run: |
           hash=$(git rev-parse --short=7 HEAD)
@@ -38,6 +45,7 @@ jobs:
     secrets: inherit
     with:
       version: ${{ needs.daily-version.outputs.version }}
+      ref: ${{ needs.daily-version.outputs.branch }}
       release-id: ${{ needs.release-id.outputs.id }}
 
   release-daemon:
@@ -46,6 +54,7 @@ jobs:
     secrets: inherit
     with:
       version: ${{ needs.daily-version.outputs.version }}
+      ref: ${{ needs.daily-version.outputs.branch }}
       release-id: ${{ needs.release-id.outputs.id }}
 
   push-images:
@@ -54,6 +63,8 @@ jobs:
     steps:
       - name: 'Checkout source code'
         uses: actions/checkout@v3
+        with:
+          ref: ${{ env.RELEASE_BRANCH }}
 
       - name: Install coscmd
         run: pip install coscmd        
@@ -80,6 +91,8 @@ jobs:
     steps:
       - name: 'Checkout source code'
         uses: actions/checkout@v3
+        with:
+          ref: ${{ env.RELEASE_BRANCH }}
 
       - name: Install coscmd
         run: pip install coscmd        
@@ -108,6 +121,8 @@ jobs:
     steps:
       - name: "Checkout source code"
         uses: actions/checkout@v3
+        with:
+          ref: ${{ env.RELEASE_BRANCH }}
 
       - name: Install coscmd
         run: pip install coscmd        
@@ -140,6 +155,8 @@ jobs:
     steps:
       - name: "Checkout source code"
         uses: actions/checkout@v3
+        with:
+          ref: ${{ env.RELEASE_BRANCH }}
 
       - name: Install coscmd
         run: pip install coscmd        
@@ -174,6 +191,8 @@ jobs:
     steps:
       - name: 'Checkout source code'
         uses: actions/checkout@v3
+        with:
+          ref: ${{ env.RELEASE_BRANCH }}
 
       - name: Package installer
         run: |
@@ -217,6 +236,8 @@ jobs:
     steps:
       - name: 'Checkout source code'
         uses: actions/checkout@v3
+        with:
+          ref: ${{ env.RELEASE_BRANCH }}
 
       - name: Package installer
         run: |
@@ -246,6 +267,7 @@ jobs:
         with:
           name: v${{ needs.daily-version.outputs.version }} Release
           tag_name: ${{ needs.daily-version.outputs.version }}
+          target_commitish: ${{ env.RELEASE_BRANCH }}
           files: |
             install-wizard-v${{ needs.daily-version.outputs.version }}.tar.gz
             build/base-package/publicInstaller.sh
