@@ -236,7 +236,7 @@ func reconcileGatewayMode(ctx context.Context, c client.Client, gw GatewayRef, s
 	if err := applyJWKSReferenceGrant(ctx, c, srr); err != nil {
 		return ReconcileResult{}, fmt.Errorf("apply JWKS ReferenceGrant: %w", err)
 	}
-	if err := meshedReadyEndpoints(ctx, c, upstreamNS, srr.Spec.Upstream); err != nil {
+	if err := httpRouteMeshDependenciesReady(ctx, c, upstreamNS, srr); err != nil {
 		if withdrawErr := withdrawUnreadyHTTPRoute(ctx, c, srr); withdrawErr != nil {
 			return ReconcileResult{}, fmt.Errorf("withdraw HTTPRoute for unverified mesh endpoints: %w", withdrawErr)
 		}
