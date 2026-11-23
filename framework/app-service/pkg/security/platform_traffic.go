@@ -33,6 +33,8 @@ var (
 	citusPods           = map[string]string{"app": "citus", "app.kubernetes.io/name": "citus"}
 	kvrocksPods         = map[string]string{"app": "kvrocks", "app.kubernetes.io/name": "kvrocks"}
 	envoyControllerPods = map[string]string{"control-plane": "envoy-gateway", "app.kubernetes.io/name": "gateway-helm", "app.kubernetes.io/instance": "app-gateway-eg"}
+	platformAuthelia    = platformWorkload{"os-framework", map[string]string{"app": "authelia-backend", "traffic.olares.io/platform-mesh": "true"}}
+	bflPods             = map[string]string{"tier": "bfl"}
 )
 
 func gatewayDataPlanePods(gateway string) map[string]string {
@@ -62,13 +64,22 @@ var platformServiceFlows = []platformServiceFlow{
 	{"infisical-kvrocks", workload("os-framework", "app", "infisical"), types.NamespacedName{Namespace: "os-platform", Name: "redis-cluster-proxy"}, kvrocksPods, 6379, 6666, ""},
 	{"files-kvrocks", workload("os-framework", "app", "files"), types.NamespacedName{Namespace: "os-platform", Name: "redis-cluster-proxy"}, kvrocksPods, 6379, 6666, ""},
 	{"authelia-ldap", workload("os-framework", "app", "authelia-backend"), types.NamespacedName{Namespace: "os-platform", Name: "lldap-service"}, map[string]string{"app": "lldap"}, 3890, 3890, ""},
+	// Token cache initialization still uses the LLDAP HTTP API during mesh migration.
+	{"authelia-lldap-token", platformAuthelia, types.NamespacedName{Namespace: "os-platform", Name: "lldap-service"}, map[string]string{"app": "lldap"}, 17170, 17170, ""},
 	{"entry-gateway-xds", platformWorkload{"os-gateway", gatewayDataPlanePods("app-gateway")}, types.NamespacedName{Namespace: "os-gateway", Name: "envoy-gateway"}, envoyControllerPods, 18000, 18000, ""},
 	{"internal-gateway-xds", platformWorkload{"os-gateway", gatewayDataPlanePods("app-access-internal")}, types.NamespacedName{Namespace: "os-gateway", Name: "envoy-gateway"}, envoyControllerPods, 18000, 18000, ""},
 	{"l4-entry", platformWorkload{"os-network", map[string]string{"app": "l4-bfl-proxy", "tier": "bfl"}}, types.NamespacedName{Namespace: "os-gateway", Name: "app-gateway-l4-mtls"}, gatewayDataPlanePods("app-gateway"), 8443, 8443, ""},
 	{"l4-authz", platformWorkload{"os-network", map[string]string{"app": "l4-bfl-proxy", "tier": "bfl"}}, types.NamespacedName{Namespace: "os-gateway", Name: "app-gateway-l4-mtls"}, gatewayDataPlanePods("app-gateway"), 9444, 9444, ""},
 }
 
-const platformMeshControlPlaneLabel = "linkerd.io/control-plane-ns"
+const (
+	platformMeshControlPlaneLabel = "linkerd.io/control-plane-ns"
+	autheliaBFLFlowName           = "authelia-bfl"
+)
+
+func autheliaBFLFlow(space string) platformServiceFlow {
+	return platformServiceFlow{autheliaBFLFlowName, platformAuthelia, types.NamespacedName{Namespace: space, Name: "bfl"}, bflPods, 80, 8080, ""}
+}
 
 func platformTrafficFlows(namespace string) []platformServiceFlow {
 	var tenant string
@@ -88,7 +99,6 @@ func platformTrafficFlows(namespace string) []platformServiceFlow {
 	auth := types.NamespacedName{Namespace: system, Name: "authelia-backend"}
 	bfl := types.NamespacedName{Namespace: space, Name: "bfl"}
 	systemProxy := map[string]string{"app": "systemserver"}
-	bflPods := map[string]string{"tier": "bfl"}
 	return []platformServiceFlow{
 		{"authelia-frontend-auth", frontend("authelia"), auth, systemProxy, 9091, 9091, "auth-proxy"},
 		{"desktop-auth", frontend("olares-app"), auth, systemProxy, 9091, 9091, "auth-proxy"},
@@ -97,6 +107,7 @@ func platformTrafficFlows(namespace string) []platformServiceFlow {
 		{"desktop-bfl", frontend("olares-app"), bfl, bflPods, 80, 8080, ""},
 		{"desktop-app-service", frontend("olares-app"), types.NamespacedName{Namespace: system, Name: "app-service"}, systemProxy, 28080, 28080, ""},
 		{"desktop-nats", frontend("olares-app"), types.NamespacedName{Namespace: system, Name: "nats"}, systemProxy, 4222, 4222, ""},
+		autheliaBFLFlow(space),
 	}
 }
 
@@ -137,35 +148,37 @@ func PlatformTrafficNamespaces(service types.NamespacedName) []string {
 
 func BuildPlatformTrafficPolicies(namespace string, services map[types.NamespacedName]*corev1.Service) []netv1.NetworkPolicy {
 	var policies []netv1.NetworkPolicy
+	if namespace == platformAuthelia.namespace {
+		// Authelia initializes its cache using the BFL API in each tenant space.
+		// Build one source policy from the current inventory so deleted Services
+		// also lose their egress grants.
+		var spaces []string
+		for key := range services {
+			if key.Name == "bfl" && IsUserSpaceNamespaces(key.Namespace) {
+				spaces = append(spaces, key.Namespace)
+			}
+		}
+		slices.Sort(spaces)
+		out := netv1.NetworkPolicy{
+			ObjectMeta: npMeta("olares-platform-"+autheliaBFLFlowName+"-egress", namespace),
+			Spec: netv1.NetworkPolicySpec{
+				PodSelector: metav1.LabelSelector{MatchLabels: platformAuthelia.selector},
+				PolicyTypes: []netv1.PolicyType{netv1.PolicyTypeEgress},
+			},
+		}
+		for _, space := range spaces {
+			flow := autheliaBFLFlow(space)
+			out.Spec.Egress = append(out.Spec.Egress, flow.egressRules(services[flow.service])...)
+		}
+		policies = append(policies, out)
+	}
 	for _, flow := range platformTrafficFlows(namespace) {
 		service := services[flow.service]
-		usable := flow.matchesService(service)
-		destination, ports := flow.destination()
 		if namespace == flow.from.namespace {
-			policy := netv1.NetworkPolicy{
-				ObjectMeta: npMeta("olares-platform-"+flow.name+"-egress", namespace),
-				Spec: netv1.NetworkPolicySpec{
-					PodSelector: metav1.LabelSelector{MatchLabels: flow.from.selector},
-					PolicyTypes: []netv1.PolicyType{netv1.PolicyTypeEgress},
-				},
-			}
-			if usable {
-				policy.Spec.Egress = []netv1.NetworkPolicyEgressRule{{
-					To:    []netv1.NetworkPolicyPeer{platformPeer(flow.service.Namespace, destination)},
-					Ports: ports,
-				}}
-				for _, addr := range serviceClusterIPs(service) {
-					if cidr := exactIPCIDR(addr); cidr != "" {
-						policy.Spec.Egress = append(policy.Spec.Egress, netv1.NetworkPolicyEgressRule{
-							To:    []netv1.NetworkPolicyPeer{{IPBlock: &netv1.IPBlock{CIDR: cidr}}},
-							Ports: []netv1.NetworkPolicyPort{tcpPort(flow.servicePort)},
-						})
-					}
-				}
-			}
-			policies = append(policies, policy)
+			policies = append(policies, flow.egressPolicy(service))
 		}
 		if namespace == flow.service.Namespace {
+			destination, ports := flow.destination()
 			policy := netv1.NetworkPolicy{
 				ObjectMeta: npMeta("olares-platform-"+flow.name+"-ingress", namespace),
 				Spec: netv1.NetworkPolicySpec{
@@ -173,7 +186,7 @@ func BuildPlatformTrafficPolicies(namespace string, services map[types.Namespace
 					PolicyTypes: []netv1.PolicyType{netv1.PolicyTypeIngress},
 				},
 			}
-			if usable {
+			if flow.matchesService(service) {
 				policy.Spec.Ingress = []netv1.NetworkPolicyIngressRule{{
 					From:  []netv1.NetworkPolicyPeer{platformPeer(flow.from.namespace, flow.from.selector)},
 					Ports: ports,
@@ -183,6 +196,37 @@ func BuildPlatformTrafficPolicies(namespace string, services map[types.Namespace
 		}
 	}
 	return policies
+}
+
+func (flow platformServiceFlow) egressPolicy(service *corev1.Service) netv1.NetworkPolicy {
+	return netv1.NetworkPolicy{
+		ObjectMeta: npMeta("olares-platform-"+flow.name+"-egress", flow.from.namespace),
+		Spec: netv1.NetworkPolicySpec{
+			PodSelector: metav1.LabelSelector{MatchLabels: flow.from.selector},
+			PolicyTypes: []netv1.PolicyType{netv1.PolicyTypeEgress},
+			Egress:      flow.egressRules(service),
+		},
+	}
+}
+
+func (flow platformServiceFlow) egressRules(service *corev1.Service) []netv1.NetworkPolicyEgressRule {
+	if !flow.matchesService(service) {
+		return nil
+	}
+	destination, ports := flow.destination()
+	rules := []netv1.NetworkPolicyEgressRule{{
+		To:    []netv1.NetworkPolicyPeer{platformPeer(flow.service.Namespace, destination)},
+		Ports: ports,
+	}}
+	for _, addr := range serviceClusterIPs(service) {
+		if cidr := exactIPCIDR(addr); cidr != "" {
+			rules = append(rules, netv1.NetworkPolicyEgressRule{
+				To:    []netv1.NetworkPolicyPeer{{IPBlock: &netv1.IPBlock{CIDR: cidr}}},
+				Ports: []netv1.NetworkPolicyPort{tcpPort(flow.servicePort)},
+			})
+		}
+	}
+	return rules
 }
 
 func (flow platformServiceFlow) matchesService(service *corev1.Service) bool {
