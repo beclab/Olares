@@ -1,6 +1,7 @@
 package access
 
 import (
+	"bytes"
 	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
@@ -27,13 +28,17 @@ const (
 	AdmissionServiceName       = "access-admission"
 )
 
-// PromoteAdmissionFailurePolicy ensures webhook TLS material exists and sets
-// every webhook's failurePolicy to Fail with caBundle filled.
-// Manifest may ship Ignore only as install bootstrap ordering.
-func PromoteAdmissionFailurePolicy(ctx context.Context, c client.Client) error {
-	caPEM, err := ensureAdmissionTLS(ctx, c, AdmissionTLSNamespace, AdmissionTLSSecretName)
-	if err != nil {
-		return err
+// PrepareAdmissionTLS bootstraps the serving credential without changing
+// the API server's webhook failure policy.
+func PrepareAdmissionTLS(ctx context.Context, c client.Client) ([]byte, error) {
+	return ensureAdmissionTLS(ctx, c, AdmissionTLSNamespace, AdmissionTLSSecretName)
+}
+
+// PromoteAdmissionFailurePolicy pins the verified CA and enforces Fail after
+// the caller has checked the serving endpoint.
+func PromoteAdmissionFailurePolicy(ctx context.Context, c client.Client, caBundle []byte) error {
+	if len(caBundle) == 0 {
+		return fmt.Errorf("webhook CA bundle is empty")
 	}
 	var wh admissionregistrationv1.ValidatingWebhookConfiguration
 	if err := c.Get(ctx, types.NamespacedName{Name: AdmissionWebhookConfigName}, &wh); err != nil {
@@ -43,10 +48,17 @@ func PromoteAdmissionFailurePolicy(ctx context.Context, c client.Client) error {
 		return fmt.Errorf("webhook config %s has no webhooks", AdmissionWebhookConfigName)
 	}
 	fail := admissionregistrationv1.Fail
-	caBundle := []byte(caPEM)
+	changed := false
 	for i := range wh.Webhooks {
-		wh.Webhooks[i].FailurePolicy = &fail
-		wh.Webhooks[i].ClientConfig.CABundle = caBundle
+		w := &wh.Webhooks[i]
+		if w.FailurePolicy == nil || *w.FailurePolicy != fail || !bytes.Equal(w.ClientConfig.CABundle, caBundle) {
+			w.FailurePolicy = &fail
+			w.ClientConfig.CABundle = caBundle
+			changed = true
+		}
+	}
+	if !changed {
+		return nil
 	}
 	return c.Update(ctx, &wh)
 }

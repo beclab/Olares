@@ -32,27 +32,30 @@ func ReconcileAccessPolicy(ctx context.Context, c client.Client, u *unstructured
 		return err
 	}
 	for _, d := range desired {
-		if d.Delete {
-			obj := d.Object.DeepCopy()
-			obj.SetGroupVersionKind(d.GVK)
-			obj.SetName(d.Name)
-			obj.SetNamespace(d.Namespace)
-			if err := c.Delete(ctx, obj); err != nil && !apierrors.IsNotFound(err) {
-				return err
-			}
-			continue
-		}
 		existing := &unstructured.Unstructured{}
 		existing.SetGroupVersionKind(d.GVK)
 		err := c.Get(ctx, types.NamespacedName{Namespace: d.Namespace, Name: d.Name}, existing)
-		if apierrors.IsNotFound(err) {
-			if err := c.Create(ctx, d.Object); err != nil {
+		switch {
+		case apierrors.IsNotFound(err):
+			if !d.Delete {
+				if err := c.Create(ctx, d.Object); err != nil {
+					return err
+				}
+			}
+			continue
+		case err != nil:
+			return err
+		}
+		labels := existing.GetLabels()
+		if labels[ManagedByLabel] != ManagedByAccessPolicy || labels[PolicyNameLabel] != p.Name {
+			return fmt.Errorf("refusing to change %s %s/%s owned by another controller", d.GVK.Kind, d.Namespace, d.Name)
+		}
+		if d.Delete {
+			uid, rv := existing.GetUID(), existing.GetResourceVersion()
+			if err := c.Delete(ctx, existing, client.Preconditions{UID: &uid, ResourceVersion: &rv}); err != nil && !apierrors.IsNotFound(err) {
 				return err
 			}
 			continue
-		}
-		if err != nil {
-			return err
 		}
 		d.Object.SetResourceVersion(existing.GetResourceVersion())
 		if err := c.Update(ctx, d.Object); err != nil {

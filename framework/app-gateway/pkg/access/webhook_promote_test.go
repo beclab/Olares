@@ -42,7 +42,18 @@ func TestPromoteAdmissionFailurePolicyAlwaysFail(t *testing.T) {
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: AdmissionTLSNamespace}}
 	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(ns, wh).Build()
 
-	if err := PromoteAdmissionFailurePolicy(context.Background(), c); err != nil {
+	ca, err := PrepareAdmissionTLS(context.Background(), c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var bootstrap admissionregistrationv1.ValidatingWebhookConfiguration
+	if err := c.Get(context.Background(), types.NamespacedName{Name: AdmissionWebhookConfigName}, &bootstrap); err != nil {
+		t.Fatal(err)
+	}
+	if *bootstrap.Webhooks[0].FailurePolicy != admissionregistrationv1.Ignore {
+		t.Fatal("preparing TLS promoted the webhook before endpoint readiness")
+	}
+	if err := PromoteAdmissionFailurePolicy(context.Background(), c, ca); err != nil {
 		t.Fatal(err)
 	}
 	var got admissionregistrationv1.ValidatingWebhookConfiguration

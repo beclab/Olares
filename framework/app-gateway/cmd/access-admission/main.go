@@ -4,12 +4,14 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"syscall"
 	"time"
 
@@ -27,9 +29,6 @@ import (
 
 func main() {
 	addr := getenv("ACCESS_ADMISSION_ADDR", ":9443")
-	certFile := getenv("ACCESS_ADMISSION_CERT", "/tls/tls.crt")
-	keyFile := getenv("ACCESS_ADMISSION_KEY", "/tls/tls.key")
-
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -46,29 +45,45 @@ func main() {
 		slog.Error("admission client unavailable", "error", err)
 		os.Exit(1)
 	}
-	if err := access.PromoteAdmissionFailurePolicy(ctx, cl); err != nil {
+	bootstrapCtx, cancelBootstrap := context.WithTimeout(ctx, 90*time.Second)
+	ca, err := access.PrepareAdmissionTLS(bootstrapCtx, cl)
+	if err != nil {
+		slog.Error("prepare admission TLS", "error", err)
+		os.Exit(1)
+	}
+	cert, err := loadAdmissionTLS(bootstrapCtx, cl)
+	if err != nil {
+		slog.Error("load admission TLS", "error", err)
+		os.Exit(1)
+	}
+	srv.TLSConfig = &tls.Config{MinVersion: tls.VersionTLS12, Certificates: []tls.Certificate{cert}}
+	serverErr := make(chan error, 1)
+	go func() {
+		slog.Info("access-admission listening tls", "addr", addr)
+		serverErr <- srv.ListenAndServeTLS("", "")
+	}()
+	serviceURL := "https://" + access.AdmissionServiceName + "." + access.AdmissionTLSNamespace + ".svc/healthz"
+	if err := waitForAdmissionEndpoint(bootstrapCtx, serviceURL, ca, serverErr); err != nil {
+		slog.Error("admission service not ready", "error", err)
+		os.Exit(1)
+	}
+	if err := access.PromoteAdmissionFailurePolicy(bootstrapCtx, cl, ca); err != nil {
 		slog.Error("promote admission failurePolicy", "error", err)
 		os.Exit(1)
 	}
-	if err := materializeAdmissionTLS(ctx, cl, certFile, keyFile); err != nil {
-		slog.Error("materialize admission tls files", "error", err)
-		os.Exit(1)
-	}
+	cancelBootstrap()
 	slog.Info("admission webhook policy reconciled to Fail")
 
 	if uniauth.AccessPolicyReconcileDesired() {
 		go runPolicyReconcileLoop(ctx)
 	}
 
-	go func() {
-		slog.Info("access-admission listening tls", "addr", addr)
-		if err := srv.ListenAndServeTLS(certFile, keyFile); err != nil && err != http.ErrServerClosed {
-			slog.Error("server stopped", "error", err)
-			stop()
-		}
-	}()
-
-	<-ctx.Done()
+	select {
+	case <-ctx.Done():
+	case err := <-serverErr:
+		slog.Error("admission server stopped", "error", err)
+		os.Exit(1)
+	}
 	shutdown, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	_ = srv.Shutdown(shutdown)
@@ -146,21 +161,52 @@ func buildAdmissionClient() (client.Client, error) {
 	return client.New(cfg, client.Options{Scheme: scheme})
 }
 
-func materializeAdmissionTLS(ctx context.Context, cl client.Client, certFile, keyFile string) error {
+func loadAdmissionTLS(ctx context.Context, cl client.Client) (tls.Certificate, error) {
 	var sec corev1.Secret
 	if err := cl.Get(ctx, types.NamespacedName{
 		Namespace: access.AdmissionTLSNamespace,
 		Name:      access.AdmissionTLSSecretName,
 	}, &sec); err != nil {
-		return err
+		return tls.Certificate{}, err
 	}
-	if err := os.MkdirAll(filepath.Dir(certFile), 0o755); err != nil {
-		return err
+	return tls.X509KeyPair(sec.Data["tls.crt"], sec.Data["tls.key"])
+}
+
+func waitForAdmissionEndpoint(ctx context.Context, url string, ca []byte, serverErr <-chan error) error {
+	roots := x509.NewCertPool()
+	if !roots.AppendCertsFromPEM(ca) {
+		return fmt.Errorf("invalid webhook CA bundle")
 	}
-	if err := os.WriteFile(certFile, sec.Data["tls.crt"], 0o600); err != nil {
-		return err
+	transport := &http.Transport{TLSClientConfig: &tls.Config{RootCAs: roots, MinVersion: tls.VersionTLS12}}
+	defer transport.CloseIdleConnections()
+	client := &http.Client{Transport: transport, Timeout: 2 * time.Second,
+		CheckRedirect: func(_ *http.Request, _ []*http.Request) error { return http.ErrUseLastResponse }}
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+	var lastErr error
+	for {
+		select {
+		case err := <-serverErr:
+			return fmt.Errorf("admission server stopped: %w", err)
+		case <-ctx.Done():
+			return fmt.Errorf("waiting for admission service: %w (last probe: %v)", ctx.Err(), lastErr)
+		case <-ticker.C:
+			req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+			if err != nil {
+				return err
+			}
+			resp, err := client.Do(req)
+			if err != nil {
+				lastErr = err
+				continue
+			}
+			resp.Body.Close()
+			if resp.StatusCode == http.StatusOK {
+				return nil
+			}
+			lastErr = fmt.Errorf("unexpected HTTP status %d", resp.StatusCode)
+		}
 	}
-	return os.WriteFile(keyFile, sec.Data["tls.key"], 0o600)
 }
 
 func getenv(k, def string) string {
