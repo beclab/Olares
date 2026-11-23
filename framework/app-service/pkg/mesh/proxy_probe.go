@@ -9,8 +9,6 @@ import (
 )
 
 const (
-	// LinkerdProxyContainerName is the upstream injected proxy container name.
-	LinkerdProxyContainerName = "linkerd-proxy"
 	// LinkerdAwaitBinary is shipped in the proxy image (also used by postStart).
 	LinkerdAwaitBinary = "/usr/lib/linkerd/linkerd-await"
 	// LinkerdAdminPortName is the injected admin port name.
@@ -27,22 +25,14 @@ func HardenLinkerdProxyAdminProbes(pod *corev1.Pod) bool {
 	if pod == nil {
 		return false
 	}
-	changed := false
-	for i := range pod.Spec.Containers {
-		c := &pod.Spec.Containers[i]
-		if c.Name != LinkerdProxyContainerName {
-			continue
-		}
-		if hardenLinkerdAdminProbe(&c.LivenessProbe) {
-			changed = true
-		}
-		if hardenLinkerdAdminProbe(&c.ReadinessProbe) {
-			changed = true
-		}
-		if hardenLinkerdAdminProbe(&c.StartupProbe) {
-			changed = true
-		}
+	proxy := LinkerdProxy(pod)
+	if proxy == nil {
+		return false
 	}
+	livenessChanged := hardenLinkerdAdminProbe(&proxy.LivenessProbe)
+	readinessChanged := hardenLinkerdAdminProbe(&proxy.ReadinessProbe)
+	startupChanged := hardenLinkerdAdminProbe(&proxy.StartupProbe)
+	changed := livenessChanged || readinessChanged || startupChanged
 	if changed {
 		klog.Infof("mesh-probe: hardened linkerd-proxy admin probes to exec await ns=%s pod=%s",
 			pod.Namespace, pod.Name)

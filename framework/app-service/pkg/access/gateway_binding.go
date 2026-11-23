@@ -296,11 +296,7 @@ func checkMeshService(ctx context.Context, c client.Client, ns, svc, sa string, 
 				mesh.CheckHTTPMeshInterception(&pod) != nil {
 				return fmt.Errorf("endpoint identity or interception is invalid for %s/%s", ns, svc)
 			}
-			proxyReady := false
-			for _, s := range pod.Status.ContainerStatuses {
-				proxyReady = proxyReady || (s.Name == "linkerd-proxy" && s.Ready)
-			}
-			if !proxyReady {
+			if !mesh.LinkerdProxyReady(&pod) {
 				return fmt.Errorf("endpoint Linkerd proxy is not ready for %s/%s", ns, svc)
 			}
 			found = true

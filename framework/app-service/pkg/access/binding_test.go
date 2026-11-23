@@ -248,7 +248,7 @@ func meshServiceFixture(ns, name, sa string, sp, cp int32, selector map[string]s
 	return []client.Object{
 		&corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: name, UID: uid},
 			Spec: corev1.ServiceSpec{Selector: selector, Ports: []corev1.ServicePort{{Name: "http", Port: sp, TargetPort: intstr.FromInt32(cp)}}}},
-		&corev1.Pod{ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: name, UID: podUID}, Spec: corev1.PodSpec{ServiceAccountName: sa},
+		&corev1.Pod{ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: name, UID: podUID}, Spec: corev1.PodSpec{ServiceAccountName: sa, Containers: []corev1.Container{{Name: "linkerd-proxy"}}},
 			Status: corev1.PodStatus{ContainerStatuses: []corev1.ContainerStatus{{Name: "linkerd-proxy", Ready: true}}}},
 		&discoveryv1.EndpointSlice{ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: name,
 			Labels:          map[string]string{discoveryv1.LabelServiceName: name},
