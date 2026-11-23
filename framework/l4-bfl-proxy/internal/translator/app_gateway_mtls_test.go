@@ -38,6 +38,26 @@ func TestClusterForAppGatewayEnabled(t *testing.T) {
 	}
 }
 
+func TestAppendEntryMTLSSDS(t *testing.T) {
+	xds := &ir.Xds{}
+	appendEntryMTLSSDS(xds, nil)
+	if len(xds.Secrets) != 0 {
+		t.Fatal("nil material")
+	}
+	appendEntryMTLSSDS(xds, &message.EntryMTLSMaterial{
+		ClientCert: "cc", ClientKey: "ck", CA: "ca",
+	})
+	if len(xds.Secrets) != 2 {
+		t.Fatalf("secrets=%d", len(xds.Secrets))
+	}
+	if xds.Secrets[0].Name != appGatewayClientCertSDS || xds.Secrets[0].CertData != "cc" {
+		t.Fatal("client sds")
+	}
+	if xds.Secrets[1].Name != appGatewayTrustedCASDS || xds.Secrets[1].TrustedCA != "ca" {
+		t.Fatal("ca sds")
+	}
+}
+
 func TestBuildAppVirtualHostsUsesAppGatewayMTLS(t *testing.T) {
 	tr := &Translator{cfg: &Config{AppGatewayMTLS: true, SSLServerPort: 443}}
 	user := &message.UserInfo{Name: "alice"}
@@ -97,6 +117,15 @@ func TestDefaultAppGatewayHostMatchesChannelManifest(t *testing.T) {
 	body := string(raw)
 	if !strings.Contains(body, "name: app-gateway-l4-mtls") {
 		t.Fatalf("manifest missing Service name app-gateway-l4-mtls: %s", manifest)
+	}
+	if !strings.Contains(body, `enabled: "true"`) {
+		t.Fatal("channel CM must project enabled=true")
+	}
+	if !strings.Contains(body, "RequireAndVerify") {
+		t.Fatal("ClientTrafficPolicy must RequireAndVerify")
+	}
+	if !strings.Contains(body, "owning-gateway-name: app-gateway") {
+		t.Fatal("Service must select EG dataplane")
 	}
 	if !strings.Contains(body, "namespace: os-gateway") {
 		t.Fatalf("manifest missing namespace os-gateway: %s", manifest)

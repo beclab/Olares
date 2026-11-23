@@ -99,7 +99,7 @@ func main() {
 		UserNamespacePrefix: userNamespacePrefix,
 		SSLServerPort:       sslServerPort,
 		SSLProxyServerPort:  sslProxyServerPort,
-	})
+	}).WithAPIReader(mgr.GetAPIReader())
 	if err := prov.SetupWithManager(ctx); err != nil {
 		klog.Fatalf("setup provider failed: %v", err)
 	}

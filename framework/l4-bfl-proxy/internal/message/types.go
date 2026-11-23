@@ -79,8 +79,20 @@ type SSLConfig struct {
 	Ephemeral bool
 }
 
+// EntryMTLSMaterial is L4→app-gateway client trust material (Entry CA, not Linkerd).
+type EntryMTLSMaterial struct {
+	ClientCert string
+	ClientKey  string
+	CA         string
+}
+
+func (m *EntryMTLSMaterial) Ready() bool {
+	return m != nil && m.ClientCert != "" && m.ClientKey != "" && m.CA != ""
+}
+
 type Resources struct {
-	Users []*UserInfo
+	Users     []*UserInfo
+	EntryMTLS *EntryMTLSMaterial
 }
 
 func (r *Resources) DeepCopy() *Resources {
@@ -88,6 +100,10 @@ func (r *Resources) DeepCopy() *Resources {
 		return nil
 	}
 	out := &Resources{}
+	if r.EntryMTLS != nil {
+		cp := *r.EntryMTLS
+		out.EntryMTLS = &cp
+	}
 	if r.Users != nil {
 		for _, u := range r.Users {
 			uc := *u
