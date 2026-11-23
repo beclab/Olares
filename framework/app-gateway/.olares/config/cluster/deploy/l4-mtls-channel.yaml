@@ -21,9 +21,28 @@ spec:
   ports:
     - name: mtls
       port: 8443
-      # Envoy Gateway maps Gateway listener port P → container 10000+P.
-      targetPort: 18443
+      # Envoy Gateway keeps unprivileged listener ports unchanged.
+      targetPort: 8443
       protocol: TCP
+---
+# Linkerd passes only this listener through to Envoy's independent Entry TLS
+# authentication. The other listeners inherit the authenticated mesh default.
+apiVersion: policy.linkerd.io/v1beta3
+kind: Server
+metadata:
+  name: app-gateway-entry-mtls
+  namespace: os-gateway
+spec:
+  podSelector:
+    matchLabels:
+      gateway.envoyproxy.io/owning-gateway-name: app-gateway
+      gateway.envoyproxy.io/owning-gateway-namespace: os-gateway
+      app.kubernetes.io/component: proxy
+      app.kubernetes.io/managed-by: envoy-gateway
+      app.kubernetes.io/name: envoy
+  port: 8443
+  proxyProtocol: TLS
+  accessPolicy: all-unauthenticated
 ---
 apiVersion: v1
 kind: ConfigMap

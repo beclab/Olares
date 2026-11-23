@@ -151,18 +151,10 @@ func workloadNeedsHTTPMTLS(ctx context.Context, c client.Client, ref WorkloadRef
 		if pod.DeletionTimestamp != nil {
 			continue
 		}
-		hasProxy := false
-		for _, ctr := range pod.Spec.Containers {
-			if ctr.Name == linkerdProxyContainerName {
-				hasProxy = true
-				break
-			}
-		}
-		policy := ""
-		if pod.Annotations != nil {
-			policy = pod.Annotations[mesh.LinkerdDefaultInboundPolicyAnnotation]
-		}
-		if !hasProxy || policy != mesh.InboundPolicyClusterAuthenticated {
+		if pod.Annotations[mesh.LinkerdDefaultInboundPolicyAnnotation] != mesh.InboundPolicyClusterAuthenticated ||
+			!mesh.HasHTTPMeshInit(pod) ||
+			!mesh.ProxyHasInboundPolicy(pod, mesh.InboundPolicyClusterAuthenticated) ||
+			mesh.CheckHTTPMeshInterception(pod) != nil {
 			return true, nil
 		}
 	}

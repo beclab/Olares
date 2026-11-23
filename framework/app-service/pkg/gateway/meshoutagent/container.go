@@ -72,22 +72,23 @@ func ContainerSpec() corev1.Container {
 }
 
 // InitContainerSpec redirects outbound TCP/80 and TCP/8080 into the mesh-out agent.
-// Skips mesh-out uid and envoy uid so upstream / agent self-traffic does not loop.
+// Proxy UIDs skip this redirect. Their upstream traffic still reaches Linkerd.
 func InitContainerSpec() corev1.Container {
 	root := int64(0)
 	nginxUID := NginxWorkerUID()
 	envoyUID := strconv.FormatInt(constants.EnvoyUID, 10)
+	linkerdUID := strconv.FormatInt(constants.LinkerdProxyUID, 10)
 	script := fmt.Sprintf(`set -eu
 NGINX_UID="%s"
 ENVOY_UID="%s"
+LINKERD_UID="%s"
 LISTEN="%d"
-iptables -t nat -C OUTPUT -m owner --uid-owner "$NGINX_UID" -j RETURN 2>/dev/null \
-  || iptables -t nat -I OUTPUT 1 -m owner --uid-owner "$NGINX_UID" -j RETURN
+OWNER_SKIP="-m owner ! --uid-owner $NGINX_UID -m owner ! --uid-owner $ENVOY_UID -m owner ! --uid-owner $LINKERD_UID"
 for p in 80 8080; do
-  iptables -t nat -C OUTPUT -p tcp --dport "$p" -m owner ! --uid-owner "$NGINX_UID" -m owner ! --uid-owner "$ENVOY_UID" -j REDIRECT --to-ports "$LISTEN" 2>/dev/null \
-    || iptables -t nat -I OUTPUT 2 -p tcp --dport "$p" -m owner ! --uid-owner "$NGINX_UID" -m owner ! --uid-owner "$ENVOY_UID" -j REDIRECT --to-ports "$LISTEN"
+  iptables -t nat -C OUTPUT -p tcp --dport "$p" $OWNER_SKIP -j REDIRECT --to-ports "$LISTEN" 2>/dev/null \
+    || iptables -t nat -I OUTPUT 1 -p tcp --dport "$p" $OWNER_SKIP -j REDIRECT --to-ports "$LISTEN"
 done
-`, nginxUID, envoyUID, ListenPort)
+`, nginxUID, envoyUID, linkerdUID, ListenPort)
 	return corev1.Container{
 		Name:            InitContainerName,
 		Image:           meshOutAgentImage(),

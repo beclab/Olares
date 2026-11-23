@@ -309,7 +309,7 @@ func TestReconcileSharedRouteAuthModeNoneSkipsExtAuthAndStampsUser(t *testing.T)
 			Ports: []corev1.ServicePort{{Port: 80, Protocol: corev1.ProtocolTCP}},
 		},
 	}
-	c := fake.NewClientBuilder().WithScheme(testSchemeWithSecurityPolicy(t)).WithObjects(srr, svc).Build()
+	c := fake.NewClientBuilder().WithScheme(testSchemeWithSecurityPolicy(t)).WithObjects(meshedServiceObjects(svc, srr)...).Build()
 
 	res, err := ReconcileSharedRoute(ctx, c, GatewayRef{}, srr)
 	if err != nil {
@@ -378,7 +378,7 @@ func TestReconcileSharedRouteGatewayModeCreatesApplicationExtAuth(t *testing.T) 
 			Ports: []corev1.ServicePort{{Port: 80, Protocol: corev1.ProtocolTCP}},
 		},
 	}
-	c := fake.NewClientBuilder().WithScheme(testSchemeWithSecurityPolicy(t)).WithObjects(srr, svc).Build()
+	c := fake.NewClientBuilder().WithScheme(testSchemeWithSecurityPolicy(t)).WithObjects(meshedServiceObjects(svc, srr)...).Build()
 
 	res, err := ReconcileSharedRoute(ctx, c, GatewayRef{}, srr)
 	if err != nil {
@@ -436,7 +436,7 @@ func TestReconcileSharedRouteGatewayModeCreatesSecurityPolicy(t *testing.T) {
 			Ports: []corev1.ServicePort{{Port: 80, Protocol: corev1.ProtocolTCP}},
 		},
 	}
-	c := fake.NewClientBuilder().WithScheme(testSchemeWithSecurityPolicy(t)).WithObjects(srr, svc).Build()
+	c := fake.NewClientBuilder().WithScheme(testSchemeWithSecurityPolicy(t)).WithObjects(meshedServiceObjects(svc, srr)...).Build()
 
 	res, err := ReconcileSharedRoute(ctx, c, GatewayRef{}, srr)
 	if err != nil {

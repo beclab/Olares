@@ -119,37 +119,40 @@ func (h *Handler) mutate(ctx context.Context, req *admissionv1.AdmissionRequest,
 
 	shared := appCfg != nil && appCfg.IsShared()
 	nothingToInject := !injectPolicy && !injectMeshInAgent && !injectMeshOutAgent && injectSharedPod == nil && len(perms) == 0
+	systemHTTPBackend, err := h.sidecarWebhook.IsSystemHTTPBackend(ctx, &pod, req.Namespace)
+	if err != nil {
+		return h.sidecarWebhook.AdmissionError(req.UID, err)
+	}
+	meshConfigured, err := webhook.ConfigurePodHTTPMesh(&pod, req.Namespace,
+		systemHTTPBackend || (appCfg != nil && !appCfg.IsMiddleware()) || !nothingToInject, injectMeshInAgent)
+	if err != nil {
+		return h.sidecarWebhook.AdmissionError(req.UID, err)
+	}
 
 	// Shared apps historically skipped CreatePatch (label-only) to avoid oes on
 	// pure callees. Composite Shared callers with mesh-in/mesh-out must use
 	// CreatePatch; ShouldSkipOesForSharedCaller still drops oes when appropriate.
-	if shared && !sharedAppNeedsSidecarPatch(injectMeshInAgent, injectMeshOutAgent) {
-		if injectSharedPod != nil {
-			patchBytes, err := patchSharedEntranceLabel(req, &pod, *injectSharedPod)
-			if err != nil {
-				klog.Errorf("Failed to patch shared-entrance label for shared-app pod uuid=%s name=%s namespace=%s err=%v",
-					proxyUUID, pod.Name, req.Namespace, err)
-				return h.sidecarWebhook.AdmissionError(req.UID, err)
-			}
-			h.sidecarWebhook.PatchAdmissionResponse(resp, patchBytes)
-			klog.Infof("Patched shared-entrance label for shared-app pod uuid=%s namespace=%s injectSharedPod=%v",
-				proxyUUID, req.Namespace, *injectSharedPod)
-		} else {
-			klog.Infof("Skipping sidecar injection for shared-app pod with uuid=%s namespace=%s", proxyUUID, req.Namespace)
+	if shared && !sharedAppNeedsSidecarPatch(injectMeshInAgent, injectMeshOutAgent) && injectSharedPod != nil {
+		patchBytes, err := patchSharedEntranceLabel(req, &pod, *injectSharedPod)
+		if err != nil {
+			klog.Errorf("Failed to patch shared-entrance label for shared-app pod uuid=%s name=%s namespace=%s err=%v",
+				proxyUUID, pod.Name, req.Namespace, err)
+			return h.sidecarWebhook.AdmissionError(req.UID, err)
 		}
+		h.sidecarWebhook.PatchAdmissionResponse(resp, patchBytes)
 		return resp
 	}
 
-	if nothingToInject {
-		// Still harden linkerd admin probes when proxy was injected by an earlier webhook.
-		patchBytes, patched, err := h.sidecarWebhook.PatchLinkerdAdminProbesOnly(ctx, req, &pod)
+	if nothingToInject || (shared && !sharedAppNeedsSidecarPatch(injectMeshInAgent, injectMeshOutAgent)) {
+		// Persist the HTTP mesh posture and harden any already-injected proxy.
+		patchBytes, patched, err := h.sidecarWebhook.PatchMeshOnly(ctx, req, &pod, meshConfigured)
 		if err != nil {
-			klog.Errorf("Failed to harden linkerd probes uuid=%s namespace=%s err=%v", proxyUUID, req.Namespace, err)
+			klog.Errorf("Failed to patch mesh posture uuid=%s namespace=%s err=%v", proxyUUID, req.Namespace, err)
 			return h.sidecarWebhook.AdmissionError(req.UID, err)
 		}
 		if patched {
 			h.sidecarWebhook.PatchAdmissionResponse(resp, patchBytes)
-			klog.Infof("Hardened linkerd-proxy probes for pod uuid=%s namespace=%s (nothing else to inject)", proxyUUID, req.Namespace)
+			klog.Infof("Patched mesh posture for pod uuid=%s namespace=%s", proxyUUID, req.Namespace)
 			return resp
 		}
 		klog.Infof("Skipping sidecar injection for pod with uuid=%s namespace=%s", proxyUUID, req.Namespace)

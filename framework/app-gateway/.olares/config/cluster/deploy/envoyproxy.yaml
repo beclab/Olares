@@ -11,12 +11,15 @@ spec:
   provider:
     type: Kubernetes
     kubernetes:
+      envoyService:
+        type: ClusterIP
       envoyDeployment:
         pod:
           priorityClassName: system-cluster-critical
           annotations:
             linkerd.io/inject: enabled
-            config.linkerd.io/opaque-ports: "10080,18443,19001"
+            config.linkerd.io/default-inbound-policy: cluster-authenticated
+            config.linkerd.io/opaque-ports: "19001"
   telemetry:
     accessLog:
       settings:

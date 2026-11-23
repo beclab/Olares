@@ -11,6 +11,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/beclab/Olares/framework/app-service/pkg/mesh"
 )
 
 const (
@@ -18,7 +20,7 @@ const (
 	internalGateway   = "app-access-internal"
 	internalListener  = "access"
 	internalAccount   = "app-access-envoy"
-	internalPort      = 18080
+	internalPort      = 8080
 )
 
 var (
@@ -281,8 +283,8 @@ func checkMeshService(ctx context.Context, c client.Client, ns, svc, sa string, 
 			if err := c.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &pod); err != nil {
 				return err
 			}
-			if pod.UID != ref.UID || pod.Spec.ServiceAccountName != sa || pod.Spec.HostNetwork || !pod.DeletionTimestamp.IsZero() ||
-				pod.Annotations["config.linkerd.io/skip-inbound-ports"] != "" || pod.Annotations["config.linkerd.io/skip-outbound-ports"] != "" {
+			if pod.UID != ref.UID || pod.Spec.ServiceAccountName != sa || !pod.DeletionTimestamp.IsZero() ||
+				mesh.CheckHTTPMeshInterception(&pod) != nil {
 				return fmt.Errorf("endpoint identity or interception is invalid for %s/%s", ns, svc)
 			}
 			proxyReady := false
