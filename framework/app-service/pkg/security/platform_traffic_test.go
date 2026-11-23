@@ -67,6 +67,41 @@ func TestPlatformTrafficUsesPairedServiceAndTargetPorts(t *testing.T) {
 	}
 }
 
+func TestSystemServerCitusEgressScopesCoordinatorTraffic(t *testing.T) {
+	lookup := func(namespace, name string) *netv1.NetworkPolicy {
+		for _, policy := range BuildPlatformTrafficPolicies(namespace, nil) {
+			if policy.Name == name {
+				return &policy
+			}
+		}
+		return nil
+	}
+	out := lookup("user-system-alice", "olares-platform-systemserver-citus-egress")
+	if !IsTrafficGroupManagedNP(out) {
+		t.Fatal("the legacy sweep must retain the coordinator egress policy")
+	}
+	source := map[string]string{"app": "systemserver", "traffic.olares.io/platform-mesh": "true"}
+	target := map[string]string{"app": "citus", "app.kubernetes.io/name": "citus", "statefulset.kubernetes.io/pod-name": "citus-0"}
+	if !reflect.DeepEqual(out.Spec, netv1.NetworkPolicySpec{
+		PodSelector: metav1.LabelSelector{MatchLabels: source},
+		PolicyTypes: []netv1.PolicyType{netv1.PolicyTypeEgress},
+		Egress: []netv1.NetworkPolicyEgressRule{{
+			To:    []netv1.NetworkPolicyPeer{platformPeer("os-platform", target)},
+			Ports: []netv1.NetworkPolicyPort{tcpPort(5432)},
+		}},
+	}) {
+		t.Fatalf("unexpected system-server egress: %+v", out.Spec)
+	}
+	for _, ns := range []string{"user-space-alice", "user-system-", "os-framework", "os-platform"} {
+		if lookup(ns, out.Name) != nil {
+			t.Fatalf("unexpected system-server rule in %s", ns)
+		}
+	}
+	if lookup("os-platform", "olares-platform-systemserver-citus-ingress") != nil {
+		t.Fatal("the existing Citus ingress policy must remain authoritative")
+	}
+}
+
 func TestPlatformTrafficInventoryOnlyAddsVerifiedPorts(t *testing.T) {
 	for _, flow := range platformServiceFlows {
 		blocked := []int32{8080, 17171, 18001, 18002, 8222}
