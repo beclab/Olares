@@ -1,5 +1,5 @@
-# L4 → app-gateway mTLS channel (disabled until L4 AppGatewayMTLS=true).
-# Entry CA is separate from Linkerd identity CA. Rotate via dual-trust then cutover.
+# L4 → app-gateway Entry mTLS channel (product steady state: always on).
+# Entry CA is separate from Linkerd identity CA. Client certs from olares-l4-agw-mtls.
 ---
 apiVersion: v1
 kind: Service
@@ -9,13 +9,20 @@ metadata:
   labels:
     app.kubernetes.io/name: app-gateway-l4-mtls
     app.kubernetes.io/part-of: app-gateway
+    olares.io/uniauth-posture: "true"
 spec:
+  type: ClusterIP
   selector:
-    app.kubernetes.io/name: app-gateway-data
+    gateway.envoyproxy.io/owning-gateway-name: app-gateway
+    gateway.envoyproxy.io/owning-gateway-namespace: os-gateway
+    app.kubernetes.io/component: proxy
+    app.kubernetes.io/managed-by: envoy-gateway
+    app.kubernetes.io/name: envoy
   ports:
     - name: mtls
       port: 8443
-      targetPort: 8443
+      # Envoy Gateway maps Gateway listener port P → container 10000+P.
+      targetPort: 18443
       protocol: TCP
 ---
 apiVersion: v1
@@ -25,7 +32,44 @@ metadata:
   namespace: os-gateway
   labels:
     app.kubernetes.io/name: app-gateway-l4-mtls
+    olares.io/uniauth-posture: "true"
+  annotations:
+    olares.io/config-integrity: "release-controlled"
 data:
-  enabled: "false"
+  enabled: "true"
   sni: "app-gateway-l4-mtls.os-gateway.svc.cluster.local"
+  httpMeshPolicy: "entry-mtls"
   rotationMode: "dual-trust-then-cutover"
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: app-gateway-l4-entry-mtls
+  namespace: os-gateway
+  labels:
+    app.kubernetes.io/name: app-gateway
+    app.kubernetes.io/component: entry-mtls
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: app-gateway
+    sectionName: l4-mtls
+  tls:
+    clientValidation:
+      mode: RequireAndVerify
+      caCertificateRefs:
+        - kind: Secret
+          group: ""
+          name: olares-l4-agw-mtls
+---
+# Bind per-user L4 ServiceAccount (ClusterRoleBinding) to read Entry material.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: olares-entry-mtls-reader
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames: ["olares-l4-agw-mtls"]
+    verbs: ["get"]
