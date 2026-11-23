@@ -4,6 +4,7 @@ import (
 	"maps"
 	"net/netip"
 	"slices"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
@@ -54,6 +55,7 @@ var platformServiceFlows = []platformServiceFlow{
 	{"app-service-nats", workload("os-framework", "tier", "app-service"), types.NamespacedName{Namespace: "os-platform", Name: "nats"}, natsPods, 4222, 4222, "nats"},
 	{"backup-nats", workload("os-framework", "tier", "backup"), types.NamespacedName{Namespace: "os-platform", Name: "nats"}, natsPods, 4222, 4222, "nats"},
 	{"authelia-nats", workload("os-framework", "app", "authelia-backend"), types.NamespacedName{Namespace: "os-platform", Name: "nats"}, natsPods, 4222, 4222, "nats"},
+	{"lldap-nats", workload("os-platform", "app", "lldap"), types.NamespacedName{Namespace: "os-platform", Name: "nats"}, natsPods, 4222, 4222, "nats"},
 	{"lldap-citus", workload("os-platform", "app", "lldap"), types.NamespacedName{Namespace: "os-platform", Name: "citus-headless"}, citusPods, 5432, 5432, ""},
 	{"authelia-citus", workload("os-framework", "app", "authelia-backend"), types.NamespacedName{Namespace: "os-platform", Name: "citus-headless"}, citusPods, 5432, 5432, ""},
 	{"infisical-citus", workload("os-framework", "app", "infisical"), types.NamespacedName{Namespace: "os-platform", Name: "citus-headless"}, citusPods, 5432, 5432, ""},
@@ -66,9 +68,43 @@ var platformServiceFlows = []platformServiceFlow{
 	{"l4-authz", platformWorkload{"os-network", map[string]string{"app": "l4-bfl-proxy", "tier": "bfl"}}, types.NamespacedName{Namespace: "os-gateway", Name: "app-gateway-l4-mtls"}, gatewayDataPlanePods("app-gateway"), 9444, 9444, ""},
 }
 
+const platformMeshControlPlaneLabel = "linkerd.io/control-plane-ns"
+
+func platformTrafficFlows(namespace string) []platformServiceFlow {
+	var tenant string
+	for _, prefix := range []string{"user-space-", "user-system-"} {
+		if suffix, ok := strings.CutPrefix(namespace, prefix); ok && suffix != "" {
+			tenant = suffix
+			break
+		}
+	}
+	if tenant == "" {
+		return platformServiceFlows
+	}
+	return []platformServiceFlow{{
+		name: "authelia-frontend-auth",
+		from: platformWorkload{"user-space-" + tenant, map[string]string{
+			"app": "authelia", platformMeshControlPlaneLabel: "os-mesh",
+		}},
+		service: types.NamespacedName{Namespace: "user-system-" + tenant, Name: "authelia-backend"},
+		to:      map[string]string{"app": "systemserver"}, servicePort: 9091, targetPort: 9091,
+		targetName: "auth-proxy",
+	}}
+}
+
+func (flow platformServiceFlow) destination() (map[string]string, []netv1.NetworkPolicyPort) {
+	ports := []netv1.NetworkPolicyPort{tcpPort(flow.targetPort)}
+	if flow.from.selector[platformMeshControlPlaneLabel] == "" {
+		return flow.to, ports
+	}
+	selector := maps.Clone(flow.to)
+	selector[platformMeshControlPlaneLabel] = flow.from.selector[platformMeshControlPlaneLabel]
+	return selector, append(ports, tcpPort(4143))
+}
+
 func PlatformTrafficServices(namespace string) []types.NamespacedName {
 	var keys []types.NamespacedName
-	for _, flow := range platformServiceFlows {
+	for _, flow := range platformTrafficFlows(namespace) {
 		if (flow.from.namespace == namespace || flow.service.Namespace == namespace) && !slices.Contains(keys, flow.service) {
 			keys = append(keys, flow.service)
 		}
@@ -78,7 +114,7 @@ func PlatformTrafficServices(namespace string) []types.NamespacedName {
 
 func PlatformTrafficNamespaces(service types.NamespacedName) []string {
 	var namespaces []string
-	for _, flow := range platformServiceFlows {
+	for _, flow := range platformTrafficFlows(service.Namespace) {
 		if flow.service != service {
 			continue
 		}
@@ -93,9 +129,10 @@ func PlatformTrafficNamespaces(service types.NamespacedName) []string {
 
 func BuildPlatformTrafficPolicies(namespace string, services map[types.NamespacedName]*corev1.Service) []netv1.NetworkPolicy {
 	var policies []netv1.NetworkPolicy
-	for _, flow := range platformServiceFlows {
+	for _, flow := range platformTrafficFlows(namespace) {
 		service := services[flow.service]
 		usable := flow.matchesService(service)
+		destination, ports := flow.destination()
 		if namespace == flow.from.namespace {
 			policy := netv1.NetworkPolicy{
 				ObjectMeta: npMeta("olares-platform-"+flow.name+"-egress", namespace),
@@ -106,8 +143,8 @@ func BuildPlatformTrafficPolicies(namespace string, services map[types.Namespace
 			}
 			if usable {
 				policy.Spec.Egress = []netv1.NetworkPolicyEgressRule{{
-					To:    []netv1.NetworkPolicyPeer{platformPeer(flow.service.Namespace, service.Spec.Selector)},
-					Ports: []netv1.NetworkPolicyPort{tcpPort(flow.targetPort)},
+					To:    []netv1.NetworkPolicyPeer{platformPeer(flow.service.Namespace, destination)},
+					Ports: ports,
 				}}
 				for _, addr := range serviceClusterIPs(service) {
 					if cidr := exactIPCIDR(addr); cidr != "" {
@@ -124,15 +161,14 @@ func BuildPlatformTrafficPolicies(namespace string, services map[types.Namespace
 			policy := netv1.NetworkPolicy{
 				ObjectMeta: npMeta("olares-platform-"+flow.name+"-ingress", namespace),
 				Spec: netv1.NetworkPolicySpec{
-					PodSelector: metav1.LabelSelector{MatchLabels: flow.to},
+					PodSelector: metav1.LabelSelector{MatchLabels: destination},
 					PolicyTypes: []netv1.PolicyType{netv1.PolicyTypeIngress},
 				},
 			}
 			if usable {
-				policy.Spec.PodSelector.MatchLabels = service.Spec.Selector
 				policy.Spec.Ingress = []netv1.NetworkPolicyIngressRule{{
 					From:  []netv1.NetworkPolicyPeer{platformPeer(flow.from.namespace, flow.from.selector)},
-					Ports: []netv1.NetworkPolicyPort{tcpPort(flow.targetPort)},
+					Ports: ports,
 				}}
 			}
 			policies = append(policies, policy)

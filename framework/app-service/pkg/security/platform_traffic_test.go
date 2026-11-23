@@ -74,8 +74,10 @@ func TestPlatformTrafficInventoryOnlyAddsVerifiedPorts(t *testing.T) {
 			t.Fatalf("%s grants an unapproved port", flow.name)
 		}
 	}
-	if got := BuildPlatformTrafficPolicies("user-space-test", nil); len(got) != 0 {
-		t.Fatalf("tenant namespace received platform grants: %+v", got)
+	for _, policy := range BuildPlatformTrafficPolicies("user-space-test", nil) {
+		if len(policy.Spec.Ingress) != 0 || len(policy.Spec.Egress) != 0 {
+			t.Fatalf("tenant received a grant without a matching Service: %+v", policy)
+		}
 	}
 	ingress := NPAllowFromL4("os-gateway").Spec
 	if !reflect.DeepEqual(ingress.PodSelector.MatchLabels, gatewayDataPlanePods("app-gateway")) ||
@@ -111,5 +113,75 @@ func TestL4HostIngressTracksOnlySelectedNodeAddresses(t *testing.T) {
 	}
 	if got := L4HostNetworkIngressPolicy([]corev1.Pod{*deleting}); len(got.Spec.Ingress) != 0 {
 		t.Fatalf("old host remained allowed: %+v", got.Spec)
+	}
+}
+
+func TestLLDAPNATSPreservesOnlyTheNativeServicePort(t *testing.T) {
+	key := types.NamespacedName{Namespace: "os-platform", Name: "nats"}
+	service := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Namespace: key.Namespace, Name: key.Name},
+		Spec: corev1.ServiceSpec{
+			Type: corev1.ServiceTypeClusterIP, Selector: natsPods,
+			Ports: []corev1.ServicePort{
+				{Name: "nats", Port: 4222, TargetPort: intstr.FromString("nats"), Protocol: corev1.ProtocolTCP},
+				{Name: "http-monitor", Port: 8222, TargetPort: intstr.FromInt(8222), Protocol: corev1.ProtocolTCP},
+			},
+		},
+	}
+	var inbound, outbound bool
+	for _, policy := range BuildPlatformTrafficPolicies("os-platform", map[types.NamespacedName]*corev1.Service{key: service}) {
+		switch policy.Name {
+		case "olares-platform-lldap-nats-ingress":
+			inbound = len(policy.Spec.Ingress) == 1 &&
+				reflect.DeepEqual(policy.Spec.Ingress[0].Ports, []netv1.NetworkPolicyPort{tcpPort(4222)}) &&
+				reflect.DeepEqual(policy.Spec.Ingress[0].From, []netv1.NetworkPolicyPeer{platformPeer("os-platform", map[string]string{"app": "lldap"})})
+		case "olares-platform-lldap-nats-egress":
+			outbound = len(policy.Spec.Egress) == 1 &&
+				reflect.DeepEqual(policy.Spec.PodSelector.MatchLabels, map[string]string{"app": "lldap"}) &&
+				reflect.DeepEqual(policy.Spec.Egress[0].Ports, []netv1.NetworkPolicyPort{tcpPort(4222)})
+		}
+	}
+	if !inbound || !outbound {
+		t.Fatalf("missing scoped LLDAP NATS rules: ingress=%v egress=%v", inbound, outbound)
+	}
+}
+
+func TestAutheliaFrontendTransportStaysWithinTenant(t *testing.T) {
+	service := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "user-system-alice", Name: "authelia-backend"},
+		Spec: corev1.ServiceSpec{
+			Type: corev1.ServiceTypeClusterIP, ClusterIP: "10.96.0.12",
+			Selector: map[string]string{"app": "systemserver"},
+			Ports:    []corev1.ServicePort{{Port: 9091, TargetPort: intstr.FromInt(9091), Protocol: corev1.ProtocolTCP}},
+		},
+	}
+	key := types.NamespacedName{Namespace: service.Namespace, Name: service.Name}
+	services := map[types.NamespacedName]*corev1.Service{key: service}
+	if got := PlatformTrafficNamespaces(key); !reflect.DeepEqual(got, []string{"user-space-alice", "user-system-alice"}) {
+		t.Fatalf("Service change must enqueue both tenant namespaces: %v", got)
+	}
+	egress := BuildPlatformTrafficPolicies("user-space-alice", services)[0]
+	ingress := BuildPlatformTrafficPolicies("user-system-alice", services)[0]
+	if len(egress.Spec.Egress) != 2 || len(ingress.Spec.Ingress) != 1 || !IsTrafficGroupManagedNP(&egress) || !IsTrafficGroupManagedNP(&ingress) {
+		t.Fatalf("expected two persistent transport policies: %+v %+v", egress, ingress)
+	}
+	backend := map[string]string{"app": "systemserver", platformMeshControlPlaneLabel: "os-mesh"}
+	frontend := map[string]string{"app": "authelia", platformMeshControlPlaneLabel: "os-mesh"}
+	ports := []netv1.NetworkPolicyPort{tcpPort(9091), tcpPort(4143)}
+	if !reflect.DeepEqual(ingress.Spec.PodSelector.MatchLabels, backend) ||
+		!reflect.DeepEqual(egress.Spec.PodSelector.MatchLabels, frontend) ||
+		!reflect.DeepEqual(ingress.Spec.Ingress[0].From, []netv1.NetworkPolicyPeer{platformPeer("user-space-alice", frontend)}) ||
+		!reflect.DeepEqual(egress.Spec.Egress[0].To, []netv1.NetworkPolicyPeer{platformPeer("user-system-alice", backend)}) ||
+		!reflect.DeepEqual(ingress.Spec.Ingress[0].Ports, ports) ||
+		!reflect.DeepEqual(egress.Spec.Egress[0].Ports, ports) ||
+		!reflect.DeepEqual(egress.Spec.Egress[1].Ports, []netv1.NetworkPolicyPort{tcpPort(9091)}) {
+		t.Fatalf("transport selected an unexpected workload or port: %+v %+v", egress.Spec, ingress.Spec)
+	}
+	if got := BuildPlatformTrafficPolicies("user-space-bob", services)[0]; len(got.Spec.Egress) != 0 {
+		t.Fatalf("another tenant's Service activated egress: %+v", got.Spec)
+	}
+	service.Spec.Ports[0].TargetPort = intstr.FromInt(8080)
+	if got := BuildPlatformTrafficPolicies("user-system-alice", services)[0]; len(got.Spec.Ingress) != 0 {
+		t.Fatalf("retargeting the Service must withdraw ingress: %+v", got.Spec)
 	}
 }
