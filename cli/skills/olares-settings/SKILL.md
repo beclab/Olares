@@ -1,7 +1,7 @@
 ---
 name: olares-settings
 version: 0.0.0-cli.0
-description: "Olares Settings via olares-cli settings — mirror the Settings SPA: users, apps, VPN, network, backup, integrations, GPU/compute, search-index directories/rebuild, and me/whoami. Use for system or post-install app configuration; not for querying file contents with olares-search."
+description: "Olares Settings via olares-cli settings — mirror the Settings SPA, including Files RAG directories, task state, failed jobs, and Owner rebuild. Use for system or post-install configuration; query Files RAG evidence with olares-search."
 compatibility: Requires olares-cli on PATH and active Olares profile
 metadata:
   openclaw:
@@ -31,6 +31,7 @@ Load the shared [platform model](../olares-shared/references/olares-platform.md)
 | Find out who this profile is and what version it is on | this file | `olares-cli settings me version -o json` |
 | Read or change one app's configuration | [post-install app configuration](references/olares-settings-apps.md) | `olares-cli settings apps get <app> -o json` |
 | See whether a cloud account is bound | [integration accounts](references/olares-settings-integration.md) | `olares-cli settings integration accounts list -o json` |
+| Inspect Files RAG indexing and failures | this file | `olares-cli settings rag status -o json` |
 | List the users on this Olares | [user lifecycle and password handling](references/olares-settings-users.md) | `olares-cli settings users list -o json` |
 
 ## Verb index
@@ -49,6 +50,7 @@ Load the shared [platform model](../olares-shared/references/olares-platform.md)
 | `gpu` / `compute` | legacy GPU list / accelerator list, unbind, set-type | Which one exists depends on the version: `gpu` on 1.12.5, `compute` on 1.12.6+ |
 | `video` | `config get` | Read-only. There is nothing here to set |
 | `search` | `status`, `rebuild`, `dirs list/add/rm` | [`olares-search`](../olares-search/SKILL.md) for index coverage |
+| `rag` | `status`, `dirs list/add/rm`, `pause/resume`, `failed/retry`, Owner `rebuild` | [`olares-search`](../olares-search/SKILL.md) for `search rag`; never mutate merely because a query missed |
 | `restore` | `plans list/check-url/create-from-snapshot/create-from-url/cancel` | Restores start here, but the snapshots they restore from are listed under `backup` |
 | `advanced` | status, registries, images, system/user env | Admin-only; the env write verbs are `env system set` and `env user set` (there is no "env update"), and each takes `--var KEY=VALUE` and refuses a positional `KEY=VALUE`. Its image list is what [`olares-doctor`](../olares-doctor/SKILL.md) annotates with workload references |
 
@@ -65,6 +67,7 @@ Load the shared [platform model](../olares-shared/references/olares-platform.md)
 - `appearance widget set` and `appearance layout reset` require 1.12.6+; `appearance get` degrades instead, reporting the widget section as gated. Five of the seven locales `appearance language set` accepts require 1.12.7+.
 - Overlay writes are asynchronous. `--watch` observes the gateway/app state settling; per-app overlay changes may restart a running app through Market.
 - Search indexing and rebuild are asynchronous. A successful request does not mean newly indexed content is immediately searchable.
+- Files RAG directory changes and rebuild are also asynchronous. `settings rag status` is the source of progress; a retrieval miss alone is not permission to add a directory or rebuild.
 
 ## Safety and escalation
 
@@ -72,6 +75,7 @@ Load the shared [platform model](../olares-shared/references/olares-platform.md)
 - Read secrets from stdin or environment variables supported by the selected verb.
 - Treat the requested configuration change as task-scope authorisation; do not ask again for each idempotent write in that scope.
 - Confirm destructive or wider consequences separately: user deletion, ACL replacement, accelerator unbind/type changes, app restart/stop, index rebuild, and gateway-wide overlay changes.
+- Removing a RAG directory keeps original files but removes that scope's derived RAG data; confirm it. Global RAG rebuild is Owner-only and must be explicitly confirmed. Pause/resume and retry remain service-authorized user-scoped operations.
 - Treat app lifecycle requests as [`olares-market`](../olares-market/SKILL.md), not settings configuration.
 - A download or collection that fails for a missing login is a cookie import here (`settings integration cookie`), not an [`olares-knowledge`](../olares-knowledge/SKILL.md) problem — see [cookie store](references/olares-settings-cookies.md).
 - There is no theme verb: a desktop's light/dark state is a cookie the SPA never sends upstream, so no CLI can change it. Report that rather than hunting for a verb or writing `OLARES_USER_THEME`, which nothing reads.
