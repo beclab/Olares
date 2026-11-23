@@ -107,6 +107,11 @@ func (s *XdsServer) updateSnapshot(ctx context.Context, xdsSnapshot *message.Xds
 	//	klog.Warningf("xds-server: snapshot not consistent: %v", err)
 	//}
 
+	if err := snap.ConstructVersionMap(); err != nil {
+		return fmt.Errorf("construct xDS resource versions: %w", err)
+	}
+	s.health.expect(&snap)
+
 	if err := s.snapshotCache.SetSnapshot(ctx, defaultNodeID, &snap); err != nil {
 		return fmt.Errorf("set snapshot: %w", err)
 	}
@@ -145,6 +150,10 @@ func (s *XdsServer) runGRPC(ctx context.Context) error {
 		return fmt.Errorf("xds-server: listen %s: %w", addr, err)
 	}
 
+	return s.serveGRPC(ctx, lis)
+}
+
+func (s *XdsServer) serveGRPC(ctx context.Context, lis net.Listener) error {
 	srv := serverv3.NewServer(ctx, s.snapshotCache, s.health.callbacks())
 
 	grpcServer := grpc.NewServer(
@@ -165,7 +174,7 @@ func (s *XdsServer) runGRPC(ctx context.Context) error {
 	routeservice.RegisterRouteDiscoveryServiceServer(grpcServer, srv)
 	secretservice.RegisterSecretDiscoveryServiceServer(grpcServer, srv)
 
-	klog.Infof("xds-server: gRPC server listening on %s", addr)
+	klog.Infof("xds-server: gRPC server listening on %s", lis.Addr())
 
 	go func() {
 		<-ctx.Done()
