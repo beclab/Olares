@@ -343,6 +343,7 @@ spec:
     port: 80
     targetPort: 8080
     protocol: TCP
+    appProtocol: http
   - name: ingress-http
     port: 1080
     targetPort: 80
