@@ -103,12 +103,12 @@ Yes. You can modify the hardware through several internal slots and expansion po
 When choosing an internal SSD, check the following requirements:
 
 - **Form factor and interface**: M.2 2280 (22 mm wide and 80 mm long), with a Key M connector and the NVMe protocol.
-- **Component layout and thickness**: Single-sided, with chips on only one side of the SSD and a total thickness of no more than 2.38 mm. Double-sided SSDs cannot be installed because their underside chips interfere with components beneath the drive.
+- **Component layout and thickness**: Choose a single-sided SSD with chips on only one side and a total thickness of no more than 2.38 mm. Double-sided SSDs cannot be installed because their underside chips come into contact with components beneath the drive.
 - **Heatsink**: Choose a version without a preinstalled heatsink. Versions with a heatsink exceed the available height and cannot be installed.
 
 Component layout and thickness can vary between capacities and versions within the same SSD series. Check the exact model against the requirements above before buying.
 
-Only the factory-installed SSD has been tested in Olares One. Other models have not undergone system-level testing, so their thermal performance and compatibility remain unverified.
+Only the factory-installed SSD has been validated in Olares One. Thermal performance and compatibility of other models remain unverified.
 
 For slot availability, see [Is it possible to upgrade or expand the hardware?](#is-it-possible-to-upgrade-or-expand-the-hardware). To add an installed SSD to Olares OS storage, see [Expand storage with an internal SSD](expand-storage-internal-ssd.md).
 
