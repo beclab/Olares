@@ -84,6 +84,26 @@ func npMeta(name, namespace string) metav1.ObjectMeta {
 	}
 }
 
+// IsTrafficGroupManagedNP identifies the exact policies reconciled by the
+// traffic-group writer, including policies created by earlier versions.
+func IsTrafficGroupManagedNP(np *netv1.NetworkPolicy) bool {
+	if np == nil || np.Labels["app.kubernetes.io/managed-by"] != "app-service" ||
+		np.Labels["app.kubernetes.io/name"] != "traffic-group" {
+		return false
+	}
+	for _, policy := range BuildTrafficGroupIsolationBundle(np.Namespace) {
+		if policy.Name == np.Name {
+			return true
+		}
+	}
+	for _, policy := range BuildTrafficGroupDependencyPolicies(np.Namespace, nil, nil) {
+		if policy.Name == np.Name {
+			return true
+		}
+	}
+	return false
+}
+
 func nsPeer(group string) netv1.NetworkPolicyPeer {
 	return netv1.NetworkPolicyPeer{
 		NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{

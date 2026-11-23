@@ -20,6 +20,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	unstructuredv1 "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -84,6 +85,10 @@ func (r *SecurityReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Mana
 			})))
 
 	if err != nil {
+		return err
+	}
+
+	if err := watchKubernetesAPINetworkPolicySources(c, mgr.GetCache()); err != nil {
 		return err
 	}
 
@@ -377,7 +382,20 @@ func (r *SecurityReconciler) reconcileTrafficGroupNetworkPolicies(ctx context.Co
 		return nil
 	}
 	if r.KubeClient != nil && !meshinagent.IsMeshControlPlaneReady(ctx, r.KubeClient) {
-		return nil
+		// Recover infrastructure connectivity when an existing isolation policy
+		// has already taken effect, even if the mesh is now unhealthy.
+		var existing netv1.NetworkPolicy
+		key := client.ObjectKey{Namespace: ns.Name, Name: security.NPGroupDefaultDeny(ns.Name).Name}
+		if err := r.Get(ctx, key, &existing); err != nil {
+			return client.IgnoreNotFound(err)
+		}
+		if !security.IsTrafficGroupManagedNP(&existing) {
+			return nil
+		}
+		return r.reconcileTrafficGroupDependencies(ctx, ns.Name)
+	}
+	if err := r.reconcileTrafficGroupDependencies(ctx, ns.Name); err != nil {
+		return err
 	}
 	logger := ctx.Value(loggerKey).(logr.Logger)
 	for _, np := range security.BuildTrafficGroupIsolationBundle(ns.Name) {
@@ -398,6 +416,18 @@ func (r *SecurityReconciler) upsertNetworkPolicy(ctx context.Context, desired *n
 	}
 	if err != nil {
 		return err
+	}
+	if apiequality.Semantic.DeepEqual(existing.Spec, desired.Spec) {
+		labelsMatch := true
+		for k, v := range desired.Labels {
+			if existing.Labels[k] != v {
+				labelsMatch = false
+				break
+			}
+		}
+		if labelsMatch {
+			return nil
+		}
 	}
 	existing.Spec = *desired.Spec.DeepCopy()
 	if existing.Labels == nil {
@@ -427,18 +457,22 @@ func (r *SecurityReconciler) createOrUpdateNetworkPolicy(ctx context.Context,
 	found := false
 	for _, np := range nps.Items {
 		if np.Name == key.Name && np.Namespace == key.Namespace {
+			previousSpec := np.Spec
 			np.Spec = *networkPolicy.Spec.DeepCopy()
 			if networkPolicyFix != nil {
 				networkPolicyFix(&np)
 			}
-			if err := r.Update(ctx, &np); err != nil {
-				return err
+			if !apiequality.Semantic.DeepEqual(previousSpec, np.Spec) {
+				if err := r.Update(ctx, &np); err != nil {
+					return err
+				}
 			}
 			found = true
 		} else {
 			if namespaceNetworkPolicies != nil && !namespaceNetworkPolicies.Contains(&np) {
-				// Keep NetworkPolicies owned by routecontrol or callerjwt.
-				if security.IsAppServiceManagedExternalNP(&np) {
+				// Separate reconcilers own these policies and their lifecycle.
+				if security.IsAppServiceManagedExternalNP(&np) ||
+					(uniauth.TrafficGroupNPDesired() && security.IsTrafficGroupManagedNP(&np)) {
 					continue
 				}
 				if err := r.Delete(ctx, &np); err != nil {
