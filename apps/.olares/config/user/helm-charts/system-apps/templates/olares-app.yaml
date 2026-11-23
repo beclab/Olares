@@ -251,6 +251,7 @@ spec:
       labels:
         app: olares-app
         io.bytetrade.app: "true"
+        traffic.olares.io/platform-mesh: "true"
       annotations:
 {{ if .Values.telemetry }}
         instrumentation.opentelemetry.io/inject-nodejs: "olares-instrumentation"

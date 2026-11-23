@@ -22,6 +22,22 @@ spec:
     - namespaceSelector:
         matchLabels:
           gateway.olares.io/in-cluster-caller: "true"
+    - namespaceSelector:
+        matchExpressions:
+        - key: kubernetes.io/metadata.name
+          operator: In
+          values: [os-framework, os-platform, os-protected]
+      podSelector:
+        matchLabels:
+          traffic.olares.io/platform-mesh: "true"
+    - namespaceSelector:
+        matchExpressions:
+        - key: bytetrade.io/ns-type
+          operator: In
+          values: [user-internal, user-space]
+      podSelector:
+        matchLabels:
+          traffic.olares.io/platform-mesh: "true"
     ports:
     - port: 8080
       protocol: TCP

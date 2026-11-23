@@ -14,6 +14,7 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway"
 	srrv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/gateway/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/mesh"
 )
@@ -74,7 +75,31 @@ func servingReadiness(ctx context.Context, c client.Client, gw GatewayRef, srr *
 	if err := meshedReadyEndpoints(ctx, c, gw.gatewayNamespace(), entryMeshService); err != nil {
 		return err
 	}
-	return meshedReadyEndpoints(ctx, c, backendNS, srr.Spec.Upstream)
+	return httpRouteMeshDependenciesReady(ctx, c, backendNS, srr)
+}
+
+// Gate the entire ExtAuth chain before publishing a protected route. The
+// per-user Service selects the system-server proxy, which forwards to Authelia
+// in os-framework. Both legs must have enforced mesh endpoints.
+func httpRouteMeshDependenciesReady(ctx context.Context, c client.Client, backendNS string, srr *srrv1alpha1.SharedRouteRegistry) error {
+	if err := meshedReadyEndpoints(ctx, c, backendNS, srr.Spec.Upstream); err != nil {
+		return err
+	}
+	if !isApplicationSRR(srr) || srrAuthMode(srr) == gateway.AuthModeNone {
+		return nil
+	}
+	authNS := autheliaNSForSRR(srr)
+	if authNS == "" {
+		return fmt.Errorf("Authelia ExtAuth has no bound user namespace")
+	}
+	ref := srrv1alpha1.UpstreamRef{ServiceName: AutheliaBackendServiceName, Port: AutheliaBackendPort}
+	if err := meshedReadyEndpoints(ctx, c, authNS, ref); err != nil {
+		return fmt.Errorf("Authelia proxy: %w", err)
+	}
+	if err := meshedReadyEndpoints(ctx, c, "os-framework", ref); err != nil {
+		return fmt.Errorf("Authelia server: %w", err)
+	}
+	return nil
 }
 
 func gatewayPolicyReady(ctx context.Context, c client.Client, gvk schema.GroupVersionKind, ns, name string, gw GatewayRef) error {

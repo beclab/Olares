@@ -45,10 +45,24 @@ func NewAppGatewayMeshNPOsMesh() *netv1.NetworkPolicy {
 					{NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{
 						NamespaceInClusterCallerLabel: "true",
 					}}},
+					platformMeshPeer("kubernetes.io/metadata.name", "os-framework", "os-platform", "os-protected"),
+					platformMeshPeer(NamespaceTypeLabel, Internal, UserSpace),
 				},
 				Ports: appGatewayMeshNPPorts(),
 			}},
 		},
+	}
+}
+
+// platformMeshPeer admits opted-in platform pods to the mesh control plane.
+func platformMeshPeer(namespaceLabel string, values ...string) netv1.NetworkPolicyPeer {
+	return netv1.NetworkPolicyPeer{
+		NamespaceSelector: &metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{{
+			Key: namespaceLabel, Operator: metav1.LabelSelectorOpIn, Values: values,
+		}}},
+		PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{
+			"traffic.olares.io/platform-mesh": "true",
+		}},
 	}
 }
 
