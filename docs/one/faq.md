@@ -1,6 +1,6 @@
 ---
 outline: [2,3]
-description: Answers to common questions about Olares One.
+description: Find answers about Olares One hardware, SSD requirements, local AI, gaming, and operating systems.
 head:
   - - meta
     - name: keywords
@@ -97,6 +97,18 @@ Yes. You can modify the hardware through several internal slots and expansion po
 * **Memory**: The RAM capacity can be upgraded to a maximum of 128GB.
 * **External graphics**: You can connect a compatible Thunderbolt external graphics device. See [Can I use an eGPU with Olares One?](#can-i-use-an-egpu-with-olares-one)
 * **External displays**: The Thunderbolt 5 port supports docking stations with up to two external monitors at up to 8K resolution. The built-in RTX 5090 Mobile handles video output.
+
+### What SSD can I install in Olares One?
+
+When choosing an internal SSD, check the following requirements:
+
+- **Form factor and interface**: M.2 2280 (22 mm wide and 80 mm long), using PCIe NVMe.
+- **Component layout**: Single-sided, with chips on only one side of the SSD. Double-sided SSDs can interfere with internal components.
+- **Heatsink**: Choose a version without a preinstalled heatsink to fit the available space.
+
+Component layout and thickness can vary between capacities and versions within the same SSD series. Check the exact model against the requirements above before buying.
+
+For slot availability, see [Is it possible to upgrade or expand the hardware?](#is-it-possible-to-upgrade-or-expand-the-hardware). To add an installed SSD to Olares OS storage, see [Expand storage with an internal SSD](expand-storage-internal-ssd.md).
 
 ### Can I use an eGPU with Olares One?
 
