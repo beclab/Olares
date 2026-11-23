@@ -21,15 +21,15 @@ func TestBuildEdgeForwardVirtualHosts(t *testing.T) {
 	}
 	cs := make(map[string]*ir.ClusterIR)
 	vhosts := tr.buildEdgeForwardVirtualHosts(user, "alice.olares.com", cs)
-	if len(vhosts) != 1 {
+	if len(vhosts) != 2 {
 		t.Fatalf("vhosts=%d", len(vhosts))
 	}
 	if cs[edgeForwardClusterName] == nil || cs[edgeForwardClusterName].UpstreamMTLS == nil {
 		t.Fatal("expected AGW mTLS cluster")
 	}
 	r := vhosts[0].Routes[0]
-	if r.ExtAuth != nil {
-		t.Fatal("edge forward must not attach ExtAuth")
+	if r.ExtAuth == nil {
+		t.Fatal("edge business routes must authenticate through AGW")
 	}
 	if r.Cluster != edgeForwardClusterName {
 		t.Fatalf("cluster=%s", r.Cluster)
@@ -65,18 +65,18 @@ func TestBuildUserVirtualHostsEdgeModeOnlyEdgeForward(t *testing.T) {
 	}
 	cs := make(map[string]*ir.ClusterIR)
 	vhosts := tr.buildUserVirtualHosts(user, "alice.olares.com", false, cs)
-	if len(vhosts) != 1 || vhosts[0].Name != "edge_forward_alice" {
-		t.Fatalf("want single edge_forward vhost, got %#v", vhosts)
+	if len(vhosts) != 2 || vhosts[0].Name != "edge_forward_alice" {
+		t.Fatalf("want separate authenticated and login vhosts, got %#v", vhosts)
 	}
 	for name := range cs {
 		if name != edgeForwardClusterName {
 			t.Fatalf("unexpected cluster %s in edge mode", name)
 		}
 	}
-	for _, vh := range vhosts {
+	for i, vh := range vhosts {
 		for _, r := range vh.Routes {
-			if r.ExtAuth != nil {
-				t.Fatal("edge mode must not attach ExtAuth")
+			if (r.ExtAuth != nil) != (i == 0) {
+				t.Fatal("business vhost must authenticate and login vhost must avoid a loop")
 			}
 			if r.Cluster != edgeForwardClusterName {
 				t.Fatalf("must not build local backend cluster %s", r.Cluster)
@@ -110,5 +110,32 @@ func TestEdgeForwardDenyAllUsesExactPublicHosts(t *testing.T) {
 	}
 	if _, ok := got["other.example.org"]; ok {
 		t.Fatal("foreign host was added to the route table")
+	}
+}
+
+func TestProductionAuthorizationAndBusinessUseSeparateMTLSUpstreams(t *testing.T) {
+	tr := &Translator{cfg: &Config{AppGatewayMTLS: true, SSLServerPort: 443}}
+	user := &message.UserInfo{
+		Name: "alice", ServerNameDomains: []string{"frontdoor.example.net"},
+		SSL: &message.SSLConfig{Zone: "frontdoor.example.net", CertData: "test"},
+	}
+	snapshot := tr.Translate(&message.Resources{Users: []*message.UserInfo{user}})
+	ports := map[string]uint32{"app_gateway_edge_forward": 8443, "authelia_backend_alice": 9444}
+	for _, cluster := range snapshot.Clusters {
+		port, expected := ports[cluster.Name]
+		if !expected {
+			t.Fatalf("unexpected upstream %s", cluster.Name)
+		}
+		if cluster.Port != port || cluster.Host != DefaultAppGatewayHost || cluster.UpstreamMTLS == nil ||
+			cluster.UpstreamMTLS.SNI != DefaultAppGatewayHost || cluster.UpstreamMTLS.ClientCertSDS != appGatewayClientCertSDS {
+			t.Fatalf("upstream %s could omit Entry mTLS: %+v", cluster.Name, cluster)
+		}
+		delete(ports, cluster.Name)
+	}
+	if len(ports) != 0 {
+		t.Fatalf("missing upstreams %v", ports)
+	}
+	if len(snapshot.Secrets) != 1 {
+		t.Fatal("missing Entry credentials must leave authorization waiting for SDS")
 	}
 }

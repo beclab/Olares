@@ -35,18 +35,7 @@ func servingReadiness(ctx context.Context, c client.Client, gw GatewayRef, srr *
 	if !conditionReady(conditions, gateway.GetGeneration(), "Programmed") {
 		return fmt.Errorf("gateway is not programmed for its current generation")
 	}
-	listeners, _, _ := unstructured.NestedSlice(gateway.Object, "status", "listeners")
-	listenerReady := false
-	for _, raw := range listeners {
-		listener, _ := raw.(map[string]any)
-		conditions, _, _ := unstructured.NestedSlice(listener, "conditions")
-		if listener["name"] == l4MTLSGatewaySectN &&
-			conditionReady(conditions, gateway.GetGeneration(), "Programmed") &&
-			conditionReady(conditions, gateway.GetGeneration(), "ResolvedRefs") {
-			listenerReady = true
-		}
-	}
-	if !listenerReady {
+	if !gatewayListenerReady(gateway, l4MTLSGatewaySectN) {
 		return fmt.Errorf("entry mTLS listener is not programmed")
 	}
 	route := &unstructured.Unstructured{}
@@ -68,6 +57,27 @@ func servingReadiness(ctx context.Context, c client.Client, gw GatewayRef, srr *
 		return err
 	}
 
+	if needsL4Authz(srr) {
+		if !gatewayListenerReady(gateway, l4AuthzSection) {
+			return fmt.Errorf("L4 authorization listener is not programmed")
+		}
+		if err := gatewayPolicyReadyForSection(ctx, c, validation, gw.gatewayNamespace(), "app-gateway-l4-authz-mtls", gw, l4AuthzSection); err != nil {
+			return err
+		}
+		check := l4AuthzRoute(srr)
+		if err := c.Get(ctx, client.ObjectKeyFromObject(check), check); err != nil {
+			return err
+		}
+		if !entryParentReadyForSection(check, gw, l4AuthzSection) {
+			return fmt.Errorf("authorization route is not accepted for its current generation")
+		}
+		service := entryMeshService
+		service.Port = l4AuthzPort
+		if err := meshedReadyEndpoints(ctx, c, gw.gatewayNamespace(), service); err != nil {
+			return err
+		}
+	}
+
 	backendNS := srr.Spec.Upstream.ServiceNamespace
 	if backendNS == "" {
 		backendNS = srr.Namespace
@@ -76,6 +86,20 @@ func servingReadiness(ctx context.Context, c client.Client, gw GatewayRef, srr *
 		return err
 	}
 	return httpRouteMeshDependenciesReady(ctx, c, backendNS, srr)
+}
+
+func gatewayListenerReady(gateway *unstructured.Unstructured, section string) bool {
+	listeners, _, _ := unstructured.NestedSlice(gateway.Object, "status", "listeners")
+	for _, raw := range listeners {
+		listener, _ := raw.(map[string]any)
+		conditions, _, _ := unstructured.NestedSlice(listener, "conditions")
+		if listener["name"] == section &&
+			conditionReady(conditions, gateway.GetGeneration(), "Programmed") &&
+			conditionReady(conditions, gateway.GetGeneration(), "ResolvedRefs") {
+			return true
+		}
+	}
+	return false
 }
 
 // Gate the entire ExtAuth chain before publishing a protected route. The
@@ -103,6 +127,10 @@ func httpRouteMeshDependenciesReady(ctx context.Context, c client.Client, backen
 }
 
 func gatewayPolicyReady(ctx context.Context, c client.Client, gvk schema.GroupVersionKind, ns, name string, gw GatewayRef) error {
+	return gatewayPolicyReadyForSection(ctx, c, gvk, ns, name, gw, l4MTLSGatewaySectN)
+}
+
+func gatewayPolicyReadyForSection(ctx context.Context, c client.Client, gvk schema.GroupVersionKind, ns, name string, gw GatewayRef, section string) error {
 	policy := &unstructured.Unstructured{}
 	policy.SetGroupVersionKind(gvk)
 	if err := c.Get(ctx, client.ObjectKey{Namespace: ns, Name: name}, policy); err != nil {
@@ -113,7 +141,7 @@ func gatewayPolicyReady(ctx context.Context, c client.Client, gvk schema.GroupVe
 		ancestor, _ := raw.(map[string]any)
 		ref, _, _ := unstructured.NestedMap(ancestor, "ancestorRef")
 		if ancestor["controllerName"] != "gateway.envoyproxy.io/gatewayclass-controller" || ref["name"] != gw.gatewayName() ||
-			(ref["sectionName"] != nil && ref["sectionName"] != l4MTLSGatewaySectN) {
+			(ref["sectionName"] != nil && ref["sectionName"] != section) {
 			continue
 		}
 		n, _, _ := unstructured.NestedString(ref, "namespace")
@@ -132,12 +160,16 @@ func gatewayPolicyReady(ctx context.Context, c client.Client, gvk schema.GroupVe
 }
 
 func entryParentReady(route *unstructured.Unstructured, gw GatewayRef) bool {
+	return entryParentReadyForSection(route, gw, l4MTLSGatewaySectN)
+}
+
+func entryParentReadyForSection(route *unstructured.Unstructured, gw GatewayRef, section string) bool {
 	parents, _, _ := unstructured.NestedSlice(route.Object, "status", "parents")
 	for _, raw := range parents {
 		parent, _ := raw.(map[string]any)
 		ref, _, _ := unstructured.NestedMap(parent, "parentRef")
 		if parent["controllerName"] != "gateway.envoyproxy.io/gatewayclass-controller" ||
-			ref["name"] != gw.gatewayName() || ref["sectionName"] != l4MTLSGatewaySectN {
+			ref["name"] != gw.gatewayName() || ref["sectionName"] != section {
 			continue
 		}
 		ns, _, _ := unstructured.NestedString(ref, "namespace")
@@ -187,6 +219,10 @@ func meshedReadyEndpoints(ctx context.Context, c client.Client, ns string, upstr
 			break
 		}
 	}
+	var entryPort int32
+	if ns == defaultGatewayNS && serviceName == entryMeshService.ServiceName {
+		entryPort = upstream.Port
+	}
 	selector := labels.SelectorFromSet(service.Spec.Selector)
 	var endpointSlices discoveryv1.EndpointSliceList
 	if err := c.List(ctx, &endpointSlices, client.InNamespace(ns), client.MatchingLabels{discoveryv1.LabelServiceName: serviceName}); err != nil {
@@ -202,7 +238,7 @@ func meshedReadyEndpoints(ctx context.Context, c client.Client, ns string, upstr
 			if endpoint.Conditions.Ready != nil && !*endpoint.Conditions.Ready {
 				continue
 			}
-			if !hasInterceptedHTTPPort(sl.Ports, portName, serviceName == entryMeshService.ServiceName) {
+			if !hasInterceptedHTTPPort(sl.Ports, portName, entryPort) {
 				return fmt.Errorf("%s/%s has a serving endpoint without an intercepted HTTP target port", ns, serviceName)
 			}
 			ref := endpoint.TargetRef
@@ -244,13 +280,13 @@ func meshedReadyEndpoints(ctx context.Context, c client.Client, ns string, upstr
 	return nil
 }
 
-func hasInterceptedHTTPPort(ports []discoveryv1.EndpointPort, portName string, entry bool) bool {
+func hasInterceptedHTTPPort(ports []discoveryv1.EndpointPort, portName string, entryPort int32) bool {
 	for _, port := range ports {
 		if ptr.Deref(port.Name, "") != portName || ptr.Deref(port.Protocol, corev1.ProtocolTCP) != corev1.ProtocolTCP || port.Port == nil {
 			continue
 		}
-		if entry {
-			return *port.Port == entryMeshService.Port
+		if entryPort != 0 {
+			return *port.Port == entryPort
 		}
 		switch *port.Port {
 		case 3389, 4190, 4191:

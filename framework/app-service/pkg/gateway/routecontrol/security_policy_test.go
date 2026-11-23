@@ -239,13 +239,14 @@ func TestDesiredApplicationExtAuthSecurityPolicy(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "app-blog-web",
 			Namespace: "blog-alice",
+			UID:       "blog-entrance",
 			Annotations: map[string]string{
 				"gateway.olares.io/extauth-user": "alice",
 			},
 		},
 		Spec: srrv1alpha1.SharedRouteRegistrySpec{
 			EntranceClass: srrv1alpha1.EntranceClassApplication,
-			HostPatterns:  []string{"blog.*.olares.com"},
+			HostPatterns:  []string{"blog.example.net"},
 			Upstream:      srrv1alpha1.UpstreamRef{ServiceName: "web"},
 		},
 	}
@@ -368,7 +369,7 @@ func TestReconcileSharedRouteGatewayModeCreatesApplicationExtAuth(t *testing.T) 
 		Spec: srrv1alpha1.SharedRouteRegistrySpec{
 			RouteMode:     srrv1alpha1.RouteModeGateway,
 			EntranceClass: srrv1alpha1.EntranceClassApplication,
-			HostPatterns:  []string{"blog.*.olares.com"},
+			HostPatterns:  []string{"blog.example.net"},
 			Upstream:      srrv1alpha1.UpstreamRef{ServiceName: "web", Port: 80},
 		},
 	}

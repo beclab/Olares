@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -10,7 +11,10 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/cluster"
@@ -101,6 +105,24 @@ func (r *SharedRouteProducerReconciler) reconcileApp(ctx context.Context, app *a
 			spec.Upstream.ServiceNamespace, spec.Upstream.ServiceName, spec.Upstream.Port)
 	}
 
+	var zone string
+	if len(app.Spec.Entrances) != 0 {
+		if app.Spec.Owner == "" {
+			return PruneEntranceSRRs(ctx, r.Client, app, desired)
+		}
+		var registeredZone corev1.ConfigMap
+		if err := r.Client.Get(ctx, client.ObjectKey{Namespace: "user-space-" + app.Spec.Owner, Name: "zone-ssl-config"}, &registeredZone); err != nil {
+			if apierrors.IsNotFound(err) {
+				return PruneEntranceSRRs(ctx, r.Client, app, desired)
+			}
+			return fmt.Errorf("resolve registered zone for application %s: %w", app.Name, err)
+		}
+		zone = strings.ToLower(strings.TrimSuffix(strings.TrimSpace(registeredZone.Data["zone"]), "."))
+		if normalized, err := NormalizeHostOrLogicalPattern(zone); err != nil || normalized != zone || strings.Contains(zone, "*") {
+			return PruneEntranceSRRs(ctx, r.Client, app, desired)
+		}
+	}
+
 	for i := range app.Spec.Entrances {
 		entrance := app.Spec.Entrances[i]
 		if entrance.Name == "" {
@@ -119,6 +141,10 @@ func (r *SharedRouteProducerReconciler) reconcileApp(ctx context.Context, app *a
 			srrv1alpha1.EntranceClassApplication)
 		if err != nil {
 			return fmt.Errorf("build SRR spec for application entrance %q: %w", entrance.Name, err)
+		}
+		spec.HostPatterns, err = bindApplicationAuthorities(app, entrance.Name, zone, spec.HostPatterns)
+		if err != nil {
+			return fmt.Errorf("bind authorities for entrance %q: %w", entrance.Name, err)
 		}
 		name := ResourceNameForEntranceApp(appid, entrance.Name)
 		for _, hp := range spec.HostPatterns {
@@ -139,6 +165,58 @@ func (r *SharedRouteProducerReconciler) reconcileApp(ctx context.Context, app *a
 		return fmt.Errorf("prune stale SRRs: %w", err)
 	}
 	return nil
+}
+
+// bindApplicationAuthorities materializes the tenant's registered zone and
+// per-entrance custom domains. A zone label never derives the tenant identity.
+func bindApplicationAuthorities(app *appv1alpha1.Application, entrance, zone string, logical []string) ([]string, error) {
+	var custom map[string]map[string]string
+	if raw := app.EffectiveSettings(app.Spec.Owner)["customDomain"]; raw != "" {
+		if err := json.Unmarshal([]byte(raw), &custom); err != nil {
+			return nil, err
+		}
+	}
+	primary := strings.SplitN(zone, ".", 2)[0]
+	localZone := primary + ".olares.local"
+	seen := make(map[string]bool)
+	var hosts []string
+	add := func(raw string) error {
+		host, err := NormalizeHostOrLogicalPattern(raw)
+		if err != nil {
+			return err
+		}
+		if strings.Contains(host, "*") {
+			return fmt.Errorf("application entrance requires an exact authority")
+		}
+		if !seen[host] {
+			hosts = append(hosts, host)
+			seen[host] = true
+		}
+		return nil
+	}
+	addPrefix := func(prefix string) error {
+		if err := add(prefix + "." + zone); err != nil {
+			return err
+		}
+		return add(prefix + "." + localZone)
+	}
+	for _, pattern := range logical {
+		label, _, _ := strings.Cut(pattern, ".*.")
+		if err := addPrefix(label); err != nil {
+			return nil, err
+		}
+	}
+	if prefix := custom[entrance]["third_level_domain"]; prefix != "" {
+		if err := addPrefix(prefix); err != nil {
+			return nil, err
+		}
+	}
+	if host := custom[entrance]["third_party_domain"]; host != "" {
+		if err := add(host); err != nil {
+			return nil, err
+		}
+	}
+	return hosts, nil
 }
 
 func resolveApplicationEntranceService(ctx context.Context, c client.Client,
@@ -167,8 +245,28 @@ func (r *SharedRouteProducerReconciler) SetupWithManager(mgr ctrl.Manager) error
 	if r.Client == nil {
 		r.Client = mgr.GetClient()
 	}
+	const ownerIndex = "gateway.olares.io/application-owner"
+	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &appv1alpha1.Application{}, ownerIndex, func(obj client.Object) []string {
+		return []string{obj.(*appv1alpha1.Application).Spec.Owner}
+	}); err != nil {
+		return err
+	}
 	return ctrl.NewControllerManagedBy(mgr).
 		Named("shared-route-producer").
 		For(&appv1alpha1.Application{}).
+		Watches(&corev1.ConfigMap{}, handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
+			var apps appv1alpha1.ApplicationList
+			if err := r.Client.List(ctx, &apps, client.MatchingFields{ownerIndex: strings.TrimPrefix(obj.GetNamespace(), "user-space-")}); err != nil {
+				klog.Warningf("list applications affected by registered zone change: %v", err)
+				return nil
+			}
+			var requests []reconcile.Request
+			for i := range apps.Items {
+				requests = append(requests, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(&apps.Items[i])})
+			}
+			return requests
+		}), builder.WithPredicates(predicate.NewPredicateFuncs(func(obj client.Object) bool {
+			return obj.GetName() == "zone-ssl-config" && strings.HasPrefix(obj.GetNamespace(), "user-space-")
+		}))).
 		Complete(r)
 }

@@ -86,6 +86,7 @@ func TestSharedRouteProducerReconcilerBuildsApplicationSRRs(t *testing.T) {
 			},
 		},
 		Spec: appv1alpha1.ApplicationSpec{
+			Owner:     "alice",
 			Name:      "demo",
 			Namespace: "demo-user",
 			Appid:     "demo1234",
@@ -104,7 +105,7 @@ func TestSharedRouteProducerReconcilerBuildsApplicationSRRs(t *testing.T) {
 		Spec:       corev1.ServiceSpec{Ports: []corev1.ServicePort{{Port: 9090, Protocol: corev1.ProtocolTCP}}},
 	}
 
-	c := fake.NewClientBuilder().WithScheme(producerTestScheme(t)).WithObjects(app, webSvc, apiSvc).Build()
+	c := fake.NewClientBuilder().WithScheme(producerTestScheme(t)).WithObjects(app, registeredTestZone(), webSvc, apiSvc).Build()
 	r := &SharedRouteProducerReconciler{Client: c}
 	if err := r.reconcileApp(context.Background(), app); err != nil {
 		t.Fatalf("reconcileApp: %v", err)
@@ -119,8 +120,8 @@ func TestSharedRouteProducerReconcilerBuildsApplicationSRRs(t *testing.T) {
 		if got.Spec.EntranceClass != srrv1alpha1.EntranceClassApplication {
 			t.Fatalf("%s entranceClass = %q, want %q", name, got.Spec.EntranceClass, srrv1alpha1.EntranceClassApplication)
 		}
-		wantHost := appv1alpha1.EntranceID(app.Spec.Appid, i, len(app.Spec.Entrances)) + ".*.olares.com"
-		if len(got.Spec.HostPatterns) != 1 || got.Spec.HostPatterns[0] != wantHost {
+		wantHost := appv1alpha1.EntranceID(app.Spec.Appid, i, len(app.Spec.Entrances)) + ".frontdoor.example.net"
+		if len(got.Spec.HostPatterns) != 2 || got.Spec.HostPatterns[0] != wantHost {
 			t.Fatalf("%s hostPatterns = %v, want %q", name, got.Spec.HostPatterns, wantHost)
 		}
 	}
@@ -139,6 +140,7 @@ func TestSharedRouteProducerReconcilerApplicationUsesThirdLevelOverride(t *testi
 			},
 		},
 		Spec: appv1alpha1.ApplicationSpec{
+			Owner:     "alice",
 			Name:      "router",
 			Namespace: "router-shared",
 			Appid:     "f3395cd5",
@@ -160,7 +162,7 @@ func TestSharedRouteProducerReconcilerApplicationUsesThirdLevelOverride(t *testi
 		Spec:       corev1.ServiceSpec{Ports: []corev1.ServicePort{{Port: 9090, Protocol: corev1.ProtocolTCP}}},
 	}
 
-	c := fake.NewClientBuilder().WithScheme(producerTestScheme(t)).WithObjects(app, webSvc, apiSvc).Build()
+	c := fake.NewClientBuilder().WithScheme(producerTestScheme(t)).WithObjects(app, registeredTestZone(), webSvc, apiSvc).Build()
 	r := &SharedRouteProducerReconciler{Client: c}
 	if err := r.reconcileApp(context.Background(), app); err != nil {
 		t.Fatalf("reconcileApp: %v", err)
@@ -171,10 +173,10 @@ func TestSharedRouteProducerReconcilerApplicationUsesThirdLevelOverride(t *testi
 	if err := c.Get(context.Background(), types.NamespacedName{Namespace: app.Spec.Namespace, Name: webName}, got); err != nil {
 		t.Fatalf("get web SRR: %v", err)
 	}
-	if len(got.Spec.HostPatterns) != 2 ||
-		got.Spec.HostPatterns[0] != "router.*.olares.com" ||
-		got.Spec.HostPatterns[1] != appv1alpha1.EntranceID(app.Spec.Appid, 0, len(app.Spec.Entrances))+".*.olares.com" {
-		t.Fatalf("web hostPatterns = %v, want [router.*.olares.com, hash.*.olares.com]", got.Spec.HostPatterns)
+	if len(got.Spec.HostPatterns) != 4 ||
+		got.Spec.HostPatterns[0] != "router.frontdoor.example.net" ||
+		got.Spec.HostPatterns[2] != appv1alpha1.EntranceID(app.Spec.Appid, 0, len(app.Spec.Entrances))+".frontdoor.example.net" {
+		t.Fatalf("web hostPatterns = %v, want exact registered zone and local aliases for router and hash", got.Spec.HostPatterns)
 	}
 }
 
@@ -191,9 +193,11 @@ func TestSharedRouteProducerReconcilerSingleApplicationEntranceUsesBareAppID(t *
 			},
 		},
 		Spec: appv1alpha1.ApplicationSpec{
+			Owner:     "alice",
 			Name:      "demo",
 			Namespace: "demo-user",
 			Appid:     "demo1234",
+			Settings:  map[string]string{"customDomain": `{"web":{"third_party_domain":"console.partner.example"}}`},
 			Entrances: []appv1alpha1.Entrance{
 				{Name: "web", Host: "web-svc", Port: 8080},
 			},
@@ -204,7 +208,7 @@ func TestSharedRouteProducerReconcilerSingleApplicationEntranceUsesBareAppID(t *
 		Spec:       corev1.ServiceSpec{Ports: []corev1.ServicePort{{Port: 8080, Protocol: corev1.ProtocolTCP}}},
 	}
 
-	c := fake.NewClientBuilder().WithScheme(producerTestScheme(t)).WithObjects(app, webSvc).Build()
+	c := fake.NewClientBuilder().WithScheme(producerTestScheme(t)).WithObjects(app, registeredTestZone(), webSvc).Build()
 	r := &SharedRouteProducerReconciler{Client: c}
 	if err := r.reconcileApp(context.Background(), app); err != nil {
 		t.Fatalf("reconcileApp: %v", err)
@@ -215,10 +219,21 @@ func TestSharedRouteProducerReconcilerSingleApplicationEntranceUsesBareAppID(t *
 	if err := c.Get(context.Background(), types.NamespacedName{Namespace: app.Spec.Namespace, Name: name}, got); err != nil {
 		t.Fatalf("get application SRR: %v", err)
 	}
-	wantHost := app.Spec.Appid + ".*.olares.com"
-	if len(got.Spec.HostPatterns) != 1 || got.Spec.HostPatterns[0] != wantHost {
+	wantHost := app.Spec.Appid + ".frontdoor.example.net"
+	if len(got.Spec.HostPatterns) != 3 || got.Spec.HostPatterns[0] != wantHost ||
+		got.Spec.HostPatterns[2] != "console.partner.example" || got.Annotations[AnnotationExtAuthUser] != "alice" {
 		t.Fatalf("single entrance hostPatterns = %v, want %q", got.Spec.HostPatterns, wantHost)
 	}
+	if err := c.Delete(context.Background(), registeredTestZone()); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.reconcileApp(context.Background(), app); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Get(context.Background(), types.NamespacedName{Namespace: app.Spec.Namespace, Name: name}, got); !apierrors.IsNotFound(err) {
+		t.Fatalf("deleted zone left an active entrance: %v", err)
+	}
+
 }
 
 func TestSharedRouteProducerReconcilerNotOptedInDeletesOwnedSRRs(t *testing.T) {
@@ -300,6 +315,7 @@ func TestSharedRouteProducerReconcilerPrunesSharedAndApplicationSeparately(t *te
 			},
 		},
 		Spec: appv1alpha1.ApplicationSpec{
+			Owner:     "alice",
 			Name:      "demo",
 			Namespace: "demo-user",
 			Appid:     "demo1234",
@@ -339,7 +355,7 @@ func TestSharedRouteProducerReconcilerPrunesSharedAndApplicationSeparately(t *te
 	}
 
 	c := fake.NewClientBuilder().WithScheme(producerTestScheme(t)).
-		WithObjects(app, sharedSvc, appSvc, staleShared, staleApp).Build()
+		WithObjects(app, registeredTestZone(), sharedSvc, appSvc, staleShared, staleApp).Build()
 	r := &SharedRouteProducerReconciler{Client: c}
 	if err := r.reconcileApp(context.Background(), app); err != nil {
 		t.Fatalf("reconcileApp: %v", err)
@@ -362,5 +378,12 @@ func TestSharedRouteProducerReconcilerPrunesSharedAndApplicationSeparately(t *te
 		if !apierrors.IsNotFound(err) {
 			t.Fatalf("expected stale SRR %s to be pruned, get err=%v", name, err)
 		}
+	}
+}
+
+func registeredTestZone() *corev1.ConfigMap {
+	return &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "user-space-alice", Name: "zone-ssl-config"},
+		Data:       map[string]string{"zone": "frontdoor.example.net"},
 	}
 }
