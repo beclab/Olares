@@ -195,7 +195,29 @@ func BuildPlatformTrafficPolicies(namespace string, services map[types.Namespace
 			policies = append(policies, policy)
 		}
 	}
+	if tenant, ok := strings.CutPrefix(namespace, "user-system-"); ok && tenant != "" {
+		policies = append(policies, systemServerCitusEgress(namespace))
+	}
 	return policies
+}
+
+func systemServerCitusEgress(namespace string) netv1.NetworkPolicy {
+	// The system-server Envoy connects to the coordinator's headless DNS
+	// record, so select the coordinator Pod without using a Service VIP.
+	coordinator := maps.Clone(citusPods)
+	coordinator["statefulset.kubernetes.io/pod-name"] = "citus-0"
+	systemServer := map[string]string{"app": "systemserver", "traffic.olares.io/platform-mesh": "true"}
+	return netv1.NetworkPolicy{
+		ObjectMeta: npMeta("olares-platform-systemserver-citus-egress", namespace),
+		Spec: netv1.NetworkPolicySpec{
+			PodSelector: metav1.LabelSelector{MatchLabels: systemServer},
+			PolicyTypes: []netv1.PolicyType{netv1.PolicyTypeEgress},
+			Egress: []netv1.NetworkPolicyEgressRule{{
+				To:    []netv1.NetworkPolicyPeer{platformPeer("os-platform", coordinator)},
+				Ports: []netv1.NetworkPolicyPort{tcpPort(5432)},
+			}},
+		},
+	}
 }
 
 func (flow platformServiceFlow) egressPolicy(service *corev1.Service) netv1.NetworkPolicy {
