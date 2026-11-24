@@ -16,7 +16,8 @@ import (
 const (
 	// heartbeatInterval keeps /healthz fresh while idling between reconciles;
 	// it must be well below livenessHeartbeatThreshold.
-	heartbeatInterval = 30 * time.Second
+	heartbeatInterval      = 30 * time.Second
+	entryReconcileInterval = 6 * time.Hour
 
 	// backoffBaseDelay / backoffMaxDelay bound transient-failure retries
 	// (detailed design §4: 5s initial, 5min cap, plus ±20% jitter).
@@ -68,18 +69,16 @@ func (c *Controller) Run(ctx context.Context) {
 	c.probes.Heartbeat()
 
 	var workers sync.WaitGroup
-	start := func(domain string, reconcile func(context.Context) error) {
+	start := func(domain string, interval time.Duration, reconcile func(context.Context) error) {
 		workers.Add(1)
 		go func() {
 			defer workers.Done()
-			c.runReconciler(ctx, domain, reconcile)
+			c.runReconciler(ctx, domain, interval, reconcile)
 		}()
 	}
-	start("linkerd", c.reconcileOnce)
+	start("linkerd", c.interval, c.reconcileOnce)
 	if c.entryMTLSEnabled {
-		start("entry", func(ctx context.Context) error {
-			return entrypki.MaintainEntryMTLS(ctx, c.client, c.entryNamespace, true, time.Now().UTC())
-		})
+		start("entry", entryReconcileInterval, c.reconcileEntry)
 	}
 	defer workers.Wait()
 
@@ -94,7 +93,7 @@ func (c *Controller) Run(ctx context.Context) {
 	}
 }
 
-func (c *Controller) runReconciler(ctx context.Context, domain string, reconcile func(context.Context) error) {
+func (c *Controller) runReconciler(ctx context.Context, domain string, interval time.Duration, reconcile func(context.Context) error) {
 	limiter := workqueue.NewTypedItemExponentialFailureRateLimiter[string](backoffBaseDelay, backoffMaxDelay)
 	for ctx.Err() == nil {
 		attempt, cancel := context.WithTimeout(ctx, reconcileTimeout)
@@ -103,7 +102,7 @@ func (c *Controller) runReconciler(ctx context.Context, domain string, reconcile
 		if ctx.Err() != nil {
 			return
 		}
-		delay := c.interval
+		delay := interval
 		if err != nil {
 			delay = min(withJitter(limiter.When(reconcileKey)), backoffMaxDelay)
 			slog.Warn("PKI reconcile failed; backing off",
@@ -119,6 +118,15 @@ func (c *Controller) runReconciler(ctx context.Context, domain string, reconcile
 		case <-timer.C:
 		}
 	}
+}
+
+func (c *Controller) reconcileEntry(ctx context.Context) error {
+	err := entrypki.MaintainEntryMTLS(ctx, c.client, c.entryNamespace, true, time.Now().UTC())
+	if ctx.Err() == context.Canceled {
+		return err
+	}
+	c.metrics.recordEntryResult(time.Now(), err)
+	return err
 }
 
 func (c *Controller) reconcileOnce(ctx context.Context) error {

@@ -8,6 +8,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -83,7 +84,8 @@ func TestColdStartRenewsBothExpiredEntryCertificatesWhileLinkerdIsBlocked(t *tes
 	}
 
 	const interval = 24 * time.Hour
-	controller := NewController(c, "os-mesh", interval, NewProbeState(interval), NewMetrics()).WithEntryMTLS(true, entrypki.DefaultNamespace)
+	metrics := NewMetrics()
+	controller := NewController(c, "os-mesh", interval, NewProbeState(interval), metrics).WithEntryMTLS(true, entrypki.DefaultNamespace)
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
@@ -103,6 +105,12 @@ func TestColdStartRenewsBothExpiredEntryCertificatesWhileLinkerdIsBlocked(t *tes
 		t.Fatal("Linkerd reconcile did not start")
 	}
 
+	if err := wait.PollUntilContextTimeout(ctx, 25*time.Millisecond, 2*time.Second, true, func(context.Context) (bool, error) {
+		return entryMetricEquals(metrics, "olares_entry_pki_reconcile_failed 1"), nil
+	}); err != nil {
+		t.Fatalf("Entry renewal failure did not become observable: %v", err)
+	}
+
 	err := wait.PollUntilContextTimeout(ctx, 25*time.Millisecond, 12*time.Second, true, func(ctx context.Context) (bool, error) {
 		for _, leaf := range leaves {
 			secret, err := get(ctx, leaf.name)
@@ -113,7 +121,8 @@ func TestColdStartRenewsBothExpiredEntryCertificatesWhileLinkerdIsBlocked(t *tes
 				return false, nil
 			}
 		}
-		return true, nil
+		return entryMetricEquals(metrics, "olares_entry_pki_reconcile_failed 0") &&
+			!entryMetricEquals(metrics, "olares_entry_pki_last_success_timestamp_seconds 0"), nil
 	})
 	if err != nil {
 		t.Fatalf("Entry must recover on retry while Linkerd is blocked: %v", err)
@@ -128,6 +137,9 @@ func TestColdStartRenewsBothExpiredEntryCertificatesWhileLinkerdIsBlocked(t *tes
 		}
 		ca := baseline[leaf.name].Data["ca.crt"]
 		roots := x509.NewCertPool()
+		if bytes.Equal(secret.Data[leaf.privateKey], baseline[leaf.name].Data[leaf.privateKey]) {
+			t.Fatalf("%s reused its expired key", leaf.name)
+		}
 		if !bytes.Equal(secret.Data["ca.crt"], ca) || !roots.AppendCertsFromPEM(ca) {
 			t.Fatalf("%s changed the trust anchor", leaf.name)
 		}
@@ -194,4 +206,10 @@ func TestEntryFailurePreservesLinkerdReadiness(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("Linkerd readiness must remain independent of Entry: %v", err)
 	}
+}
+
+func entryMetricEquals(metrics *Metrics, line string) bool {
+	recorder := httptest.NewRecorder()
+	metrics.Handler().ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/metrics", nil))
+	return recorder.Code == http.StatusOK && strings.Contains(recorder.Body.String(), "\n"+line+"\n")
 }

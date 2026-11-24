@@ -33,9 +33,9 @@ const (
 	// DefaultNamespace hosts the L4→AGW channel Service.
 	DefaultNamespace = "os-gateway"
 
-	RotateThreshold  = 180 * 24 * time.Hour
+	RotateThreshold  = 10 * 24 * time.Hour
 	CALifetimeDays   = 10950
-	LeafLifetimeDays = 365
+	LeafLifetimeDays = 30
 
 	keyCACrt     = "ca.crt"
 	keyCAKey     = "ca.key"
@@ -57,14 +57,14 @@ func Enabled(raw string) bool {
 	return raw == "1" || raw == "true" || raw == "TRUE" || raw == "yes"
 }
 
-// NeedsRotation reports whether leaf cert remaining life is below threshold.
+// NeedsRotation reports whether a leaf is due for renewal or exceeds the current lifetime.
 func NeedsRotation(certPEM []byte, now time.Time) (bool, time.Duration, error) {
-	notAfter, err := certNotAfter(certPEM)
+	cert, err := parseCertificate(certPEM)
 	if err != nil {
 		return false, 0, err
 	}
-	rem := notAfter.Sub(now)
-	return rem < RotateThreshold, rem, nil
+	rem := cert.NotAfter.Sub(now)
+	return rem <= RotateThreshold || cert.NotAfter.Sub(cert.NotBefore) > LeafLifetimeDays*24*time.Hour, rem, nil
 }
 
 // MaintainEntryMTLS ensures the Entry Secret exists and rotates leaves near expiry.
@@ -89,6 +89,15 @@ func MaintainEntryMTLS(ctx context.Context, c client.Client, ns string, enabled 
 		case getErr == nil:
 			mat, err = materialFromSecret(&legacy)
 		case apierrors.IsNotFound(getErr):
+			// A surviving client credential means this is recovery, not bootstrap.
+			// Generating a new CA here would silently replace the trust anchor.
+			getErr := c.Get(ctx, types.NamespacedName{Namespace: ns, Name: ClientSecretName}, &legacy)
+			if getErr == nil {
+				return fmt.Errorf("entry signer missing while client credential exists")
+			}
+			if !apierrors.IsNotFound(getErr) {
+				return getErr
+			}
 			mat, err = bootstrapMaterial(now)
 		default:
 			return getErr
@@ -244,11 +253,12 @@ func issueLeaf(ca *x509.Certificate, caKey *ecdsa.PrivateKey, cn string, usage x
 	if err != nil {
 		return nil, nil, err
 	}
+	notBefore := now.Add(-time.Hour)
 	tpl := &x509.Certificate{
 		SerialNumber: serial,
 		Subject:      pkix.Name{CommonName: cn},
-		NotBefore:    now.Add(-time.Hour),
-		NotAfter:     now.Add(time.Duration(LeafLifetimeDays) * 24 * time.Hour),
+		NotBefore:    notBefore,
+		NotAfter:     notBefore.Add(LeafLifetimeDays * 24 * time.Hour),
 		KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
 		ExtKeyUsage:  []x509.ExtKeyUsage{usage},
 		DNSNames:     []string{cn},
@@ -262,18 +272,6 @@ func issueLeaf(ca *x509.Certificate, caKey *ecdsa.PrivateKey, cn string, usage x
 		return nil, nil, err
 	}
 	return pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}), keyPEM, nil
-}
-
-func certNotAfter(pemBytes []byte) (time.Time, error) {
-	block, _ := pem.Decode(pemBytes)
-	if block == nil {
-		return time.Time{}, fmt.Errorf("invalid PEM")
-	}
-	cert, err := x509.ParseCertificate(block.Bytes)
-	if err != nil {
-		return time.Time{}, err
-	}
-	return cert.NotAfter, nil
 }
 
 func parseCertificate(pemBytes []byte) (*x509.Certificate, error) {
