@@ -16,8 +16,8 @@ import (
 
 const (
 	meshInAgentImageEnv = "MESH_IN_AGENT_IMAGE"
-	// DefaultImage is the mesh-in-agent product image (engine: nginx+njs+stream) (digest pin in charts; no :latest).
-	DefaultImage        = "beclab/mesh-in-agent:1.30.0-r5"
+	// DefaultImage is the mesh-in-agent product image (engine: nginx+njs+stream) (versioned tag; release overlays pin the digest).
+	DefaultImage        = "beclab/mesh-in-agent:1.30.8-r1"
 	listenPortName      = "mesh-in-http"
 	httpsListenPortName = "mesh-in-https"
 
@@ -166,68 +166,73 @@ func InitContainerSpecWithGatewayIPs(gatewayIPs string) corev1.Container {
 func IptablesInitScript() string {
 	envoyUID := strconv.FormatInt(constants.EnvoyUID, 10)
 	linkerdUID := strconv.FormatInt(constants.LinkerdProxyUID, 10)
-	return fmt.Sprintf(`set -u
+	return fmt.Sprintf(`set -eu
 GW_HOST="${MESH_IN_AGENT_GATEWAY_HOST:-%s}"
 NGINX_UID="%s"
 ENVOY_UID="%s"
 LINKERD_UID="%s"
 HTTP_PORT="%d"
 HTTPS_PORT="%d"
-GW_IPS=""
 
 normalize_ips() {
-  echo "$1" | tr ',;' '  ' | tr -s '[:space:]' '\n' | awk 'NF && !seen[$0]++' | tr '\n' ' '
+  printf '%%s\n' "$1" | tr ',;[:space:]' '\n' | awk '
+    /^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$/ {
+      split($0, octet, ".");
+      if (octet[1] <= 255 && octet[2] <= 255 && octet[3] <= 255 && octet[4] <= 255 && !seen[$0]++) print;
+      next;
+    }
+    /^[0-9a-fA-F:.]+$/ && /:/ && !seen[$0]++ {print}
+  '
 }
 
-if [ -n "${MESH_IN_AGENT_GATEWAY_IPS:-}" ]; then
-  GW_IPS=$(normalize_ips "$MESH_IN_AGENT_GATEWAY_IPS")
-  echo "mesh-in-agent: using gateway IPs from env: $GW_IPS"
-fi
-
-if [ -z "$GW_IPS" ]; then
-  attempt=1
-  while [ "$attempt" -le 3 ]; do
-    resolved=""
-    for h in "$GW_HOST" "app-gateway-data.os-gateway.svc.cluster.local"; do
-      ip=""
-      if command -v getent >/dev/null 2>&1; then
-        ip=$(getent ahosts "$h" 2>/dev/null | awk '{print $1; exit}')
-      fi
-      if [ -z "$ip" ] && command -v nslookup >/dev/null 2>&1; then
-        ip=$(nslookup "$h" 2>/dev/null | awk '/^Address: / { a=$2 } END { print a }')
-      fi
-      if [ -n "$ip" ]; then
-        echo "mesh-in-agent: resolved $h -> $ip"
-        resolved="$resolved $ip"
-      fi
-    done
-    GW_IPS=$(normalize_ips "$resolved")
-    if [ -n "$GW_IPS" ]; then
-      break
-    fi
-    echo "mesh-in-agent: gateway resolve attempt $attempt/3 failed" >&2
-    attempt=$((attempt + 1))
-    if [ "$attempt" -le 3 ]; then
-      sleep 1
+resolve_gateway_ips() {
+  for host in "$GW_HOST" app-gateway-data.os-gateway.svc.cluster.local; do
+    if command -v dig >/dev/null 2>&1; then
+      dig +short +time=2 +tries=1 "$host" A 2>/dev/null || true
+      dig +short +time=2 +tries=1 "$host" AAAA 2>/dev/null || true
+    else
+      getent ahosts "$host" 2>/dev/null | awk '{print $1}'
     fi
   done
-fi
+}
 
-if [ -z "$GW_IPS" ]; then
-  echo "mesh-in-agent: cannot resolve gateway host $GW_HOST; continuing without redirects (workload not blocked)" >&2
-  exit 0
-fi
+redirect_port() {
+  tool="$1"; ip="$2"; port="$3"; listen="$4"
+  if ! "$tool" -w 5 -t nat -C OUTPUT -p tcp -d "$ip" --dport "$port" $OWNER_SKIP -j REDIRECT --to-ports "$listen" 2>/dev/null; then
+    "$tool" -w 5 -t nat -I OUTPUT 1 -p tcp -d "$ip" --dport "$port" $OWNER_SKIP -j REDIRECT --to-ports "$listen" || return 1
+    "$tool" -w 5 -t nat -C OUTPUT -p tcp -d "$ip" --dport "$port" $OWNER_SKIP -j REDIRECT --to-ports "$listen" || return 1
+  fi
+}
+
+install_redirects() {
+  for ip in $1; do
+    case "$ip" in
+      *:*) tool=ip6tables ;;
+      *) tool=iptables ;;
+    esac
+    redirect_port "$tool" "$ip" 80 "$HTTP_PORT" || return 1
+    redirect_port "$tool" "$ip" 443 "$HTTPS_PORT" || return 1
+  done
+}
 
 OWNER_SKIP="-m owner ! --uid-owner $NGINX_UID -m owner ! --uid-owner $ENVOY_UID -m owner ! --uid-owner $LINKERD_UID"
-echo "mesh-in-agent: redirect ips=[$GW_IPS] :80->$HTTP_PORT :443->$HTTPS_PORT (skip uid $NGINX_UID/$ENVOY_UID/$LINKERD_UID)"
-for ip in $GW_IPS; do
-  iptables -t nat -C OUTPUT -p tcp -d "$ip" --dport 80 $OWNER_SKIP -j REDIRECT --to-ports "$HTTP_PORT" 2>/dev/null \
-    || iptables -t nat -I OUTPUT 1 -p tcp -d "$ip" --dport 80 $OWNER_SKIP -j REDIRECT --to-ports "$HTTP_PORT"
-  iptables -t nat -C OUTPUT -p tcp -d "$ip" --dport 443 $OWNER_SKIP -j REDIRECT --to-ports "$HTTPS_PORT" 2>/dev/null \
-    || iptables -t nat -I OUTPUT 1 -p tcp -d "$ip" --dport 443 $OWNER_SKIP -j REDIRECT --to-ports "$HTTPS_PORT"
+GW_IPS=$(normalize_ips "${MESH_IN_AGENT_GATEWAY_IPS:-}")
+for attempt in 1 2 3; do
+  if [ -z "$GW_IPS" ]; then
+    GW_IPS=$(normalize_ips "$(resolve_gateway_ips)")
+  fi
+  if [ -n "$GW_IPS" ] && install_redirects "$GW_IPS"; then
+    echo "mesh-in-agent: installed and verified OUTPUT redirects for [$GW_IPS]"
+    exit 0
+  fi
+  echo "mesh-in-agent: gateway resolution or redirect installation failed (attempt $attempt/3)" >&2
+  if [ "$attempt" -lt 3 ]; then
+    sleep "$attempt"
+  fi
 done
-echo "mesh-in-agent: installed OUTPUT redirects:"
-iptables -t nat -S OUTPUT 2>/dev/null || true
+
+echo "mesh-in-agent: required gateway redirects are unavailable; blocking Pod startup" >&2
+exit 1
 `, DefaultGatewayHost, NginxWorkerUID(), envoyUID, linkerdUID, HTTPListenPort, HTTPSListenPort)
 }
 

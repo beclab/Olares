@@ -6,15 +6,20 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway/meshinagent"
+	"github.com/beclab/Olares/framework/app-service/pkg/mesh"
 	"github.com/beclab/Olares/framework/app-service/pkg/security"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	netv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/client-go/kubernetes"
 	kubefake "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -44,6 +49,7 @@ func TestAutheliaBFLPolicySurvivesSweepAndRevokesDeletedService(t *testing.T) {
 	namespaces := []string{"os-framework", alice.Namespace, bob.Namespace}
 	wantRequests := []reconcile.Request{
 		{NamespacedName: client.ObjectKey{Name: alice.Namespace}},
+		{NamespacedName: client.ObjectKey{Name: "user-system-alice"}},
 		{NamespacedName: client.ObjectKey{Name: "os-framework"}},
 	}
 	if got := trafficGroupNetworkPolicyRequests(ctx, alice); !reflect.DeepEqual(got, wantRequests) {
@@ -199,7 +205,7 @@ func TestTrafficGroupAPIDestinationsRotateWhileMeshIsUnready(t *testing.T) {
 		KubeClient: kubefake.NewSimpleClientset(),
 	}
 	key := client.ObjectKey{Namespace: namespace.Name, Name: "olares-traffic-group-kube-api-egress"}
-	if err := r.reconcileTrafficGroupNetworkPolicies(ctx, namespace); err != nil {
+	if err := r.reconcileTrafficGroupNetworkPolicies(ctx, namespace); !errors.Is(err, errTrafficGroupPending) {
 		t.Fatal(err)
 	}
 	if err := r.Get(ctx, key, &netv1.NetworkPolicy{}); !apierrors.IsNotFound(err) {
@@ -284,6 +290,67 @@ func TestTrafficGroupAPIDestinationsRotateWhileMeshIsUnready(t *testing.T) {
 	endpoints.Namespace = "user-space-test"
 	if got := trafficGroupNetworkPolicyRequests(ctx, endpoints); len(got) != 0 {
 		t.Fatalf("unrelated API source enqueued reconciles: %+v", got)
+	}
+}
+
+func TestTrafficGroupAppliesNoEgressBeforeReadinessAndKeepsExistingIsolation(t *testing.T) {
+	ctx := context.WithValue(t.Context(), loggerKey, logr.Discard())
+	namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "os-framework", UID: "namespace-uid"}}
+	pod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Namespace: namespace.Name, Name: "native", UID: "pod-uid"},
+		Status: corev1.PodStatus{Conditions: []corev1.PodCondition{{Type: corev1.PodReady, Status: corev1.ConditionTrue}}}}
+	objs := []client.Object{namespace, pod}
+	for _, key := range []client.ObjectKey{kubernetesAPIKey, {Namespace: "kube-system", Name: "coredns"}} {
+		objs = append(objs, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: key.Namespace, Name: key.Name, UID: "service"}},
+			&discoveryv1.EndpointSlice{ObjectMeta: metav1.ObjectMeta{
+				Namespace: key.Namespace, Name: key.Name, Labels: map[string]string{discoveryv1.LabelServiceName: key.Name},
+				OwnerReferences: []metav1.OwnerReference{{Kind: "Service", Name: key.Name, UID: "service", Controller: ptr.To(true)}},
+			}, Ports: []discoveryv1.EndpointPort{{Name: ptr.To("https"), Port: ptr.To(int32(443))}},
+				Endpoints: []discoveryv1.Endpoint{{Addresses: []string{"10.0.0.1"}, Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)}}}})
+	}
+	objs = append(objs, &corev1.Endpoints{ObjectMeta: metav1.ObjectMeta{
+		Namespace: kubernetesAPIKey.Namespace, Name: kubernetesAPIKey.Name, UID: "api-endpoints",
+	}, Subsets: []corev1.EndpointSubset{{
+		Addresses: []corev1.EndpointAddress{{IP: "10.0.0.1"}},
+		Ports:     []corev1.EndpointPort{{Name: "https", Protocol: corev1.ProtocolTCP, Port: 443}},
+	}}})
+	var writes []string
+	r := &SecurityReconciler{KubeClient: kubefake.NewSimpleClientset(),
+		Client: fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(objs...).
+			WithInterceptorFuncs(interceptor.Funcs{Create: func(ctx context.Context, c client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
+				if _, isNetworkPolicy := obj.(*netv1.NetworkPolicy); isNetworkPolicy {
+					writes = append(writes, obj.GetName())
+				}
+				return c.Create(ctx, obj, opts...)
+			}}).Build()}
+	meshinagent.SetMeshControlPlaneReadyCheck(func(context.Context, kubernetes.Interface) bool { return true })
+	t.Cleanup(func() { meshinagent.SetMeshControlPlaneReadyCheck(nil) })
+
+	if err := r.reconcileTrafficGroupNetworkPolicies(ctx, namespace); !errors.Is(err, errTrafficGroupPending) || len(writes) != 0 {
+		t.Fatalf("control plane readiness alone must not write any egress policies: %v, writes %v", err, writes)
+	}
+	record := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: mesh.EgressReadinessConfig.Namespace, Name: mesh.EgressReadinessConfig.Name},
+		Data: map[string]string{namespace.Name: `{"namespaceUID":"namespace-uid","pods":{"native":"pod-uid"},"nativePods":["native"]}`}}
+	if err := r.Create(ctx, record); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.reconcileTrafficGroupNetworkPolicies(ctx, namespace); err != nil {
+		t.Fatal(err)
+	}
+	baseline := security.NPGroupDefaultDeny(namespace.Name)
+	if len(writes) <= 1 || writes[len(writes)-1] != baseline.Name {
+		t.Fatalf("the default deny must follow dependency and ingress policies: %v", writes)
+	}
+	if err := r.Delete(ctx, record); err != nil {
+		t.Fatal(err)
+	}
+	meshinagent.SetMeshControlPlaneReadyCheck(nil)
+	if err := r.reconcileTrafficGroupNetworkPolicies(ctx, namespace); err != nil {
+		t.Fatal(err)
+	}
+	var live netv1.NetworkPolicy
+	if err := r.Get(ctx, client.ObjectKeyFromObject(&baseline), &live); err != nil ||
+		!reflect.DeepEqual(live.Spec.PolicyTypes, baseline.Spec.PolicyTypes) {
+		t.Fatalf("existing egress isolation was removed during an outage: %v, %v", err, live.Spec.PolicyTypes)
 	}
 }
 

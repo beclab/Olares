@@ -13,7 +13,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
@@ -102,11 +101,28 @@ func TestInstalledAppOwnershipAndMigrationOptOut(t *testing.T) {
 		t.Fatal("the matching app subchart must qualify")
 	}
 	pod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{nativeSidecarOptOut: "false"}},
-		Spec: corev1.PodSpec{
-			Containers:     []corev1.Container{{Name: mesh.LinkerdProxyContainer}},
-			InitContainers: []corev1.Container{{Name: ContainerName, RestartPolicy: ptr.To(corev1.ContainerRestartPolicyAlways)}},
-		}}
+		Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: mesh.LinkerdProxyContainer}}}}
+	InsertNativeMeshIn(pod, "")
 	if needsNativeSidecars(pod, true) {
 		t.Fatal("do not restart a migrated app solely for an explicit Linkerd opt-out")
+	}
+}
+
+func TestNativeMeshInRefreshesOldBootstrapAndImage(t *testing.T) {
+	t.Setenv(meshInAgentImageEnv, "beclab/mesh-in-agent:1.30.8-r1")
+	pod := &corev1.Pod{}
+	InsertNativeMeshIn(pod, "10.42.0.1")
+	if needsNativeSidecars(pod, true) {
+		t.Fatal("current bootstrap must not trigger another rollout")
+	}
+	old := pod.DeepCopy()
+	old.Spec.InitContainers[0].Command = []string{"/bin/sh", "-c", "exit 0"}
+	if !needsNativeSidecars(old, false) {
+		t.Fatal("an already native sidecar must refresh its embedded old bootstrap")
+	}
+	old = pod.DeepCopy()
+	old.Spec.InitContainers[1].Image = "beclab/mesh-in-agent:1.30.0-r5"
+	if !needsNativeSidecars(old, true) {
+		t.Fatal("an already native sidecar must refresh an outdated image")
 	}
 }

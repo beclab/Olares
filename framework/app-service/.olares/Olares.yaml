@@ -3,7 +3,7 @@ target: prebuilt
 output:
   containers:
     - 
-      name: beclab/mesh-in-agent:1.30.0-r5
+      name: beclab/mesh-in-agent:1.30.8-r1
     -
       name: beclab/mesh-out-agent:1.30.0-r4
     -
