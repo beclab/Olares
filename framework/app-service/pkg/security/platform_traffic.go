@@ -76,6 +76,13 @@ var platformServiceFlows = []platformServiceFlow{
 	{"l4-authz", platformWorkload{"os-network", map[string]string{"app": "l4-bfl-proxy", "tier": "bfl"}}, types.NamespacedName{Namespace: "os-gateway", Name: "app-gateway-l4-mtls"}, gatewayDataPlanePods("app-gateway"), 9444, 9444, ""},
 }
 
+// The tenant system-server's native TCP proxy dials these platform Services.
+// The destination Pods do not need a Linkerd proxy or an HTTP permission.
+var systemServerNativeFlows = []platformServiceFlow{
+	{service: types.NamespacedName{Namespace: "os-platform", Name: "nats"}, to: natsPods, servicePort: 4222, targetPort: 4222, targetName: "nats"},
+	{service: types.NamespacedName{Namespace: "os-platform", Name: "redis-cluster-proxy"}, to: kvrocksPods, servicePort: 6379, targetPort: 6666},
+}
+
 const (
 	platformMeshControlPlaneLabel = "linkerd.io/control-plane-ns"
 	autheliaBFLFlowName           = "authelia-bfl"
@@ -131,6 +138,7 @@ func platformTrafficFlows(namespace string) []platformServiceFlow {
 		}}, types.NamespacedName{Namespace: system, Name: "app-service"}, systemProxy, 28080, 28080, ""},
 		{"desktop-app-service", frontend("olares-app"), types.NamespacedName{Namespace: system, Name: "app-service"}, systemProxy, 28080, 28080, ""},
 		{"desktop-nats", frontend("olares-app"), types.NamespacedName{Namespace: system, Name: "nats"}, systemProxy, 4222, 4222, ""},
+		{"desktop-redis", frontend("olares-app"), types.NamespacedName{Namespace: system, Name: "redis-cluster-proxy"}, systemProxy, 6379, 6379, ""},
 		{"bfl-cert-refresh", platformWorkload{space, map[string]string{
 			"app.kubernetes.io/name": "bfl-cert-refresh", platformMeshControlPlaneLabel: "os-mesh",
 		}}, bfl, bflPods, 80, 8080, ""},
@@ -181,6 +189,7 @@ func ActivePlatformTrafficServices(namespace string, pods []corev1.Pod) []types.
 		return pod.Labels["app"] == "systemserver" && pod.Labels["traffic.olares.io/platform-mesh"] == "true"
 	}) {
 		keys = append(keys, types.NamespacedName{Namespace: "os-platform", Name: "citus-headless"})
+		keys = append(keys, SystemServerNativeServices()...)
 	}
 	return keys
 }
@@ -300,6 +309,25 @@ func SystemServerCitusEgressRule() netv1.NetworkPolicyEgressRule {
 		To:    []netv1.NetworkPolicyPeer{platformPeer("os-platform", coordinator)},
 		Ports: []netv1.NetworkPolicyPort{tcpPort(5432)},
 	}
+}
+
+// SystemServerNativeServices lists the Service identities used by the native proxy.
+func SystemServerNativeServices() []types.NamespacedName {
+	keys := make([]types.NamespacedName, 0, len(systemServerNativeFlows))
+	for _, flow := range systemServerNativeFlows {
+		keys = append(keys, flow.service)
+	}
+	return keys
+}
+
+// SystemServerNativeEgressRules permits only the verified Services and target
+// ports, including the Service VIP on CNIs that evaluate egress before DNAT.
+func SystemServerNativeEgressRules(services map[types.NamespacedName]*corev1.Service) []netv1.NetworkPolicyEgressRule {
+	var rules []netv1.NetworkPolicyEgressRule
+	for _, flow := range systemServerNativeFlows {
+		rules = append(rules, flow.egressRules(services[flow.service])...)
+	}
+	return rules
 }
 
 // SystemServerProviderEgressRules scopes the verified provider proxy destinations.

@@ -48,8 +48,8 @@ func (g Gateway) verify(ctx context.Context, client *http.Client, zone string) e
 		host string
 		path string
 	}{
-		{g.EntryPort, "auth." + zone, "/api/health"},
-		{g.AuthPort, desktop, "/api/verify/"},
+		{g.EntryPort, "auth." + zone, "/"},
+		{g.AuthPort, desktop, "/api/verify"},
 	} {
 		url := "https://" + net.JoinHostPort(g.Host, strconv.FormatUint(uint64(probe.port), 10)) + probe.path
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
@@ -58,6 +58,7 @@ func (g Gateway) verify(ctx context.Context, client *http.Client, zone string) e
 		}
 		req.Host = probe.host
 		if probe.port == g.AuthPort {
+			req.Header.Set("Accept", "text/html")
 			req.Header.Set("X-Original-URL", "https://"+desktop+"/")
 			req.Header.Set("X-Original-Method", http.MethodGet)
 			req.Header.Set("X-Forwarded-Host", desktop)

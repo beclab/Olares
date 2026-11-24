@@ -3,6 +3,7 @@ package routecontrol
 import (
 	"context"
 	"reflect"
+	"slices"
 	"testing"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway"
@@ -214,7 +215,23 @@ func TestSystemLoginStartsBackendTransportBeforeFrontend(t *testing.T) {
 			},
 		},
 	}
-	authBackends = append(authBackends, dns, infisical, bfl, appService)
+	nats := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "os-platform", Name: "nats"},
+		Spec: corev1.ServiceSpec{
+			Type: corev1.ServiceTypeClusterIP, ClusterIP: "10.96.0.14",
+			Selector: map[string]string{"app.kubernetes.io/name": "nats", "app.kubernetes.io/instance": "nats", "app.kubernetes.io/component": "nats"},
+			Ports:    []corev1.ServicePort{{Port: 4222, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromString("nats")}},
+		},
+	}
+	redis := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "os-platform", Name: "redis-cluster-proxy"},
+		Spec: corev1.ServiceSpec{
+			Type: corev1.ServiceTypeClusterIP, ClusterIP: "10.96.0.15",
+			Selector: map[string]string{"app": "kvrocks", "app.kubernetes.io/name": "kvrocks"},
+			Ports:    []corev1.ServicePort{{Port: 6379, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt32(6666)}},
+		},
+	}
+	authBackends = append(authBackends, dns, infisical, bfl, appService, nats, redis)
 	c := fake.NewClientBuilder().WithScheme(testSchemeWithSecurityPolicy(t)).WithObjects(authBackends...).Build()
 	if err := gateway.EnsureSystemPlaneRoutes(ctx, c, "alice", "alice.olares.com", "user-space-alice", false); err != nil {
 		t.Fatal(err)
@@ -294,6 +311,26 @@ func TestSystemLoginStartsBackendTransportBeforeFrontend(t *testing.T) {
 					}}).networkPolicyPeer()},
 					Ports: []netv1.NetworkPolicyPort{meshTransportPort(6755), meshTransportPort(4143)},
 				},
+				{
+					To: []netv1.NetworkPolicyPeer{(meshTransportPeer{"os-platform", map[string]string{
+						"app.kubernetes.io/name": "nats", "app.kubernetes.io/instance": "nats", "app.kubernetes.io/component": "nats",
+					}}).networkPolicyPeer()},
+					Ports: []netv1.NetworkPolicyPort{meshTransportPort(4222)},
+				},
+				{
+					To:    []netv1.NetworkPolicyPeer{{IPBlock: &netv1.IPBlock{CIDR: "10.96.0.14/32"}}},
+					Ports: []netv1.NetworkPolicyPort{meshTransportPort(4222)},
+				},
+				{
+					To: []netv1.NetworkPolicyPeer{(meshTransportPeer{"os-platform", map[string]string{
+						"app": "kvrocks", "app.kubernetes.io/name": "kvrocks",
+					}}).networkPolicyPeer()},
+					Ports: []netv1.NetworkPolicyPort{meshTransportPort(6666)},
+				},
+				{
+					To:    []netv1.NetworkPolicyPeer{{IPBlock: &netv1.IPBlock{CIDR: "10.96.0.15/32"}}},
+					Ports: []netv1.NetworkPolicyPort{meshTransportPort(6379)},
+				},
 			}) {
 				t.Fatalf("unexpected system-server bootstrap dependencies: %+v", p.Spec.Egress)
 			}
@@ -320,8 +357,8 @@ func TestSystemLoginStartsBackendTransportBeforeFrontend(t *testing.T) {
 	if !reflect.DeepEqual(systemEgress.Spec.Egress, wantEgress) {
 		t.Fatalf("old login egress policy was not repaired in place: %+v", systemEgress.Spec.Egress)
 	}
-	// Removing the Infisical provider port and changing the BFL target must
-	// withdraw both grants while preserving the original dependencies.
+	// Missing or retargeted Services must lose their grants while the
+	// original Authelia, Citus and DNS dependencies remain available.
 	if err := c.Get(ctx, client.ObjectKeyFromObject(infisical), infisical); err != nil {
 		t.Fatal(err)
 	}
@@ -339,12 +376,37 @@ func TestSystemLoginStartsBackendTransportBeforeFrontend(t *testing.T) {
 	if err := c.Delete(ctx, appService); err != nil {
 		t.Fatal(err)
 	}
+	if err := c.Delete(ctx, nats); err != nil {
+		t.Fatal(err)
+	}
+	redis.Spec.Ports[0].TargetPort = intstr.FromInt32(6379)
+	if err := c.Update(ctx, redis); err != nil {
+		t.Fatal(err)
+	}
 	checkRoute(ReasonAwaitingDataPlane)
 	if err := c.Get(ctx, client.ObjectKeyFromObject(systemEgress), systemEgress); err != nil {
 		t.Fatal(err)
 	}
 	if !reflect.DeepEqual(systemEgress.Spec.Egress, wantEgress[:3]) {
 		t.Fatalf("stale provider grants were retained: %+v", systemEgress.Spec.Egress)
+	}
+	if err := c.Create(ctx, &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Namespace: nats.Namespace, Name: nats.Name},
+		Spec:       nats.Spec,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	redis.Spec.Ports[0].TargetPort = intstr.FromInt32(6666)
+	if err := c.Update(ctx, redis); err != nil {
+		t.Fatal(err)
+	}
+	checkRoute(ReasonAwaitingDataPlane)
+	if err := c.Get(ctx, client.ObjectKeyFromObject(systemEgress), systemEgress); err != nil {
+		t.Fatal(err)
+	}
+	wantRestored := append(slices.Clone(wantEgress[:3]), wantEgress[7:]...)
+	if !reflect.DeepEqual(systemEgress.Spec.Egress, wantRestored) {
+		t.Fatalf("restored native Services did not recover their grants: %+v", systemEgress.Spec.Egress)
 	}
 	frontend := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: key.Namespace, Name: "authelia-svc"},
 		Spec: corev1.ServiceSpec{Ports: []corev1.ServicePort{{Port: 80, Protocol: corev1.ProtocolTCP}}}}
@@ -397,6 +459,18 @@ func TestSystemLoginStartsBackendTransportBeforeFrontend(t *testing.T) {
 	if !reflect.DeepEqual(hosts, []string{"desktop.alice.olares.com", "desktop.alice.olares.local"}) ||
 		ref["namespace"] != "user-system-alice" || ref["name"] != AutheliaBackendServiceName {
 		t.Fatalf("desktop authorizer is not bound to its canonical tenant: hosts=%v ref=%v", hosts, ref)
+	}
+	filters, _, _ := unstructured.NestedSlice(rules[0].(map[string]any), "filters")
+	wantFilters := []any{
+		map[string]any{"type": "URLRewrite", "urlRewrite": map[string]any{
+			"path": map[string]any{"type": "ReplaceFullPath", "replaceFullPath": "/api/verify"},
+		}},
+		map[string]any{"type": "RequestHeaderModifier", "requestHeaderModifier": map[string]any{
+			"set": []any{map[string]any{"name": "X-BFL-USER", "value": "alice"}},
+		}},
+	}
+	if !reflect.DeepEqual(filters, wantFilters) {
+		t.Fatalf("desktop authorizer must use the canonical path and set the tenant header: %v", filters)
 	}
 
 	backend := &corev1.Service{}
