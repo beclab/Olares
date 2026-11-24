@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"math/rand"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/beclab/Olares/framework/app-gateway/pkg/entrypki"
@@ -23,6 +24,7 @@ const (
 	backoffMaxDelay  = 5 * time.Minute
 
 	backoffJitterFraction = 0.2
+	reconcileTimeout      = time.Minute
 
 	reconcileKey = "reconcile"
 )
@@ -31,14 +33,13 @@ const (
 // then one pass per interval, with exponential backoff on transient failures.
 // It never calls os.Exit; the process exits only when ctx is cancelled.
 type Controller struct {
-	client          client.Client
-	ns              string
-	interval        time.Duration
-	probes          *ProbeState
-	metrics         *Metrics
-	limiter         workqueue.TypedRateLimiter[string]
+	client           client.Client
+	ns               string
+	interval         time.Duration
+	probes           *ProbeState
+	metrics          *Metrics
 	entryMTLSEnabled bool
-	entryNamespace  string
+	entryNamespace   string
 }
 
 // NewController wires the reconcile loop to its client, probes and metrics.
@@ -49,7 +50,6 @@ func NewController(c client.Client, ns string, interval time.Duration, probes *P
 		interval: interval,
 		probes:   probes,
 		metrics:  metrics,
-		limiter:  workqueue.NewTypedItemExponentialFailureRateLimiter[string](backoffBaseDelay, backoffMaxDelay),
 	}
 }
 
@@ -63,27 +63,26 @@ func (c *Controller) WithEntryMTLS(enabled bool, entryNamespace string) *Control
 // Run drives reconciliation until ctx is cancelled, returning on graceful
 // shutdown. Transient failures are retried with backoff and never terminate.
 func (c *Controller) Run(ctx context.Context) {
-	reconcileTicker := time.NewTicker(c.interval)
-	defer reconcileTicker.Stop()
 	heartbeatTicker := time.NewTicker(heartbeatInterval)
 	defer heartbeatTicker.Stop()
+	c.probes.Heartbeat()
 
-	var retry <-chan time.Time
-
-	runOnce := func() {
-		c.probes.Heartbeat()
-		if err := c.reconcileOnce(ctx); err != nil {
-			delay := withJitter(c.limiter.When(reconcileKey))
-			slog.Warn("reconcile failed; backing off",
-				"reason", classifyReason(err), "error", err, "retry_in", delay.String())
-			retry = time.After(delay)
-			return
-		}
-		c.limiter.Forget(reconcileKey)
-		retry = nil
+	var workers sync.WaitGroup
+	start := func(domain string, reconcile func(context.Context) error) {
+		workers.Add(1)
+		go func() {
+			defer workers.Done()
+			c.runReconciler(ctx, domain, reconcile)
+		}()
 	}
+	start("linkerd", c.reconcileOnce)
+	if c.entryMTLSEnabled {
+		start("entry", func(ctx context.Context) error {
+			return entrypki.MaintainEntryMTLS(ctx, c.client, c.entryNamespace, true, time.Now().UTC())
+		})
+	}
+	defer workers.Wait()
 
-	runOnce()
 	for {
 		select {
 		case <-ctx.Done():
@@ -91,10 +90,33 @@ func (c *Controller) Run(ctx context.Context) {
 			return
 		case <-heartbeatTicker.C:
 			c.probes.Heartbeat()
-		case <-reconcileTicker.C:
-			runOnce()
-		case <-retry:
-			runOnce()
+		}
+	}
+}
+
+func (c *Controller) runReconciler(ctx context.Context, domain string, reconcile func(context.Context) error) {
+	limiter := workqueue.NewTypedItemExponentialFailureRateLimiter[string](backoffBaseDelay, backoffMaxDelay)
+	for ctx.Err() == nil {
+		attempt, cancel := context.WithTimeout(ctx, reconcileTimeout)
+		err := reconcile(attempt)
+		cancel()
+		if ctx.Err() != nil {
+			return
+		}
+		delay := c.interval
+		if err != nil {
+			delay = min(withJitter(limiter.When(reconcileKey)), backoffMaxDelay)
+			slog.Warn("PKI reconcile failed; backing off",
+				"domain", domain, "reason", classifyReason(err), "error", err, "retry_in", delay.String())
+		} else {
+			limiter.Forget(reconcileKey)
+		}
+		timer := time.NewTimer(delay)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return
+		case <-timer.C:
 		}
 	}
 }
@@ -111,12 +133,6 @@ func (c *Controller) reconcileOnce(ctx context.Context) error {
 	}
 	c.metrics.MarkSuccess(time.Now())
 	c.probes.MarkSuccess()
-	if c.entryMTLSEnabled {
-		if err := entrypki.MaintainEntryMTLS(ctx, c.client, c.entryNamespace, true, time.Now().UTC()); err != nil {
-			slog.Warn("entry mTLS PKI maintain failed", "error", err)
-			// Do not fail mesh reconcile on entry PKI errors; domains are isolated.
-		}
-	}
 	return nil
 }
 
