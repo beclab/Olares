@@ -1,5 +1,7 @@
 package certmanager
 
+const RefreshServiceAccount = "bfl-cert-refresh"
+
 var (
 	ReDownloadCertificateAPIFormat = "http://bfl.%s/bfl/backend/v1/re-download-cert"
 

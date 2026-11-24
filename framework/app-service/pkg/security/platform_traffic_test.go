@@ -385,3 +385,59 @@ func TestDesktopBFLCompatibilityOnlyAllowsSameTenantUnmeshedAPI(t *testing.T) {
 		t.Fatal("deleting the Service must withdraw both grants")
 	}
 }
+
+func TestBFLMeshTransportForAutheliaAndCertificateRefresh(t *testing.T) {
+	key := types.NamespacedName{Namespace: "user-space-alice", Name: "bfl"}
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Namespace: key.Namespace, Name: key.Name},
+		Spec: corev1.ServiceSpec{
+			Type: corev1.ServiceTypeClusterIP, ClusterIP: "10.96.0.13",
+			Selector: map[string]string{"tier": "bfl"},
+			Ports:    []corev1.ServicePort{{Port: 80, TargetPort: intstr.FromInt(8080), Protocol: corev1.ProtocolTCP}},
+		},
+	}
+	services := map[types.NamespacedName]*corev1.Service{key: svc}
+	lookup := func(namespace, name string) netv1.NetworkPolicy {
+		t.Helper()
+		for _, policy := range BuildPlatformTrafficPolicies(namespace, services) {
+			if policy.Name == "olares-platform-"+name {
+				if !IsTrafficGroupManagedNP(&policy) {
+					t.Fatalf("legacy sweep would prune %s", policy.Name)
+				}
+				return policy
+			}
+		}
+		t.Fatalf("missing policy %s/%s", namespace, name)
+		return netv1.NetworkPolicy{}
+	}
+	ports := []netv1.NetworkPolicyPort{tcpPort(8080), tcpPort(4143)}
+	backend := map[string]string{"tier": "bfl", "linkerd.io/control-plane-ns": "os-mesh"}
+	for _, tc := range []struct {
+		name, namespace string
+		selector        map[string]string
+	}{
+		{"authelia-bfl-mesh", "os-framework", map[string]string{
+			"app": "authelia-backend", "traffic.olares.io/platform-mesh": "true", "linkerd.io/control-plane-ns": "os-mesh",
+		}},
+		{"bfl-cert-refresh", key.Namespace, map[string]string{
+			"app.kubernetes.io/name": "bfl-cert-refresh", "linkerd.io/control-plane-ns": "os-mesh",
+		}},
+	} {
+		out, in := lookup(tc.namespace, tc.name+"-egress"), lookup(key.Namespace, tc.name+"-ingress")
+		if len(out.Spec.Egress) != 2 || len(in.Spec.Ingress) != 1 ||
+			!reflect.DeepEqual(out.Spec.PodSelector.MatchLabels, tc.selector) ||
+			!reflect.DeepEqual(in.Spec.PodSelector.MatchLabels, backend) ||
+			!reflect.DeepEqual(out.Spec.Egress[0].To, []netv1.NetworkPolicyPeer{platformPeer(key.Namespace, backend)}) ||
+			!reflect.DeepEqual(in.Spec.Ingress[0].From, []netv1.NetworkPolicyPeer{platformPeer(tc.namespace, tc.selector)}) ||
+			!reflect.DeepEqual(out.Spec.Egress[0].Ports, ports) || !reflect.DeepEqual(in.Spec.Ingress[0].Ports, ports) {
+			t.Fatalf("unexpected mTLS transport for %s: %+v %+v", tc.name, out.Spec, in.Spec)
+		}
+	}
+	delete(services, key)
+	if len(lookup("os-framework", "authelia-bfl-mesh-egress").Spec.Egress) != 0 ||
+		len(lookup(key.Namespace, "bfl-cert-refresh-egress").Spec.Egress) != 0 ||
+		len(lookup(key.Namespace, "authelia-bfl-mesh-ingress").Spec.Ingress) != 0 ||
+		len(lookup(key.Namespace, "bfl-cert-refresh-ingress").Spec.Ingress) != 0 {
+		t.Fatal("deleting the tenant BFL Service must withdraw mesh data-plane grants")
+	}
+}
