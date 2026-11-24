@@ -2,13 +2,16 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway/meshinagent"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
+	"github.com/beclab/Olares/framework/app-service/pkg/mesh"
 	"github.com/beclab/Olares/framework/app-service/pkg/security"
 	"github.com/beclab/Olares/framework/app-service/pkg/uniauth"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
@@ -44,13 +47,16 @@ const (
 	controllerName = "security-controller"
 )
 
+var errTrafficGroupPending = errors.New("traffic-group egress isolation is awaiting readiness")
+
 // SecurityReconciler represents a reconciler for managing security
 type SecurityReconciler struct {
 	client.Client
-	Scheme        *runtime.Scheme
-	Logger        *logr.Logger
-	DynamicClient dynamic.Interface
-	KubeClient    kubernetes.Interface
+	ReadinessReader client.Reader
+	Scheme          *runtime.Scheme
+	Logger          *logr.Logger
+	DynamicClient   dynamic.Interface
+	KubeClient      kubernetes.Interface
 }
 
 var loggerKey struct{}
@@ -59,6 +65,9 @@ var loggerKey struct{}
 func (r *SecurityReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
 	if r.Client == nil {
 		r.Client = mgr.GetClient()
+	}
+	if r.ReadinessReader == nil {
+		r.ReadinessReader = mgr.GetAPIReader()
 	}
 	if r.Logger == nil {
 		l := ctrl.Log.WithName("controllers").WithName(controllerName)
@@ -207,6 +216,10 @@ func (r *SecurityReconciler) Reconcile(rootCtx context.Context, req ctrl.Request
 	}
 
 	if err := r.reconcileTrafficGroupNetworkPolicies(ctx, namespace); err != nil {
+		if errors.Is(err, errTrafficGroupPending) {
+			logger.V(1).Info("Waiting for traffic-group readiness", "reason", err.Error())
+			return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
+		}
 		if apierrors.IsConflict(err) {
 			logger.Info("Conflict while update traffic-group network policy.")
 			return ctrl.Result{Requeue: true}, nil
@@ -372,8 +385,9 @@ func (r *SecurityReconciler) reconcileNamespaceLabels(ctx context.Context, ns *c
 	return nil
 }
 
-// reconcileTrafficGroupNetworkPolicies applies the safe isolation bundle after
-// the mesh control plane is ready (inject before L3 deny), then continuously.
+// Reconcile an existing isolation policy even during an outage. For first
+// activation, dependency egress policies themselves isolate selected Pods, so
+// gate those writes as well as the namespace-wide baseline.
 func (r *SecurityReconciler) reconcileTrafficGroupNetworkPolicies(ctx context.Context, ns *corev1.Namespace) error {
 	if !uniauth.TrafficGroupNPDesired() {
 		return nil
@@ -381,31 +395,46 @@ func (r *SecurityReconciler) reconcileTrafficGroupNetworkPolicies(ctx context.Co
 	if ns == nil || !ns.DeletionTimestamp.IsZero() {
 		return nil
 	}
-	if r.KubeClient != nil && !meshinagent.IsMeshControlPlaneReady(ctx, r.KubeClient) {
-		// Recover infrastructure connectivity when an existing isolation policy
-		// has already taken effect, even if the mesh is now unhealthy.
-		var existing netv1.NetworkPolicy
-		key := client.ObjectKey{Namespace: ns.Name, Name: security.NPGroupDefaultDeny(ns.Name).Name}
-		if err := r.Get(ctx, key, &existing); err != nil {
-			return client.IgnoreNotFound(err)
-		}
+	reader := r.ReadinessReader
+	if reader == nil {
+		reader = r.Client
+	}
+	baseline := security.NPGroupDefaultDeny(ns.Name)
+	var existing netv1.NetworkPolicy
+	err := reader.Get(ctx, client.ObjectKeyFromObject(&baseline), &existing)
+	if err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+	if err == nil {
 		if !security.IsTrafficGroupManagedNP(&existing) {
 			return nil
 		}
-		return r.reconcileTrafficGroupDependencies(ctx, ns.Name)
+		if r.KubeClient != nil && !meshinagent.IsMeshControlPlaneReady(ctx, r.KubeClient) {
+			return r.reconcileTrafficGroupDependencies(ctx, ns.Name)
+		}
+	} else {
+		if r.KubeClient == nil || !meshinagent.IsMeshControlPlaneReady(ctx, r.KubeClient) {
+			return fmt.Errorf("%w: Linkerd control plane is not ready", errTrafficGroupPending)
+		}
+		if err := mesh.CheckEgressReadiness(ctx, reader, ns); err != nil {
+			return fmt.Errorf("%w: %v", errTrafficGroupPending, err)
+		}
 	}
 	if err := r.reconcileTrafficGroupDependencies(ctx, ns.Name); err != nil {
 		return err
 	}
 	logger := ctx.Value(loggerKey).(logr.Logger)
 	for _, np := range security.BuildTrafficGroupIsolationBundle(ns.Name) {
+		if np.Name == baseline.Name {
+			continue
+		}
 		policy := np
 		if err := r.upsertNetworkPolicy(ctx, &policy); err != nil {
 			logger.Error(err, "upsert traffic-group network policy", "name", policy.Name)
 			return err
 		}
 	}
-	return nil
+	return r.upsertNetworkPolicy(ctx, &baseline)
 }
 
 func (r *SecurityReconciler) upsertNetworkPolicy(ctx context.Context, desired *netv1.NetworkPolicy) error {
@@ -416,6 +445,9 @@ func (r *SecurityReconciler) upsertNetworkPolicy(ctx context.Context, desired *n
 	}
 	if err != nil {
 		return err
+	}
+	if !security.IsTrafficGroupManagedNP(&existing) {
+		return fmt.Errorf("refusing to change NetworkPolicy %s/%s owned by another writer", existing.Namespace, existing.Name)
 	}
 	if apiequality.Semantic.DeepEqual(existing.Spec, desired.Spec) {
 		labelsMatch := true

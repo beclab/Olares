@@ -230,8 +230,8 @@ func TestInitContainerSpec(t *testing.T) {
 	}
 	script := strings.Join(c.Command, " ")
 	for _, want := range []string{
-		"iptables", "-I OUTPUT", "--dport 80", "REDIRECT", "16080", "os-gateway",
-		"--dport 443", "16443", `-d "$ip"`,
+		"iptables", "ip6tables", "-I OUTPUT", "REDIRECT", "16080", "os-gateway",
+		"16443", `-d "$ip"`,
 		`NGINX_UID="1651"`,
 		`LINKERD_UID="2102"`,
 		`ENVOY_UID="1555"`,

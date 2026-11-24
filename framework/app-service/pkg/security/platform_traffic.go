@@ -160,6 +160,31 @@ func PlatformTrafficServices(namespace string) []types.NamespacedName {
 	return keys
 }
 
+// ActivePlatformTrafficServices lists the known upstream dependencies of the
+// running workload snapshot being evaluated for first egress isolation.
+func ActivePlatformTrafficServices(namespace string, pods []corev1.Pod) []types.NamespacedName {
+	var keys []types.NamespacedName
+	for _, flow := range platformTrafficFlows(namespace) {
+		if flow.from.namespace == namespace && !slices.Contains(keys, flow.service) &&
+			slices.ContainsFunc(pods, func(pod corev1.Pod) bool {
+				for k, v := range flow.from.selector {
+					if pod.Labels[k] != v {
+						return false
+					}
+				}
+				return true
+			}) {
+			keys = append(keys, flow.service)
+		}
+	}
+	if IsUserSystemNamespaces(namespace) && slices.ContainsFunc(pods, func(pod corev1.Pod) bool {
+		return pod.Labels["app"] == "systemserver" && pod.Labels["traffic.olares.io/platform-mesh"] == "true"
+	}) {
+		keys = append(keys, types.NamespacedName{Namespace: "os-platform", Name: "citus-headless"})
+	}
+	return keys
+}
+
 func PlatformTrafficNamespaces(service types.NamespacedName) []string {
 	var namespaces []string
 	for _, flow := range platformTrafficFlows(service.Namespace) {

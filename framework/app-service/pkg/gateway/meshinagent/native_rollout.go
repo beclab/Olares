@@ -3,6 +3,7 @@ package meshinagent
 import (
 	"context"
 	"errors"
+	"slices"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/mesh"
@@ -19,7 +20,7 @@ import (
 const (
 	nativeSidecarMigrationAnnotation = "gateway.olares.io/native-sidecar-migration"
 	nativeSidecarOptOut              = "config.linkerd.io/proxy-enable-native-sidecar"
-	nativeSidecarMigrationRevision   = "v1"
+	nativeSidecarMigrationRevision   = "v2"
 )
 
 // NativeInjectorReady waits for the injector deployment to observe its new
@@ -66,7 +67,25 @@ func needsNativeSidecars(pod *corev1.Pod, installedApp bool) bool {
 			break
 		}
 	}
-	return legacyMeshIn || legacyLinkerd || (installedApp && !HasNativeMeshIn(pod))
+	nativeMeshIn := HasNativeMeshIn(pod)
+	return legacyMeshIn || legacyLinkerd || (installedApp && !nativeMeshIn) ||
+		(nativeMeshIn && needsMeshInBootstrapUpdate(pod))
+}
+
+func needsMeshInBootstrapUpdate(pod *corev1.Pod) bool {
+	var bootstrapReady bool
+	for _, container := range pod.Spec.InitContainers {
+		switch container.Name {
+		case InitContainerName:
+			want := []string{"/bin/sh", "-c", IptablesInitScript()}
+			bootstrapReady = container.Image == meshInAgentImage() && slices.Equal(container.Command, want)
+		case ContainerName:
+			if container.Image != meshInAgentImage() {
+				return true
+			}
+		}
+	}
+	return !bootstrapReady
 }
 
 // Queue only controllers that support rolling replacement. Jobs and standalone
