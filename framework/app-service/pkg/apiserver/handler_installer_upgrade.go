@@ -40,6 +40,9 @@ type upgradeHandlerHelper struct {
 	token      string
 	appConfig  *appcfg.ApplicationConfig
 	chartPath  string
+	// downloadedChartPath is the chart root the request downloaded in
+	// GetAppConfigVersion; every later config load reads it.
+	downloadedChartPath string
 }
 
 type upgradeHandlerHelperV2 struct {
@@ -103,6 +106,7 @@ func (h *upgradeHandlerHelper) getAppConfig(prevCfg *appcfg.ApplicationConfig, a
 		IsAdmin:      prevCfg.AppScope.ClusterScoped,
 		SelectedGpu:  prevCfg.SelectedGpuType,
 		ChartOwner:   prevCfg.ChartOwner,
+		ChartPath:    h.downloadedChartPath,
 	})
 	if err != nil {
 		api.HandleError(h.resp, h.req, err)
@@ -217,6 +221,7 @@ func (h *upgradeHandlerHelperV3) getAppConfig(prevCfg *appcfg.ApplicationConfig,
 		RawAppName:   h.rawAppName,
 		SelectedGpu:  prevCfg.SelectedGpuType,
 		ChartOwner:   prevCfg.ChartOwner,
+		ChartPath:    h.downloadedChartPath,
 	})
 	if err != nil {
 		api.HandleError(h.resp, h.req, err)
@@ -254,6 +259,7 @@ func (h *upgradeHandlerHelperV2) getAppConfig(prevCfg *appcfg.ApplicationConfig,
 		IsAdmin:      isAdmin,
 		RawAppName:   h.rawAppName,
 		SelectedGpu:  prevCfg.SelectedGpuType,
+		ChartPath:    h.downloadedChartPath,
 	})
 	if err != nil {
 		api.HandleError(h.resp, h.req, err)

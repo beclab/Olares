@@ -106,8 +106,12 @@ func (h *Handler) installV2(req *restful.Request, resp *restful.Response) {
 	if chartOwner == "" && insReq.Source != api.Market {
 		chartOwner = owner
 	}
+	chartURL, chartDigest := "", ""
+	if insReq.HasChartRef() {
+		chartVersion, chartURL, chartDigest = insReq.Version, insReq.ChartURL, insReq.ChartDigest
+	}
 
-	apiVersion, err := apputils.GetAppConfigVersion(req.Request.Context(), &apputils.ConfigOptions{
+	apiVersion, downloadedChartPath, err := apputils.GetAppConfigVersion(req.Request.Context(), &apputils.ConfigOptions{
 		App:          app,
 		RawAppName:   rawAppName,
 		Owner:        owner,
@@ -116,6 +120,8 @@ func (h *Handler) installV2(req *restful.Request, resp *restful.Response) {
 		Version:      chartVersion,
 		SelectedGpu:  insReq.SelectedGpuType,
 		ChartOwner:   chartOwner,
+		ChartURL:     chartURL,
+		ChartDigest:  chartDigest,
 	})
 	if err != nil {
 		klog.Errorf("Failed to get api version err=%v", err)
@@ -142,6 +148,8 @@ func (h *Handler) installV2(req *restful.Request, resp *restful.Response) {
 		token:      token,
 		insReq:     insReq,
 		client:     typedClient,
+
+		downloadedChartPath: downloadedChartPath,
 	}
 	switch apiVersion {
 	case appcfg.V1:
@@ -178,6 +186,12 @@ func (h *Handler) installV2(req *restful.Request, resp *restful.Response) {
 	appCfg, err := helper.getAppConfig(adminUsers, marketSource, isAdmin, appInstalled, installedApps, chartVersion, insReq.SelectedGpuType, chartOwner)
 	if err != nil {
 		klog.Errorf("Failed to get app config err=%v", err)
+		return
+	}
+
+	if appCfg.APIVersion == appcfg.V2 {
+		err = errors.New("app with apiVersion v2 is incompatible and cannot be install")
+		api.HandleForbidden(resp, req, err)
 		return
 	}
 
@@ -385,6 +399,10 @@ func (h *Handler) deliverInstallV2(
 		constants.ApplicationTitleLabel: appCfg.Title,
 		constants.ApplicationImageLabel: string(imagesStr),
 	}
+	if insReq.HasChartRef() {
+		annotations[api.AppChartURLKey] = insReq.ChartURL
+		annotations[api.AppChartDigestKey] = insReq.ChartDigest
+	}
 	annotations, opID := stampDurableOperationRequest(annotations)
 
 	desiredSpec := appv1alpha1.ApplicationManagerSpec{
@@ -453,6 +471,10 @@ func (h *Handler) deliverInstallV2(
 		if patched.Annotations == nil {
 			patched.Annotations = make(map[string]string, len(annotations))
 		}
+		// Drop a chart reference left by an earlier install; the loop
+		// below re-adds it when this request carries one.
+		delete(patched.Annotations, api.AppChartURLKey)
+		delete(patched.Annotations, api.AppChartDigestKey)
 		for k, v := range annotations {
 			patched.Annotations[k] = v
 		}

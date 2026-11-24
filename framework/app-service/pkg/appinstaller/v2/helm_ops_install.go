@@ -177,7 +177,7 @@ func (h *HelmOpsV2) install(values map[string]interface{}) (err error, sharedIns
 			actionConfig,
 			settings,
 			chart.Name,
-			appcfg.ChartPath(h.App().AppName, chart.Name),
+			appcfg.SubChartPath(h.App(), chart.Name),
 			h.App().RepoURL,
 			appcfg.ChartNamespace(&chart, h.App().OwnerName),
 			values,

@@ -20,7 +20,6 @@ type HelmClient struct {
 	ctx          context.Context
 }
 
-// NewHelmClient build a helm client.
 func NewHelmClient(ctx context.Context, kubeConfig *rest.Config, namespace string) (*HelmClient, error) {
 	actionConfig, settings, err := helm.InitConfig(kubeConfig, namespace)
 	if err != nil {

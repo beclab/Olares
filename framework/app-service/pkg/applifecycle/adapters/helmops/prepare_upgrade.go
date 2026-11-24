@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -104,21 +105,67 @@ func (o *Ops) refreshUpgradeChart(ctx context.Context, req ports.WorkloadRequest
 		IsAdmin:      isAdmin,
 	}
 	if userspace.IsSysApp(rawAppName) {
-		_, err = apputils.GetIndexAndDownloadChart(ctx, opts)
-		return err
+		// System apps are re-downloaded here (their Spec.Config is not
+		// refreshed from the chart). Point ChartsName at the fresh
+		// download so helm upgrade renders it rather than whatever an
+		// older path holds.
+		opts.ChartURL = req.AM.Annotations[api.AppChartURLKey]
+		opts.ChartDigest = req.AM.Annotations[api.AppChartDigestKey]
+		chartPath, err := apputils.GetIndexAndDownloadChart(ctx, opts)
+		if err != nil {
+			return err
+		}
+		cfg, cfgErr := resolveAppCfg(req)
+		if cfgErr != nil || cfg.ChartsName == chartPath {
+			// No stored config to repoint (earlier releases did not
+			// need one here either).
+			return nil
+		}
+		cfg.ChartsName = chartPath
+		return o.patchSpecConfig(ctx, req, cfg)
 	}
 	cfg, err := resolveAppCfg(req)
 	if err != nil {
 		return err
 	}
 	opts.SelectedGpu = cfg.SelectedGpuType
+	// Keep the chart owner: it selects X-Market-User for a re-download
+	// (clones, uploads) and GetAppConfig copies it into the refreshed config.
+	opts.ChartOwner = cfg.ChartOwner
+	// Read the chart the upgrade handler downloaded and recorded as
+	// ChartsName. AMs written by earlier releases carry the legacy flat
+	// path there, which still resolves. If the directory is gone (cache
+	// pruned, node rebuilt), download the target version again instead of
+	// failing the upgrade.
+	if chartDirExists(cfg.ChartsName) {
+		opts.ChartPath = cfg.ChartsName
+	} else {
+		if opts.Version == "" {
+			opts.Version = cfg.Version
+		}
+		opts.ChartURL = req.AM.Annotations[api.AppChartURLKey]
+		opts.ChartDigest = req.AM.Annotations[api.AppChartDigestKey]
+		opts.NeedDownloadChart = true
+	}
 	appConfig, _, err := apputils.GetAppConfig(ctx, opts)
 	if err != nil {
 		return err
 	}
 	appConfig.Ports = cfg.Ports
 	appConfig.TailScale = cfg.TailScale
-	updated, err := json.Marshal(appConfig)
+	return o.patchSpecConfig(ctx, req, appConfig)
+}
+
+func chartDirExists(p string) bool {
+	if p == "" {
+		return false
+	}
+	fi, err := os.Stat(p)
+	return err == nil && fi.IsDir()
+}
+
+func (o *Ops) patchSpecConfig(ctx context.Context, req ports.WorkloadRequest, cfg *appcfg.ApplicationConfig) error {
+	updated, err := json.Marshal(cfg)
 	if err != nil {
 		return err
 	}

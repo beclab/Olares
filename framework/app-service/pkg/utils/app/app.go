@@ -6,9 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"net/http"
 	"net/netip"
-	"net/url"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -27,13 +25,11 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
-	"github.com/beclab/Olares/framework/app-service/pkg/utils/files"
 	"github.com/beclab/oac"
 	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/go-resty/resty/v2"
-	"github.com/hashicorp/go-getter"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/repo"
@@ -808,10 +804,20 @@ type ConfigOptions struct {
 	RawAppName   string
 	SelectedGpu  string
 	// NeedDownloadChart controls whether GetIndexAndDownloadChart should be
-	// invoked to fetch the chart from the repo. When false (the default), the
-	// download step is skipped and the chart is assumed to be already present
-	// at the conventional local path (appcfg.ChartsPath + "/" + RawAppName).
+	// invoked to fetch the chart from the repo. When false (the default) and
+	// ChartPath is empty, the chart is read from the legacy flat path
+	// (appcfg.ChartsPath + "/" + RawAppName) written by earlier releases.
 	NeedDownloadChart bool
+	// ChartPath is a chart root already on disk, normally the one the first
+	// download of this request returned (GetAppConfigVersion) or the
+	// ChartsName stored on the ApplicationManager. It takes precedence over
+	// both NeedDownloadChart and the legacy flat path.
+	ChartPath string
+	// ChartURL (relative to RepoURL) and ChartDigest ("sha256:<hex>") name
+	// the exact package market rendered. When both are set the download
+	// skips static-index.yaml and verifies the package.
+	ChartURL    string
+	ChartDigest string
 	// for v3 app, upload source need to find origin chart
 	ChartOwner string
 }
@@ -836,23 +842,10 @@ func GetAppConfig(ctx context.Context, options *ConfigOptions) (*appcfg.Applicat
 		return nil, chartPath, err
 	}
 
-	// set appcfg.Namespace to specified namespace by OlaresManifests.Spec
-	var namespace string
-	if appcfg.Namespace != "" {
-		namespace, _ = utils.AppNamespace(options.App, options.Owner, appcfg.Namespace)
-	} else if appcfg.IsShared() {
-		namespace = SharedAppNamespace(options.App)
-	} else {
-		namespace = fmt.Sprintf("%s-%s", options.App, options.Owner)
-	}
-
+	appcfg.Namespace = ResolveInstallNamespace(options.App, options.Owner, appcfg)
 	if appcfg.IsMiddleware() {
-		namespace = fmt.Sprintf("%s-%s", appcfg.AppName, "middleware")
-		klog.Infof("appcfg.IsMiddlewarew, set namespace=%s", namespace)
-
+		klog.Infof("appcfg.IsMiddleware, set namespace=%s", appcfg.Namespace)
 	}
-
-	appcfg.Namespace = namespace
 	// Shared apps are addressed to the cluster owner (the olares "owner"
 	// role user) so OwnerName / Application.spec.owner stay stable across
 	// admins. This is the canonical write site referenced by the reload
@@ -874,7 +867,9 @@ func GetAppConfig(ctx context.Context, options *ConfigOptions) (*appcfg.Applicat
 
 func getAppConfigFromRepo(ctx context.Context, options *ConfigOptions) (*appcfg.ApplicationConfig, string, error) {
 	var chartPath string
-	if options.NeedDownloadChart {
+	if options.ChartPath != "" {
+		chartPath = options.ChartPath
+	} else if options.NeedDownloadChart {
 		var err error
 		chartPath, err = GetIndexAndDownloadChart(ctx, options)
 		if err != nil {
@@ -888,20 +883,24 @@ func getAppConfigFromRepo(ctx context.Context, options *ConfigOptions) (*appcfg.
 	return getAppConfigFromConfigurationFile(options, chartPath)
 }
 
-func GetAppConfigVersion(ctx context.Context, options *ConfigOptions) (appcfg.APIVersion, error) {
+// GetAppConfigVersion downloads the chart for options and returns its manifest
+// API version together with the local chart root. Callers pass that root on
+// as ConfigOptions.ChartPath so the rest of the request reads the very chart
+// that was downloaded here.
+func GetAppConfigVersion(ctx context.Context, options *ConfigOptions) (appcfg.APIVersion, string, error) {
 	chartPath, err := GetIndexAndDownloadChart(ctx, options)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	raw, err := os.ReadFile(filepath.Join(chartPath, oac.ManifestFileName))
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	versions, err := oac.PeekManifestVersions(raw)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
-	return appcfg.APIVersion(versions.APIVersion), nil
+	return appcfg.APIVersion(versions.APIVersion), chartPath, nil
 }
 
 // parseLegacyAppRequirement parses the scalar spec.required* fields of a
@@ -1127,7 +1126,6 @@ func toApplicationConfig(opt *ConfigOptions, chart string, cfg *appcfg.AppConfig
 		WsConfig:             cfg.Options.WsConfig,
 		Upload:               cfg.Options.Upload,
 		OnlyAdmin:            cfg.Spec.OnlyAdmin,
-		Namespace:            cfg.Spec.Namespace,
 		MobileSupported:      cfg.Options.MobileSupported,
 		OIDC:                 cfg.Options.OIDC,
 		ApiTimeout:           cfg.Options.ApiTimeout,
@@ -1136,7 +1134,6 @@ func toApplicationConfig(opt *ConfigOptions, chart string, cfg *appcfg.AppConfig
 		AllowedOutboundPorts: cfg.Options.AllowedOutboundPorts,
 		RequiredGPU:          cfg.Spec.RequiredGPU,
 		PodGPUConsumePolicy:  cfg.Spec.PodGPUConsumePolicy,
-		Internal:             cfg.Spec.RunAsInternal,
 		SubCharts:            cfg.Spec.SubCharts,
 		ServiceAccountName:   cfg.Permission.ServiceAccount,
 		Provider:             cfg.Provider,
@@ -1202,8 +1199,42 @@ func checkVersionFormat(constraint string) error {
 	return nil
 }
 
-// GetIndexAndDownloadChart download a chart and returns download chart path.
+// GetIndexAndDownloadChart downloads the chart for options and returns the
+// local chart root. The chart lands in a fresh, immutable cache directory
+// (see chart_cache.go), never in the shared ./charts/<rawAppName>.
+//
+// When market sent an exact reference (ChartURL + ChartDigest) that single
+// package is fetched and verified. Otherwise the version is resolved from the
+// repo's static-index.yaml as before.
 func GetIndexAndDownloadChart(ctx context.Context, options *ConfigOptions) (string, error) {
+	if options.RepoURL == "" {
+		return "", fmt.Errorf("url info is empty, repo [%s]", options.RepoURL)
+	}
+	klog.Infof("GetIndexAndDownloadChart: app=%s rawApp=%s version=%q user=%v source=%v originOwner=%v exactRef=%t",
+		options.App, options.RawAppName, options.Version, options.Owner, options.MarketSource, options.ChartOwner,
+		options.ChartURL != "" && options.ChartDigest != "")
+
+	if options.ChartURL != "" && options.ChartDigest != "" {
+		if options.Version != "" && chartRefMatches(options.ChartURL, options.RawAppName, options.Version) {
+			packageURL, err := resolveChartURL(options.RepoURL, options.ChartURL)
+			if err != nil {
+				return "", err
+			}
+			chartPath, err := downloadChartToCache(ctx, options, options.Version,
+				chartPackageRef{url: packageURL, digest: options.ChartDigest})
+			// A digest mismatch is fatal. A missing package (re-rendered
+			// or not yet served) falls back to the index lookup below.
+			if !errors.Is(err, errChartPackageNotFound) {
+				return chartPath, err
+			}
+			klog.Warningf("chart reference %s not found, falling back to index lookup for %s %s",
+				options.ChartURL, options.RawAppName, options.Version)
+		} else {
+			klog.Warningf("ignoring chart reference %q for %s version %q: it names another package",
+				options.ChartURL, options.RawAppName, options.Version)
+		}
+	}
+
 	client := resty.New().SetTimeout(10*time.Second).
 		SetAuthToken(options.Token).
 		SetHeader(constants.MarketUser, options.Owner).
@@ -1215,10 +1246,8 @@ func GetIndexAndDownloadChart(ctx context.Context, options *ConfigOptions) (stri
 	if options.RepoURL[len(options.RepoURL)-1] != '/' {
 		indexFileURL += "/"
 	}
-	klog.Infof("GetIndexAndDownloadChart: user: %v, source: %v, originOwner: %v", options.Owner, options.MarketSource, options.ChartOwner)
-
 	indexFileURL += "static-index.yaml"
-	resp, err := client.R().Get(indexFileURL)
+	resp, err := client.R().SetContext(ctx).Get(indexFileURL)
 	if err != nil {
 		return "", err
 	}
@@ -1244,62 +1273,17 @@ func GetIndexAndDownloadChart(ctx context.Context, options *ConfigOptions) (stri
 		}
 		return "", err
 	}
+	if len(chartVersion.URLs) == 0 {
+		return "", fmt.Errorf("chart %s-%s has no download url in index", options.RawAppName, chartVersion.Version)
+	}
 
-	klog.Infof("Success to find app chart from index app=%s rawApp=%s version=%s", options.App, options.RawAppName, options.Version)
+	klog.Infof("Success to find app chart from index app=%s rawApp=%s version=%s", options.App, options.RawAppName, chartVersion.Version)
 	chartURL, err := repo.ResolveReferenceURL(options.RepoURL, chartVersion.URLs[0])
 	if err != nil {
 		return "", err
 	}
-
-	url, err := url.Parse(chartURL)
-	if err != nil {
-		return "", err
-	}
-
-	// assume the chart path is app name
-	chartPath := appcfg.ChartsPath + "/" + options.RawAppName
-	if files.IsExist(chartPath) {
-		if err := files.RemoveAll(chartPath); err != nil {
-			return "", err
-		}
-	}
-	_, err = downloadAndUnpack(ctx, url, options.Token, options.Owner, options.MarketSource, options.ChartOwner)
-	if err != nil {
-		return "", err
-	}
-	return chartPath, nil
-}
-
-func downloadAndUnpack(ctx context.Context, tgz *url.URL, token, owner, marketSource, originOwner string) (string, error) {
-	dst := appcfg.ChartsPath
-	g := new(getter.HttpGetter)
-	g.Header = make(http.Header)
-	g.Header.Set("Authorization", "Bearer "+token)
-	g.Header.Set(constants.MarketUser, owner)
-	g.Header.Set(constants.MarketSource, marketSource)
-	if originOwner != "" {
-		g.Header.Set(constants.MarketUser, originOwner)
-	}
-
-	downloader := &getter.Client{
-		Ctx:       ctx,
-		Dst:       dst,
-		Src:       tgz.String(),
-		Mode:      getter.ClientModeDir,
-		Detectors: getter.Detectors,
-		Getters: map[string]getter.Getter{
-			"http": g,
-			"file": new(getter.FileGetter),
-		},
-	}
-
-	//download the files
-	if err := downloader.Get(); err != nil {
-		klog.Errorf("Failed to get path=%s err=%v", downloader.Src, err)
-		return "", err
-	}
-
-	return dst, nil
+	// The index's digest field is not a package hash, so nothing to verify.
+	return downloadChartToCache(ctx, options, chartVersion.Version, chartPackageRef{url: chartURL})
 }
 
 func loadIndex(data []byte) (*repo.IndexFile, error) {
