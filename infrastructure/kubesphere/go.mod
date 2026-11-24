@@ -8,9 +8,7 @@ go 1.25.0
 
 require (
 	code.cloudfoundry.org/bytefmt v0.0.0-20190710193110-1eb035ffe2b6
-	github.com/Khan/genqlient v0.7.0
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
-	github.com/beclab/lldap-client v0.0.8
 	github.com/coreos/go-oidc v2.3.0+incompatible
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/emicklei/go-restful v2.16.0+incompatible
@@ -22,7 +20,6 @@ require (
 	github.com/go-openapi/spec v0.21.0
 	github.com/go-openapi/strfmt v0.23.0
 	github.com/go-openapi/validate v0.24.0
-	github.com/go-resty/resty/v2 v2.16.2
 	github.com/golang/example v0.0.0-20170904185048-46695d81d1fa
 	github.com/google/go-cmp v0.7.0
 	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674
@@ -46,7 +43,6 @@ require (
 	github.com/spf13/pflag v1.0.7
 	github.com/spf13/viper v1.20.1
 	github.com/stretchr/testify v1.11.1
-	github.com/thoas/go-funk v0.9.3
 	golang.org/x/oauth2 v0.34.0
 	gopkg.in/cas.v2 v2.2.0
 	gopkg.in/square/go-jose.v2 v2.6.0
@@ -160,7 +156,6 @@ require (
 	github.com/stoewer/go-strcase v1.3.0 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/tchap/go-patricia/v2 v2.3.2 // indirect
-	github.com/vektah/gqlparser/v2 v2.5.20 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
@@ -195,7 +190,6 @@ require (
 	golang.org/x/text v0.40.0 // indirect
 	golang.org/x/time v0.11.0 // indirect
 	golang.org/x/tools v0.47.0 // indirect
-	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20251202230838-ff82c1b0f217 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251202230838-ff82c1b0f217 // indirect
 	google.golang.org/grpc v1.79.3 // indirect
