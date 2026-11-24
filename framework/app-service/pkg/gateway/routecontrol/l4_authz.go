@@ -87,7 +87,7 @@ func desiredL4AuthzRoute(gw GatewayRef, srr *srrv1alpha1.SharedRouteRegistry) (*
 	}
 	rule := map[string]any{
 		"matches": []any{map[string]any{
-			"path": map[string]any{"type": "PathPrefix", "value": "/api/verify"},
+			"path": map[string]any{"type": "PathPrefix", "value": AutheliaVerifyPath},
 		}},
 		"backendRefs": []any{map[string]any{
 			"name": AutheliaBackendServiceName, "namespace": authNS, "port": int64(AutheliaBackendPort),

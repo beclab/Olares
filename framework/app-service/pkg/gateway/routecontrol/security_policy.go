@@ -22,7 +22,7 @@ const (
 	SecurityPolicySuffix       = "-jwt-authn"
 	ApplicationExtAuthSuffix   = "-extauth"
 	AutheliaBackendServiceName = "authelia-backend"
-	AutheliaVerifyPath         = "/api/verify/"
+	AutheliaVerifyPath         = "/api/verify"
 	AutheliaBackendPort        = int32(9091)
 	CallerJWTIssuer            = callerjwt.IssuerURL
 	CallerJWTAudience          = "app-gateway-data"
@@ -199,7 +199,7 @@ func applySecurityPolicy(ctx context.Context, c client.Client, srr *srrv1alpha1.
 	return nil
 }
 
-// desiredApplicationExtAuthSecurityPolicy mirrors legacy L4 Authelia /api/verify/.
+// desiredApplicationExtAuthSecurityPolicy checks the canonical Authelia endpoint.
 func desiredApplicationExtAuthSecurityPolicy(srr *srrv1alpha1.SharedRouteRegistry) *unstructured.Unstructured {
 	if srr == nil {
 		return nil

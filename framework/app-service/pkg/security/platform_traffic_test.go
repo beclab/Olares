@@ -279,6 +279,7 @@ func TestSystemFrontendGrantsUseOnlyVerifiedServicePorts(t *testing.T) {
 	space, system := "user-space-alice", "user-system-alice"
 	bflKey := types.NamespacedName{Namespace: space, Name: "bfl"}
 	natsKey := types.NamespacedName{Namespace: system, Name: "nats"}
+	redisKey := types.NamespacedName{Namespace: system, Name: "redis-cluster-proxy"}
 	services := map[types.NamespacedName]*corev1.Service{
 		bflKey: {
 			ObjectMeta: metav1.ObjectMeta{Namespace: space, Name: bflKey.Name},
@@ -295,6 +296,12 @@ func TestSystemFrontendGrantsUseOnlyVerifiedServicePorts(t *testing.T) {
 				Selector: map[string]string{"app": "systemserver"},
 				Ports:    []corev1.ServicePort{{Port: 4222, TargetPort: intstr.FromInt(4222), Protocol: corev1.ProtocolTCP}}},
 		},
+		redisKey: {
+			ObjectMeta: metav1.ObjectMeta{Namespace: system, Name: redisKey.Name},
+			Spec: corev1.ServiceSpec{Type: corev1.ServiceTypeClusterIP,
+				Selector: map[string]string{"app": "systemserver"}, ClusterIP: "10.96.0.20",
+				Ports: []corev1.ServicePort{{Port: 6379, TargetPort: intstr.FromInt(6379), Protocol: corev1.ProtocolTCP}}},
+		},
 	}
 	policies := map[string]netv1.NetworkPolicy{}
 	for _, p := range BuildPlatformTrafficPolicies(space, services) {
@@ -307,6 +314,7 @@ func TestSystemFrontendGrantsUseOnlyVerifiedServicePorts(t *testing.T) {
 		{"login-bfl", "authelia", space, 80, 8080},
 		{"desktop-bfl", "olares-app", space, 80, 8080},
 		{"desktop-nats", "olares-app", system, 0, 4222},
+		{"desktop-redis", "olares-app", system, 6379, 6379},
 	} {
 		p := policies["olares-platform-"+tc.name+"-egress"]
 		if p.Spec.PodSelector.MatchLabels["app"] != tc.app || len(p.Spec.Egress) == 0 ||

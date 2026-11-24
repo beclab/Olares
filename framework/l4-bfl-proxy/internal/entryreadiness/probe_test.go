@@ -29,8 +29,11 @@ func TestGatewayProbeUsesTLSAndCorrectAuthority(t *testing.T) {
 		netFailure, wantPass bool
 	}{
 		{"ready", 200, 401, false, true},
+		{"browser login redirect", 200, 302, false, true},
 		{"login unavailable", 503, 401, false, false},
+		{"wrong login endpoint", 404, 401, false, false},
 		{"auth route missing", 200, 404, false, false},
+		{"auth path normalization redirect", 200, 301, false, false},
 		{"anonymous auth accepted", 200, 200, false, false},
 		{"TLS failure", 200, 401, true, false},
 	} {
@@ -45,13 +48,16 @@ func TestGatewayProbeUsesTLSAndCorrectAuthority(t *testing.T) {
 				var status int
 				switch r.URL.Port() {
 				case "8443":
-					if r.Host != "auth.alice.example.org" || r.URL.Path != "/api/health" {
+					if r.Host != "auth.alice.example.org" || r.URL.Path != "/" {
 						t.Fatalf("unexpected login route: %s %s", r.Host, r.URL.Path)
 					}
 					status = tc.entry
 				case "9444":
-					if r.Host != "desktop.alice.example.org" || r.URL.Path != "/api/verify/" ||
-						r.Header.Get("X-Original-URL") != "https://desktop.alice.example.org/" {
+					if r.Host != "desktop.alice.example.org" || r.URL.Path != "/api/verify" ||
+						r.Header.Get("Accept") != "text/html" ||
+						r.Header.Get("X-Original-URL") != "https://desktop.alice.example.org/" ||
+						r.Header.Get("X-Original-Method") != "GET" ||
+						r.Header.Get("X-Forwarded-Host") != r.Host || r.Header.Get("X-Forwarded-Proto") != "https" {
 						t.Fatal("authorization probe did not preserve the Desktop identity")
 					}
 					status = tc.auth
