@@ -57,6 +57,9 @@ func (r *SharedRouteReconciler) Reconcile(ctx context.Context, req reconcile.Req
 			retry = 5 * time.Second
 		} else {
 			res.Message = "Entry route and current mesh endpoints are ready"
+			if isSystemDesktopRoute(srr) {
+				res.Reason = ReasonDesktopEntryAuthorizationReady
+			}
 			// Endpoint changes need not modify the owned Route.
 			retry = 30 * time.Second
 		}

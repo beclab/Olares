@@ -225,7 +225,7 @@ func desiredApplicationExtAuthSecurityPolicy(srr *srrv1alpha1.SharedRouteRegistr
 		},
 	}
 	headers := []any{"authorization", "cookie", "x-forwarded-for", "x-authorization", "x-bfl-user"}
-	if isMainSystemEntry(srr) && srr.Name == gateway.SystemPlaneSRRName("desktop") {
+	if isSystemDesktopRoute(srr) {
 		// Unlike a path prefix, the override does not append the Desktop path.
 		// This route only accepts Entry mTLS. L4 supplies the original request
 		// metadata after authenticating the browser.

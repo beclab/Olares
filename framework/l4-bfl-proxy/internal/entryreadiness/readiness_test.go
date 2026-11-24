@@ -14,6 +14,10 @@ import (
 )
 
 func readySystemRoute(name, host string) *unstructured.Unstructured {
+	reason := "Reconciled"
+	if name == "sys-desktop" {
+		reason = desktopAuthorizationReady
+	}
 	route := &unstructured.Unstructured{Object: map[string]any{
 		"metadata": map[string]any{"namespace": "user-space-alice", "name": name, "generation": int64(4),
 			"labels":      map[string]any{"gateway.olares.io/system-plane": "true", "app.kubernetes.io/managed-by": "app-service"},
@@ -21,7 +25,7 @@ func readySystemRoute(name, host string) *unstructured.Unstructured {
 		},
 		"spec": map[string]any{"routeMode": "gateway", "entranceClass": "application", "hostPatterns": []any{host}},
 		"status": map[string]any{"observedGeneration": int64(4), "httpRouteName": name, "conditions": []any{
-			map[string]any{"type": "Ready", "status": "True", "reason": "Reconciled", "observedGeneration": int64(4)},
+			map[string]any{"type": "Ready", "status": "True", "reason": reason, "observedGeneration": int64(4)},
 		}},
 	}}
 	route.SetGroupVersionKind(systemRouteRegistryGVK)
@@ -64,6 +68,11 @@ func TestEntryRoutesReadyRequiresBothObservedTenantRoutes(t *testing.T) {
 		}},
 		{"legacy direct", func(route *unstructured.Unstructured) {
 			_ = unstructured.SetNestedField(route.Object, "direct", "spec", "routeMode")
+		}},
+		{"older app-service marked Desktop ready", func(route *unstructured.Unstructured) {
+			_ = unstructured.SetNestedSlice(route.Object, []any{
+				map[string]any{"type": "Ready", "status": "True", "reason": "Reconciled", "observedGeneration": int64(4)},
+			}, "status", "conditions")
 		}},
 		{"unready backend", func(route *unstructured.Unstructured) {
 			_ = unstructured.SetNestedSlice(route.Object, []any{

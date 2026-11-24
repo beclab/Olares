@@ -3,6 +3,7 @@ package routecontrol
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"slices"
 
 	corev1 "k8s.io/api/core/v1"
@@ -26,16 +27,16 @@ var entryMeshService = srrv1alpha1.UpstreamRef{ServiceName: "app-gateway-l4-mtls
 // servingReadiness distinguishes resources accepted by Kubernetes from an
 // observed, programmed listener with meshed backend endpoints.
 func servingReadiness(ctx context.Context, c client.Client, gw GatewayRef, srr *srrv1alpha1.SharedRouteRegistry, routeName string) error {
-	gateway := &unstructured.Unstructured{}
-	gateway.SetGroupVersionKind(gatewayGVK)
-	if err := c.Get(ctx, client.ObjectKey{Namespace: gw.gatewayNamespace(), Name: gw.gatewayName()}, gateway); err != nil {
+	gatewayObject := &unstructured.Unstructured{}
+	gatewayObject.SetGroupVersionKind(gatewayGVK)
+	if err := c.Get(ctx, client.ObjectKey{Namespace: gw.gatewayNamespace(), Name: gw.gatewayName()}, gatewayObject); err != nil {
 		return err
 	}
-	conditions, _, _ := unstructured.NestedSlice(gateway.Object, "status", "conditions")
-	if !conditionReady(conditions, gateway.GetGeneration(), "Programmed") {
+	conditions, _, _ := unstructured.NestedSlice(gatewayObject.Object, "status", "conditions")
+	if !conditionReady(conditions, gatewayObject.GetGeneration(), "Programmed") {
 		return fmt.Errorf("gateway is not programmed for its current generation")
 	}
-	if !gatewayListenerReady(gateway, l4MTLSGatewaySectN) {
+	if !gatewayListenerReady(gatewayObject, l4MTLSGatewaySectN) {
 		return fmt.Errorf("entry mTLS listener is not programmed")
 	}
 	route := &unstructured.Unstructured{}
@@ -47,21 +48,29 @@ func servingReadiness(ctx context.Context, c client.Client, gw GatewayRef, srr *
 		return fmt.Errorf("HTTPRoute not accepted on the entry mTLS listener for its current generation")
 	}
 
-	if srrAuthMode(srr) != "none" {
-		if err := gatewayPolicyReady(ctx, c, securityPolicyGVK, srr.Namespace, securityPolicyName(srr), gw); err != nil {
+	if isSystemDesktopRoute(srr) && srrAuthMode(srr) != gateway.AuthModeExtAuth {
+		return fmt.Errorf("Desktop Entry requires external authorization")
+	}
+	if srrAuthMode(srr) != gateway.AuthModeNone {
+		policy, err := acceptedGatewayPolicy(ctx, c, securityPolicyGVK, srr.Namespace, securityPolicyName(srr), gw, l4MTLSGatewaySectN)
+		if err != nil {
 			return err
+		}
+		if isSystemDesktopRoute(srr) && !reflect.DeepEqual(policy.Object["spec"],
+			desiredApplicationExtAuthSecurityPolicy(srr).Object["spec"]) {
+			return fmt.Errorf("Desktop Entry does not enforce the expected external authorization")
 		}
 	}
 	validation := schema.GroupVersionKind{Group: "gateway.envoyproxy.io", Version: "v1alpha1", Kind: "ClientTrafficPolicy"}
-	if err := gatewayPolicyReady(ctx, c, validation, gw.gatewayNamespace(), "app-gateway-l4-entry-mtls", gw); err != nil {
+	if _, err := acceptedGatewayPolicy(ctx, c, validation, gw.gatewayNamespace(), "app-gateway-l4-entry-mtls", gw, l4MTLSGatewaySectN); err != nil {
 		return err
 	}
 
 	if needsL4Authz(srr) {
-		if !gatewayListenerReady(gateway, l4AuthzSection) {
+		if !gatewayListenerReady(gatewayObject, l4AuthzSection) {
 			return fmt.Errorf("L4 authorization listener is not programmed")
 		}
-		if err := gatewayPolicyReadyForSection(ctx, c, validation, gw.gatewayNamespace(), "app-gateway-l4-authz-mtls", gw, l4AuthzSection); err != nil {
+		if _, err := acceptedGatewayPolicy(ctx, c, validation, gw.gatewayNamespace(), "app-gateway-l4-authz-mtls", gw, l4AuthzSection); err != nil {
 			return err
 		}
 		check := l4AuthzRoute(srr)
@@ -126,18 +135,17 @@ func httpRouteMeshDependenciesReady(ctx context.Context, c client.Client, backen
 	return nil
 }
 
-func gatewayPolicyReady(ctx context.Context, c client.Client, gvk schema.GroupVersionKind, ns, name string, gw GatewayRef) error {
-	return gatewayPolicyReadyForSection(ctx, c, gvk, ns, name, gw, l4MTLSGatewaySectN)
-}
-
-func gatewayPolicyReadyForSection(ctx context.Context, c client.Client, gvk schema.GroupVersionKind, ns, name string, gw GatewayRef, section string) error {
+func acceptedGatewayPolicy(ctx context.Context, c client.Client, gvk schema.GroupVersionKind, ns, name string, gw GatewayRef, section string) (*unstructured.Unstructured, error) {
 	policy := &unstructured.Unstructured{}
 	policy.SetGroupVersionKind(gvk)
 	if err := c.Get(ctx, client.ObjectKey{Namespace: ns, Name: name}, policy); err != nil {
-		return err
+		return nil, err
+	}
+	if !policy.GetDeletionTimestamp().IsZero() {
+		return nil, fmt.Errorf("%s %s is being deleted", gvk.Kind, name)
 	}
 	if gvk.Kind == "ClientTrafficPolicy" && !validEntryClientPolicy(policy, gw, section) {
-		return fmt.Errorf("ClientTrafficPolicy %s does not enforce the expected Entry client identity", name)
+		return nil, fmt.Errorf("ClientTrafficPolicy %s does not enforce the expected Entry client identity", name)
 	}
 	ancestors, _, _ := unstructured.NestedSlice(policy.Object, "status", "ancestors")
 	for _, raw := range ancestors {
@@ -156,10 +164,10 @@ func gatewayPolicyReadyForSection(ctx context.Context, c client.Client, gvk sche
 		}
 		conditions, _, _ := unstructured.NestedSlice(ancestor, "conditions")
 		if conditionReady(conditions, policy.GetGeneration(), "Accepted") {
-			return nil
+			return policy, nil
 		}
 	}
-	return fmt.Errorf("%s %s has no accepted status for this gateway", gvk.Kind, name)
+	return nil, fmt.Errorf("%s %s has no accepted status for this gateway", gvk.Kind, name)
 }
 
 func validEntryClientPolicy(policy *unstructured.Unstructured, gw GatewayRef, section string) bool {
