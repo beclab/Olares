@@ -144,12 +144,6 @@ func transportPair(labels map[string]string, leg string, source meshTransportPee
 	if len(backend.serviceIPs) > 0 {
 		out.Spec.Egress = append(out.Spec.Egress, netv1.NetworkPolicyEgressRule{To: backend.serviceIPs, Ports: []netv1.NetworkPolicyPort{backend.servicePort}})
 	}
-	if tenant, ok := strings.CutPrefix(source.namespace, "user-system-"); ok && tenant != "" &&
-		source.selector["app"] == "systemserver" && source.selector["linkerd.io/control-plane-ns"] == mesh.LinkerdNamespace {
-		// Any Egress policy isolates the Pod, even before traffic-group activation.
-		// Keep the coordinator reachable in the same write that enables route egress.
-		out.Spec.Egress = append(out.Spec.Egress, security.SystemServerCitusEgressRule())
-	}
 	in := netv1.NetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{Name: base + "-ingress", Namespace: backend.peer.namespace, Labels: labels},
 		Spec: netv1.NetworkPolicySpec{
@@ -159,6 +153,26 @@ func transportPair(labels map[string]string, leg string, source meshTransportPee
 		},
 	}
 	return []netv1.NetworkPolicy{out, in}
+}
+
+func authTransportPair(ctx context.Context, c client.Client, labels map[string]string, leg string, source meshTransportPeer, backend meshTransportBackend) ([]netv1.NetworkPolicy, error) {
+	policies := transportPair(labels, leg, source, backend)
+	tenant, ok := strings.CutPrefix(source.namespace, "user-system-")
+	if !ok || tenant == "" || source.selector["app"] != "systemserver" ||
+		source.selector["linkerd.io/control-plane-ns"] != mesh.LinkerdNamespace {
+		return policies, nil
+	}
+
+	dns := &corev1.Service{}
+	err := c.Get(ctx, client.ObjectKey{Namespace: metav1.NamespaceSystem, Name: security.CoreDNSServiceName}, dns)
+	if client.IgnoreNotFound(err) != nil {
+		return nil, fmt.Errorf("get CoreDNS Service: %w", err)
+	}
+	// Any Egress policy isolates the Pod, even before traffic-group activation.
+	// Include its native database and DNS dependencies in that first write.
+	policies[0].Spec.Egress = append(policies[0].Spec.Egress,
+		security.SystemServerCitusEgressRule(), security.CoreDNSEgressRule(dns))
+	return policies, nil
 }
 
 // systemLoginTransport runs before the frontend readiness check. The login
@@ -199,7 +213,7 @@ func systemLoginTransport(ctx context.Context, c client.Client, srr *srrv1alpha1
 		}
 		backends = append(backends, backend)
 	}
-	return transportPair(transportLabels(client.ObjectKeyFromObject(srr)), "login-backend", backends[0].peer, backends[1]), nil
+	return authTransportPair(ctx, c, transportLabels(client.ObjectKeyFromObject(srr)), "login-backend", backends[0].peer, backends[1])
 }
 
 func applyMeshTransport(ctx context.Context, c client.Client, gw GatewayRef, srr *srrv1alpha1.SharedRouteRegistry, service *corev1.Service, port int32, bootstrap map[client.ObjectKey]bool) error {
@@ -229,7 +243,11 @@ func applyMeshTransport(ctx context.Context, c client.Client, gw GatewayRef, srr
 			auth = append(auth, b)
 		}
 		policies = append(policies, transportPair(labels, "auth-proxy", gatewayPeer, auth[0])...)
-		policies = append(policies, transportPair(labels, "auth-server", auth[0].peer, auth[1])...)
+		authServer, err := authTransportPair(ctx, c, labels, "auth-server", auth[0].peer, auth[1])
+		if err != nil {
+			return err
+		}
+		policies = append(policies, authServer...)
 	}
 
 	keep, err := upsertMeshTransports(ctx, c, key, policies)
