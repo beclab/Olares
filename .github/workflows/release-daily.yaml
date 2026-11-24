@@ -29,6 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       id: ${{ steps.generate.outputs.id }}
+      sha: ${{ steps.generate.outputs.sha }}
     steps:
       - name: 'Checkout source code'
         uses: actions/checkout@v3
@@ -38,6 +39,7 @@ jobs:
         run: |
           hash=$(git rev-parse --short=7 HEAD)
           echo "id=$hash" >> "$GITHUB_OUTPUT"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
   release-cli:
     needs: [daily-version, release-id]
@@ -232,6 +234,8 @@ jobs:
   release:
     needs: [daily-version, upload-package, release-cli, release-id]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: 'Checkout source code'
@@ -262,12 +266,24 @@ jobs:
           cp .dist/install-wizard/install.ps1 build/base-package
           cp .dist/install-wizard/joincluster.sh build/base-package
 
+      - name: Update daily tag to release commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.daily-version.outputs.version }}
+          SHA: ${{ needs.release-id.outputs.sha }}
+        run: |
+          if gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${TAG}" > /dev/null 2>&1; then
+            gh api -X PATCH "repos/${GITHUB_REPOSITORY}/git/refs/tags/${TAG}" -f sha="${SHA}" -F force=true
+          else
+            gh api -X POST "repos/${GITHUB_REPOSITORY}/git/refs" -f ref="refs/tags/${TAG}" -f sha="${SHA}"
+          fi
+
       - name: Release public files
         uses: softprops/action-gh-release@v1
         with:
           name: v${{ needs.daily-version.outputs.version }} Release
           tag_name: ${{ needs.daily-version.outputs.version }}
-          target_commitish: ${{ env.RELEASE_BRANCH }}
+          target_commitish: ${{ needs.release-id.outputs.sha }}
           files: |
             install-wizard-v${{ needs.daily-version.outputs.version }}.tar.gz
             build/base-package/publicInstaller.sh
