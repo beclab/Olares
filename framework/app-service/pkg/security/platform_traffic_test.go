@@ -386,7 +386,7 @@ func TestDesktopBFLCompatibilityOnlyAllowsSameTenantUnmeshedAPI(t *testing.T) {
 	}
 }
 
-func TestBFLMeshTransportForAutheliaAndCertificateRefresh(t *testing.T) {
+func TestBFLMeshTransportForRegisteredCallers(t *testing.T) {
 	key := types.NamespacedName{Namespace: "user-space-alice", Name: "bfl"}
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{Namespace: key.Namespace, Name: key.Name},
@@ -422,6 +422,21 @@ func TestBFLMeshTransportForAutheliaAndCertificateRefresh(t *testing.T) {
 		{"bfl-cert-refresh", key.Namespace, map[string]string{
 			"app.kubernetes.io/name": "bfl-cert-refresh", "linkerd.io/control-plane-ns": "os-mesh",
 		}},
+		{"desktop-bfl", key.Namespace, map[string]string{
+			"app": "olares-app", "linkerd.io/control-plane-ns": "os-mesh",
+		}},
+		{"login-bfl", key.Namespace, map[string]string{
+			"app": "authelia", "linkerd.io/control-plane-ns": "os-mesh",
+		}},
+		{"wizard-bfl", key.Namespace, map[string]string{
+			"app": "wizard", "linkerd.io/control-plane-ns": "os-mesh",
+		}},
+		{"tapr-images-bfl", "user-system-alice", map[string]string{
+			"app": "tapr-images", "linkerd.io/control-plane-ns": "os-mesh",
+		}},
+		{"vault-bfl", "os-framework", map[string]string{
+			"app": "vault-server", "linkerd.io/control-plane-ns": "os-mesh",
+		}},
 	} {
 		out, in := lookup(tc.namespace, tc.name+"-egress"), lookup(key.Namespace, tc.name+"-ingress")
 		if len(out.Spec.Egress) != 2 || len(in.Spec.Ingress) != 1 ||
@@ -435,6 +450,7 @@ func TestBFLMeshTransportForAutheliaAndCertificateRefresh(t *testing.T) {
 	}
 	delete(services, key)
 	if len(lookup("os-framework", "authelia-bfl-mesh-egress").Spec.Egress) != 0 ||
+		len(lookup("os-framework", "vault-bfl-egress").Spec.Egress) != 0 ||
 		len(lookup(key.Namespace, "bfl-cert-refresh-egress").Spec.Egress) != 0 ||
 		len(lookup(key.Namespace, "authelia-bfl-mesh-ingress").Spec.Ingress) != 0 ||
 		len(lookup(key.Namespace, "bfl-cert-refresh-ingress").Spec.Ingress) != 0 {

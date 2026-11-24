@@ -60,6 +60,12 @@ spec:
       - name: vault
 
 ---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: bfl-vault
+  namespace: {{ .Release.Namespace }}
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -79,7 +85,11 @@ spec:
     metadata:
       labels:
         app: vault-server
+      annotations:
+        linkerd.io/inject: enabled
+        config.linkerd.io/proxy-enable-native-sidecar: "true"
     spec:
+      serviceAccountName: bfl-vault
       priorityClassName: "system-cluster-critical"
       affinity:
         nodeAffinity:

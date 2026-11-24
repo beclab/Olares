@@ -1,5 +1,6 @@
 bfl:
   prepareCertRefreshMesh: false
+  enforceAPIMesh: false
   nodeport: 30883
   nodeport_ingress_http: 30083
   nodeport_ingress_https: 30082

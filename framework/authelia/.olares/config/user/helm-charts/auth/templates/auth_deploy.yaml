@@ -25,6 +25,7 @@ spec:
         config.linkerd.io/default-inbound-policy: cluster-authenticated
         traffic.olares.io/mtls-mode: Required
     spec:
+      serviceAccountName: bfl-login
       priorityClassName: "system-cluster-critical"
       initContainers:
       - args:
@@ -40,6 +41,13 @@ spec:
         ports:
         - containerPort: 80
         
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: bfl-login
+  namespace: user-space-{{ .Values.bfl.username }}
+automountServiceAccountToken: false
 ---
 apiVersion: v1
 kind: Service

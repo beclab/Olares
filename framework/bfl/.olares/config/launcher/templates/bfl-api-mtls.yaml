@@ -1,0 +1,90 @@
+{{- if .Values.bfl.enforceAPIMesh }}
+{{- $ns := .Release.Namespace -}}
+{{- if ne $ns (printf "user-space-%s" .Values.bfl.username) -}}
+{{- fail "BFL API mTLS must be rendered into its tenant user-space namespace" -}}
+{{- end -}}
+{{- $systemNS := printf "user-system-%s" .Values.bfl.username -}}
+{{- $desktop := dict "name" "system-frontend" "namespace" $ns -}}
+{{- $wizard := dict "name" "bfl-wizard" "namespace" $ns -}}
+{{- $login := dict "name" "bfl-login" "namespace" $ns -}}
+{{- $authelia := dict "name" "os-internal" "namespace" "os-framework" -}}
+{{- $vault := dict "name" "bfl-vault" "namespace" "os-framework" -}}
+{{- $tapr := dict "name" "tapr-images" "namespace" $systemNS -}}
+{{- $refresh := dict "name" "bfl-cert-refresh" "namespace" $ns -}}
+apiVersion: policy.linkerd.io/v1beta3
+kind: Server
+metadata:
+  name: bfl-api
+  namespace: {{ $ns }}
+spec:
+  podSelector:
+    matchLabels:
+      tier: bfl
+      traffic.olares.io/bfl-api-mtls: required
+  port: 8080
+  proxyProtocol: HTTP/1
+  accessPolicy: deny
+{{- range $route := list
+  (dict "name" "frontend-modules" "paths" (list "/bfl/iam/v1alpha1" "/bfl/settings/v1alpha1" "/bfl/monitor/v1alpha1") "type" "PathPrefix" "methods" (list "") "accounts" (list $desktop $wizard))
+  (dict "name" "frontend-backend" "paths" (list "/bfl/backend/v1/terminus-info" "/bfl/backend/v1/olares-info" "/bfl/backend/v1/cluster" "/bfl/backend/v1/config-system") "methods" (list "GET" "OPTIONS") "accounts" (list $desktop $wizard))
+  (dict "name" "frontend-apps" "paths" (list "/bfl/backend/v1/myapps") "methods" (list "POST" "OPTIONS") "accounts" (list $desktop $wizard))
+  (dict "name" "user-info" "paths" (list "/bfl/backend/v1/user-info") "methods" (list "GET" "OPTIONS") "accounts" (list $desktop $wizard $authelia))
+  (dict "name" "public-info" "paths" (list "/bfl/info/v1/olares-info") "methods" (list "GET" "OPTIONS") "accounts" (list $desktop $wizard $login $vault))
+  (dict "name" "login-cluster" "paths" (list "/bfl/monitor/v1alpha1/cluster") "methods" (list "GET" "OPTIONS") "accounts" (list $desktop $wizard $login))
+  (dict "name" "login-password" "paths" (list "/bfl/iam/v1alpha1/users") "type" "PathPrefix" "methods" (list "PUT" "OPTIONS") "accounts" (list $desktop $wizard $login))
+  (dict "name" "vault-binding" "paths" (list "/bfl/settings/v1alpha1/binding-zone") "methods" (list "POST") "accounts" (list $desktop $wizard $vault))
+  (dict "name" "tapr-app-policy" "paths" (list "/bfl/settings/v1alpha1/applications") "type" "PathPrefix" "methods" (list "GET" "POST") "accounts" (list $desktop $wizard $tapr))
+  (dict "name" "cert-refresh" "paths" (list "/bfl/backend/v1/re-download-cert") "methods" (list "GET") "accounts" (list $refresh)) }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: bfl-api-{{ $route.name }}
+  namespace: {{ $ns }}
+spec:
+  parentRefs:
+    - group: policy.linkerd.io
+      kind: Server
+      name: bfl-api
+  rules:
+    - matches:
+        {{- range $path := $route.paths }}
+        {{- range $method := $route.methods }}
+        - path:
+            type: {{ $route.type | default "Exact" }}
+            value: {{ $path }}
+          {{- with $method }}
+          method: {{ . }}
+          {{- end }}
+        {{- end }}
+        {{- end }}
+---
+apiVersion: policy.linkerd.io/v1alpha1
+kind: MeshTLSAuthentication
+metadata:
+  name: bfl-api-{{ $route.name }}
+  namespace: {{ $ns }}
+spec:
+  identityRefs:
+    {{- range $account := $route.accounts }}
+    - kind: ServiceAccount
+      name: {{ $account.name }}
+      namespace: {{ $account.namespace }}
+    {{- end }}
+---
+apiVersion: policy.linkerd.io/v1alpha1
+kind: AuthorizationPolicy
+metadata:
+  name: bfl-api-{{ $route.name }}
+  namespace: {{ $ns }}
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: bfl-api-{{ $route.name }}
+  requiredAuthenticationRefs:
+    - group: policy.linkerd.io
+      kind: MeshTLSAuthentication
+      name: bfl-api-{{ $route.name }}
+{{- end }}
+{{- end }}
