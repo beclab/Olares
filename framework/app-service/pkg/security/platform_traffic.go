@@ -303,7 +303,7 @@ func SystemServerCitusEgressRule() netv1.NetworkPolicyEgressRule {
 }
 
 // SystemServerProviderEgressRules scopes the verified provider proxy destinations.
-func SystemServerProviderEgressRules(tenant string, infisical, bfl *corev1.Service) []netv1.NetworkPolicyEgressRule {
+func SystemServerProviderEgressRules(tenant string, infisical, bfl, appService *corev1.Service) []netv1.NetworkPolicyEgressRule {
 	if tenant == "" {
 		return nil
 	}
@@ -330,6 +330,23 @@ func SystemServerProviderEgressRules(tenant string, infisical, bfl *corev1.Servi
 		rules = append(rules, netv1.NetworkPolicyEgressRule{
 			To:    []netv1.NetworkPolicyPeer{platformPeer(bflFlow.service.Namespace, target)},
 			Ports: []netv1.NetworkPolicyPort{tcpPort(8080), tcpPort(4143)},
+		})
+	}
+	appServiceFlow := platformServiceFlow{
+		service:     types.NamespacedName{Namespace: "os-framework", Name: "app-service"},
+		to:          map[string]string{"tier": "app-service"},
+		servicePort: 6755,
+		targetPort:  6755,
+	}
+	if appServiceFlow.matchesService(appService) {
+		// Do not grant the VIP, which may still serve unenrolled endpoints.
+		target := map[string]string{
+			"tier": "app-service", platformMeshControlPlaneLabel: "os-mesh",
+			"traffic.olares.io/app-service-api-mtls": "required",
+		}
+		rules = append(rules, netv1.NetworkPolicyEgressRule{
+			To:    []netv1.NetworkPolicyPeer{platformPeer(appServiceFlow.service.Namespace, target)},
+			Ports: []netv1.NetworkPolicyPort{tcpPort(6755), tcpPort(4143)},
 		})
 	}
 	return rules

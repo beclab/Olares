@@ -202,7 +202,19 @@ func TestSystemLoginStartsBackendTransportBeforeFrontend(t *testing.T) {
 			Ports:    []corev1.ServicePort{{Port: 80, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt32(8080)}},
 		},
 	}
-	authBackends = append(authBackends, dns, infisical, bfl)
+	appService := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "os-framework", Name: "app-service"},
+		Spec: corev1.ServiceSpec{
+			Type: corev1.ServiceTypeClusterIP, ClusterIP: "10.96.0.13",
+			Selector: map[string]string{"tier": "app-service"},
+			Ports: []corev1.ServicePort{
+				{Port: 6755, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt32(6755)},
+				{Port: 8433, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt32(8433)},
+				{Port: 8444, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromString("jwks")},
+			},
+		},
+	}
+	authBackends = append(authBackends, dns, infisical, bfl, appService)
 	c := fake.NewClientBuilder().WithScheme(testSchemeWithSecurityPolicy(t)).WithObjects(authBackends...).Build()
 	if err := gateway.EnsureSystemPlaneRoutes(ctx, c, "alice", "alice.olares.com", "user-space-alice", false); err != nil {
 		t.Fatal(err)
@@ -275,6 +287,13 @@ func TestSystemLoginStartsBackendTransportBeforeFrontend(t *testing.T) {
 					}}).networkPolicyPeer()},
 					Ports: []netv1.NetworkPolicyPort{meshTransportPort(8080), meshTransportPort(4143)},
 				},
+				{
+					To: []netv1.NetworkPolicyPeer{(meshTransportPeer{"os-framework", map[string]string{
+						"tier": "app-service", "linkerd.io/control-plane-ns": "os-mesh",
+						"traffic.olares.io/app-service-api-mtls": "required",
+					}}).networkPolicyPeer()},
+					Ports: []netv1.NetworkPolicyPort{meshTransportPort(6755), meshTransportPort(4143)},
+				},
 			}) {
 				t.Fatalf("unexpected system-server bootstrap dependencies: %+v", p.Spec.Egress)
 			}
@@ -315,6 +334,9 @@ func TestSystemLoginStartsBackendTransportBeforeFrontend(t *testing.T) {
 	}
 	bfl.Spec.Ports[0].TargetPort = intstr.FromInt32(8081)
 	if err := c.Update(ctx, bfl); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Delete(ctx, appService); err != nil {
 		t.Fatal(err)
 	}
 	checkRoute(ReasonAwaitingDataPlane)
