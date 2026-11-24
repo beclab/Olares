@@ -29,6 +29,24 @@ func TestRolloutFingerprint(t *testing.T) {
 	}
 }
 
+func TestNativeMeshInInjectionDetection(t *testing.T) {
+	always := corev1.ContainerRestartPolicyAlways
+	pod := &corev1.Pod{Spec: corev1.PodSpec{InitContainers: []corev1.Container{
+		{Name: ContainerName, RestartPolicy: &always},
+		{Name: mesh.LinkerdProxyContainer, RestartPolicy: &always},
+	}}}
+	if podNeedsInjectChange(pod, SharedCallerInject(true)) {
+		t.Fatal("native sidecars must be recognised as injected")
+	}
+	if !podNeedsInjectChange(pod, SharedCallerInject(false)) {
+		t.Fatal("native sidecars must be recognised when injection is disabled")
+	}
+	pod.Spec.InitContainers[0].RestartPolicy = nil
+	if !podNeedsInjectChange(pod, SharedCallerInject(true)) {
+		t.Fatal("a regular init container must not be treated as a running sidecar")
+	}
+}
+
 func TestRolloutQueuePromotedKeyAcquiresWithoutExtraSlot(t *testing.T) {
 	q := NewRolloutQueue(2)
 	if !q.TryAcquire("a") || !q.TryAcquire("b") {

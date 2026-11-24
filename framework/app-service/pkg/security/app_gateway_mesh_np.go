@@ -1,6 +1,7 @@
 package security
 
 import (
+	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -48,7 +49,18 @@ func NewAppGatewayMeshNPOsMesh() *netv1.NetworkPolicy {
 					platformMeshPeer("kubernetes.io/metadata.name", "os-framework", "os-platform", "os-protected"),
 					platformMeshPeer(NamespaceTypeLabel, Internal, UserSpace),
 				},
-				Ports: appGatewayMeshNPPorts(),
+				Ports: appGatewayMeshNPPorts(8080, 8086, 8090, 9443, 443),
+			}, {
+				From: []netv1.NetworkPolicyPeer{{
+					NamespaceSelector: &metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{
+						{Key: constants.ApplicationNameLabel, Operator: metav1.LabelSelectorOpExists},
+						{Key: constants.ApplicationInstallUserLabel, Operator: metav1.LabelSelectorOpExists},
+					}},
+					PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{
+						"linkerd.io/control-plane-ns": MeshControlPlaneNamespace,
+					}},
+				}},
+				Ports: appGatewayMeshNPPorts(8080, 8086, 8090),
 			}},
 		},
 	}
@@ -96,9 +108,8 @@ func appGatewayMeshNPLabels() map[string]string {
 	}
 }
 
-func appGatewayMeshNPPorts() []netv1.NetworkPolicyPort {
+func appGatewayMeshNPPorts(ports ...int32) []netv1.NetworkPolicyPort {
 	tcp := corev1.ProtocolTCP
-	ports := []int32{8080, 8086, 8090, 9443, 443}
 	out := make([]netv1.NetworkPolicyPort, 0, len(ports))
 	for _, p := range ports {
 		port := intstr.FromInt32(p)

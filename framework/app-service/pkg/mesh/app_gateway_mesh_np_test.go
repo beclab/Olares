@@ -4,7 +4,10 @@ import (
 	"context"
 	"testing"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	networkingv1 "k8s.io/api/networking/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -28,7 +31,7 @@ func TestEnsureAppGatewayMeshNetworkPolicies(t *testing.T) {
 	}, meshNP); err != nil {
 		t.Fatalf("os-mesh NP: %v", err)
 	}
-	if len(meshNP.Spec.Ingress) != 1 || len(meshNP.Spec.Ingress[0].From) != 6 {
+	if len(meshNP.Spec.Ingress) != 2 || len(meshNP.Spec.Ingress[0].From) != 6 {
 		t.Fatalf("os-mesh from peers = %+v", meshNP.Spec.Ingress)
 	}
 	foundCaller := false
@@ -53,6 +56,30 @@ func TestEnsureAppGatewayMeshNetworkPolicies(t *testing.T) {
 	}
 	if len(meshNP.Spec.Ingress[0].Ports) != 5 {
 		t.Fatalf("ports = %+v", meshNP.Spec.Ingress[0].Ports)
+	}
+	appIngress := meshNP.Spec.Ingress[1]
+	if len(appIngress.From) != 1 || appIngress.From[0].PodSelector == nil ||
+		appIngress.From[0].PodSelector.MatchLabels["linkerd.io/control-plane-ns"] != security.MeshControlPlaneNamespace {
+		t.Fatalf("app ingress requires an enrolled proxy: %+v", appIngress.From)
+	}
+	selector, err := metav1.LabelSelectorAsSelector(appIngress.From[0].NamespaceSelector)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !selector.Matches(labels.Set{constants.ApplicationNameLabel: "photos", constants.ApplicationInstallUserLabel: "alice"}) ||
+		selector.Matches(labels.Set{constants.ApplicationNameLabel: "photos"}) ||
+		selector.Matches(labels.Set{constants.ApplicationInstallUserLabel: "alice"}) {
+		t.Fatal("app ingress must require both installer ownership labels")
+	}
+	ports := map[int32]bool{8080: true, 8086: true, 8090: true}
+	for _, port := range appIngress.Ports {
+		if port.Port == nil || port.Protocol == nil || *port.Protocol != "TCP" || !ports[port.Port.IntVal] || port.EndPort != nil {
+			t.Fatalf("unexpected app control-plane port: %+v", port)
+		}
+		delete(ports, port.Port.IntVal)
+	}
+	if len(ports) != 0 {
+		t.Fatalf("missing app control-plane ports: %v", ports)
 	}
 	if !security.IsAppGatewayMeshManagedNP(meshNP) {
 		t.Fatalf("os-mesh NP labels must be security-sweep exempt: %+v", meshNP.Labels)

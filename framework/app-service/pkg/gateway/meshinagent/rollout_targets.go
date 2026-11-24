@@ -284,6 +284,7 @@ func podNeedsInjectChange(pod *corev1.Pod, want InjectSpec) bool {
 			has.MeshIn = true
 		}
 	}
+	has.MeshIn = has.MeshIn || HasNativeMeshIn(pod)
 	if !want.MeshIn && !want.Linkerd {
 		return has.MeshIn || has.Linkerd
 	}

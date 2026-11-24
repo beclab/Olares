@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -39,11 +40,20 @@ func ContainerSpec() corev1.Container {
 	uid := constants.MeshInAgentUID
 	nonRoot := true
 	noEsc := false
+	always := corev1.ContainerRestartPolicyAlways
 	return corev1.Container{
 		Name:            ContainerName,
 		Image:           meshInAgentImage(),
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		Command:         []string{"/bin/sh", "-c", agentStartScript()},
+		RestartPolicy:   &always,
+		StartupProbe: &corev1.Probe{
+			ProbeHandler: corev1.ProbeHandler{Exec: &corev1.ExecAction{Command: []string{
+				"/bin/sh", "-ec", fmt.Sprintf("nc -z -w 1 127.0.0.1 %d && nc -z -w 1 127.0.0.1 %d",
+					HTTPListenPort, HTTPSListenPort),
+			}}},
+			TimeoutSeconds: 3, PeriodSeconds: 2, FailureThreshold: 60,
+		},
 		Ports: []corev1.ContainerPort{
 			{
 				Name:          listenPortName,
@@ -320,4 +330,30 @@ func boolPtr(v bool) *bool { return &v }
 // IsStubImage reports whether image is the deprecated scaffold stub.
 func IsStubImage(image string) bool {
 	return strings.Contains(image, "0.0.0-stub")
+}
+
+// InsertNativeMeshIn starts mesh-in before application init containers. If
+// Linkerd has already injected, keep its init/proxy prefix ahead of mesh-in.
+func InsertNativeMeshIn(pod *corev1.Pod, gatewayIPs string) {
+	index := 0
+	for index < len(pod.Spec.InitContainers) {
+		name := pod.Spec.InitContainers[index].Name
+		if name != "linkerd-init" && name != "linkerd-proxy" {
+			break
+		}
+		index++
+	}
+	pod.Spec.InitContainers = slices.Insert(pod.Spec.InitContainers, index,
+		InitContainerSpecWithGatewayIPs(gatewayIPs), ContainerSpec())
+}
+
+// HasNativeMeshIn reports whether mesh-in remains running after init.
+func HasNativeMeshIn(pod *corev1.Pod) bool {
+	for _, container := range pod.Spec.InitContainers {
+		if container.Name == ContainerName && container.RestartPolicy != nil &&
+			*container.RestartPolicy == corev1.ContainerRestartPolicyAlways {
+			return true
+		}
+	}
+	return false
 }

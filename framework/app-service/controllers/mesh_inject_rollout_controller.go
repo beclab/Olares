@@ -7,6 +7,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway/meshinagent"
 	"github.com/beclab/Olares/framework/app-service/pkg/mesh"
 	appsv1 "k8s.io/api/apps/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -78,6 +79,21 @@ func (r *MeshInjectRolloutReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	default:
 		if epoch == "" || epoch == "0" {
 			_ = meshinagent.StoreMeshInjectRolloutState(ctx, r.Client, false, "0")
+		}
+	}
+	if ready && worker != nil && req.Namespace == mesh.LinkerdNamespace && req.Name == "linkerd-proxy-injector" {
+		injector, err := r.Kube.AppsV1().Deployments(req.Namespace).Get(ctx, req.Name, metav1.GetOptions{})
+		if err != nil {
+			return ctrl.Result{}, client.IgnoreNotFound(err)
+		}
+		nativeReady, err := meshinagent.NativeInjectorReady(ctx, r.Kube, injector)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		if nativeReady {
+			if err := worker.EnqueueNativeSidecarMigration(ctx); err != nil {
+				return ctrl.Result{}, err
+			}
 		}
 	}
 	return ctrl.Result{RequeueAfter: after}, nil
