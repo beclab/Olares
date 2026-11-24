@@ -3,7 +3,7 @@
 # beclab/mesh-in-agent — nginx alpine + njs; process UID 1651.
 # Build context: framework/app-service/build/mesh-in-agent
 
-ARG NGINX_ALPINE_TAG=1.30.0-alpine
+ARG NGINX_ALPINE_TAG=1.30.8-alpine
 ARG MESH_IN_UID=1651
 ARG GO_VERSION=1.24.3
 
@@ -16,9 +16,9 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go build -trimpath -ldflags="-
 
 FROM nginx:${NGINX_ALPINE_TAG}
 
-ARG NGINX_ALPINE_TAG=1.30.0-alpine
-ARG NGINX_VERSION=1.30.0
-ARG NJS_OLARES_REV=r5
+ARG NGINX_ALPINE_TAG=1.30.8-alpine
+ARG NGINX_VERSION=1.30.8
+ARG NJS_OLARES_REV=r1
 ARG SOURCE_COMMIT=unknown
 ARG BUILD_DATE=unknown
 ARG MESH_IN_UID=1651
@@ -53,9 +53,11 @@ RUN set -eux; \
       sed -i "s/^[[:space:]]*user[[:space:]].*/user  meshin;/" /etc/nginx/nginx.conf; \
     fi; \
     NGINX_VER="$(nginx -v 2>&1 | sed -n 's/^nginx version: nginx\///p')"; \
+    test "$NGINX_VER" = "$NGINX_VERSION"; \
     NJS_APK="$(apk info -e -v nginx-module-njs | head -n1)"; \
-    NJS_VER="$(printf '%s\n' "$NJS_APK" | sed -n 's/^nginx-module-njs-[0-9.]*\.0\.\([0-9.]*\)-r[0-9]*$/\1/p')"; \
-    if [ -z "$NJS_VER" ]; then NJS_VER="$(printf '%s\n' "$NJS_APK" | sed -n 's/^nginx-module-njs-//p')"; fi; \
+    NJS_VER="${NJS_APK#nginx-module-njs-${NGINX_VER}.}"; \
+    test "$NJS_VER" != "$NJS_APK"; \
+    NJS_VER="${NJS_VER%-r*}"; \
     mkdir -p /usr/share/doc/mesh-in-agent; \
     { \
       echo "base_image=nginx:${NGINX_ALPINE_TAG}"; \
