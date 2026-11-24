@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"slices"
 	"strings"
 	"testing"
 
@@ -282,6 +283,55 @@ func TestDesiredApplicationExtAuthSecurityPolicy(t *testing.T) {
 	}
 	if be["port"] != int64(AutheliaBackendPort) {
 		t.Fatalf("port = %#v", be["port"])
+	}
+}
+
+func TestApplyDesktopExtAuthReplacesLegacyPath(t *testing.T) {
+	ctx := t.Context()
+	srr := &srrv1alpha1.SharedRouteRegistry{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "sys-desktop", Namespace: "user-space-alice", UID: "desktop-entrance",
+			Labels: map[string]string{
+				ManagedByLabel: ManagedByValue, InstanceLabel: gateway.SystemPlaneInstance,
+				gateway.LabelSystemPlane: gateway.LabelSystemPlaneValue,
+			},
+			Annotations: map[string]string{gateway.AnnotationExtAuthUser: "alice"},
+		},
+		Spec: srrv1alpha1.SharedRouteRegistrySpec{EntranceClass: srrv1alpha1.EntranceClassApplication},
+	}
+	existing := desiredApplicationExtAuthSecurityPolicy(srr)
+	existing.SetUID("existing-policy")
+	unstructured.RemoveNestedField(existing.Object, "spec", "extAuth", "http", "pathOverride")
+	if err := unstructured.SetNestedField(existing.Object, "/api/verify", "spec", "extAuth", "http", "path"); err != nil {
+		t.Fatal(err)
+	}
+	c := fake.NewClientBuilder().WithScheme(testSchemeWithSecurityPolicy(t)).WithObjects(existing).Build()
+	if err := applySecurityPolicy(ctx, c, srr); err != nil {
+		t.Fatal(err)
+	}
+	got := existing.DeepCopy()
+	if err := c.Get(ctx, types.NamespacedName{Namespace: existing.GetNamespace(), Name: existing.GetName()}, got); err != nil {
+		t.Fatal(err)
+	}
+	path, found, err := unstructured.NestedString(got.Object, "spec", "extAuth", "http", "pathOverride")
+	if err != nil || !found || path != "/api/verify" || got.GetUID() != existing.GetUID() {
+		t.Fatalf("existing policy did not get the canonical path: %q, found=%v, err=%v", path, found, err)
+	}
+	if _, found, _ := unstructured.NestedFieldNoCopy(got.Object, "spec", "extAuth", "http", "path"); found {
+		t.Fatal("legacy path prefix remains alongside the override")
+	}
+	if failOpen, found, _ := unstructured.NestedBool(got.Object, "spec", "extAuth", "failOpen"); !found || failOpen {
+		t.Fatal("Desktop authorization must stay fail-closed")
+	}
+	headers, _, err := unstructured.NestedStringSlice(got.Object, "spec", "extAuth", "headersToExtAuth")
+	for _, header := range []string{"accept", "cookie", "x-bfl-user", "x-original-url", "x-original-method"} {
+		if err != nil || !slices.Contains(headers, header) {
+			t.Fatalf("Desktop authorization is missing header %q: %v", header, err)
+		}
+	}
+	backends, _, _ := unstructured.NestedSlice(got.Object, "spec", "extAuth", "http", "backendRefs")
+	if len(backends) != 1 || backends[0].(map[string]any)["namespace"] != "user-system-alice" {
+		t.Fatalf("Desktop authorization must use the tenant backend: %v", backends)
 	}
 }
 

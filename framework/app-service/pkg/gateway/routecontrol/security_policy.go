@@ -213,6 +213,27 @@ func desiredApplicationExtAuthSecurityPolicy(srr *srrv1alpha1.SharedRouteRegistr
 	}
 	routeName := httpRouteName(srr)
 	autheliaNS := "user-system-" + user
+	authHTTP := map[string]any{
+		"backendRefs": []any{
+			map[string]any{
+				"group":     "",
+				"kind":      "Service",
+				"name":      AutheliaBackendServiceName,
+				"namespace": autheliaNS,
+				"port":      int64(AutheliaBackendPort),
+			},
+		},
+	}
+	headers := []any{"authorization", "cookie", "x-forwarded-for", "x-authorization", "x-bfl-user"}
+	if isMainSystemEntry(srr) && srr.Name == gateway.SystemPlaneSRRName("desktop") {
+		// Unlike a path prefix, the override does not append the Desktop path.
+		// This route only accepts Entry mTLS. L4 supplies the original request
+		// metadata after authenticating the browser.
+		authHTTP["pathOverride"] = AutheliaVerifyPath
+		headers = append(headers, "accept", "x-original-url", "x-original-method")
+	} else {
+		authHTTP["path"] = AutheliaVerifyPath
+	}
 	return &unstructured.Unstructured{Object: map[string]any{
 		"apiVersion": "gateway.envoyproxy.io/v1alpha1",
 		"kind":       "SecurityPolicy",
@@ -231,22 +252,9 @@ func desiredApplicationExtAuthSecurityPolicy(srr *srrv1alpha1.SharedRouteRegistr
 				"name":  routeName,
 			},
 			"extAuth": map[string]any{
-				"failOpen": false,
-				"headersToExtAuth": []any{
-					"authorization", "cookie", "x-forwarded-for", "x-authorization", "x-bfl-user",
-				},
-				"http": map[string]any{
-					"backendRefs": []any{
-						map[string]any{
-							"group":     "",
-							"kind":      "Service",
-							"name":      AutheliaBackendServiceName,
-							"namespace": autheliaNS,
-							"port":      int64(AutheliaBackendPort),
-						},
-					},
-					"path": AutheliaVerifyPath,
-				},
+				"failOpen":         false,
+				"headersToExtAuth": headers,
+				"http":             authHTTP,
 			},
 		},
 	}}
