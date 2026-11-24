@@ -21,11 +21,14 @@ limitations under the License.
 package terminal
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
+	"sort"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -44,6 +47,13 @@ import (
 const (
 	// Time allowed to write a message to the peer.
 	writeWait = 10 * time.Second
+
+	hostPasswdVolume = "host-passwd"
+	hostPasswdPath   = "/host/etc/passwd"
+
+	defaultHostUserName = "olares"
+	minNormalUID        = 1000
+	nobodyUID           = 65534
 )
 
 // PtyHandler is what remotecommand expects from a pty
@@ -223,6 +233,7 @@ func (n *NodeTerminaler) getNSEnterPod() (*v1.Pod, error) {
 			}
 		}
 
+		hostPathFile := v1.HostPathFile
 		var p = &v1.Pod{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "pod",
@@ -240,9 +251,6 @@ func (n *NodeTerminaler) getNSEnterPod() (*v1.Pod, error) {
 					{
 						Name:  n.ContainerName,
 						Image: n.Config.Image,
-						Command: []string{
-							"nsenter", "-m", "-u", "-i", "-n", "-p", "-t", "1",
-						},
 						Stdin: true,
 						TTY:   true,
 						SecurityContext: &v1.SecurityContext{
@@ -258,15 +266,33 @@ func (n *NodeTerminaler) getNSEnterPod() (*v1.Pod, error) {
 								Value: "en_US.UTF-8",
 							},
 						},
+						VolumeMounts: []v1.VolumeMount{
+							{
+								Name:      hostPasswdVolume,
+								MountPath: hostPasswdPath,
+								ReadOnly:  true,
+							},
+						},
+					},
+				},
+				Volumes: []v1.Volume{
+					{
+						Name: hostPasswdVolume,
+						VolumeSource: v1.VolumeSource{
+							HostPath: &v1.HostPathVolumeSource{
+								Path: "/etc/passwd",
+								Type: &hostPathFile,
+							},
+						},
 					},
 				},
 			},
 		}
 
 		if n.Config.Timeout == 0 {
-			p.Spec.Containers[0].Args = []string{"tail", "-f", "/dev/null"}
+			p.Spec.Containers[0].Command = []string{"tail", "-f", "/dev/null"}
 		} else {
-			p.Spec.Containers[0].Args = []string{"sleep", strconv.Itoa(n.Config.Timeout)}
+			p.Spec.Containers[0].Command = []string{"sleep", strconv.Itoa(n.Config.Timeout)}
 		}
 
 		pod, err = n.client.CoreV1().Pods(n.Namespace).Create(context.Background(), p, metav1.CreateOptions{})
@@ -293,6 +319,16 @@ func (n NodeTerminaler) CleanUpNSEnterPod() {
 // startProcess is called by handleAttach
 // Executed cmd in the container specified in request and connects it up with the ptyHandler (a session)
 func (t *terminaler) startProcess(namespace, podName, containerName string, cmd []string, ptyHandler PtyHandler) error {
+	return t.execInPod(namespace, podName, containerName, cmd, remotecommand.StreamOptions{
+		Stdin:             ptyHandler,
+		Stdout:            ptyHandler,
+		Stderr:            ptyHandler,
+		TerminalSizeQueue: ptyHandler,
+		Tty:               true,
+	})
+}
+
+func (t *terminaler) execInPod(namespace, podName, containerName string, cmd []string, opts remotecommand.StreamOptions) error {
 	req := t.client.CoreV1().RESTClient().Post().
 		Resource("pods").
 		Name(podName).
@@ -301,10 +337,10 @@ func (t *terminaler) startProcess(namespace, podName, containerName string, cmd 
 	req.VersionedParams(&v1.PodExecOptions{
 		Container: containerName,
 		Command:   cmd,
-		Stdin:     true,
-		Stdout:    true,
-		Stderr:    true,
-		TTY:       true,
+		Stdin:     opts.Stdin != nil,
+		Stdout:    opts.Stdout != nil,
+		Stderr:    opts.Stderr != nil,
+		TTY:       opts.Tty,
 	}, scheme.ParameterCodec)
 
 	exec, err := remotecommand.NewSPDYExecutor(t.config, "POST", req.URL())
@@ -312,18 +348,75 @@ func (t *terminaler) startProcess(namespace, podName, containerName string, cmd 
 		return err
 	}
 
-	err = exec.Stream(remotecommand.StreamOptions{
-		Stdin:             ptyHandler,
-		Stdout:            ptyHandler,
-		Stderr:            ptyHandler,
-		TerminalSizeQueue: ptyHandler,
-		Tty:               true,
-	})
-	if err != nil {
-		return err
+	return exec.Stream(opts)
+}
+
+type hostUser struct {
+	Name string
+	UID  int
+	GID  int
+	Home string
+}
+
+var rootHostUser = hostUser{Name: "root", UID: 0, GID: 0, Home: "/root"}
+
+// selectHostUser picks the user for the node shell from passwd content:
+// "olares" first, then the normal user with the smallest uid, otherwise root.
+func selectHostUser(passwd string) hostUser {
+	var candidates []hostUser
+	for _, line := range strings.Split(passwd, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		fields := strings.Split(line, ":")
+		if len(fields) < 7 || fields[0] == "" {
+			continue
+		}
+		uid, err := strconv.Atoi(fields[2])
+		if err != nil {
+			continue
+		}
+		gid, err := strconv.Atoi(fields[3])
+		if err != nil {
+			continue
+		}
+		u := hostUser{Name: fields[0], UID: uid, GID: gid, Home: fields[5]}
+		if u.Name == defaultHostUserName {
+			return u
+		}
+		if uid >= minNormalUID && uid != nobodyUID {
+			candidates = append(candidates, u)
+		}
 	}
 
-	return nil
+	if len(candidates) == 0 {
+		return rootHostUser
+	}
+	sort.SliceStable(candidates, func(i, j int) bool { return candidates[i].UID < candidates[j].UID })
+	return candidates[0]
+}
+
+func (t *terminaler) detectHostUser(namespace, podName, containerName string) hostUser {
+	var stdout, stderr bytes.Buffer
+	err := t.execInPod(namespace, podName, containerName, []string{"cat", hostPasswdPath}, remotecommand.StreamOptions{
+		Stdout: &stdout,
+		Stderr: &stderr,
+	})
+	if err != nil {
+		klog.Warningf("read host users from pod %s/%s error: %v, stderr: %s", namespace, podName, err, stderr.String())
+		return rootHostUser
+	}
+	return selectHostUser(stdout.String())
+}
+
+func buildNodeShellCmd(u hostUser) []string {
+	return []string{
+		"nsenter", "-t", "1", "-m", "-u", "-i", "-n", "-p",
+		"-S", strconv.Itoa(u.UID), "-G", strconv.Itoa(u.GID), "-w",
+		"env", "HOME=" + u.Home, "USER=" + u.Name,
+		"/bin/bash",
+	}
 }
 
 // isValidShell checks if the shell is an allowed one
@@ -382,8 +475,17 @@ func (t *terminaler) HandleShellAccessToNode(nodename string, conn *websocket.Co
 		klog.Warning("watching pod status error: ", err)
 		return
 	} else {
-		t.HandleSession(nodeTerminaler.Shell, nodeTerminaler.Namespace, nodeTerminaler.PodName, nodeTerminaler.ContainerName, conn)
 		defer nodeTerminaler.CleanUpNSEnterPod()
+
+		user := t.detectHostUser(nodeTerminaler.Namespace, nodeTerminaler.PodName, nodeTerminaler.ContainerName)
+		klog.Infof("node %s shell access as user %s(%d:%d)", nodename, user.Name, user.UID, user.GID)
+
+		session := &TerminalSession{conn: conn, sizeChan: make(chan remotecommand.TerminalSize)}
+		if err := t.startProcess(nodeTerminaler.Namespace, nodeTerminaler.PodName, nodeTerminaler.ContainerName, buildNodeShellCmd(user), session); err != nil {
+			session.Close(2, err.Error())
+			return
+		}
+		session.Close(1, "Process exited")
 	}
 }
 
