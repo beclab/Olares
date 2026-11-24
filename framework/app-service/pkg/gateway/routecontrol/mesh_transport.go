@@ -7,10 +7,12 @@ import (
 	"maps"
 	"net/netip"
 	"slices"
+	"strings"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway"
 	srrv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/gateway/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/mesh"
+	"github.com/beclab/Olares/framework/app-service/pkg/security"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	netv1 "k8s.io/api/networking/v1"
@@ -141,6 +143,12 @@ func transportPair(labels map[string]string, leg string, source meshTransportPee
 	}
 	if len(backend.serviceIPs) > 0 {
 		out.Spec.Egress = append(out.Spec.Egress, netv1.NetworkPolicyEgressRule{To: backend.serviceIPs, Ports: []netv1.NetworkPolicyPort{backend.servicePort}})
+	}
+	if tenant, ok := strings.CutPrefix(source.namespace, "user-system-"); ok && tenant != "" &&
+		source.selector["app"] == "systemserver" && source.selector["linkerd.io/control-plane-ns"] == mesh.LinkerdNamespace {
+		// Any Egress policy isolates the Pod, even before traffic-group activation.
+		// Keep the coordinator reachable in the same write that enables route egress.
+		out.Spec.Egress = append(out.Spec.Egress, security.SystemServerCitusEgressRule())
 	}
 	in := netv1.NetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{Name: base + "-ingress", Namespace: backend.peer.namespace, Labels: labels},

@@ -290,21 +290,26 @@ func unmeshedDesktopBFLPolicies(flow platformServiceFlow, service *corev1.Servic
 	return []netv1.NetworkPolicy{egress, ingress}
 }
 
-func systemServerCitusEgress(namespace string) netv1.NetworkPolicy {
+// SystemServerCitusEgressRule permits native PostgreSQL traffic to the coordinator.
+func SystemServerCitusEgressRule() netv1.NetworkPolicyEgressRule {
 	// The system-server Envoy connects to the coordinator's headless DNS
 	// record, so select the coordinator Pod without using a Service VIP.
 	coordinator := maps.Clone(citusPods)
 	coordinator["statefulset.kubernetes.io/pod-name"] = "citus-0"
+	return netv1.NetworkPolicyEgressRule{
+		To:    []netv1.NetworkPolicyPeer{platformPeer("os-platform", coordinator)},
+		Ports: []netv1.NetworkPolicyPort{tcpPort(5432)},
+	}
+}
+
+func systemServerCitusEgress(namespace string) netv1.NetworkPolicy {
 	systemServer := map[string]string{"app": "systemserver", "traffic.olares.io/platform-mesh": "true"}
 	return netv1.NetworkPolicy{
 		ObjectMeta: npMeta("olares-platform-systemserver-citus-egress", namespace),
 		Spec: netv1.NetworkPolicySpec{
 			PodSelector: metav1.LabelSelector{MatchLabels: systemServer},
 			PolicyTypes: []netv1.PolicyType{netv1.PolicyTypeEgress},
-			Egress: []netv1.NetworkPolicyEgressRule{{
-				To:    []netv1.NetworkPolicyPeer{platformPeer("os-platform", coordinator)},
-				Ports: []netv1.NetworkPolicyPort{tcpPort(5432)},
-			}},
+			Egress:      []netv1.NetworkPolicyEgressRule{SystemServerCitusEgressRule()},
 		},
 	}
 }
