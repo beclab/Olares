@@ -302,6 +302,39 @@ func SystemServerCitusEgressRule() netv1.NetworkPolicyEgressRule {
 	}
 }
 
+// SystemServerProviderEgressRules scopes the verified provider proxy destinations.
+func SystemServerProviderEgressRules(tenant string, infisical, bfl *corev1.Service) []netv1.NetworkPolicyEgressRule {
+	if tenant == "" {
+		return nil
+	}
+	infisicalFlow := platformServiceFlow{
+		service:     types.NamespacedName{Namespace: "os-protected", Name: "infisical-service"},
+		to:          map[string]string{"app": "infisical"},
+		servicePort: 8080,
+		targetPort:  8080,
+	}
+	rules := infisicalFlow.egressRules(infisical)
+	bflFlow := platformServiceFlow{
+		service:     types.NamespacedName{Namespace: "user-space-" + tenant, Name: "bfl"},
+		to:          bflPods,
+		servicePort: 80,
+		targetPort:  8080,
+	}
+	if bflFlow.matchesService(bfl) {
+		// The meshed source uses Pod endpoints. A VIP grant could also reach
+		// an unenrolled BFL Pod while the Service still selects both revisions.
+		target := map[string]string{
+			"tier": "bfl", platformMeshControlPlaneLabel: "os-mesh",
+			"traffic.olares.io/bfl-api-mtls": "required",
+		}
+		rules = append(rules, netv1.NetworkPolicyEgressRule{
+			To:    []netv1.NetworkPolicyPeer{platformPeer(bflFlow.service.Namespace, target)},
+			Ports: []netv1.NetworkPolicyPort{tcpPort(8080), tcpPort(4143)},
+		})
+	}
+	return rules
+}
+
 func systemServerCitusEgress(namespace string) netv1.NetworkPolicy {
 	systemServer := map[string]string{"app": "systemserver", "traffic.olares.io/platform-mesh": "true"}
 	return netv1.NetworkPolicy{

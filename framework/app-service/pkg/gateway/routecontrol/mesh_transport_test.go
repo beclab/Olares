@@ -183,7 +183,26 @@ func TestSystemLoginStartsBackendTransportBeforeFrontend(t *testing.T) {
 			},
 		},
 	}
-	authBackends = append(authBackends, dns)
+	infisical := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "os-protected", Name: "infisical-service"},
+		Spec: corev1.ServiceSpec{
+			Type: corev1.ServiceTypeClusterIP, ClusterIP: "10.96.0.11",
+			Selector: map[string]string{"app": "infisical"},
+			Ports: []corev1.ServicePort{
+				{Port: 80, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt32(8088)},
+				{Port: 8080, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt32(8080)},
+			},
+		},
+	}
+	bfl := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "user-space-alice", Name: "bfl"},
+		Spec: corev1.ServiceSpec{
+			Type: corev1.ServiceTypeClusterIP, ClusterIP: "10.96.0.12",
+			Selector: map[string]string{"tier": "bfl"},
+			Ports:    []corev1.ServicePort{{Port: 80, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt32(8080)}},
+		},
+	}
+	authBackends = append(authBackends, dns, infisical, bfl)
 	c := fake.NewClientBuilder().WithScheme(testSchemeWithSecurityPolicy(t)).WithObjects(authBackends...).Build()
 	if err := gateway.EnsureSystemPlaneRoutes(ctx, c, "alice", "alice.olares.com", "user-space-alice", false); err != nil {
 		t.Fatal(err)
@@ -242,8 +261,22 @@ func TestSystemLoginStartsBackendTransportBeforeFrontend(t *testing.T) {
 						{Protocol: ptr.To(corev1.ProtocolUDP), Port: ptr.To(intstr.FromInt32(53))},
 					},
 				},
+				{
+					To:    []netv1.NetworkPolicyPeer{(meshTransportPeer{"os-protected", map[string]string{"app": "infisical"}}).networkPolicyPeer()},
+					Ports: []netv1.NetworkPolicyPort{meshTransportPort(8080)},
+				},
+				{
+					To:    []netv1.NetworkPolicyPeer{{IPBlock: &netv1.IPBlock{CIDR: "10.96.0.11/32"}}},
+					Ports: []netv1.NetworkPolicyPort{meshTransportPort(8080)},
+				},
+				{
+					To: []netv1.NetworkPolicyPeer{(meshTransportPeer{"user-space-alice", map[string]string{
+						"tier": "bfl", "linkerd.io/control-plane-ns": "os-mesh", "traffic.olares.io/bfl-api-mtls": "required",
+					}}).networkPolicyPeer()},
+					Ports: []netv1.NetworkPolicyPort{meshTransportPort(8080), meshTransportPort(4143)},
+				},
 			}) {
-				t.Fatalf("first isolation must include only Authelia, Citus, and CoreDNS: %+v", p.Spec.Egress)
+				t.Fatalf("unexpected system-server bootstrap dependencies: %+v", p.Spec.Egress)
 			}
 		}
 		if p.Namespace == "os-framework" &&
@@ -257,7 +290,7 @@ func TestSystemLoginStartsBackendTransportBeforeFrontend(t *testing.T) {
 		t.Fatal("login bootstrap did not install the system-server egress policy")
 	}
 	wantEgress := systemEgress.DeepCopy().Spec.Egress
-	systemEgress.Spec.Egress = systemEgress.Spec.Egress[:2]
+	systemEgress.Spec.Egress = systemEgress.Spec.Egress[:3]
 	if err := c.Update(ctx, systemEgress); err != nil {
 		t.Fatal(err)
 	}
@@ -267,6 +300,29 @@ func TestSystemLoginStartsBackendTransportBeforeFrontend(t *testing.T) {
 	}
 	if !reflect.DeepEqual(systemEgress.Spec.Egress, wantEgress) {
 		t.Fatalf("old login egress policy was not repaired in place: %+v", systemEgress.Spec.Egress)
+	}
+	// Removing the Infisical provider port and changing the BFL target must
+	// withdraw both grants while preserving the original dependencies.
+	if err := c.Get(ctx, client.ObjectKeyFromObject(infisical), infisical); err != nil {
+		t.Fatal(err)
+	}
+	infisical.Spec.Ports = infisical.Spec.Ports[:1]
+	if err := c.Update(ctx, infisical); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Get(ctx, client.ObjectKeyFromObject(bfl), bfl); err != nil {
+		t.Fatal(err)
+	}
+	bfl.Spec.Ports[0].TargetPort = intstr.FromInt32(8081)
+	if err := c.Update(ctx, bfl); err != nil {
+		t.Fatal(err)
+	}
+	checkRoute(ReasonAwaitingDataPlane)
+	if err := c.Get(ctx, client.ObjectKeyFromObject(systemEgress), systemEgress); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(systemEgress.Spec.Egress, wantEgress[:3]) {
+		t.Fatalf("stale provider grants were retained: %+v", systemEgress.Spec.Egress)
 	}
 	frontend := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: key.Namespace, Name: "authelia-svc"},
 		Spec: corev1.ServiceSpec{Ports: []corev1.ServicePort{{Port: 80, Protocol: corev1.ProtocolTCP}}}}
