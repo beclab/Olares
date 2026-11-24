@@ -75,6 +75,10 @@ func (u *userCertWatcher) Watch(ctx context.Context) {
 }
 
 func createOrUpdateJob(ctx context.Context, kubeClient kubernetes.Interface, namespace string) error {
+	mesh, err := hasCertRefreshServiceAccount(ctx, kubeClient, namespace)
+	if err != nil {
+		return err
+	}
 	currentJob, err := kubeClient.BatchV1().Jobs(namespace).Get(ctx, jobDownloadUserCert.Name, metav1.GetOptions{})
 	if err != nil {
 		if kubeErr.IsNotFound(err) {
@@ -99,8 +103,7 @@ func createOrUpdateJob(ctx context.Context, kubeClient kubernetes.Interface, nam
 		}
 	}
 
-	job := jobDownloadUserCert.DeepCopy()
-	job.Namespace = namespace
+	job := newDownloadUserCertJob(namespace, mesh)
 	_, err = kubeClient.BatchV1().Jobs(job.Namespace).Create(ctx, job, metav1.CreateOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to create job: %w", err)
@@ -108,6 +111,33 @@ func createOrUpdateJob(ctx context.Context, kubeClient kubernetes.Interface, nam
 
 	klog.Info("Job created: ", job.Name)
 	return nil
+}
+
+const certRefreshServiceAccount = "bfl-cert-refresh"
+
+func hasCertRefreshServiceAccount(ctx context.Context, kubeClient kubernetes.Interface, namespace string) (bool, error) {
+	_, err := kubeClient.CoreV1().ServiceAccounts(namespace).Get(ctx, certRefreshServiceAccount, metav1.GetOptions{})
+	if kubeErr.IsNotFound(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("get BFL certificate refresh ServiceAccount: %w", err)
+	}
+	return true, nil
+}
+
+func newDownloadUserCertJob(namespace string, mesh bool) *batchv1.Job {
+	job := jobDownloadUserCert.DeepCopy()
+	job.Namespace = namespace
+	if mesh {
+		job.Spec.Template.Spec.ServiceAccountName = certRefreshServiceAccount
+		job.Spec.Template.Labels = map[string]string{"app.kubernetes.io/name": certRefreshServiceAccount}
+		job.Spec.Template.Annotations = map[string]string{
+			"linkerd.io/inject":                             "enabled",
+			"config.linkerd.io/proxy-enable-native-sidecar": "true",
+		}
+	}
+	return job
 }
 
 var jobDownloadUserCert = batchv1.Job{

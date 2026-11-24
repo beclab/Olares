@@ -81,6 +81,14 @@ func autheliaBFLFlow(space string) platformServiceFlow {
 	return platformServiceFlow{autheliaBFLFlowName, platformAuthelia, types.NamespacedName{Namespace: space, Name: "bfl"}, bflPods, 80, 8080, ""}
 }
 
+func autheliaBFLMeshFlow(space string) platformServiceFlow {
+	flow := autheliaBFLFlow(space)
+	flow.name += "-mesh"
+	flow.from.selector = maps.Clone(flow.from.selector)
+	flow.from.selector[platformMeshControlPlaneLabel] = "os-mesh"
+	return flow
+}
+
 func platformTrafficFlows(namespace string) []platformServiceFlow {
 	var tenant string
 	for _, prefix := range []string{"user-space-", "user-system-"} {
@@ -107,7 +115,11 @@ func platformTrafficFlows(namespace string) []platformServiceFlow {
 		{"desktop-bfl", frontend("olares-app"), bfl, bflPods, 80, 8080, ""},
 		{"desktop-app-service", frontend("olares-app"), types.NamespacedName{Namespace: system, Name: "app-service"}, systemProxy, 28080, 28080, ""},
 		{"desktop-nats", frontend("olares-app"), types.NamespacedName{Namespace: system, Name: "nats"}, systemProxy, 4222, 4222, ""},
+		{"bfl-cert-refresh", platformWorkload{space, map[string]string{
+			"app.kubernetes.io/name": "bfl-cert-refresh", platformMeshControlPlaneLabel: "os-mesh",
+		}}, bfl, bflPods, 80, 8080, ""},
 		autheliaBFLFlow(space),
+		autheliaBFLMeshFlow(space),
 	}
 }
 
@@ -159,18 +171,14 @@ func BuildPlatformTrafficPolicies(namespace string, services map[types.Namespace
 			}
 		}
 		slices.Sort(spaces)
-		out := netv1.NetworkPolicy{
-			ObjectMeta: npMeta("olares-platform-"+autheliaBFLFlowName+"-egress", namespace),
-			Spec: netv1.NetworkPolicySpec{
-				PodSelector: metav1.LabelSelector{MatchLabels: platformAuthelia.selector},
-				PolicyTypes: []netv1.PolicyType{netv1.PolicyTypeEgress},
-			},
+		for _, buildFlow := range []func(string) platformServiceFlow{autheliaBFLFlow, autheliaBFLMeshFlow} {
+			out := buildFlow("").egressPolicy(nil)
+			for _, space := range spaces {
+				flow := buildFlow(space)
+				out.Spec.Egress = append(out.Spec.Egress, flow.egressRules(services[flow.service])...)
+			}
+			policies = append(policies, out)
 		}
-		for _, space := range spaces {
-			flow := autheliaBFLFlow(space)
-			out.Spec.Egress = append(out.Spec.Egress, flow.egressRules(services[flow.service])...)
-		}
-		policies = append(policies, out)
 	}
 	for _, flow := range platformTrafficFlows(namespace) {
 		service := services[flow.service]

@@ -18,6 +18,7 @@ import (
 	iamV1alpha2 "github.com/beclab/api/iam/v1alpha2"
 	batchV1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	batchapply "k8s.io/client-go/applyconfigurations/batch/v1"
@@ -234,9 +235,6 @@ func (s *Subscriber) applySSLConfigMap(ctx context.Context, c *certmanager.Respo
 }
 
 func (s *Subscriber) applyRenewCertCronJob(ctx context.Context, expiredAt string) error {
-	forbidConcurrent := batchV1.ForbidConcurrent
-	restartOnFailure := corev1.RestartPolicyOnFailure
-
 	parsedTime, err := time.Parse(certmanager.CertExpiredDateTimeLayout, expiredAt)
 	if err != nil {
 		return fmt.Errorf("parse expired time err, %v", err)
@@ -245,7 +243,19 @@ func (s *Subscriber) applyRenewCertCronJob(ctx context.Context, expiredAt string
 	expiredTime := parsedTime.AddDate(0, 0, certmanager.DefaultAheadRenewalCertDays)
 	schedule := fmt.Sprintf(certmanager.ReDownloadCertCronJobScheduleFormat, expiredTime.Minute(), expiredTime.Hour(), expiredTime.Day(), int(expiredTime.Month()))
 
-	cronjob := batchapply.CronJob(certmanager.ReDownloadCertCronJobName, constants.Namespace)
+	_, err = s.client.Kubernetes().CoreV1().ServiceAccounts(constants.Namespace).Get(ctx, certmanager.RefreshServiceAccount, metav1.GetOptions{})
+	if err != nil && !apierrors.IsNotFound(err) {
+		return fmt.Errorf("get BFL certificate refresh ServiceAccount: %w", err)
+	}
+	cronjob := renewCertCronJob(constants.Namespace, schedule, err == nil)
+	_, err = s.client.Kubernetes().BatchV1().CronJobs(constants.Namespace).Apply(ctx, cronjob, metav1.ApplyOptions{FieldManager: constants.ApplyPatchFieldManager})
+	return err
+}
+
+func renewCertCronJob(namespace, schedule string, mesh bool) *batchapply.CronJobApplyConfiguration {
+	forbidConcurrent := batchV1.ForbidConcurrent
+	restartOnFailure := corev1.RestartPolicyOnFailure
+	cronjob := batchapply.CronJob(certmanager.ReDownloadCertCronJobName, namespace)
 	cronjob.Spec = &batchapply.CronJobSpecApplyConfiguration{
 		ConcurrencyPolicy:       &forbidConcurrent,
 		Schedule:                pointer.String(schedule),
@@ -254,7 +264,17 @@ func (s *Subscriber) applyRenewCertCronJob(ctx context.Context, expiredAt string
 	cronjob.Spec.JobTemplate = batchapply.JobTemplateSpec()
 	cronjob.Spec.JobTemplate.Spec = batchapply.JobSpec()
 	cronjob.Spec.JobTemplate.Spec.Template = applyCorev1.PodTemplateSpec()
+	if mesh {
+		cronjob.Spec.JobTemplate.Spec.Template.WithLabels(map[string]string{"app.kubernetes.io/name": certmanager.RefreshServiceAccount}).
+			WithAnnotations(map[string]string{
+				"linkerd.io/inject":                             "enabled",
+				"config.linkerd.io/proxy-enable-native-sidecar": "true",
+			})
+	}
 	cronjob.Spec.JobTemplate.Spec.Template.Spec = applyCorev1.PodSpec()
+	if mesh {
+		cronjob.Spec.JobTemplate.Spec.Template.Spec.WithServiceAccountName(certmanager.RefreshServiceAccount)
+	}
 	cronjob.Spec.JobTemplate.Spec.Template.Spec.RestartPolicy = &restartOnFailure
 	cronjob.Spec.JobTemplate.Spec.Template.Spec.Containers = []applyCorev1.ContainerApplyConfiguration{{
 		Name:  pointer.String("trigger"),
@@ -264,10 +284,9 @@ func (s *Subscriber) applyRenewCertCronJob(ctx context.Context, expiredAt string
 			"--header",
 			"X-FROM-CRONJOB: true",
 			"-qSO - ",
-			fmt.Sprintf(certmanager.ReDownloadCertificateAPIFormat, constants.Namespace),
+			fmt.Sprintf(certmanager.ReDownloadCertificateAPIFormat, namespace),
 		},
 	}}
 
-	_, err = s.client.Kubernetes().BatchV1().CronJobs(constants.Namespace).Apply(ctx, cronjob, metav1.ApplyOptions{FieldManager: constants.ApplyPatchFieldManager})
-	return err
+	return cronjob
 }
