@@ -168,10 +168,24 @@ func authTransportPair(ctx context.Context, c client.Client, labels map[string]s
 	if client.IgnoreNotFound(err) != nil {
 		return nil, fmt.Errorf("get CoreDNS Service: %w", err)
 	}
+	infisical, bfl := &corev1.Service{}, &corev1.Service{}
+	for _, dependency := range []struct {
+		key client.ObjectKey
+		svc *corev1.Service
+	}{
+		{client.ObjectKey{Namespace: "os-protected", Name: "infisical-service"}, infisical},
+		{client.ObjectKey{Namespace: "user-space-" + tenant, Name: "bfl"}, bfl},
+	} {
+		if err := c.Get(ctx, dependency.key, dependency.svc); client.IgnoreNotFound(err) != nil {
+			return nil, fmt.Errorf("get system-server provider Service %s: %w", dependency.key, err)
+		}
+	}
 	// Any Egress policy isolates the Pod, even before traffic-group activation.
-	// Include its native database and DNS dependencies in that first write.
+	// Include its database, DNS and provider dependencies in that first write.
 	policies[0].Spec.Egress = append(policies[0].Spec.Egress,
 		security.SystemServerCitusEgressRule(), security.CoreDNSEgressRule(dns))
+	policies[0].Spec.Egress = append(policies[0].Spec.Egress,
+		security.SystemServerProviderEgressRules(tenant, infisical, bfl)...)
 	return policies, nil
 }
 

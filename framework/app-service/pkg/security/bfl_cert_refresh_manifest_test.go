@@ -113,7 +113,7 @@ func TestBFLAPIMTLSActivatesOnlyForItsTenantAndDefaultsToDeny(t *testing.T) {
 	}{
 		{"frontend-modules", "/bfl/settings/v1alpha1", "", []string{ns + "/system-frontend", ns + "/bfl-wizard"}},
 		{"frontend-backend", "/bfl/backend/v1/terminus-info", "GET", []string{ns + "/system-frontend", ns + "/bfl-wizard"}},
-		{"frontend-apps", "/bfl/backend/v1/myapps", "POST", []string{ns + "/system-frontend", ns + "/bfl-wizard"}},
+		{"frontend-apps", "/bfl/backend/v1/myapps", "POST", []string{ns + "/system-frontend", ns + "/bfl-wizard", "user-system-example/bytetrade-sys-ops"}},
 		{"user-info", "/bfl/backend/v1/user-info", "GET", []string{ns + "/system-frontend", ns + "/bfl-wizard", "os-framework/os-internal"}},
 		{"public-info", "/bfl/info/v1/olares-info", "OPTIONS", []string{ns + "/system-frontend", ns + "/bfl-wizard", ns + "/bfl-login", "os-framework/bfl-vault"}},
 		{"login-cluster", "/bfl/monitor/v1alpha1/cluster", "GET", []string{ns + "/system-frontend", ns + "/bfl-wizard", ns + "/bfl-login"}},
@@ -145,6 +145,10 @@ func TestBFLAPIMTLSActivatesOnlyForItsTenantAndDefaultsToDeny(t *testing.T) {
 				path := m["path"].(map[string]any)
 				method, _ := m["method"].(string)
 				matched = matched || (path["value"] == tc.path && method == tc.method)
+				if tc.name == "frontend-apps" && (path["value"] != tc.path || path["type"] != "Exact" ||
+					(method != "POST" && method != "OPTIONS")) {
+					t.Fatalf("system-server identity would cover an unrelated request: %v", m)
+				}
 				if path["value"] == "/" || path["value"] == "/bfl" || path["value"] == "/bfl/backend/v1" ||
 					(path["value"] == "/bfl/backend/v1/re-download-cert" && (tc.name != "cert-refresh" || path["type"] != "Exact")) {
 					t.Fatalf("authorization route %s would include unrelated API requests: %v", name, m)

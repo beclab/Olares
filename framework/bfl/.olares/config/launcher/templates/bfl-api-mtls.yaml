@@ -10,6 +10,7 @@
 {{- $authelia := dict "name" "os-internal" "namespace" "os-framework" -}}
 {{- $vault := dict "name" "bfl-vault" "namespace" "os-framework" -}}
 {{- $tapr := dict "name" "tapr-images" "namespace" $systemNS -}}
+{{- $systemServer := dict "name" "bytetrade-sys-ops" "namespace" $systemNS -}}
 {{- $refresh := dict "name" "bfl-cert-refresh" "namespace" $ns -}}
 apiVersion: policy.linkerd.io/v1beta3
 kind: Server
@@ -27,7 +28,7 @@ spec:
 {{- range $route := list
   (dict "name" "frontend-modules" "paths" (list "/bfl/iam/v1alpha1" "/bfl/settings/v1alpha1" "/bfl/monitor/v1alpha1") "type" "PathPrefix" "methods" (list "") "accounts" (list $desktop $wizard))
   (dict "name" "frontend-backend" "paths" (list "/bfl/backend/v1/terminus-info" "/bfl/backend/v1/olares-info" "/bfl/backend/v1/cluster" "/bfl/backend/v1/config-system") "methods" (list "GET" "OPTIONS") "accounts" (list $desktop $wizard))
-  (dict "name" "frontend-apps" "paths" (list "/bfl/backend/v1/myapps") "methods" (list "POST" "OPTIONS") "accounts" (list $desktop $wizard))
+  (dict "name" "frontend-apps" "paths" (list "/bfl/backend/v1/myapps") "methods" (list "POST" "OPTIONS") "accounts" (list $desktop $wizard $systemServer))
   (dict "name" "user-info" "paths" (list "/bfl/backend/v1/user-info") "methods" (list "GET" "OPTIONS") "accounts" (list $desktop $wizard $authelia))
   (dict "name" "public-info" "paths" (list "/bfl/info/v1/olares-info") "methods" (list "GET" "OPTIONS") "accounts" (list $desktop $wizard $login $vault))
   (dict "name" "login-cluster" "paths" (list "/bfl/monitor/v1alpha1/cluster") "methods" (list "GET" "OPTIONS") "accounts" (list $desktop $wizard $login))
