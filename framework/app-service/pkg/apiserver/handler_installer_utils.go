@@ -2,22 +2,15 @@ package apiserver
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
 	"fmt"
-	"net/http"
-	"time"
-
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
-	"github.com/beclab/Olares/framework/app-service/pkg/workflowinstaller"
 	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	"github.com/emicklei/go-restful/v3"
-	"github.com/go-resty/resty/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
@@ -181,50 +174,4 @@ func (h *Handler) checkDependencies(req *restful.Request, resp *restful.Response
 		Response: api.Response{Code: 200},
 		Data:     data,
 	})
-}
-
-func (h *Handler) cleanRecommendFeedData(name, owner string) error {
-	knowledgeAPI := fmt.Sprintf("http://knowledge-base-api.user-system-%s:3010", owner)
-	feedAPI := knowledgeAPI + "/knowledge/feed/algorithm/" + name
-
-	client := resty.New()
-	response, err := client.R().Get(feedAPI)
-	if err != nil {
-		return err
-	}
-	if response.StatusCode() != http.StatusOK {
-		klog.Errorf("Failed to get knowledge feed list status=%s body=%s", response.Status(), response.String())
-		return errors.New(response.Status())
-	}
-	var ret workflowinstaller.KnowledgeAPIResp
-	err = json.Unmarshal(response.Body(), &ret)
-	if err != nil {
-		return err
-	}
-	feedUrls := ret.Data
-	klog.Info("Start to clean recommend feed data ", feedAPI, len(feedUrls))
-	if len(feedUrls) > 0 {
-		limit := 10
-		removeClient := resty.New()
-		for i := 0; i*limit < len(feedUrls); i++ {
-			start := i * limit
-			end := start + limit
-			if end > len(feedUrls) {
-				end = len(feedUrls)
-			}
-			removeList := feedUrls[start:end]
-			reqData := workflowinstaller.KnowledgeFeedDelReq{FeedUrls: removeList}
-			removeBody, _ := json.Marshal(reqData)
-			res, _ := removeClient.SetTimeout(5*time.Second).R().SetHeader(restful.HEADER_ContentType, restful.MIME_JSON).
-				SetBody(removeBody).Delete(feedAPI)
-
-			if res.StatusCode() == http.StatusOK {
-				klog.Info("Delete feed success: ", i, len(removeList))
-			} else {
-				klog.Errorf("Failed to clean recommend feed data err=%s", string(res.Body()))
-			}
-		}
-	}
-	klog.Info("Delete entry success page: ", name, len(feedUrls))
-	return nil
 }
