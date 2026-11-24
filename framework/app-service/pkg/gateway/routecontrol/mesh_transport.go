@@ -168,13 +168,14 @@ func authTransportPair(ctx context.Context, c client.Client, labels map[string]s
 	if client.IgnoreNotFound(err) != nil {
 		return nil, fmt.Errorf("get CoreDNS Service: %w", err)
 	}
-	infisical, bfl := &corev1.Service{}, &corev1.Service{}
+	infisical, bfl, appService := &corev1.Service{}, &corev1.Service{}, &corev1.Service{}
 	for _, dependency := range []struct {
 		key client.ObjectKey
 		svc *corev1.Service
 	}{
 		{client.ObjectKey{Namespace: "os-protected", Name: "infisical-service"}, infisical},
 		{client.ObjectKey{Namespace: "user-space-" + tenant, Name: "bfl"}, bfl},
+		{client.ObjectKey{Namespace: "os-framework", Name: "app-service"}, appService},
 	} {
 		if err := c.Get(ctx, dependency.key, dependency.svc); client.IgnoreNotFound(err) != nil {
 			return nil, fmt.Errorf("get system-server provider Service %s: %w", dependency.key, err)
@@ -185,7 +186,7 @@ func authTransportPair(ctx context.Context, c client.Client, labels map[string]s
 	policies[0].Spec.Egress = append(policies[0].Spec.Egress,
 		security.SystemServerCitusEgressRule(), security.CoreDNSEgressRule(dns))
 	policies[0].Spec.Egress = append(policies[0].Spec.Egress,
-		security.SystemServerProviderEgressRules(tenant, infisical, bfl)...)
+		security.SystemServerProviderEgressRules(tenant, infisical, bfl, appService)...)
 	return policies, nil
 }
 
