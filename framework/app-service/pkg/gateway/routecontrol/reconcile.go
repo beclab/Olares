@@ -37,9 +37,12 @@ const (
 	ReasonGatewayMode      = "GatewayMode"
 	ReasonDirectMode       = "DirectMode"
 	ReasonReconciled       = "Reconciled"
-	ReasonBackendMissing   = "BackendServiceMissing"
-	ReasonInvalidSpec      = "InvalidSpec"
-	ReasonRouteApplyFailed = "RouteApplyFailed"
+	// The L4 cutover gate distinguishes a verified Desktop authorizer from
+	// Ready status published by controllers that used the legacy path prefix.
+	ReasonDesktopEntryAuthorizationReady = "DesktopEntryAuthorizationReady"
+	ReasonBackendMissing                 = "BackendServiceMissing"
+	ReasonInvalidSpec                    = "InvalidSpec"
+	ReasonRouteApplyFailed               = "RouteApplyFailed"
 )
 
 // GatewayRef selects the parent Gateway for every HTTPRoute written by
@@ -205,7 +208,14 @@ func isSystemLoginRoute(srr *srrv1alpha1.SharedRouteRegistry) bool {
 		srr.Spec.Upstream.ServiceName == "authelia-svc" && srr.Spec.Upstream.Port == 80
 }
 
+func isSystemDesktopRoute(srr *srrv1alpha1.SharedRouteRegistry) bool {
+	return isMainSystemEntry(srr) && srr.Name == gateway.SystemPlaneSRRName("desktop")
+}
+
 func reconcileGatewayMode(ctx context.Context, c client.Client, gw GatewayRef, srr *srrv1alpha1.SharedRouteRegistry) (ReconcileResult, error) {
+	if isSystemDesktopRoute(srr) && srrAuthMode(srr) != gateway.AuthModeExtAuth {
+		return routeUnavailable(ctx, c, gw, srr, ReasonInvalidSpec, "Desktop Entry requires external authorization", nil)
+	}
 	if err := validateL4AuthzAuthorities(ctx, c, srr); err != nil {
 		return waitForHTTPRouteMesh(ctx, c, gw, srr, err)
 	}

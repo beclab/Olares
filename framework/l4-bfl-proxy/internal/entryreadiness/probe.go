@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
 	"strconv"
+	"strings"
 
 	"github.com/beclab/l4-bfl-proxy/internal/message"
 )
@@ -43,16 +45,17 @@ func (g Gateway) client(material *message.EntryMTLSMaterial) (verifyEntry, func(
 
 func (g Gateway) verify(ctx context.Context, client *http.Client, zone string) error {
 	desktop := "desktop." + zone
+	login := "auth." + zone
 	for _, probe := range []struct {
 		port uint32
 		host string
 		path string
 	}{
-		{g.EntryPort, "auth." + zone, "/"},
+		{g.EntryPort, login, "/"},
 		{g.AuthPort, desktop, "/api/verify"},
 	} {
-		url := "https://" + net.JoinHostPort(g.Host, strconv.FormatUint(uint64(probe.port), 10)) + probe.path
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+		address := "https://" + net.JoinHostPort(g.Host, strconv.FormatUint(uint64(probe.port), 10)) + probe.path
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, address, nil)
 		if err != nil {
 			return err
 		}
@@ -74,9 +77,15 @@ func (g Gateway) verify(ctx context.Context, client *http.Client, zone string) e
 		}
 		if probe.port == g.AuthPort {
 			switch resp.StatusCode {
-			case http.StatusFound, http.StatusSeeOther, http.StatusTemporaryRedirect, http.StatusPermanentRedirect,
-				http.StatusUnauthorized, http.StatusForbidden:
+			case http.StatusUnauthorized, http.StatusForbidden:
 				continue
+			case http.StatusFound, http.StatusSeeOther, http.StatusTemporaryRedirect, http.StatusPermanentRedirect:
+				target, err := url.Parse(resp.Header.Get("Location"))
+				if err == nil && target.Scheme == "https" && target.User == nil &&
+					strings.EqualFold(target.Hostname(), login) && (target.Port() == "" || target.Port() == "443") {
+					continue
+				}
+				return fmt.Errorf("Entry authorization on port %d did not redirect to its HTTPS login host", probe.port)
 			}
 		}
 		return fmt.Errorf("Entry readiness probe on port %d returned HTTP %d", probe.port, resp.StatusCode)

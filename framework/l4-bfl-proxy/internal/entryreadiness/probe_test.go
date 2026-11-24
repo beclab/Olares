@@ -26,16 +26,23 @@ func TestGatewayProbeUsesTLSAndCorrectAuthority(t *testing.T) {
 	for _, tc := range []struct {
 		name                 string
 		entry, auth          int
+		location             string
 		netFailure, wantPass bool
 	}{
-		{"ready", 200, 401, false, true},
-		{"browser login redirect", 200, 302, false, true},
-		{"login unavailable", 503, 401, false, false},
-		{"wrong login endpoint", 404, 401, false, false},
-		{"auth route missing", 200, 404, false, false},
-		{"auth path normalization redirect", 200, 301, false, false},
-		{"anonymous auth accepted", 200, 200, false, false},
-		{"TLS failure", 200, 401, true, false},
+		{"ready", 200, 401, "", false, true},
+		{"browser login redirect", 200, 302, "https://auth.alice.example.org/?rd=desktop", false, true},
+		{"login unavailable", 503, 401, "", false, false},
+		{"wrong login endpoint", 404, 401, "", false, false},
+		{"auth route missing", 200, 404, "", false, false},
+		{"auth path normalization redirect", 200, 301, "https://auth.alice.example.org/", false, false},
+		{"redirect without location", 200, 302, "", false, false},
+		{"plaintext redirect", 200, 302, "http://auth.alice.example.org/", false, false},
+		{"desktop redirect loop", 200, 302, "https://desktop.alice.example.org/api/verify", false, false},
+		{"redirect to another tenant", 200, 302, "https://auth.bob.example.org/", false, false},
+		{"redirect with authority credentials", 200, 302, "https://user@auth.alice.example.org/", false, false},
+		{"redirect to another port", 200, 302, "https://auth.alice.example.org:9444/", false, false},
+		{"anonymous auth accepted", 200, 200, "", false, false},
+		{"TLS failure", 200, 401, "", true, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			client := &http.Client{Transport: probeRoundTrip(func(r *http.Request) (*http.Response, error) {
@@ -64,8 +71,14 @@ func TestGatewayProbeUsesTLSAndCorrectAuthority(t *testing.T) {
 				default:
 					t.Fatalf("unexpected port %s", r.URL.Port())
 				}
-				return &http.Response{StatusCode: status, Body: io.NopCloser(strings.NewReader(""))}, nil
-			})}
+				return &http.Response{
+					StatusCode: status,
+					Header:     http.Header{"Location": []string{tc.location}},
+					Body:       io.NopCloser(strings.NewReader("")),
+				}, nil
+			}), CheckRedirect: func(*http.Request, []*http.Request) error {
+				return http.ErrUseLastResponse
+			}}
 			if err := g.verify(t.Context(), client, "alice.example.org"); (err == nil) != tc.wantPass {
 				t.Fatalf("probe = %v, want ready=%v", err, tc.wantPass)
 			}

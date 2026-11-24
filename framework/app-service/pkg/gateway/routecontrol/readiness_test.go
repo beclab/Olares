@@ -9,6 +9,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/mesh"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -219,6 +220,55 @@ func TestServingReadinessWaitsForPolicyAndMeshedEndpoints(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(fixtures...).Build()
 		if err := servingReadiness(ctx, c, GatewayRef{}, srr, "route"); err != nil {
 			t.Fatalf("ready native sidecar rejected at cutover: %v", err)
+		}
+	})
+	t.Run("Desktop requires the accepted fixed-path authorizer", func(t *testing.T) {
+		desktop := srr.DeepCopy()
+		desktop.SetName("sys-desktop")
+		desktop.SetNamespace("user-space-alice")
+		desktop.SetUID("desktop-entry")
+		desktop.SetLabels(map[string]string{
+			ManagedByLabel: ManagedByValue, InstanceLabel: gateway.SystemPlaneInstance,
+			gateway.LabelSystemPlane: gateway.LabelSystemPlaneValue,
+		})
+		desktop.SetAnnotations(map[string]string{gateway.AnnotationExtAuthUser: "alice"})
+		desktop.Spec.EntranceClass = srrv1alpha1.EntranceClassApplication
+		desktopRoute := route.DeepCopy()
+		desktopRoute.SetName(desktop.Name)
+		desktopRoute.SetNamespace(desktop.Namespace)
+		policy := desiredApplicationExtAuthSecurityPolicy(desktop)
+		policy.Object["status"] = security.DeepCopy().Object["status"]
+		policy.SetGeneration(security.GetGeneration())
+		check := func(want string) {
+			t.Helper()
+			c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gw, desktopRoute, policy, ctp).Build()
+			err := servingReadiness(ctx, c, GatewayRef{}, desktop, desktop.Name)
+			if err == nil || !strings.Contains(err.Error(), want) {
+				t.Fatalf("readiness = %v, want %q", err, want)
+			}
+		}
+		check("authorization listener is not programmed")
+		unstructured.RemoveNestedField(policy.Object, "spec", "extAuth", "http", "pathOverride")
+		if err := unstructured.SetNestedField(policy.Object, "/api/verify", "spec", "extAuth", "http", "path"); err != nil {
+			t.Fatal(err)
+		}
+		check("does not enforce the expected external authorization")
+		policy.SetGeneration(policy.GetGeneration() + 1)
+		check("has no accepted status")
+
+		desktop.Annotations[gateway.AnnotationAuthMode] = gateway.AuthModeNone
+		setOwnerSRR(desktopRoute, desktop)
+		authRoute := l4AuthzRoute(desktop)
+		setOwnerSRR(authRoute, desktop)
+		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(desktopRoute, authRoute).Build()
+		res, err := reconcileGatewayMode(ctx, c, GatewayRef{}, desktop)
+		if err != nil || res.Status != metav1.ConditionFalse || res.Reason != ReasonInvalidSpec {
+			t.Fatalf("Desktop without external authorization was accepted: %+v, %v", res, err)
+		}
+		for _, obj := range []*unstructured.Unstructured{desktopRoute, authRoute} {
+			if err := c.Get(ctx, client.ObjectKeyFromObject(obj), obj); !apierrors.IsNotFound(err) {
+				t.Fatalf("route %s was not withdrawn: %v", obj.GetName(), err)
+			}
 		}
 	})
 	for _, tc := range []struct {

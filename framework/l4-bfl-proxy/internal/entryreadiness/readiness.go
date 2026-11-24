@@ -17,6 +17,8 @@ var systemRouteRegistryGVK = schema.GroupVersionKind{
 	Group: "gateway.olares.io", Version: "v1alpha1", Kind: "SharedRouteRegistry",
 }
 
+const desktopAuthorizationReady = "DesktopEntryAuthorizationReady"
+
 // Checker reports app-service's observed gateway and Linkerd readiness for
 // the login and Desktop authorities that this proxy actually serves.
 func Checker(resources *message.ProviderResources, reader client.Reader, gateway Gateway) func(*http.Request) error {
@@ -117,13 +119,17 @@ func systemRouteReady(route *unstructured.Unstructured, owner, host string) bool
 		return false
 	}
 	conditions, _, _ := unstructured.NestedSlice(route.Object, "status", "conditions")
+	reason := "Reconciled"
+	if route.GetName() == "sys-desktop" {
+		reason = desktopAuthorizationReady
+	}
 	for _, item := range conditions {
 		condition, ok := item.(map[string]any)
 		if !ok || condition["type"] != "Ready" {
 			continue
 		}
 		generation, _, _ := unstructured.NestedInt64(condition, "observedGeneration")
-		return generation == route.GetGeneration() && condition["status"] == "True" && condition["reason"] == "Reconciled"
+		return generation == route.GetGeneration() && condition["status"] == "True" && condition["reason"] == reason
 	}
 	return false
 }
