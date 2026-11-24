@@ -81,6 +81,17 @@ func TestBuildUserVirtualHostsEdgeModeOnlyEdgeForward(t *testing.T) {
 			if r.Cluster != edgeForwardClusterName {
 				t.Fatalf("must not build local backend cluster %s", r.Cluster)
 			}
+			if i == 0 {
+				if r.RequestHeaders["X-Original-URL"] != "%REQ(:SCHEME)%://%REQ(:AUTHORITY)%%REQ(:PATH)%" ||
+					r.RequestHeaders["X-Original-Method"] != "%REQ(:METHOD)%" {
+					t.Fatalf("authenticated traffic must preserve the original target: %v", r.RequestHeaders)
+				}
+				if _, found := r.RequestHeaders["X-BFL-USER"]; found {
+					t.Fatal("edge must keep the identity returned by authorization")
+				}
+			} else if len(r.RequestHeaders) != 0 {
+				t.Fatalf("login traffic must not receive application authorization metadata: %v", r.RequestHeaders)
+			}
 		}
 	}
 }

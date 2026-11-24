@@ -58,8 +58,16 @@ func (t *Translator) buildEdgeForwardVirtualHosts(user *message.UserInfo, zone s
 	}
 	makeVHost := func(suffix string, domains []string, check bool) *ir.VirtualHostIR {
 		var extAuth *ir.ExtAuthConfigIR
+		var authHeaders map[string]string
 		if check {
 			extAuth = buildAppExtAuthConfig(user)
+			// The router overwrites client copies after ExtAuth succeeds.
+			// The Desktop authorizer receives these through Entry mTLS and
+			// checks the original resource even with a fixed verification path.
+			authHeaders = map[string]string{
+				"X-Original-URL":    "%REQ(:SCHEME)%://%REQ(:AUTHORITY)%%REQ(:PATH)%",
+				"X-Original-Method": "%REQ(:METHOD)%",
+			}
 		}
 		return &ir.VirtualHostIR{
 			Name:     "edge_forward_" + user.Name + suffix,
@@ -73,6 +81,7 @@ func (t *Translator) buildEdgeForwardVirtualHosts(user *message.UserInfo, zone s
 				Cluster:          edgeForwardClusterName,
 				WebSocketUpgrade: true,
 				ExtAuth:          extAuth,
+				RequestHeaders:   authHeaders,
 			}},
 		}
 	}
