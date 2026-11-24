@@ -34,6 +34,7 @@ var (
 	kvrocksPods         = map[string]string{"app": "kvrocks", "app.kubernetes.io/name": "kvrocks"}
 	envoyControllerPods = map[string]string{"control-plane": "envoy-gateway", "app.kubernetes.io/name": "gateway-helm", "app.kubernetes.io/instance": "app-gateway-eg"}
 	platformAuthelia    = platformWorkload{"os-framework", map[string]string{"app": "authelia-backend", "traffic.olares.io/platform-mesh": "true"}}
+	platformVault       = platformWorkload{"os-framework", map[string]string{"app": "vault-server", platformMeshControlPlaneLabel: "os-mesh"}}
 	bflPods             = map[string]string{"tier": "bfl"}
 )
 
@@ -63,6 +64,9 @@ var platformServiceFlows = []platformServiceFlow{
 	{"infisical-citus", workload("os-framework", "app", "infisical"), types.NamespacedName{Namespace: "os-platform", Name: "citus-headless"}, citusPods, 5432, 5432, ""},
 	{"infisical-kvrocks", workload("os-framework", "app", "infisical"), types.NamespacedName{Namespace: "os-platform", Name: "redis-cluster-proxy"}, kvrocksPods, 6379, 6666, ""},
 	{"files-kvrocks", workload("os-framework", "app", "files"), types.NamespacedName{Namespace: "os-platform", Name: "redis-cluster-proxy"}, kvrocksPods, 6379, 6666, ""},
+	{"vault-citus", workload("os-framework", "app", "vault-server"), types.NamespacedName{Namespace: "os-platform", Name: "citus-headless"}, citusPods, 5432, 5432, ""},
+	{"vault-nats", workload("os-framework", "app", "vault-server"), types.NamespacedName{Namespace: "os-platform", Name: "nats"}, natsPods, 4222, 4222, "nats"},
+	{"vault-authelia", platformVault, types.NamespacedName{Namespace: "os-framework", Name: "authelia-backend"}, map[string]string{"app": "authelia-backend"}, 9091, 9091, ""},
 	{"authelia-ldap", workload("os-framework", "app", "authelia-backend"), types.NamespacedName{Namespace: "os-platform", Name: "lldap-service"}, map[string]string{"app": "lldap"}, 3890, 3890, ""},
 	// Token cache initialization still uses the LLDAP HTTP API during mesh migration.
 	{"authelia-lldap-token", platformAuthelia, types.NamespacedName{Namespace: "os-platform", Name: "lldap-service"}, map[string]string{"app": "lldap"}, 17170, 17170, ""},
@@ -89,6 +93,10 @@ func autheliaBFLMeshFlow(space string) platformServiceFlow {
 	return flow
 }
 
+func vaultBFLFlow(space string) platformServiceFlow {
+	return platformServiceFlow{"vault-bfl", platformVault, types.NamespacedName{Namespace: space, Name: "bfl"}, bflPods, 80, 8080, ""}
+}
+
 func platformTrafficFlows(namespace string) []platformServiceFlow {
 	var tenant string
 	for _, prefix := range []string{"user-space-", "user-system-"} {
@@ -110,9 +118,17 @@ func platformTrafficFlows(namespace string) []platformServiceFlow {
 	return []platformServiceFlow{
 		{"authelia-frontend-auth", frontend("authelia"), auth, systemProxy, 9091, 9091, "auth-proxy"},
 		{"desktop-auth", frontend("olares-app"), auth, systemProxy, 9091, 9091, "auth-proxy"},
+		{"wizard-auth", frontend("wizard"), auth, systemProxy, 9091, 9091, "auth-proxy"},
 		{"desktop-logout", frontend("olares-app"), types.NamespacedName{Namespace: space, Name: "authelia-svc"}, map[string]string{"app": "authelia"}, 80, 80, ""},
 		{"login-bfl", frontend("authelia"), bfl, bflPods, 80, 8080, ""},
 		{"desktop-bfl", frontend("olares-app"), bfl, bflPods, 80, 8080, ""},
+		{"wizard-bfl", frontend("wizard"), bfl, bflPods, 80, 8080, ""},
+		{"tapr-images-bfl", platformWorkload{system, map[string]string{
+			"app": "tapr-images", platformMeshControlPlaneLabel: "os-mesh",
+		}}, bfl, bflPods, 80, 8080, ""},
+		{"bfl-app-service", platformWorkload{space, map[string]string{
+			"tier": "bfl", platformMeshControlPlaneLabel: "os-mesh",
+		}}, types.NamespacedName{Namespace: system, Name: "app-service"}, systemProxy, 28080, 28080, ""},
 		{"desktop-app-service", frontend("olares-app"), types.NamespacedName{Namespace: system, Name: "app-service"}, systemProxy, 28080, 28080, ""},
 		{"desktop-nats", frontend("olares-app"), types.NamespacedName{Namespace: system, Name: "nats"}, systemProxy, 4222, 4222, ""},
 		{"bfl-cert-refresh", platformWorkload{space, map[string]string{
@@ -120,6 +136,7 @@ func platformTrafficFlows(namespace string) []platformServiceFlow {
 		}}, bfl, bflPods, 80, 8080, ""},
 		autheliaBFLFlow(space),
 		autheliaBFLMeshFlow(space),
+		vaultBFLFlow(space),
 	}
 }
 
@@ -161,9 +178,8 @@ func PlatformTrafficNamespaces(service types.NamespacedName) []string {
 func BuildPlatformTrafficPolicies(namespace string, services map[types.NamespacedName]*corev1.Service) []netv1.NetworkPolicy {
 	var policies []netv1.NetworkPolicy
 	if namespace == platformAuthelia.namespace {
-		// Authelia initializes its cache using the BFL API in each tenant space.
-		// Build one source policy from the current inventory so deleted Services
-		// also lose their egress grants.
+		// Platform callers use BFL in multiple tenants. Rebuild the source
+		// policies from the Service inventory so stale grants are withdrawn.
 		var spaces []string
 		for key := range services {
 			if key.Name == "bfl" && IsUserSpaceNamespaces(key.Namespace) {
@@ -171,7 +187,7 @@ func BuildPlatformTrafficPolicies(namespace string, services map[types.Namespace
 			}
 		}
 		slices.Sort(spaces)
-		for _, buildFlow := range []func(string) platformServiceFlow{autheliaBFLFlow, autheliaBFLMeshFlow} {
+		for _, buildFlow := range []func(string) platformServiceFlow{autheliaBFLFlow, autheliaBFLMeshFlow, vaultBFLFlow} {
 			out := buildFlow("").egressPolicy(nil)
 			for _, space := range spaces {
 				flow := buildFlow(space)

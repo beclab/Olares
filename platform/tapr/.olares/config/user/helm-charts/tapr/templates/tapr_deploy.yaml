@@ -19,6 +19,9 @@ spec:
     metadata:
       labels:
         app: tapr-images
+      annotations:
+        linkerd.io/inject: enabled
+        config.linkerd.io/proxy-enable-native-sidecar: "true"
     spec:
       serviceAccountName: tapr-images
       serviceAccount: tapr-images

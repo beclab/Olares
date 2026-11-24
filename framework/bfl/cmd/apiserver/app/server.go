@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"net"
 	"os"
 	"time"
 
@@ -49,8 +50,24 @@ func NewAPPServerCommand() *cobra.Command {
 	cmd.PersistentFlags().StringVarP(&constants.Namespace, "namespace", "n", utils.EnvOrDefault("BFL_NAMESPACE", ""), "namespace for bfl")
 	cmd.PersistentFlags().StringVarP(&constants.KubeSphereAPIHost, "ks-apiserver", "s", "ks-apiserver.kubesphere-system", "kubesphere api server")
 	cmd.PersistentFlags().StringVarP(&constants.APIServerListenAddress, "listen", "l", ":8080", "listen address")
+	cmd.AddCommand(&cobra.Command{
+		Use:   "check-local-api",
+		Short: "Check the local BFL API listener",
+		Args:  cobra.NoArgs,
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return checkLocalAPI("127.0.0.1:8080")
+		},
+	})
 
 	return cmd
+}
+
+func checkLocalAPI(address string) error {
+	conn, err := net.DialTimeout("tcp", address, time.Second)
+	if err != nil {
+		return fmt.Errorf("connect to the local BFL API: %w", err)
+	}
+	return conn.Close()
 }
 
 func Run() error {

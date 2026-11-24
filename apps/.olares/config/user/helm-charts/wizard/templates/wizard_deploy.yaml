@@ -18,7 +18,11 @@ spec:
     metadata:
       labels:
         app: wizard
+      annotations:
+        linkerd.io/inject: enabled
+        config.linkerd.io/proxy-enable-native-sidecar: "true"
     spec:
+      serviceAccountName: bfl-wizard
       initContainers:
       - args:
         - -it
@@ -42,6 +46,13 @@ spec:
           type: Directory
           path: "{{ .Values.userspace.userData }}"
 
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: bfl-wizard
+  namespace: {{ .Release.Namespace }}
+automountServiceAccountToken: false
 ---
 apiVersion: v1
 kind: Service

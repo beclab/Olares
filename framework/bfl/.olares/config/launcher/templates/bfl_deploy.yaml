@@ -200,8 +200,15 @@ spec:
       labels:
         tier: bfl
         traffic.olares.io/platform-mesh: "true"
+{{- if .Values.bfl.enforceAPIMesh }}
+        traffic.olares.io/bfl-api-mtls: required
+{{- end }}
       annotations:
         linkerd.io/inject: enabled
+{{- if .Values.bfl.enforceAPIMesh }}
+        traffic.olares.io/mtls-mode: Required
+        config.linkerd.io/default-inbound-policy: deny
+{{- end }}
 {{ if .Values.telemetry }}
         instrumentation.opentelemetry.io/inject-go: "olares-instrumentation"
         instrumentation.opentelemetry.io/go-container-names: "api"    
@@ -287,8 +294,13 @@ spec:
           protocol: TCP
         livenessProbe:
           initialDelaySeconds: 3
+{{- if .Values.bfl.enforceAPIMesh }}
+          exec:
+            command: ["/bfl-api", "check-local-api"]
+{{- else }}
           tcpSocket:
             port: 8080
+{{- end }}
         env:
         - name: APP_SERVICE_SERVICE_HOST
           value: app-service.user-system-{{ .Values.bfl.username }}

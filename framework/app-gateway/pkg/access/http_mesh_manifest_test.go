@@ -177,6 +177,27 @@ func TestHTTPMeshAdmissionIsBoundAndFailClosed(t *testing.T) {
 	}
 }
 
+func TestBFLStrictEnrollmentRequiresDenyFallback(t *testing.T) {
+	const label = "traffic.olares.io/bfl-api-mtls"
+	resources := readMeshManifest(t, "http-mesh-admission.yaml")
+	policy := resources["ValidatingAdmissionPolicy/olares-http-mesh-pods"]
+	conditions := meshField(t, policy, "spec", "matchConditions").([]any)
+	match := meshField(t, conditions[0], "expression").(string)
+	for _, object := range []string{"object", "oldObject"} {
+		if !strings.Contains(match, object+".metadata.labels['"+label+"'] == 'required'") {
+			t.Fatalf("strict BFL admission must cover %s", object)
+		}
+	}
+	variables := meshField(t, policy, "spec", "variables").([]any)
+	for _, variable := range variables {
+		if meshField(t, variable, "name") == "inboundPolicy" &&
+			strings.Contains(meshField(t, variable, "expression").(string), "variables.bflAPI ? 'deny'") {
+			return
+		}
+	}
+	t.Fatal("the BFL API must deny inbound traffic if its authorization resources are unavailable")
+}
+
 func readMeshManifest(t *testing.T, name string) map[string]map[string]any {
 	t.Helper()
 	_, file, _, _ := runtime.Caller(0)

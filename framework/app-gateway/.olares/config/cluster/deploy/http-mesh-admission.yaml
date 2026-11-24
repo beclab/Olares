@@ -20,10 +20,19 @@ spec:
         (oldObject != null && has(oldObject.metadata.annotations) &&
          'traffic.olares.io/mtls-mode' in oldObject.metadata.annotations &&
          oldObject.metadata.annotations['traffic.olares.io/mtls-mode'] == 'Required') ||
+        (has(object.metadata.labels) && 'traffic.olares.io/bfl-api-mtls' in object.metadata.labels &&
+         object.metadata.labels['traffic.olares.io/bfl-api-mtls'] == 'required') ||
+        (oldObject != null && has(oldObject.metadata.labels) &&
+         'traffic.olares.io/bfl-api-mtls' in oldObject.metadata.labels &&
+         oldObject.metadata.labels['traffic.olares.io/bfl-api-mtls'] == 'required') ||
         (request.namespace == 'os-gateway' && has(object.metadata.labels) &&
          'gateway.envoyproxy.io/owning-gateway-name' in object.metadata.labels &&
          object.metadata.labels['gateway.envoyproxy.io/owning-gateway-name'] in ['app-gateway', 'app-access-internal'])
   variables:
+    - name: bflAPI
+      expression: >-
+        has(object.metadata.labels) && 'traffic.olares.io/bfl-api-mtls' in object.metadata.labels &&
+        object.metadata.labels['traffic.olares.io/bfl-api-mtls'] == 'required'
     - name: internalGateway
       expression: >-
         request.namespace == 'os-gateway' && has(object.metadata.labels) &&
@@ -35,7 +44,7 @@ spec:
         'config.linkerd.io/proxy-enable-native-sidecar' in object.metadata.annotations &&
         object.metadata.annotations['config.linkerd.io/proxy-enable-native-sidecar'] == 'true'
     - name: inboundPolicy
-      expression: "variables.internalGateway ? 'deny' : 'cluster-authenticated'"
+      expression: "variables.internalGateway || variables.bflAPI ? 'deny' : 'cluster-authenticated'"
   validations:
     - expression: >-
         has(object.metadata.annotations) &&
@@ -49,6 +58,13 @@ spec:
           (!('traffic.olares.io/mtls-mode' in object.metadata.annotations) ||
            object.metadata.annotations['traffic.olares.io/mtls-mode'] != 'Required'))
       message: Enrolled HTTP Pods must retain their required Linkerd inbound policy.
+    - expression: >-
+        (!(oldObject != null && has(oldObject.metadata.labels) &&
+           'traffic.olares.io/bfl-api-mtls' in oldObject.metadata.labels &&
+           oldObject.metadata.labels['traffic.olares.io/bfl-api-mtls'] == 'required') || variables.bflAPI) &&
+        (!variables.bflAPI || (request.namespace.startsWith('user-space-') &&
+          'tier' in object.metadata.labels && object.metadata.labels['tier'] == 'bfl'))
+      message: Enrolled BFL Pods must retain their tenant API policy selector.
     - expression: >-
         (!has(object.spec.hostNetwork) || !object.spec.hostNetwork) &&
         object.spec.containers.all(c, !has(c.ports) || c.ports.all(p, !has(p.hostPort) || p.hostPort == 0)) &&
