@@ -11,6 +11,55 @@ import (
 	"k8s.io/utils/ptr"
 )
 
+func TestCoreDNSEgressRuleLimitsServiceVIPs(t *testing.T) {
+	valid := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Name: "coredns", Namespace: "kube-system"},
+		Spec: corev1.ServiceSpec{
+			Type:       corev1.ServiceTypeClusterIP,
+			ClusterIPs: []string{"10.233.0.3", "fd00::53", "invalid"},
+			Selector:   map[string]string{"k8s-app": "kube-dns"},
+			Ports: []corev1.ServicePort{
+				{Port: 53, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt32(53)},
+				{Port: 53, Protocol: corev1.ProtocolUDP, TargetPort: intstr.FromInt32(53)},
+				{Port: 9153, Protocol: corev1.ProtocolTCP},
+			},
+		},
+	}
+	for _, tc := range []struct {
+		name   string
+		change func(*corev1.Service)
+		vips   []string
+	}{
+		{name: "valid dual stack", vips: []string{"10.233.0.3/32", "fd00::53/128"}},
+		{name: "different namespace", change: func(s *corev1.Service) { s.Namespace = "user-space-alice" }},
+		{name: "different selector", change: func(s *corev1.Service) { s.Spec.Selector["k8s-app"] = "other" }},
+		{name: "metrics as TCP target", change: func(s *corev1.Service) { s.Spec.Ports[0].TargetPort = intstr.FromInt32(9153) }},
+		{name: "named target without a verified port", change: func(s *corev1.Service) { s.Spec.Ports[0].TargetPort = intstr.FromString("dns-tcp") }},
+		{name: "no UDP", change: func(s *corev1.Service) { s.Spec.Ports = s.Spec.Ports[:1] }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			service := valid.DeepCopy()
+			if tc.change != nil {
+				tc.change(service)
+			}
+			wantPeer := netv1.NetworkPolicyPeer{
+				NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"kubernetes.io/metadata.name": "kube-system"}},
+				PodSelector:       &metav1.LabelSelector{MatchLabels: map[string]string{"k8s-app": "kube-dns"}},
+			}
+			want := netv1.NetworkPolicyEgressRule{
+				To:    []netv1.NetworkPolicyPeer{wantPeer},
+				Ports: []netv1.NetworkPolicyPort{tcpPort(53), udpPort(53)},
+			}
+			for _, cidr := range tc.vips {
+				want.To = append(want.To, netv1.NetworkPolicyPeer{IPBlock: &netv1.IPBlock{CIDR: cidr}})
+			}
+			if rule := CoreDNSEgressRule(service); !reflect.DeepEqual(rule, want) {
+				t.Fatalf("unexpected CoreDNS egress: %+v", rule)
+			}
+		})
+	}
+}
+
 func TestTrafficGroupDependencyPolicies(t *testing.T) {
 	meta := metav1.ObjectMeta{Namespace: "default", Name: "kubernetes"}
 	service := &corev1.Service{

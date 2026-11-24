@@ -2,16 +2,19 @@ package security
 
 import (
 	"cmp"
+	"maps"
 	"slices"
 
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 const (
 	KubernetesAPINamespace  = "default"
 	KubernetesAPIName       = "kubernetes"
+	CoreDNSServiceName      = "coredns"
 	coreDNSIngressName      = "olares-traffic-group-coredns-ingress"
 	kubernetesAPIEgressName = "olares-traffic-group-kube-api-egress"
 )
@@ -86,6 +89,40 @@ func BuildTrafficGroupDependencyPolicies(namespace string, service *corev1.Servi
 		}
 	}
 	return append(policies, platformWebhookPolicies(namespace, service, rules)...)
+}
+
+// CoreDNSEgressRule allows only DNS to CoreDNS Pods and its verified Service IPs.
+func CoreDNSEgressRule(service *corev1.Service) netv1.NetworkPolicyEgressRule {
+	selector := map[string]string{"k8s-app": "kube-dns"}
+	rule := netv1.NetworkPolicyEgressRule{
+		To:    []netv1.NetworkPolicyPeer{platformPeer(metav1.NamespaceSystem, selector)},
+		Ports: []netv1.NetworkPolicyPort{tcpPort(53), udpPort(53)},
+	}
+	if service == nil || service.Namespace != metav1.NamespaceSystem || service.Name != CoreDNSServiceName ||
+		!service.DeletionTimestamp.IsZero() || service.Spec.Type != corev1.ServiceTypeClusterIP ||
+		!maps.Equal(service.Spec.Selector, selector) {
+		return rule
+	}
+	var tcp, udp bool
+	for _, port := range service.Spec.Ports {
+		if port.Port != 53 || (port.TargetPort != intstr.FromInt32(53) && port.TargetPort != intstr.FromInt32(0)) {
+			continue
+		}
+		switch port.Protocol {
+		case corev1.ProtocolTCP:
+			tcp = true
+		case corev1.ProtocolUDP:
+			udp = true
+		}
+	}
+	if tcp && udp {
+		for _, ip := range serviceClusterIPs(service) {
+			if cidr := exactIPCIDR(ip); cidr != "" {
+				rule.To = append(rule.To, netv1.NetworkPolicyPeer{IPBlock: &netv1.IPBlock{CIDR: cidr}})
+			}
+		}
+	}
+	return rule
 }
 
 func apiEgressPolicy(namespace, name string, selector map[string]string, rules []netv1.NetworkPolicyEgressRule) netv1.NetworkPolicy {

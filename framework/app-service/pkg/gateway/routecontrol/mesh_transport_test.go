@@ -142,7 +142,7 @@ func TestTransportRejectsReservedProxyPortsAndInvalidService(t *testing.T) {
 	}
 }
 
-func TestRouteEgressDoesNotGrantCitusToOtherSources(t *testing.T) {
+func TestRouteEgressDoesNotGrantSystemDependenciesToOtherSources(t *testing.T) {
 	for _, source := range []meshTransportPeer{
 		{"user-space-alice", map[string]string{"app": "systemserver", "linkerd.io/control-plane-ns": "os-mesh"}},
 		{"user-system-", map[string]string{"app": "systemserver", "linkerd.io/control-plane-ns": "os-mesh"}},
@@ -153,8 +153,8 @@ func TestRouteEgressDoesNotGrantCitusToOtherSources(t *testing.T) {
 			peer:        meshTransportPeer{"os-framework", map[string]string{"app": "authelia-backend"}},
 			targetPorts: []netv1.NetworkPolicyPort{meshTransportPort(9091)},
 		}
-		egress := transportPair(transportLabels(client.ObjectKey{Namespace: source.namespace, Name: "test"}), "auth-server", source, backend)[0]
-		if len(egress.Spec.Egress) != 1 {
+		policies, err := authTransportPair(t.Context(), nil, transportLabels(client.ObjectKey{Namespace: source.namespace, Name: "test"}), "auth-server", source, backend)
+		if err != nil || len(policies[0].Spec.Egress) != 1 {
 			t.Fatalf("non-system-server source received an extra egress rule: %+v", source)
 		}
 	}
@@ -171,6 +171,19 @@ func TestSystemLoginStartsBackendTransportBeforeFrontend(t *testing.T) {
 			}
 		}
 	}
+	dns := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "kube-system", Name: "coredns"},
+		Spec: corev1.ServiceSpec{
+			Type: corev1.ServiceTypeClusterIP, ClusterIP: "10.96.0.10",
+			Selector: map[string]string{"k8s-app": "kube-dns"},
+			Ports: []corev1.ServicePort{
+				{Name: "dns", Port: 53, Protocol: corev1.ProtocolUDP},
+				{Name: "dns-tcp", Port: 53, Protocol: corev1.ProtocolTCP},
+				{Name: "metrics", Port: 9153, Protocol: corev1.ProtocolTCP},
+			},
+		},
+	}
+	authBackends = append(authBackends, dns)
 	c := fake.NewClientBuilder().WithScheme(testSchemeWithSecurityPolicy(t)).WithObjects(authBackends...).Build()
 	if err := gateway.EnsureSystemPlaneRoutes(ctx, c, "alice", "alice.olares.com", "user-space-alice", false); err != nil {
 		t.Fatal(err)
@@ -219,8 +232,18 @@ func TestSystemLoginStartsBackendTransportBeforeFrontend(t *testing.T) {
 					}}).networkPolicyPeer()},
 					Ports: []netv1.NetworkPolicyPort{meshTransportPort(5432)},
 				},
+				{
+					To: []netv1.NetworkPolicyPeer{
+						(meshTransportPeer{"kube-system", map[string]string{"k8s-app": "kube-dns"}}).networkPolicyPeer(),
+						{IPBlock: &netv1.IPBlock{CIDR: "10.96.0.10/32"}},
+					},
+					Ports: []netv1.NetworkPolicyPort{
+						meshTransportPort(53),
+						{Protocol: ptr.To(corev1.ProtocolUDP), Port: ptr.To(intstr.FromInt32(53))},
+					},
+				},
 			}) {
-				t.Fatalf("first isolation must include only Authelia and the Citus coordinator: %+v", p.Spec.Egress)
+				t.Fatalf("first isolation must include only Authelia, Citus, and CoreDNS: %+v", p.Spec.Egress)
 			}
 		}
 		if p.Namespace == "os-framework" &&
@@ -234,7 +257,7 @@ func TestSystemLoginStartsBackendTransportBeforeFrontend(t *testing.T) {
 		t.Fatal("login bootstrap did not install the system-server egress policy")
 	}
 	wantEgress := systemEgress.DeepCopy().Spec.Egress
-	systemEgress.Spec.Egress = systemEgress.Spec.Egress[:1]
+	systemEgress.Spec.Egress = systemEgress.Spec.Egress[:2]
 	if err := c.Update(ctx, systemEgress); err != nil {
 		t.Fatal(err)
 	}
