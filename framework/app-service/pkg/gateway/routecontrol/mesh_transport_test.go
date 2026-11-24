@@ -142,6 +142,24 @@ func TestTransportRejectsReservedProxyPortsAndInvalidService(t *testing.T) {
 	}
 }
 
+func TestRouteEgressDoesNotGrantCitusToOtherSources(t *testing.T) {
+	for _, source := range []meshTransportPeer{
+		{"user-space-alice", map[string]string{"app": "systemserver", "linkerd.io/control-plane-ns": "os-mesh"}},
+		{"user-system-", map[string]string{"app": "systemserver", "linkerd.io/control-plane-ns": "os-mesh"}},
+		{"user-system-alice", map[string]string{"app": "systemserver"}},
+		{"user-system-alice", map[string]string{"app": "other", "linkerd.io/control-plane-ns": "os-mesh"}},
+	} {
+		backend := meshTransportBackend{
+			peer:        meshTransportPeer{"os-framework", map[string]string{"app": "authelia-backend"}},
+			targetPorts: []netv1.NetworkPolicyPort{meshTransportPort(9091)},
+		}
+		egress := transportPair(transportLabels(client.ObjectKey{Namespace: source.namespace, Name: "test"}), "auth-server", source, backend)[0]
+		if len(egress.Spec.Egress) != 1 {
+			t.Fatalf("non-system-server source received an extra egress rule: %+v", source)
+		}
+	}
+}
+
 func TestSystemLoginStartsBackendTransportBeforeFrontend(t *testing.T) {
 	ctx := context.Background()
 	authBackends := autheliaMeshServiceObjects("user-system-alice")
@@ -179,13 +197,53 @@ func TestSystemLoginStartsBackendTransportBeforeFrontend(t *testing.T) {
 	}
 	checkRoute(ReasonAwaitingDataPlane)
 	verify(2)
+	var systemEgress *netv1.NetworkPolicy
 	for _, p := range policies.Items {
+		if p.Namespace == "user-system-alice" {
+			systemEgress = p.DeepCopy()
+			if !reflect.DeepEqual(p.Spec.PodSelector.MatchLabels, map[string]string{
+				"app": "systemserver", "linkerd.io/control-plane-ns": "os-mesh",
+			}) {
+				t.Fatalf("unexpected bootstrap egress source: %+v", p.Spec.PodSelector)
+			}
+			if !reflect.DeepEqual(p.Spec.Egress, []netv1.NetworkPolicyEgressRule{
+				{
+					To: []netv1.NetworkPolicyPeer{(meshTransportPeer{"os-framework", map[string]string{
+						"app": "authelia-backend", "linkerd.io/control-plane-ns": "os-mesh",
+					}}).networkPolicyPeer()},
+					Ports: []netv1.NetworkPolicyPort{meshTransportPort(4143), meshTransportPort(9091)},
+				},
+				{
+					To: []netv1.NetworkPolicyPeer{(meshTransportPeer{"os-platform", map[string]string{
+						"app": "citus", "app.kubernetes.io/name": "citus", "statefulset.kubernetes.io/pod-name": "citus-0",
+					}}).networkPolicyPeer()},
+					Ports: []netv1.NetworkPolicyPort{meshTransportPort(5432)},
+				},
+			}) {
+				t.Fatalf("first isolation must include only Authelia and the Citus coordinator: %+v", p.Spec.Egress)
+			}
+		}
 		if p.Namespace == "os-framework" &&
 			(p.Spec.PodSelector.MatchLabels["app"] != "authelia-backend" ||
 				p.Spec.Ingress[0].From[0].NamespaceSelector.MatchLabels["kubernetes.io/metadata.name"] != "user-system-alice" ||
 				p.Spec.Ingress[0].From[0].PodSelector.MatchLabels["app"] != "systemserver") {
 			t.Fatalf("bootstrap ingress grants an unexpected identity: %+v", p.Spec)
 		}
+	}
+	if systemEgress == nil {
+		t.Fatal("login bootstrap did not install the system-server egress policy")
+	}
+	wantEgress := systemEgress.DeepCopy().Spec.Egress
+	systemEgress.Spec.Egress = systemEgress.Spec.Egress[:1]
+	if err := c.Update(ctx, systemEgress); err != nil {
+		t.Fatal(err)
+	}
+	checkRoute(ReasonAwaitingDataPlane)
+	if err := c.Get(ctx, client.ObjectKeyFromObject(systemEgress), systemEgress); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(systemEgress.Spec.Egress, wantEgress) {
+		t.Fatalf("old login egress policy was not repaired in place: %+v", systemEgress.Spec.Egress)
 	}
 	frontend := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: key.Namespace, Name: "authelia-svc"},
 		Spec: corev1.ServiceSpec{Ports: []corev1.ServicePort{{Port: 80, Protocol: corev1.ProtocolTCP}}}}
