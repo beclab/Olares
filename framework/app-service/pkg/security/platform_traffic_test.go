@@ -8,6 +8,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
@@ -317,5 +318,70 @@ func TestSystemFrontendGrantsUseOnlyVerifiedServicePorts(t *testing.T) {
 			(len(p.Spec.Egress) != 2 || !reflect.DeepEqual(p.Spec.Egress[1].Ports, []netv1.NetworkPolicyPort{tcpPort(tc.servicePort)})) {
 			t.Fatalf("unexpected virtual Service ports for %s: %+v", tc.name, p.Spec)
 		}
+	}
+}
+
+func TestDesktopBFLCompatibilityOnlyAllowsSameTenantUnmeshedAPI(t *testing.T) {
+	space := "user-space-alice"
+	key := types.NamespacedName{Namespace: space, Name: "bfl"}
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Namespace: key.Namespace, Name: key.Name},
+		Spec: corev1.ServiceSpec{
+			Type: corev1.ServiceTypeClusterIP, ClusterIP: "10.96.0.13", Selector: map[string]string{"tier": "bfl"},
+			Ports: []corev1.ServicePort{
+				{Port: 80, TargetPort: intstr.FromInt(8080), Protocol: corev1.ProtocolTCP},
+				{Port: 443, TargetPort: intstr.FromInt(443), Protocol: corev1.ProtocolTCP},
+			},
+		},
+	}
+	services := map[types.NamespacedName]*corev1.Service{key: svc}
+	lookup := func(namespace string) (out, in *netv1.NetworkPolicy) {
+		for _, policy := range BuildPlatformTrafficPolicies(namespace, services) {
+			switch policy.Name {
+			case "olares-platform-desktop-bfl-unmeshed-egress":
+				out = &policy
+			case "olares-platform-desktop-bfl-unmeshed-ingress":
+				in = &policy
+			}
+		}
+		return out, in
+	}
+	out, in := lookup(space)
+	if !IsTrafficGroupManagedNP(out) || !IsTrafficGroupManagedNP(in) ||
+		len(out.Spec.Egress) != 1 || len(in.Spec.Ingress) != 1 {
+		t.Fatalf("expected a managed egress and ingress rule: %+v %+v", out, in)
+	}
+	desktop := map[string]string{"app": "olares-app", "linkerd.io/control-plane-ns": "os-mesh"}
+	if !reflect.DeepEqual(out.Spec.PodSelector.MatchLabels, desktop) ||
+		!reflect.DeepEqual(in.Spec.Ingress[0].From, []netv1.NetworkPolicyPeer{platformPeer(space, desktop)}) ||
+		!reflect.DeepEqual(in.Spec.Ingress[0].Ports, []netv1.NetworkPolicyPort{tcpPort(8080)}) {
+		t.Fatalf("unexpected Desktop source or BFL ingress port: %+v %+v", out.Spec, in.Spec)
+	}
+	to := out.Spec.Egress[0].To
+	if len(to) != 1 || to[0].IPBlock != nil ||
+		!reflect.DeepEqual(to[0].NamespaceSelector, platformPeer(space, nil).NamespaceSelector) ||
+		!reflect.DeepEqual(to[0].PodSelector, &in.Spec.PodSelector) ||
+		!reflect.DeepEqual(out.Spec.Egress[0].Ports, []netv1.NetworkPolicyPort{tcpPort(8080)}) {
+		t.Fatalf("unexpected BFL egress destination: %+v", out.Spec)
+	}
+	target, err := metav1.LabelSelectorAsSelector(&in.Spec.PodSelector)
+	if err != nil || !target.Matches(labels.Set{"tier": "bfl"}) ||
+		target.Matches(labels.Set{"tier": "other"}) ||
+		target.Matches(labels.Set{"tier": "bfl", "linkerd.io/control-plane-ns": "os-mesh"}) ||
+		target.Matches(labels.Set{"tier": "bfl", "linkerd.io/control-plane-ns": "another-mesh"}) {
+		t.Fatalf("the compatibility policy must select only unmeshed BFL Pods: %v %v", target, err)
+	}
+	if otherOut, otherIn := lookup("user-space-bob"); len(otherOut.Spec.Egress) != 0 || len(otherIn.Spec.Ingress) != 0 {
+		t.Fatal("a tenant received compatibility grants from another tenant's Service")
+	}
+	svc.Spec.Ports[0].TargetPort = intstr.FromInt(443)
+	out, in = lookup(space)
+	if len(out.Spec.Egress) != 0 || len(in.Spec.Ingress) != 0 {
+		t.Fatal("retargeting the BFL API must withdraw both grants")
+	}
+	delete(services, key)
+	out, in = lookup(space)
+	if len(out.Spec.Egress) != 0 || len(in.Spec.Ingress) != 0 {
+		t.Fatal("deleting the Service must withdraw both grants")
 	}
 }

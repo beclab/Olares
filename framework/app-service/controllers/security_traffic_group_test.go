@@ -116,7 +116,7 @@ func TestAutheliaBFLPolicySurvivesSweepAndRevokesDeletedService(t *testing.T) {
 
 func TestTrafficGroupPoliciesSurviveLegacySweep(t *testing.T) {
 	ctx := context.WithValue(context.Background(), loggerKey, logr.Discard())
-	for _, ns := range []string{"kube-system", "os-framework", "user-system-alice"} {
+	for _, ns := range []string{"kube-system", "os-framework", "user-system-alice", "user-space-alice"} {
 		t.Run(ns, func(t *testing.T) {
 			namespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: ns}}
 			baseline := security.NPGroupDefaultDeny(ns)
