@@ -128,7 +128,48 @@ func (h *HelmOps) install(values map[string]interface{}) error {
 		return driver.ErrReleaseExists
 	}
 	if errors.Is(err, driver.ErrReleaseNotFound) {
+		if err := h.prepareAppMeshNamespace(); err != nil {
+			return err
+		}
 		return helm.InstallCharts(h.ctx, h.actionConfig, h.settings, h.app.AppName, h.app.ChartsName, h.app.RepoURL, h.app.Namespace, values)
+	}
+	return err
+}
+
+// prepareAppMeshNamespace makes Linkerd control-plane access available before
+// Helm creates application Pods, including charts with install hooks.
+func (h *HelmOps) prepareAppMeshNamespace() error {
+	if h.app.Type != appv1alpha1.App.String() || h.app.AppName == "" || h.app.OwnerName == "" {
+		return nil
+	}
+	nsClient := h.client.KubeClient.Kubernetes().CoreV1().Namespaces()
+	meta := metav1.ObjectMeta{Name: h.app.Namespace, Labels: map[string]string{
+		constants.ApplicationNameLabel:        h.app.AppName,
+		constants.ApplicationInstallUserLabel: h.app.OwnerName,
+	}}
+	ns, err := nsClient.Get(h.ctx, h.app.Namespace, metav1.GetOptions{})
+	if apierrors.IsNotFound(err) {
+		_, err = nsClient.Create(h.ctx, &corev1.Namespace{ObjectMeta: meta}, metav1.CreateOptions{})
+		if !apierrors.IsAlreadyExists(err) {
+			return err
+		}
+		ns, err = nsClient.Get(h.ctx, h.app.Namespace, metav1.GetOptions{})
+	}
+	if err != nil {
+		return err
+	}
+	if ns.Labels == nil {
+		ns.Labels = make(map[string]string)
+	}
+	changed := false
+	for key, value := range meta.Labels {
+		if ns.Labels[key] == "" {
+			ns.Labels[key] = value
+			changed = true
+		}
+	}
+	if changed {
+		_, err = nsClient.Update(h.ctx, ns, metav1.UpdateOptions{})
 	}
 	return err
 }

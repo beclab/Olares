@@ -75,7 +75,7 @@ spec:
     - expression: >-
         has(object.spec.initContainers) &&
         object.spec.initContainers.exists(c, c.name == 'linkerd-init') &&
-        (variables.nativeProxy ?
+        (
           (object.spec.initContainers.size() >= 2 &&
            object.spec.initContainers[0].name == 'linkerd-init' &&
            object.spec.initContainers[1].name == 'linkerd-proxy' &&
@@ -83,10 +83,10 @@ spec:
            object.spec.initContainers[1].restartPolicy == 'Always' &&
            has(object.spec.initContainers[1].startupProbe) && has(object.spec.initContainers[1].env) &&
            object.spec.initContainers[1].env.exists(e, e.name == 'LINKERD2_PROXY_INBOUND_DEFAULT_POLICY' &&
-             !has(e.valueFrom) && has(e.value) && e.value == variables.inboundPolicy)) :
-          object.spec.containers.exists(c, c.name == 'linkerd-proxy' && has(c.env) &&
+             !has(e.valueFrom) && has(e.value) && e.value == variables.inboundPolicy)) ||
+          (!variables.nativeProxy && object.spec.containers.exists(c, c.name == 'linkerd-proxy' && has(c.env) &&
             c.env.exists(e, e.name == 'LINKERD2_PROXY_INBOUND_DEFAULT_POLICY' &&
-              !has(e.valueFrom) && has(e.value) && e.value == variables.inboundPolicy)))
+              !has(e.valueFrom) && has(e.value) && e.value == variables.inboundPolicy))))
       message: Enrolled HTTP Pods require an injected Linkerd init container and a configured proxy.
 ---
 apiVersion: admissionregistration.k8s.io/v1

@@ -1,7 +1,13 @@
 package meshinagent
 
 import (
+	"os"
 	"strings"
+
+	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
+	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/security"
+	corev1 "k8s.io/api/core/v1"
 
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 )
@@ -79,4 +85,21 @@ func HasIntentOnly(settings map[string]string) bool {
 		return false
 	}
 	return len(ParseCallees(settings)) == 0
+}
+
+// InstalledAppOwnsNamespace matches the app's primary namespace or a subchart
+// namespace registered by the installer for the same app and installing user.
+func InstalledAppOwnsNamespace(ns *corev1.Namespace, app *appv1alpha1.ApplicationManager) bool {
+	if ns == nil || app == nil || app.Spec.Type != appv1alpha1.App || app.Spec.AppName == "" ||
+		app.Spec.AppOwner == "" || appcfg.AppName(app.Spec.AppName).IsSysApp() ||
+		(os.Getenv("GENERATED_APPS") != "" && appcfg.AppName(app.Spec.AppName).IsGeneratedApp()) {
+		return false
+	}
+	if internal, _ := security.IsUserInternalNamespaces(ns.Name); internal ||
+		security.IsOSSystemNamespace(ns.Name) || security.IsUnderLayerNamespace(ns.Name) {
+		return false
+	}
+	return ns.Name == app.Spec.AppNamespace ||
+		(ns.Labels[constants.ApplicationNameLabel] == app.Spec.AppName &&
+			ns.Labels[constants.ApplicationInstallUserLabel] == app.Spec.AppOwner)
 }

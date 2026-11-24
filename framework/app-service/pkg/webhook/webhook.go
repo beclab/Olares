@@ -116,6 +116,11 @@ func (wh *Webhook) GetAppConfig(namespace string) (appMgr *v1alpha1.ApplicationM
 // inject the generated fakes.
 func GetAppConfigForNamespace(ctx context.Context, appClient versioned.Interface, kubeClient kubernetes.Interface, namespace string) (
 	appMgr *v1alpha1.ApplicationManager, appConfig *appcfg.ApplicationConfig, isShared, isSharedApp bool, err error) {
+	return getAppConfigForNamespace(ctx, appClient, kubeClient, namespace, false)
+}
+
+func getAppConfigForNamespace(ctx context.Context, appClient versioned.Interface, kubeClient kubernetes.Interface, namespace string, includeSubcharts bool) (
+	appMgr *v1alpha1.ApplicationManager, appConfig *appcfg.ApplicationConfig, isShared, isSharedApp bool, err error) {
 	list, err := appClient.AppV1alpha1().ApplicationManagers().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, nil, false, false, err
@@ -132,7 +137,6 @@ func GetAppConfigForNamespace(ctx context.Context, appClient versioned.Interface
 	}
 
 	refAppName := ns.Labels[constants.ApplicationNameLabel]
-	sharedNamespace := ns.Labels["bytetrade.io/ns-shared"]
 	installedUser := ns.Labels[constants.ApplicationInstallUserLabel]
 
 	var appconfig appcfg.ApplicationConfig
@@ -141,8 +145,9 @@ func GetAppConfigForNamespace(ctx context.Context, appClient versioned.Interface
 		switch {
 		case a.Spec.AppNamespace == namespace && (a.Spec.Type == v1alpha1.App || a.Spec.Type == v1alpha1.Middleware),
 			// shared server namespace
-			sharedNamespace == "true" && a.Spec.AppName == refAppName && a.Spec.AppOwner == installedUser &&
-				(a.Spec.Type == v1alpha1.App || a.Spec.Type == v1alpha1.Middleware):
+			ns.Labels["bytetrade.io/ns-shared"] == "true" && a.Spec.AppName == refAppName && a.Spec.AppOwner == installedUser &&
+				(a.Spec.Type == v1alpha1.App || a.Spec.Type == v1alpha1.Middleware),
+			includeSubcharts && meshinagent.InstalledAppOwnsNamespace(ns, &a):
 			err = json.Unmarshal([]byte(a.Spec.Config), &appconfig)
 			if err != nil {
 				return nil, nil, false, false, err
@@ -214,7 +219,30 @@ func (wh *Webhook) CreatePatch(
 ) ([]byte, error) {
 	isInjected, prevUUID := isInjectedPod(pod)
 
-	if isInjected {
+	alreadyHasMeshIn := meshinagent.HasNativeMeshIn(pod)
+
+	if injectMeshInAgent && !alreadyHasMeshIn {
+		// Conf is materialized at sidecar start (base64 → /tmp/mesh-in); do not
+		// mount an emptyDir over /etc/nginx (would hide image modules path).
+		viewer := ""
+		if appConfig != nil {
+			viewer = appConfig.OwnerName
+		}
+		pod.Spec.Volumes = append(pod.Spec.Volumes,
+			meshinagent.JWTSecretVolume(),
+			meshinagent.CertsVolumeForViewer(viewer),
+			meshinagent.SharedHostsVolume(),
+		)
+		gatewayIPs := wh.lookupMeshInGatewayIPs(ctx)
+		meshinagent.InsertNativeMeshIn(pod, gatewayIPs)
+		// ARCH S6: mesh-in and linkerd-proxy share the same admission predicate.
+		if mesh.ShouldInjectLinkerdProxy(injectMeshInAgent) {
+			mesh.AnnotatePodForLinkerdInject(pod, true)
+			klog.Infof("mesh-xport: annotate pod=%s/%s linkerd.io/inject=enabled", req.Namespace, pod.Name)
+		}
+	}
+
+	if isInjected || alreadyHasMeshIn {
 		// TODO: force mutate
 		klog.Infof("Pod is injected with uuid=%s namespace=%s", prevUUID, req.Namespace)
 		mesh.HardenLinkerdProxyAdminProbes(pod)
@@ -232,27 +260,6 @@ func (wh *Webhook) CreatePatch(
 			pod.Spec.Volumes = []corev1.Volume{}
 		}
 
-		if injectMeshInAgent {
-			// Conf is materialized at sidecar start (base64 → /tmp/mesh-in); do not
-			// mount an emptyDir over /etc/nginx (would hide image modules path).
-			viewer := ""
-			if appConfig != nil {
-				viewer = appConfig.OwnerName
-			}
-			pod.Spec.Volumes = append(pod.Spec.Volumes,
-				meshinagent.JWTSecretVolume(),
-				meshinagent.CertsVolumeForViewer(viewer),
-				meshinagent.SharedHostsVolume(),
-			)
-			gatewayIPs := wh.lookupMeshInGatewayIPs(ctx)
-			pod.Spec.InitContainers = append(pod.Spec.InitContainers, meshinagent.InitContainerSpecWithGatewayIPs(gatewayIPs))
-			pod.Spec.Containers = append(pod.Spec.Containers, meshinagent.ContainerSpec())
-			// ARCH S6: mesh-in and linkerd-proxy share the same admission predicate.
-			if mesh.ShouldInjectLinkerdProxy(injectMeshInAgent) {
-				mesh.AnnotatePodForLinkerdInject(pod, true)
-				klog.Infof("mesh-xport: annotate pod=%s/%s linkerd.io/inject=enabled", req.Namespace, pod.Name)
-			}
-		}
 		if injectMeshOutAgent {
 			pod.Spec.Volumes = append(pod.Spec.Volumes, meshoutagent.SATokenVolume(), meshoutagent.ConfVolume())
 			pod.Spec.InitContainers = append(pod.Spec.InitContainers, meshoutagent.InitContainerSpec())
@@ -477,14 +484,14 @@ func (wh *Webhook) MustInject(ctx context.Context, pod *corev1.Pod, namespace st
 	// TODO: uninject annotation
 
 	// get appLabel from namespace
-	_, err = wh.kubeClient.CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{})
+	ns, err := wh.kubeClient.CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{})
 	if err != nil {
 		klog.Errorf("Failed to get namespace=%s err=%v", namespace, err)
 		return
 	}
 
 	var isSharedApp bool
-	appMgr, appConfig, isShared, isSharedApp, err = wh.GetAppConfig(namespace)
+	appMgr, appConfig, isShared, isSharedApp, err = getAppConfigForNamespace(ctx, wh.dynamicClient, wh.kubeClient, namespace, true)
 	if err != nil {
 		if errors.Is(err, api.ErrApplicationManagerNotFound) {
 			err = nil
@@ -496,6 +503,11 @@ func (wh *Webhook) MustInject(ctx context.Context, pod *corev1.Pod, namespace st
 
 	if appConfig == nil {
 		klog.Infof("Unknown namespace=%s, do not inject", namespace)
+		return
+	}
+	installedApp := meshinagent.InstalledAppOwnsNamespace(ns, appMgr)
+	if namespace != appMgr.Spec.AppNamespace {
+		injectMeshInAgent = installedApp
 		return
 	}
 	if appConfig.IsMiddleware() {
@@ -568,13 +580,17 @@ func (wh *Webhook) MustInject(ctx context.Context, pod *corev1.Pod, namespace st
 		}
 	}
 
-	var declaresSharedCaller bool
-	injectMeshInAgent, declaresSharedCaller, err = wh.shouldInjectMeshInAgent(ctx, appConfig, namespace, isSharedApp)
-	if err != nil {
-		return false, false, false, nil, perms, nil, nil, err
+	if installedApp {
+		injectMeshInAgent = true
+	} else {
+		var declaresSharedCaller bool
+		injectMeshInAgent, declaresSharedCaller, err = wh.shouldInjectMeshInAgent(ctx, appConfig, namespace, isSharedApp)
+		if err != nil {
+			return false, false, false, nil, perms, nil, nil, err
+		}
+		isEntrancePod := isSharedEntranceWorkload(injectSharedPod, pod.GetLabels())
+		injectMeshInAgent = applyOutboundMeshInGate(injectMeshInAgent, isEntrancePod, declaresSharedCaller, pod.GetLabels())
 	}
-	isEntrancePod := isSharedEntranceWorkload(injectSharedPod, pod.GetLabels())
-	injectMeshInAgent = applyOutboundMeshInGate(injectMeshInAgent, isEntrancePod, declaresSharedCaller, pod.GetLabels())
 	injectMeshOutAgent = meshoutagent.ShouldInject(isShared, perms)
 	return
 }

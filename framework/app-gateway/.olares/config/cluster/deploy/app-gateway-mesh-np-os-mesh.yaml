@@ -49,6 +49,23 @@ spec:
       protocol: TCP
     - port: 443
       protocol: TCP
+  - from:
+    - namespaceSelector:
+        matchExpressions:
+        - key: applications.app.bytetrade.io/name
+          operator: Exists
+        - key: applications.app.bytetrade.io/install_user
+          operator: Exists
+      podSelector:
+        matchLabels:
+          linkerd.io/control-plane-ns: os-mesh
+    ports:
+    - port: 8080
+      protocol: TCP
+    - port: 8086
+      protocol: TCP
+    - port: 8090
+      protocol: TCP
   podSelector: {}
   policyTypes:
   - Ingress

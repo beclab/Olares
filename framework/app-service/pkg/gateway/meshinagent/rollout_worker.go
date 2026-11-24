@@ -280,7 +280,7 @@ func (w *RolloutWorker) runJob(ctx context.Context, job RolloutJob) {
 			}
 		}
 		if !bumped {
-			if lastErr = w.bumpAll(ctx, job.Workloads); lastErr != nil {
+			if lastErr = w.bumpAll(ctx, job); lastErr != nil {
 				continue
 			}
 			bumped = true
@@ -301,10 +301,14 @@ func (w *RolloutWorker) runJob(ctx context.Context, job RolloutJob) {
 	w.markFailed(ctx, job)
 }
 
-func (w *RolloutWorker) bumpAll(ctx context.Context, refs []WorkloadRef) error {
+func (w *RolloutWorker) bumpAll(ctx context.Context, job RolloutJob) error {
+	bump := BumpWorkload
+	if job.Reason == ReasonNativeSidecars {
+		bump = bumpNativeSidecars
+	}
 	var first error
-	for _, ref := range refs {
-		if err := BumpWorkload(ctx, w.Client, ref); err != nil {
+	for _, ref := range job.Workloads {
+		if err := bump(ctx, w.Client, ref); err != nil {
 			if first == nil {
 				first = err
 			}

@@ -20,9 +20,10 @@ var ErrWorkloadGone = errors.New("rollout target not found")
 
 // WorkloadRef identifies a Deployment or StatefulSet to roll.
 type WorkloadRef struct {
-	Kind      string // "Deployment" or "StatefulSet"
+	Kind      string // "Deployment", "StatefulSet", or "DaemonSet"
 	Namespace string
 	Name      string
+	UID       types.UID // Optional identity for work deduplicated across upgrade scans.
 }
 
 // Key returns namespace/kind/name for queue dedupe.
@@ -139,6 +140,14 @@ func WorkloadRolloutComplete(ctx context.Context, c client.Client, ref WorkloadR
 			return false, err
 		}
 		return statefulSetRolloutComplete(&sts), nil
+	case "DaemonSet":
+		var ds appsv1.DaemonSet
+		if err := c.Get(ctx, types.NamespacedName{Namespace: ref.Namespace, Name: ref.Name}, &ds); err != nil {
+			return false, err
+		}
+		return ds.Status.ObservedGeneration >= ds.Generation &&
+			ds.Status.UpdatedNumberScheduled == ds.Status.DesiredNumberScheduled &&
+			ds.Status.NumberAvailable == ds.Status.DesiredNumberScheduled, nil
 	default:
 		return false, fmt.Errorf("mesh-in-rollout: unsupported kind %q", ref.Kind)
 	}

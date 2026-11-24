@@ -28,6 +28,7 @@ const (
 	ReasonMeshReady         = "mesh_ready"
 	ReasonAppCreateInject   = "app_create_inject"
 	ReasonHTTPMeshMTLS      = "http_mesh_mtls"
+	ReasonNativeSidecars    = "native_sidecars"
 
 	RestartedAtAnnotation = "kubectl.kubernetes.io/restartedAt"
 
