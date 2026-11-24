@@ -167,6 +167,19 @@ spec:
     metadata:
       labels:
         tier: app-service
+        {{- $apiMesh := default dict .Values.appServiceAPIMesh }}
+        {{- if $apiMesh.activate }}
+        {{- if not $apiMesh.prepare }}
+        {{- fail "prepare app-service API mTLS policies before activating the listener" }}
+        {{- end }}
+        traffic.olares.io/platform-mesh: "true"
+        traffic.olares.io/app-service-api-mtls: required
+      annotations:
+        linkerd.io/inject: enabled
+        config.linkerd.io/proxy-enable-native-sidecar: "true"
+        config.linkerd.io/default-inbound-policy: deny
+        config.linkerd.io/skip-inbound-ports: "8433,8444"
+        {{- end }}
     spec:
       affinity:
         nodeAffinity:

@@ -1,0 +1,137 @@
+{{- $mesh := default dict .Values.appServiceAPIMesh -}}
+{{- if $mesh.prepare -}}
+{{- if ne .Release.Namespace "os-framework" -}}
+{{- fail "app-service API mesh policies belong in os-framework" -}}
+{{- end -}}
+{{- if or (not $mesh.tenants) (ne (len (default (list) $mesh.tenants)) (len (uniq (default (list) $mesh.tenants)))) -}}
+{{- fail "app-service API mTLS requires an explicit tenant inventory" -}}
+{{- end -}}
+{{- $routes := list (dict "name" "market-image-info" "namespace" "os-framework" "account" "market-sa" "method" "POST" "path" "/app-service/v1/apps/image-info") -}}
+{{- range $tenant := $mesh.tenants -}}
+{{- if or (gt (len $tenant) 51) (not (regexMatch "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$" $tenant)) -}}
+{{- fail "invalid app-service API mTLS tenant" -}}
+{{- end -}}
+{{- $routes = append $routes (dict "name" (printf "user-apps-%s" $tenant) "namespace" (printf "user-system-%s" $tenant) "account" "bytetrade-sys-ops" "method" "GET" "path" (printf "/app-service/v1/user-apps/%s" $tenant)) -}}
+{{- end }}
+apiVersion: policy.linkerd.io/v1beta3
+kind: Server
+metadata:
+  name: app-service-api
+  namespace: os-framework
+spec:
+  podSelector:
+    matchLabels:
+      tier: app-service
+      traffic.olares.io/app-service-api-mtls: required
+  port: 6755
+  proxyProtocol: HTTP/1
+  accessPolicy: deny
+{{- range $route := $routes }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ $route.name }}
+  namespace: os-framework
+spec:
+  parentRefs:
+    - group: policy.linkerd.io
+      kind: Server
+      name: app-service-api
+  rules:
+    - matches:
+        - path:
+            type: Exact
+            value: {{ $route.path | quote }}
+          method: {{ $route.method }}
+---
+apiVersion: policy.linkerd.io/v1alpha1
+kind: MeshTLSAuthentication
+metadata:
+  name: {{ $route.name }}
+  namespace: os-framework
+spec:
+  identityRefs:
+    - kind: ServiceAccount
+      name: {{ $route.account }}
+      namespace: {{ $route.namespace }}
+---
+apiVersion: policy.linkerd.io/v1alpha1
+kind: AuthorizationPolicy
+metadata:
+  name: {{ $route.name }}
+  namespace: os-framework
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: {{ $route.name }}
+  requiredAuthenticationRefs:
+    - group: policy.linkerd.io
+      kind: MeshTLSAuthentication
+      name: {{ $route.name }}
+{{- end }}
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: olares-app-service-api-mtls-pods
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["pods"]
+        scope: Namespaced
+  matchConditions:
+    - name: enrolled-api
+      expression: >-
+        request.namespace == 'os-framework' &&
+        ((has(object.metadata.labels) &&
+          'traffic.olares.io/app-service-api-mtls' in object.metadata.labels) ||
+         (oldObject != null && has(oldObject.metadata.labels) &&
+          'traffic.olares.io/app-service-api-mtls' in oldObject.metadata.labels))
+  validations:
+    - expression: >-
+        has(object.metadata.labels) &&
+        'tier' in object.metadata.labels && object.metadata.labels['tier'] == 'app-service' &&
+        'traffic.olares.io/app-service-api-mtls' in object.metadata.labels &&
+        object.metadata.labels['traffic.olares.io/app-service-api-mtls'] == 'required' &&
+        (!has(object.spec.hostNetwork) || !object.spec.hostNetwork) &&
+        object.spec.containers.all(c, !has(c.ports) || c.ports.all(p, !has(p.hostPort) || p.hostPort == 0))
+      message: The app-service API enrollment must be retained without host networking.
+    - expression: >-
+        has(object.metadata.annotations) &&
+        'linkerd.io/inject' in object.metadata.annotations &&
+        object.metadata.annotations['linkerd.io/inject'] == 'enabled' &&
+        'config.linkerd.io/proxy-enable-native-sidecar' in object.metadata.annotations &&
+        object.metadata.annotations['config.linkerd.io/proxy-enable-native-sidecar'] == 'true' &&
+        'config.linkerd.io/default-inbound-policy' in object.metadata.annotations &&
+        object.metadata.annotations['config.linkerd.io/default-inbound-policy'] == 'deny' &&
+        'config.linkerd.io/skip-inbound-ports' in object.metadata.annotations &&
+        object.metadata.annotations['config.linkerd.io/skip-inbound-ports'] == '8433,8444' &&
+        ['config.linkerd.io/skip-outbound-ports', 'config.linkerd.io/skip-subnets'].all(
+          a, !(a in object.metadata.annotations) || object.metadata.annotations[a] == '')
+      message: Keep API interception and preserve only the existing Webhook and JWKS port exceptions.
+    - expression: >-
+        has(object.spec.initContainers) && object.spec.initContainers.size() >= 2 &&
+        object.spec.initContainers[0].name == 'linkerd-init' &&
+        object.spec.initContainers[1].name == 'linkerd-proxy' &&
+        has(object.spec.initContainers[1].restartPolicy) &&
+        object.spec.initContainers[1].restartPolicy == 'Always' &&
+        has(object.spec.initContainers[1].startupProbe) &&
+        has(object.spec.initContainers[1].env) &&
+        object.spec.initContainers[1].env.exists(e, e.name == 'LINKERD2_PROXY_INBOUND_DEFAULT_POLICY' &&
+          !has(e.valueFrom) && has(e.value) && e.value == 'deny')
+      message: The app-service API requires the configured native Linkerd sidecar.
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: olares-app-service-api-mtls-pods
+spec:
+  policyName: olares-app-service-api-mtls-pods
+  validationActions: [Deny, Audit]
+{{- end }}

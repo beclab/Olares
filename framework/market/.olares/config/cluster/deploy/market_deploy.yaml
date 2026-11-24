@@ -123,7 +123,14 @@ spec:
       labels:
         app: appstore
         io.bytetrade.app: "true"
+        {{- if .Values.marketLinkerd }}
+        traffic.olares.io/platform-mesh: "true"
+        {{- end }}
       annotations:
+        {{- if .Values.marketLinkerd }}
+        linkerd.io/inject: enabled
+        config.linkerd.io/proxy-enable-native-sidecar: "true"
+        {{- end }}
 {{ if .Values.telemetry }}
         instrumentation.opentelemetry.io/inject-go: "olares-instrumentation"
         instrumentation.opentelemetry.io/go-container-names: "appstore-backend"    
