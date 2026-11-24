@@ -16,11 +16,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
-func TestCatalogTrustChangesOnlyAfterAuthenticatedProbe(t *testing.T) {
-	ctx := context.Background()
-	scheme := runtime.NewScheme()
-	_ = admissionregv1.AddToScheme(scheme)
-	hook := &admissionregv1.ValidatingWebhookConfiguration{
+func catalogWebhookFixture() *admissionregv1.ValidatingWebhookConfiguration {
+	return &admissionregv1.ValidatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{Name: catalogConfig},
 		Webhooks: []admissionregv1.ValidatingWebhook{{
 			FailurePolicy: ptr.To(admissionregv1.Fail),
@@ -34,6 +31,13 @@ func TestCatalogTrustChangesOnlyAfterAuthenticatedProbe(t *testing.T) {
 			}},
 		}},
 	}
+}
+
+func TestCatalogTrustChangesOnlyAfterAuthenticatedProbe(t *testing.T) {
+	ctx := context.Background()
+	scheme := runtime.NewScheme()
+	_ = admissionregv1.AddToScheme(scheme)
+	hook := catalogWebhookFixture()
 	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(hook).Build()
 	ca := []byte("verified serving CA")
 	failed := func(context.Context, []byte) error { return errors.New("TLS endpoint unavailable") }
@@ -70,6 +74,57 @@ func TestCatalogTrustChangesOnlyAfterAuthenticatedProbe(t *testing.T) {
 	}
 	if err := ensureCatalogWebhook(ctx, c, ca, verified); err == nil {
 		t.Fatal("fail-open webhook passed the publication gate")
+	}
+}
+
+func TestCatalogWebhookObjectSelector(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		selector *metav1.LabelSelector
+		allowed  bool
+	}{
+		{name: "omitted", allowed: true},
+		{name: "API server default", selector: &metav1.LabelSelector{}, allowed: true},
+		{name: "match labels", selector: &metav1.LabelSelector{
+			MatchLabels: map[string]string{"validate": "true"},
+		}},
+		{name: "match expressions", selector: &metav1.LabelSelector{
+			MatchExpressions: []metav1.LabelSelectorRequirement{{Key: "validate", Operator: metav1.LabelSelectorOpExists}},
+		}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
+			scheme := runtime.NewScheme()
+			if err := admissionregv1.AddToScheme(scheme); err != nil {
+				t.Fatal(err)
+			}
+			hook := catalogWebhookFixture()
+			hook.Webhooks[0].ObjectSelector = tc.selector
+			oldCA := []byte("previous serving CA")
+			newCA := []byte("replacement serving CA")
+			hook.Webhooks[0].ClientConfig.CABundle = oldCA
+			c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(hook).Build()
+
+			probed := false
+			err := ensureCatalogWebhook(ctx, c, newCA, func(context.Context, []byte) error {
+				probed = true
+				return nil
+			})
+			if (err == nil) != tc.allowed || probed != tc.allowed {
+				t.Fatalf("unexpected result: probe called=%v, err=%v", probed, err)
+			}
+			if err := c.Get(ctx, client.ObjectKey{Name: catalogConfig}, hook); err != nil {
+				t.Fatal(err)
+			}
+			expectedCA := oldCA
+			if tc.allowed {
+				expectedCA = newCA
+			}
+			if !bytes.Equal(hook.Webhooks[0].ClientConfig.CABundle, expectedCA) ||
+				*hook.Webhooks[0].FailurePolicy != admissionregv1.Fail {
+				t.Fatal("unexpected admission trust or failure policy")
+			}
+		})
 	}
 }
 

@@ -44,13 +44,16 @@ func catalogWebhook(ctx context.Context, c client.Client) (*admissionregv1.Valid
 	}
 	w := hook.Webhooks[0]
 	s := w.ClientConfig.Service
+	// The API server defaults an omitted object selector to an empty selector.
+	selector := w.ObjectSelector
+	hasObjectFilter := selector != nil && (len(selector.MatchLabels) != 0 || len(selector.MatchExpressions) != 0)
 	if w.FailurePolicy == nil || *w.FailurePolicy != admissionregv1.Fail ||
 		s == nil || s.Name != "app-service" || s.Namespace != "os-framework" ||
 		s.Port == nil || *s.Port != 8433 || s.Path == nil || *s.Path != CatalogWebhookPath ||
 		w.ClientConfig.URL != nil || w.NamespaceSelector == nil ||
 		w.NamespaceSelector.MatchLabels["kubernetes.io/metadata.name"] != PolicyNamespace ||
 		len(w.NamespaceSelector.MatchLabels) != 1 || len(w.NamespaceSelector.MatchExpressions) != 0 ||
-		len(w.MatchConditions) != 0 || w.ObjectSelector != nil ||
+		len(w.MatchConditions) != 0 || hasObjectFilter ||
 		len(w.Rules) != 1 {
 		return nil, fmt.Errorf("catalog webhook must use the fail-closed app-service endpoint")
 	}
