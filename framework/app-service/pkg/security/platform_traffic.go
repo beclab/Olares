@@ -194,11 +194,51 @@ func BuildPlatformTrafficPolicies(namespace string, services map[types.Namespace
 			}
 			policies = append(policies, policy)
 		}
+		if flow.name == "desktop-bfl" && namespace == flow.from.namespace {
+			policies = append(policies, unmeshedDesktopBFLPolicies(flow, service)...)
+		}
 	}
 	if tenant, ok := strings.CutPrefix(namespace, "user-system-"); ok && tenant != "" {
 		policies = append(policies, systemServerCitusEgress(namespace))
 	}
 	return policies
+}
+
+// Desktop still uses the BFL API on installations where BFL has not enrolled
+// in Linkerd. Only allow the verified API target port on those BFL Pods.
+func unmeshedDesktopBFLPolicies(flow platformServiceFlow, service *corev1.Service) []netv1.NetworkPolicy {
+	name, namespace := "olares-platform-desktop-bfl-unmeshed", flow.from.namespace
+	source := metav1.LabelSelector{MatchLabels: flow.from.selector}
+	target := metav1.LabelSelector{
+		MatchLabels: flow.to,
+		MatchExpressions: []metav1.LabelSelectorRequirement{{
+			Key: platformMeshControlPlaneLabel, Operator: metav1.LabelSelectorOpDoesNotExist,
+		}},
+	}
+	egress := netv1.NetworkPolicy{
+		ObjectMeta: npMeta(name+"-egress", namespace),
+		Spec: netv1.NetworkPolicySpec{
+			PodSelector: source,
+			PolicyTypes: []netv1.PolicyType{netv1.PolicyTypeEgress},
+		},
+	}
+	ingress := netv1.NetworkPolicy{
+		ObjectMeta: npMeta(name+"-ingress", namespace),
+		Spec: netv1.NetworkPolicySpec{
+			PodSelector: target,
+			PolicyTypes: []netv1.PolicyType{netv1.PolicyTypeIngress},
+		},
+	}
+	if flow.matchesService(service) {
+		targetPeer := platformPeer(namespace, flow.to)
+		targetPeer.PodSelector = &target
+		ports := []netv1.NetworkPolicyPort{tcpPort(flow.targetPort)}
+		egress.Spec.Egress = []netv1.NetworkPolicyEgressRule{{To: []netv1.NetworkPolicyPeer{targetPeer}, Ports: ports}}
+		ingress.Spec.Ingress = []netv1.NetworkPolicyIngressRule{{
+			From: []netv1.NetworkPolicyPeer{platformPeer(namespace, flow.from.selector)}, Ports: ports,
+		}}
+	}
+	return []netv1.NetworkPolicy{egress, ingress}
 }
 
 func systemServerCitusEgress(namespace string) netv1.NetworkPolicy {
