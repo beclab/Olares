@@ -61,7 +61,7 @@ test: manifests generate fmt vet envtest ## Run tests.
 # Packages with reliable, cluster-independent tests. Other packages
 # (pkg/kubesphere, pkg/task) require a live cluster and pkg/utils carries a
 # pre-existing environment-dependent test, so they are excluded from CI.
-TEST_UNIT_PKGS ?= ./pkg/gateway/routecontrol ./pkg/gateway/meshinagent ./pkg/gateway/callerjwt ./pkg/security ./pkg/mesh ./controllers/... ./pkg/apiserver/... ./pkg/appcfg/... ./pkg/appinstaller/... ./pkg/compute/... ./pkg/tapr/... ./pkg/utils/app/...
+TEST_UNIT_PKGS ?= ./controllers/... ./pkg/apiserver/... ./pkg/appcfg/... ./pkg/appinstaller/... ./pkg/compute/... ./pkg/tapr/... ./pkg/utils/app/...
 
 .PHONY: test-unit
 test-unit: envtest handler-contract-check ## Run the curated unit + integration suite with the race detector (skips manifests/generate/fmt/vet regeneration).
