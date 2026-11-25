@@ -29,6 +29,23 @@ alice:x:1000:1002::/home/alice:/bin/bash
 			want: hostUser{Name: "alice", UID: 1000, GID: 1002, Home: "/home/alice"},
 		},
 		{
+			name: "skip nologin users when choosing by uid",
+			passwd: `root:x:0:0:root:/root:/bin/bash
+locked:x:1000:1000::/home/locked:/usr/sbin/nologin
+falseuser:x:1001:1001::/home/falseuser:/bin/false
+alice:x:1002:1002::/home/alice:/bin/bash
+`,
+			want: hostUser{Name: "alice", UID: 1002, GID: 1002, Home: "/home/alice"},
+		},
+		{
+			name: "skip olares when its shell is nologin",
+			passwd: `root:x:0:0:root:/root:/bin/bash
+olares:x:1000:1000::/home/olares:/usr/sbin/nologin
+alice:x:1001:1001::/home/alice:/bin/bash
+`,
+			want: hostUser{Name: "alice", UID: 1001, GID: 1001, Home: "/home/alice"},
+		},
+		{
 			name: "only system users and nobody fall back to root",
 			passwd: `root:x:0:0:root:/root:/bin/bash
 daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin
@@ -68,7 +85,7 @@ func TestBuildNodeShellCmd(t *testing.T) {
 		"nsenter", "-t", "1", "-m", "-u", "-i", "-n", "-p",
 		"-S", "1000", "-G", "1000", "-w",
 		"env", "HOME=/home/olares", "USER=olares",
-		"/bin/bash",
+		"/bin/bash", "-c", `cd "$HOME" 2>/dev/null; exec /bin/bash`,
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("buildNodeShellCmd() = %v, want %v", got, want)
