@@ -270,6 +270,7 @@ func TestAutheliaLLDAPTokenTrafficRequiresMatchingService(t *testing.T) {
 func TestSystemServerDesktopDependenciesRequireVerifiedServices(t *testing.T) {
 	lldapKey := types.NamespacedName{Namespace: "os-platform", Name: "lldap-service"}
 	marketKey := types.NamespacedName{Namespace: "os-framework", Name: "appstore-svc"}
+	monitorKey := types.NamespacedName{Namespace: "os-framework", Name: "monitoring-server"}
 	for _, tc := range []struct {
 		key         types.NamespacedName
 		app         string
@@ -279,6 +280,7 @@ func TestSystemServerDesktopDependenciesRequireVerifiedServices(t *testing.T) {
 	}{
 		{lldapKey, "lldap", 17170, 17170, 2},
 		{marketKey, "appstore", 81, 8080, 1},
+		{monitorKey, "monitoring-server", 80, 8000, 2},
 	} {
 		t.Run(tc.key.Name, func(t *testing.T) {
 			service := &corev1.Service{
@@ -312,6 +314,9 @@ func TestSystemServerDesktopDependenciesRequireVerifiedServices(t *testing.T) {
 	}}}}
 	if !slices.Contains(ActivePlatformTrafficServices(tenant, active), lldapKey) || slices.Contains(ActivePlatformTrafficServices(tenant, nil), lldapKey) {
 		t.Fatal("LLDAP token verification is a readiness dependency of the active system-server")
+	}
+	if slices.Contains(ActivePlatformTrafficServices(tenant, active), monitorKey) {
+		t.Fatal("optional monitoring must not block tenant namespace isolation")
 	}
 }
 

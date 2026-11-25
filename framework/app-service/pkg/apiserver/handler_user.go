@@ -368,14 +368,36 @@ func (h *Handler) handleUpdateUserLimits(req *restful.Request, resp *restful.Res
 }
 
 func (h *Handler) handleUsers(req *restful.Request, resp *restful.Response) {
-	var userList iamv1alpha2.UserList
-	err := h.ctrlClient.List(req.Request.Context(), &userList)
-	if err != nil {
+	username, _ := req.Attribute(constants.UserContextAttribute).(string)
+	identities := req.Request.Header.Values(constants.BflUserKey)
+	// Reject ambiguous headers because the mesh and HTTP server must agree
+	// on the caller even when a proxy joins repeated header values.
+	if username == "" || len(identities) != 1 || identities[0] != username || strings.Contains(username, ",") {
+		api.HandleUnauthorized(resp, req, errors.New("missing or ambiguous user identity"))
+		return
+	}
+	ctx := req.Request.Context()
+	var caller iamv1alpha2.User
+	if err := h.ctrlClient.Get(ctx, types.NamespacedName{Name: username}, &caller); err != nil {
+		if apierrors.IsNotFound(err) {
+			api.HandleUnauthorized(resp, req, errors.New("unknown user identity"))
+			return
+		}
 		api.HandleError(resp, req, err)
 		return
 	}
-	userInfo := make([]UserInfo, 0)
-	for _, user := range userList.Items {
+	visible := []iamv1alpha2.User{caller}
+	role := caller.Annotations[users.UserAnnotationOwnerRole]
+	if role == "owner" || role == "admin" {
+		var userList iamv1alpha2.UserList
+		if err := h.ctrlClient.List(ctx, &userList); err != nil {
+			api.HandleError(resp, req, err)
+			return
+		}
+		visible = userList.Items
+	}
+	userInfo := make([]UserInfo, 0, len(visible))
+	for _, user := range visible {
 		var roles []string
 		roles = []string{user.Annotations[users.UserAnnotationOwnerRole]}
 		u := UserInfo{
@@ -414,10 +436,6 @@ func (h *Handler) handleUsers(req *restful.Request, resp *restful.Response) {
 
 		u.WizardComplete = getWizardComplete(&user)
 		userInfo = append(userInfo, u)
-	}
-	if err != nil {
-		api.HandleError(resp, req, err)
-		return
 	}
 	resp.WriteAsJson(NewListResult(userInfo))
 }

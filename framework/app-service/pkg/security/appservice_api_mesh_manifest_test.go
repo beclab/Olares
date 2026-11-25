@@ -125,15 +125,21 @@ func TestAppServiceAPIMeshRolloutAndPortBoundaries(t *testing.T) {
 	if active["ValidatingAdmissionPolicy/olares-app-service-api-mtls-pods"]["spec"].(map[string]any)["failurePolicy"] != "Fail" {
 		t.Fatal("enrolled Pods must fail closed")
 	}
-	for _, tc := range []struct{ name, namespace, account, method, path string }{
-		{"user-apps-alice", "user-system-alice", "bytetrade-sys-ops", "GET", "/app-service/v1/user-apps/alice"},
-		{"user-apps-bob", "user-system-bob", "bytetrade-sys-ops", "GET", "/app-service/v1/user-apps/bob"},
-		{"market-image-info", "os-framework", "market-sa", "POST", "/app-service/v1/apps/image-info"},
+	for _, tc := range []struct{ name, namespace, account, method, path, userHeader string }{
+		{"user-apps-alice", "user-system-alice", "bytetrade-sys-ops", "GET", "/app-service/v1/user-apps/alice", ""},
+		{"user-apps-bob", "user-system-bob", "bytetrade-sys-ops", "GET", "/app-service/v1/user-apps/bob", ""},
+		{"users-alice", "user-system-alice", "bytetrade-sys-ops", "GET", "/app-service/v1/users", "alice"},
+		{"users-bob", "user-system-bob", "bytetrade-sys-ops", "GET", "/app-service/v1/users", "bob"},
+		{"market-image-info", "os-framework", "market-sa", "POST", "/app-service/v1/apps/image-info", ""},
 	} {
 		route := active["HTTPRoute/"+tc.name]["spec"].(map[string]any)
-		wantRules := []any{map[string]any{"matches": []any{map[string]any{
+		match := map[string]any{
 			"path": map[string]any{"type": "Exact", "value": tc.path}, "method": tc.method,
-		}}}}
+		}
+		if tc.userHeader != "" {
+			match["headers"] = []any{map[string]any{"name": "X-Bfl-User", "type": "Exact", "value": tc.userHeader}}
+		}
+		wantRules := []any{map[string]any{"matches": []any{match}}}
 		wantParents := []any{map[string]any{"group": "policy.linkerd.io", "kind": "Server", "name": "app-service-api"}}
 		if !reflect.DeepEqual(route["rules"], wantRules) || !reflect.DeepEqual(route["parentRefs"], wantParents) {
 			t.Fatalf("incorrect request scope for %s: %v", tc.name, route)

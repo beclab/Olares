@@ -347,7 +347,15 @@ func TestSystemLoginStartsBackendTransportBeforeFrontend(t *testing.T) {
 			},
 		},
 	}
-	authBackends = append(authBackends, dns, infisical, bfl, appService, nats, redis, lldap, market)
+	monitoring := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "os-framework", Name: "monitoring-server"},
+		Spec: corev1.ServiceSpec{
+			Type: corev1.ServiceTypeClusterIP, ClusterIP: "10.96.0.18",
+			Selector: map[string]string{"app": "monitoring-server"},
+			Ports:    []corev1.ServicePort{{Port: 80, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt32(8000)}},
+		},
+	}
+	authBackends = append(authBackends, dns, infisical, bfl, appService, nats, redis, lldap, market, monitoring)
 	c := fake.NewClientBuilder().WithScheme(testSchemeWithSecurityPolicy(t)).WithObjects(authBackends...).Build()
 	if err := gateway.EnsureSystemPlaneRoutes(ctx, c, "alice", "alice.olares.com", "user-space-alice", false); err != nil {
 		t.Fatal(err)
@@ -462,6 +470,14 @@ func TestSystemLoginStartsBackendTransportBeforeFrontend(t *testing.T) {
 					Ports: []netv1.NetworkPolicyPort{meshTransportPort(8080), meshTransportPort(4143)},
 				},
 				{
+					To:    []netv1.NetworkPolicyPeer{(meshTransportPeer{"os-framework", map[string]string{"app": "monitoring-server"}}).networkPolicyPeer()},
+					Ports: []netv1.NetworkPolicyPort{meshTransportPort(8000)},
+				},
+				{
+					To:    []netv1.NetworkPolicyPeer{{IPBlock: &netv1.IPBlock{CIDR: "10.96.0.18/32"}}},
+					Ports: []netv1.NetworkPolicyPort{meshTransportPort(80)},
+				},
+				{
 					To:    []netv1.NetworkPolicyPeer{(meshTransportPeer{"os-mesh", map[string]string{"linkerd.io/control-plane-component": "identity"}}).networkPolicyPeer()},
 					Ports: []netv1.NetworkPolicyPort{meshTransportPort(8080)},
 				},
@@ -529,6 +545,9 @@ func TestSystemLoginStartsBackendTransportBeforeFrontend(t *testing.T) {
 	if err := c.Update(ctx, market); err != nil {
 		t.Fatal(err)
 	}
+	if err := c.Delete(ctx, monitoring); err != nil {
+		t.Fatal(err)
+	}
 	checkRoute(ReasonAwaitingDataPlane)
 	if err := c.Get(ctx, client.ObjectKeyFromObject(systemEgress), systemEgress); err != nil {
 		t.Fatal(err)
@@ -552,6 +571,12 @@ func TestSystemLoginStartsBackendTransportBeforeFrontend(t *testing.T) {
 	}
 	market.Spec.Selector["app"] = "appstore"
 	if err := c.Update(ctx, market); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Create(ctx, &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Namespace: monitoring.Namespace, Name: monitoring.Name},
+		Spec:       monitoring.Spec,
+	}); err != nil {
 		t.Fatal(err)
 	}
 	checkRoute(ReasonAwaitingDataPlane)

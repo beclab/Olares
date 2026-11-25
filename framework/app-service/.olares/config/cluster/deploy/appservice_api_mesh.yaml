@@ -12,6 +12,7 @@
 {{- fail "invalid app-service API mTLS tenant" -}}
 {{- end -}}
 {{- $routes = append $routes (dict "name" (printf "user-apps-%s" $tenant) "namespace" (printf "user-system-%s" $tenant) "account" "bytetrade-sys-ops" "method" "GET" "path" (printf "/app-service/v1/user-apps/%s" $tenant)) -}}
+{{- $routes = append $routes (dict "name" (printf "users-%s" $tenant) "namespace" (printf "user-system-%s" $tenant) "account" "bytetrade-sys-ops" "method" "GET" "path" "/app-service/v1/users" "userHeader" $tenant) -}}
 {{- end }}
 apiVersion: policy.linkerd.io/v1beta3
 kind: Server
@@ -44,6 +45,12 @@ spec:
             type: Exact
             value: {{ $route.path | quote }}
           method: {{ $route.method }}
+          {{- with $route.userHeader }}
+          headers:
+            - name: X-Bfl-User
+              type: Exact
+              value: {{ . | quote }}
+          {{- end }}
 ---
 apiVersion: policy.linkerd.io/v1alpha1
 kind: MeshTLSAuthentication

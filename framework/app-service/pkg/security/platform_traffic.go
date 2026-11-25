@@ -121,6 +121,14 @@ var systemServerAppStoreFlow = platformServiceFlow{
 	targetPort:  8080,
 }
 
+// The monitoring provider is optional and still uses native transport.
+var systemServerMonitoringFlow = platformServiceFlow{
+	service:     types.NamespacedName{Namespace: "os-framework", Name: "monitoring-server"},
+	to:          map[string]string{"app": "monitoring-server"},
+	servicePort: 80,
+	targetPort:  8000,
+}
+
 const (
 	platformMeshControlPlaneLabel = "linkerd.io/control-plane-ns"
 	autheliaBFLFlowName           = "authelia-bfl"
@@ -353,11 +361,11 @@ func SystemServerCitusEgressRule() netv1.NetworkPolicyEgressRule {
 
 // SystemServerDependencyServices lists the Services read when generating route egress.
 func SystemServerDependencyServices() []types.NamespacedName {
-	keys := make([]types.NamespacedName, 0, len(systemServerNativeFlows)+1)
+	keys := make([]types.NamespacedName, 0, len(systemServerNativeFlows)+2)
 	for _, flow := range systemServerNativeFlows {
 		keys = append(keys, flow.service)
 	}
-	return append(keys, systemServerAppStoreFlow.service)
+	return append(keys, systemServerAppStoreFlow.service, systemServerMonitoringFlow.service)
 }
 
 // SystemServerDependencyEgressRules scopes the verified native dependencies and
@@ -379,7 +387,7 @@ func SystemServerDependencyEgressRules(services map[types.NamespacedName]*corev1
 			Ports: []netv1.NetworkPolicyPort{tcpPort(flow.targetPort), tcpPort(4143)},
 		})
 	}
-	return rules
+	return append(rules, systemServerMonitoringFlow.egressRules(services[systemServerMonitoringFlow.service])...)
 }
 
 // SystemServerProviderEgressRules scopes the verified provider proxy destinations.
