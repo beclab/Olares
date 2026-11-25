@@ -383,11 +383,4 @@ const (
 	//
 	// Mirrors pkg/apiserver/api/types.go AppStopAllKey.
 	AnnotStopAll = "bytetrade.io/stop-all"
-
-	// AnnotPendingPod is stamped by the pod-abnormal-suspend
-	// controller when it wants a mid-resume abort. Resuming's
-	// success branch reads it and hands off to Stopping instead
-	// of Initializing. Mirrors
-	// pkg/apiserver/api/types.go AppStopByControllerDuePendingPod.
-	AnnotPendingPod = "bytetrade.io/pending-pod"
 )
