@@ -2,9 +2,12 @@ package routecontrol
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/netip"
 	"os"
@@ -125,6 +128,7 @@ func TestEntryIdentityRealEnvoy(t *testing.T) {
 		map[string]any{"match": match("session=bob", false), "direct_response": map[string]any{"status": 403}},
 		map[string]any{"match": match("session=expired", false), "direct_response": map[string]any{"status": 401}},
 		map[string]any{"match": match("policy=public", true), "direct_response": map[string]any{"status": 200}},
+		map[string]any{"match": map[string]any{"prefix": "/", "headers": []any{map[string]any{"name": ":authority", "string_match": map[string]any{"exact": "desktop.alice.olares.local"}}}}, "direct_response": map[string]any{"status": 302}, "response_headers_to_add": []any{add("Location", "http://auth.alice.olares.local/")}},
 		map[string]any{"match": map[string]any{"prefix": "/"}, "direct_response": map[string]any{"status": 302}, "response_headers_to_add": []any{add("Location", "https://auth.alice.example.org/")}},
 	}
 	echoScript := `function envoy_on_request(h)
@@ -148,6 +152,7 @@ end`
 	resources := bootstrap["static_resources"].(map[string]any)
 	resources["listeners"] = append(resources["listeners"].([]any), generated.Listener)
 	resources["clusters"] = append(resources["clusters"].([]any), generated.Clusters...)
+	terminalCA := addTerminalEntryFixture(t, bootstrap)
 	encoded, err := json.Marshal(bootstrap)
 	if err != nil {
 		t.Fatal(err)
@@ -160,10 +165,18 @@ end`
 	if err = os.WriteFile(path, encoded, 0644); err != nil {
 		t.Fatal(err)
 	}
-	id := docker("run", "-d", "--rm", "--read-only", "--cap-drop=ALL", "--security-opt=no-new-privileges", "--memory=256m", "--pids-limit=64", "--tmpfs", "/tmp:rw,noexec,nosuid,size=16m", "-p", "127.0.0.1::10000", "-p", "127.0.0.1::10003", "-p", "127.0.0.1::10004", "-v", path+":/bootstrap.json:ro", entryEnvoyImage, "--disable-hot-restart", "--concurrency", "1", "-l", "error", "-c", "/bootstrap.json")
+	id := docker("run", "-d", "--read-only", "--cap-drop=ALL", "--security-opt=no-new-privileges", "--memory=256m", "--pids-limit=64", "--tmpfs", "/tmp:rw,noexec,nosuid,size=16m", "-p", "127.0.0.1::10000", "-p", "127.0.0.1::10003", "-p", "127.0.0.1::10004", "-p", "127.0.0.1::10005", "-v", path+":/bootstrap.json:ro", entryEnvoyImage, "--disable-hot-restart", "--concurrency", "1", "-l", "error", "-c", "/bootstrap.json")
 	t.Cleanup(func() {
 		cleanup, done := context.WithTimeout(context.Background(), 15*time.Second)
 		defer done()
+		if t.Failed() {
+			diagnostic, _ := exec.CommandContext(cleanup, "docker", "logs", "--tail", "20", id).CombinedOutput()
+			lines := strings.Split(string(diagnostic), "\n")
+			if len(lines) > 20 {
+				lines = lines[len(lines)-20:]
+			}
+			t.Log("credential-free Envoy diagnostics:\n" + strings.Join(lines, "\n"))
+		}
 		out, err := exec.CommandContext(cleanup, "docker", "rm", "-f", id).CombinedOutput()
 		if err != nil {
 			t.Errorf("fixture cleanup failed: %v %s", err, out)
@@ -184,9 +197,29 @@ end`
 		time.Sleep(100 * time.Millisecond)
 	}
 	edgeAddress := docker("port", id, "10003/tcp")
-	for _, mode := range []string{"trusted-entry", "untrusted-edge"} {
+	terminalAddress := docker("port", id, "10005/tcp")
+	roots := x509.NewCertPool()
+	if !roots.AppendCertsFromPEM([]byte(terminalCA)) {
+		t.Fatal("missing terminal fixture CA")
+	}
+	terminalTransport := &http.Transport{TLSClientConfig: &tls.Config{RootCAs: roots, MinVersion: tls.VersionTLS12}, DialContext: func(ctx context.Context, network, address string) (net.Conn, error) {
+		return (&net.Dialer{}).DialContext(ctx, network, terminalAddress)
+	}}
+	defer terminalTransport.CloseIdleConnections()
+	terminalClient := &http.Client{Transport: terminalTransport, Timeout: 5 * time.Second, CheckRedirect: client.CheckRedirect}
+	for _, mode := range []string{"trusted-entry", "untrusted-edge", "terminal-l4-public", "terminal-l4-local"} {
+		requestHost := "desktop.alice.example.org"
+		requestClient := client
+		endpoint = "http://" + address + "/"
 		if mode == "untrusted-edge" {
 			endpoint = "http://" + edgeAddress + "/"
+		}
+		if strings.HasPrefix(mode, "terminal-") {
+			requestClient = terminalClient
+			if mode == "terminal-l4-local" {
+				requestHost = "desktop.alice.olares.local"
+			}
+			endpoint = "https://" + requestHost + "/"
 		}
 		for _, tc := range []struct {
 			name, cookie string
@@ -195,7 +228,7 @@ end`
 		}{{"authenticated", "session=alice", 200, "alice"}, {"authorized-different-subject", "session=delegate", 200, "bob"}, {"cross-tenant", "session=bob", 403, ""}, {"expired", "session=expired", 401, ""}, {"anonymous", "", 302, ""}, {"public-anonymous", "policy=public", 200, ""}} {
 			t.Run(mode+"/"+tc.name, func(t *testing.T) {
 				req, _ := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
-				req.Host = "desktop.alice.example.org"
+				req.Host = requestHost
 				req.Header.Set("Cookie", tc.cookie)
 				req.Header.Add("Remote-User", "mallory")
 				req.Header.Add("rEmOtE-uSeR", "admin")
@@ -206,11 +239,11 @@ end`
 				req.Header.Set("X-Caller-Appid", "forged-app")
 				req.Header.Set("X-Original-URL", "https://desktop.alice.example.org/")
 				req.Header.Set("X-Forwarded-Proto", "gopher")
-				if mode == "untrusted-edge" {
+				if mode != "trusted-entry" {
 					req.Header.Set("X-Original-URL", "https://evil.example.org/")
 				}
 				claimedIP := "198.51.100.17"
-				if mode == "untrusted-edge" {
+				if mode != "trusted-entry" {
 					claimedIP = "192.168.0.1"
 				}
 				req.Header.Set("X-Forwarded-For", claimedIP)
@@ -218,7 +251,7 @@ end`
 				req.Header.Set("Forwarded", "for=127.0.0.1")
 				req.Header.Set("X-Original-Forwarded-For", "127.0.0.1")
 				req.Header.Set("X-Envoy-External-Address", "127.0.0.1") // already verified at the mTLS edge, not recomputed as a mesh IP
-				resp, err := client.Do(req)
+				resp, err := requestClient.Do(req)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -229,6 +262,15 @@ end`
 				}
 				if resp.StatusCode != tc.status {
 					t.Fatalf("HTTP %d want %d: %s", resp.StatusCode, tc.status, body)
+				}
+				if tc.status == 302 && strings.HasPrefix(mode, "terminal-") {
+					want := "https://auth.alice.example.org/"
+					if mode == "terminal-l4-local" {
+						want = "http://auth.alice.olares.local/"
+					}
+					if resp.Header.Get("Location") != want {
+						t.Fatal("terminal login redirect lost the platform domain/protocol contract")
+					}
 				}
 				if tc.status == 200 {
 					var got map[string]string
@@ -250,13 +292,13 @@ end`
 					if mode == "trusted-entry" && got["xff"] != "198.51.100.17" {
 						t.Fatal("trusted forwarding context changed", got)
 					}
-					if mode == "untrusted-edge" {
+					if mode != "trusted-entry" {
 						if _, err := netip.ParseAddr(got["xff"]); err != nil || got["xff"] == claimedIP || got["xff"] == "127.0.0.1" {
 							t.Fatal("forged client IP survived", got)
 						}
 					}
 					if tc.user != "" {
-						expectedURL := "https://desktop.alice.example.org/"
+						expectedURL := "https://" + requestHost + "/"
 						if mode == "untrusted-edge" {
 							expectedURL = "http://desktop.alice.example.org/"
 						}
@@ -270,6 +312,19 @@ end`
 				}
 			})
 		}
+	}
+	for _, host := range []string{"auth.alice.example.org", "auth.alice.olares.local"} {
+		t.Run("terminal-login/"+host, func(t *testing.T) {
+			req, _ := http.NewRequestWithContext(ctx, http.MethodGet, "https://"+host+"/", nil)
+			resp, err := terminalClient.Do(req)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer resp.Body.Close()
+			if resp.StatusCode != 200 {
+				t.Fatal("login route was incorrectly authenticated", resp.StatusCode)
+			}
+		})
 	}
 	internalAddress := docker("port", id, "10004/tcp")
 	for _, tc := range []struct {
