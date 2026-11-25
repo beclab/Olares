@@ -19,7 +19,7 @@ AI prompt optimization uses a chat model connected through Router to refine and 
 ## Learning objectives
 
 - Install the app and check that its video models are ready.
-- Generate a video from text and refine it with AI optimization.
+- Refine a text prompt with AI optimization and use it to generate a video.
 - Animate an image, and continue a video from its last frame.
 - Guide a new video with reference media.
 - Find and download your videos.
@@ -100,9 +100,13 @@ Use **Text** to start with a description alone. This example creates a five-seco
 
 Use **Frames** to animate a photograph or illustration, or a frame from a generated video. A start frame sets the opening image, and an optional end frame guides where the shot ends.
 
-1. Go to **Create** and select **Frames**. Click **Start frame** and upload an image or choose one from the library.
-2. To use a frame from a generated video instead, pause the video at the desired moment, fine-tuning with **Previous frame** and **Next frame**, then choose **Grab frame** > **Use as first frame** or **Use as last frame**.
-3. To guide where the shot ends, add an image under **End frame (Optional)**. Keep the subject and composition compatible with the start frame.
+1. Go to **Create** and select **Frames**.
+2. Add the required start frame using either source:
+
+   - An image: Click **Start frame** and upload an image or choose one from the library.
+   - A generated video: Open the video and pause at the desired moment. Use **Previous frame** and **Next frame** to select the exact frame, then choose **Grab frame** > **Use as first frame**.
+
+3. Optionally, add an end frame. To use a frame from a generated video, choose **Grab frame** > **Use as last frame**. Keep its subject and composition compatible with the start frame.
 4. In **Prompt**, describe how the subject and camera should move and what should stay the same, such as the person's appearance, outfit, and lighting.
 5. Choose the duration and quality, then click **Generate**. **Aspect** follows the start frame.
 6. Wait for the task to complete, then open the result and play it.
@@ -136,15 +140,13 @@ When combining inputs, mention each one where you describe its purpose, such as 
 
 1. Open the courtyard video from the text section, pause at a clear view of the person, and choose **Grab frame** > **Library only**.
 2. Select **References**. Click **Add media** > **From library**, select the saved frame, and click **Choose**. Use **Upload files** instead to start with your own material.
-3. In **Prompt**, type `@` and choose the image. Explain what to keep from it and what to change:
+3. In **Prompt**, paste the following description:
 
    ```text
    Use @[person reference] as the reference for the woman, her short wavy dark hair, gold earrings, ivory silk outfit, and translucent orange scarf. Create a new luxury fashion shot on a white limestone terrace overlooking a calm turquoise Mediterranean sea. She stands on the right of the frame beside a pale stone balustrade, with orange silk flowing gracefully to the left in the sea breeze. The camera slowly glides sideways at eye level as she looks toward the horizon. Clear warm sunlight, luminous natural skin, powder-blue sky, elegant ivory and terracotta palette, realistic fabric, one continuous shot. Sound: gentle sea waves and soft wind. No dialogue, no music, no text or logos.
    ```
 
-   Insert the actual image mention with `@` in place of the bracketed placeholder.
-
-4. Review the prompt and confirm that the image mention points to your selected reference.
+4. Replace `@[person reference]` with an image mention: delete the placeholder, type `@` in its place, and select the reference image you added.
 5. Set **Aspect** to **16:9**, **Duration** to **5 s**, and **Quality** to **720p**. Choose **Fast** for this preview, then click **Generate**.
 6. Open the result and compare the person's face, outfit, and scarf with the reference.
 
