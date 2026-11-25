@@ -73,16 +73,20 @@ func TestProductionEntryFixture(t *testing.T) {
 			}
 		}
 	}
-	var listener map[string]any
+	var listener, proxyListener map[string]any
 	for _, p := range snap.Listeners {
 		m := asMap(p)
-		if m["address"].(map[string]any)["socket_address"].(map[string]any)["port_value"] == float64(10005) {
+		switch m["address"].(map[string]any)["socket_address"].(map[string]any)["port_value"] {
+		case float64(10005):
 			listener = m
-			break
+		case float64(10006):
+			proxyListener = m
 		}
 	}
 	require.NotNil(t, listener)
+	require.NotNil(t, proxyListener)
 	inline(listener)
+	inline(proxyListener)
 	clusters := []any{}
 	for _, p := range snap.Clusters {
 		m := asMap(p)
@@ -100,7 +104,7 @@ func TestProductionEntryFixture(t *testing.T) {
 		secrets = append(secrets, asMap(p))
 	}
 	if path := os.Getenv("ENTRY_EDGE_FIXTURE"); path != "" {
-		raw, e := json.Marshal(map[string]any{"listener": listener, "clusters": clusters, "secrets": secrets, "ca": certPEM})
+		raw, e := json.Marshal(map[string]any{"listener": listener, "proxy_listener": proxyListener, "clusters": clusters, "secrets": secrets, "ca": certPEM})
 		require.NoError(t, e)
 		require.NoError(t, os.WriteFile(path+".production", raw, 0600))
 	}

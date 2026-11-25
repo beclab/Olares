@@ -82,7 +82,7 @@ func TestBuildUserVirtualHostsEdgeModeOnlyEdgeForward(t *testing.T) {
 				t.Fatalf("must not build local backend cluster %s", r.Cluster)
 			}
 			if i == 0 {
-				if r.RequestHeaders["X-Original-URL"] != "%REQ(:SCHEME)%://%REQ(:AUTHORITY)%%REQ(:PATH)%" ||
+				if r.RequestHeaders["X-Original-URL"] != "%REQ(x-forwarded-proto?:SCHEME)%://%REQ(:AUTHORITY)%%REQ(:PATH)%" ||
 					r.RequestHeaders["X-Original-Method"] != "%REQ(:METHOD)%" {
 					t.Fatalf("authenticated traffic must preserve the original target: %v", r.RequestHeaders)
 				}

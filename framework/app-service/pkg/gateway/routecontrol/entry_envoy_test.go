@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"net/netip"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -128,8 +129,8 @@ func TestEntryIdentityRealEnvoy(t *testing.T) {
 		map[string]any{"match": match("session=bob", false), "direct_response": map[string]any{"status": 403}},
 		map[string]any{"match": match("session=expired", false), "direct_response": map[string]any{"status": 401}},
 		map[string]any{"match": match("policy=public", true), "direct_response": map[string]any{"status": 200}},
-		map[string]any{"match": map[string]any{"prefix": "/", "headers": []any{map[string]any{"name": ":authority", "string_match": map[string]any{"exact": "desktop.alice.olares.local"}}}}, "direct_response": map[string]any{"status": 302}, "response_headers_to_add": []any{add("Location", "http://auth.alice.olares.local/")}},
-		map[string]any{"match": map[string]any{"prefix": "/"}, "direct_response": map[string]any{"status": 302}, "response_headers_to_add": []any{add("Location", "https://auth.alice.example.org/")}},
+		map[string]any{"match": map[string]any{"prefix": "/", "headers": []any{map[string]any{"name": ":authority", "string_match": map[string]any{"exact": "desktop.alice.olares.local"}}}}, "direct_response": map[string]any{"status": 302}, "response_headers_to_add": []any{add("Location", "http://auth.alice.olares.local/?rd=%REQ(x-original-url)%")}},
+		map[string]any{"match": map[string]any{"prefix": "/"}, "direct_response": map[string]any{"status": 302}, "response_headers_to_add": []any{add("Location", "https://auth.alice.example.org/?rd=%REQ(x-original-url)%")}},
 	}
 	echoScript := `function envoy_on_request(h)
  local r=h:headers()
@@ -165,7 +166,7 @@ end`
 	if err = os.WriteFile(path, encoded, 0644); err != nil {
 		t.Fatal(err)
 	}
-	id := docker("run", "-d", "--read-only", "--cap-drop=ALL", "--security-opt=no-new-privileges", "--memory=256m", "--pids-limit=64", "--tmpfs", "/tmp:rw,noexec,nosuid,size=16m", "-p", "127.0.0.1::10000", "-p", "127.0.0.1::10003", "-p", "127.0.0.1::10004", "-p", "127.0.0.1::10005", "-v", path+":/bootstrap.json:ro", entryEnvoyImage, "--disable-hot-restart", "--concurrency", "1", "-l", "error", "-c", "/bootstrap.json")
+	id := docker("run", "-d", "--read-only", "--cap-drop=ALL", "--security-opt=no-new-privileges", "--memory=256m", "--pids-limit=64", "--tmpfs", "/tmp:rw,noexec,nosuid,size=16m", "-p", "127.0.0.1::10000", "-p", "127.0.0.1::10003", "-p", "127.0.0.1::10004", "-p", "127.0.0.1::10005", "-p", "127.0.0.1::10006", "-p", "127.0.0.1::10007", "-v", path+":/bootstrap.json:ro", entryEnvoyImage, "--disable-hot-restart", "--concurrency", "1", "-l", "error", "-c", "/bootstrap.json")
 	t.Cleanup(func() {
 		cleanup, done := context.WithTimeout(context.Background(), 15*time.Second)
 		defer done()
@@ -207,17 +208,79 @@ end`
 	}}
 	defer terminalTransport.CloseIdleConnections()
 	terminalClient := &http.Client{Transport: terminalTransport, Timeout: 5 * time.Second, CheckRedirect: client.CheckRedirect}
-	for _, mode := range []string{"trusted-entry", "untrusted-edge", "terminal-l4-public", "terminal-l4-local"} {
+	proxyClient := func(port string) *http.Client {
+		address := docker("port", id, port+"/tcp")
+		transport := &http.Transport{TLSClientConfig: terminalTransport.TLSClientConfig.Clone(),
+			DialContext: func(ctx context.Context, network, _ string) (net.Conn, error) {
+				conn, err := (&net.Dialer{}).DialContext(ctx, network, address)
+				if err != nil {
+					return nil, err
+				}
+				// Deliberately claim the same IP for both endpoints. Only the physical
+				// connection determines whether this is a local HTTP bridge.
+				if _, err = io.WriteString(conn, "PROXY TCP4 192.0.2.17 192.0.2.17 54321 10006\r\n"); err != nil {
+					conn.Close()
+					return nil, err
+				}
+				return conn, nil
+			}}
+		t.Cleanup(transport.CloseIdleConnections)
+		return &http.Client{Transport: transport, Timeout: 5 * time.Second, CheckRedirect: client.CheckRedirect}
+	}
+	localBridgeClient := proxyClient("10007")
+	remoteProxyClient := proxyClient("10006")
+	for _, tc := range []struct {
+		name, host, scheme string
+		client             *http.Client
+	}{
+		{"local-http", "desktop.alice.olares.local", "http", localBridgeClient},
+		{"local-direct-https", "desktop.alice.olares.local", "https", terminalClient},
+		{"remote-proxy-https", "desktop.alice.olares.local", "https", remoteProxyClient},
+		{"formal-host-on-local-proxy", "desktop.alice.example.org", "https", localBridgeClient},
+	} {
+		t.Run("redirect-scheme/"+tc.name, func(t *testing.T) {
+			const target = "/files%20and%20folders?tab=recent"
+			req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://"+tc.host+target, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			req.Header.Set("X-Forwarded-Proto", "ftp")
+			req.Header.Set("X-Original-URL", "https://untrusted.example.org/")
+			resp, err := tc.client.Do(req)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer resp.Body.Close()
+			location, err := resp.Location()
+			if err != nil || resp.StatusCode != http.StatusFound {
+				t.Fatalf("expected redirect, got HTTP %d: %v", resp.StatusCode, err)
+			}
+			if got, want := location.Query().Get("rd"), tc.scheme+"://"+tc.host+target; got != want {
+				// The stub's header formatter does not URL-encode rd, so read
+				// its raw value to check preservation of the escaped path too.
+				if location.RawQuery != "rd="+want {
+					t.Fatalf("rd = %q (%q), want %q", got, location.RawQuery, want)
+				}
+			}
+		})
+	}
+	for _, mode := range []string{"trusted-entry", "untrusted-edge", "terminal-l4-public", "terminal-l4-local", "terminal-l4-local-http"} {
 		requestHost := "desktop.alice.example.org"
+		wantScheme := "https"
 		requestClient := client
 		endpoint = "http://" + address + "/"
 		if mode == "untrusted-edge" {
 			endpoint = "http://" + edgeAddress + "/"
+			wantScheme = "http"
 		}
 		if strings.HasPrefix(mode, "terminal-") {
 			requestClient = terminalClient
-			if mode == "terminal-l4-local" {
+			if mode == "terminal-l4-local" || mode == "terminal-l4-local-http" {
 				requestHost = "desktop.alice.olares.local"
+			}
+			if mode == "terminal-l4-local-http" {
+				requestClient = localBridgeClient
+				wantScheme = "http"
 			}
 			endpoint = "https://" + requestHost + "/"
 		}
@@ -265,10 +328,11 @@ end`
 				}
 				if tc.status == 302 && strings.HasPrefix(mode, "terminal-") {
 					want := "https://auth.alice.example.org/"
-					if mode == "terminal-l4-local" {
+					if mode == "terminal-l4-local" || mode == "terminal-l4-local-http" {
 						want = "http://auth.alice.olares.local/"
 					}
-					if resp.Header.Get("Location") != want {
+					location, err := url.Parse(resp.Header.Get("Location"))
+					if err != nil || location.Scheme+"://"+location.Host+location.Path != want || location.Query().Get("rd") != wantScheme+"://"+requestHost+"/" {
 						t.Fatal("terminal login redirect lost the platform domain/protocol contract")
 					}
 				}
@@ -298,10 +362,7 @@ end`
 						}
 					}
 					if tc.user != "" {
-						expectedURL := "https://" + requestHost + "/"
-						if mode == "untrusted-edge" {
-							expectedURL = "http://desktop.alice.example.org/"
-						}
+						expectedURL := wantScheme + "://" + requestHost + "/"
 						if got["authurl"] != expectedURL {
 							t.Fatal("forged original target or forwarded scheme survived", got)
 						}

@@ -65,7 +65,7 @@ func (t *Translator) buildEdgeForwardVirtualHosts(user *message.UserInfo, zone s
 			// The Desktop authorizer receives these through Entry mTLS and
 			// checks the original resource even with a fixed verification path.
 			authHeaders = map[string]string{
-				"X-Original-URL":    "%REQ(:SCHEME)%://%REQ(:AUTHORITY)%%REQ(:PATH)%",
+				"X-Original-URL":    "%REQ(x-forwarded-proto?:SCHEME)%://%REQ(:AUTHORITY)%%REQ(:PATH)%",
 				"X-Original-Method": "%REQ(:METHOD)%",
 			}
 		}

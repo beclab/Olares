@@ -1902,6 +1902,15 @@
                     }
                   },
                   {
+                    "name": "envoy.filters.http.lua",
+                    "typedConfig": {
+                      "@type": "type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua",
+                      "defaultSourceCode": {
+                        "inlineString": "function envoy_on_request(handle)\n  local host = (handle:headers():get(\":authority\") or \"\"):lower()\n  if not host:match(\"^[%w.-]+%.olares%.local$\") then\n    return\n  end\n\n  local stream = handle:streamInfo()\n  local remote = stream:downstreamDirectRemoteAddress():match(\"^(.+):%d+$\")\n  local local_address = stream:downstreamDirectLocalAddress():match(\"^(.+):%d+$\")\n  if remote and remote == local_address then\n    handle:headers():replace(\"x-forwarded-proto\", \"http\")\n  end\nend\n"
+                      }
+                    }
+                  },
+                  {
                     "name": "envoy.filters.http.ext_authz",
                     "typedConfig": {
                       "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz",
@@ -2308,6 +2317,15 @@
                     }
                   },
                   {
+                    "name": "envoy.filters.http.lua",
+                    "typedConfig": {
+                      "@type": "type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua",
+                      "defaultSourceCode": {
+                        "inlineString": "function envoy_on_request(handle)\n  local host = (handle:headers():get(\":authority\") or \"\"):lower()\n  if not host:match(\"^[%w.-]+%.olares%.local$\") then\n    return\n  end\n\n  local stream = handle:streamInfo()\n  local remote = stream:downstreamDirectRemoteAddress():match(\"^(.+):%d+$\")\n  local local_address = stream:downstreamDirectLocalAddress():match(\"^(.+):%d+$\")\n  if remote and remote == local_address then\n    handle:headers():replace(\"x-forwarded-proto\", \"http\")\n  end\nend\n"
+                      }
+                    }
+                  },
+                  {
                     "name": "envoy.filters.http.ext_authz",
                     "typedConfig": {
                       "@type": "type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz",
@@ -2710,6 +2728,15 @@
                             }
                           }
                         ]
+                      }
+                    }
+                  },
+                  {
+                    "name": "envoy.filters.http.lua",
+                    "typedConfig": {
+                      "@type": "type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua",
+                      "defaultSourceCode": {
+                        "inlineString": "function envoy_on_request(handle)\n  local host = (handle:headers():get(\":authority\") or \"\"):lower()\n  if not host:match(\"^[%w.-]+%.olares%.local$\") then\n    return\n  end\n\n  local stream = handle:streamInfo()\n  local remote = stream:downstreamDirectRemoteAddress():match(\"^(.+):%d+$\")\n  local local_address = stream:downstreamDirectLocalAddress():match(\"^(.+):%d+$\")\n  if remote and remote == local_address then\n    handle:headers():replace(\"x-forwarded-proto\", \"http\")\n  end\nend\n"
                       }
                     }
                   },

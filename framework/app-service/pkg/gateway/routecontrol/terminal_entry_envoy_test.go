@@ -21,10 +21,11 @@ func addTerminalEntryFixture(t *testing.T, bootstrap map[string]any) string {
 		t.Fatal("generate TestProductionEntryFixture first", err)
 	}
 	var prod struct {
-		Listener map[string]any `json:"listener"`
-		Clusters []any          `json:"clusters"`
-		Secrets  []any          `json:"secrets"`
-		CA       string         `json:"ca"`
+		Listener      map[string]any `json:"listener"`
+		ProxyListener map[string]any `json:"proxy_listener"`
+		Clusters      []any          `json:"clusters"`
+		Secrets       []any          `json:"secrets"`
+		CA            string         `json:"ca"`
 	}
 	if err = json.Unmarshal(raw, &prod); err != nil {
 		t.Fatal(err)
@@ -49,6 +50,7 @@ func addTerminalEntryFixture(t *testing.T, bootstrap map[string]any) string {
 		}
 	}
 	scope(prod.Listener)
+	scope(prod.ProxyListener)
 	scope(prod.Clusters)
 	resources := bootstrap["static_resources"].(map[string]any)
 	listeners := resources["listeners"].([]any)
@@ -107,8 +109,29 @@ func addTerminalEntryFixture(t *testing.T, bootstrap map[string]any) string {
 	// The same northbound strip applies before either Entry authorization path.
 	authHCM["early_header_mutation_extensions"] = h["early_header_mutation_extensions"]
 	auth := map[string]any{"name": "terminal-entry-authorization", "address": map[string]any{"socket_address": map[string]any{"address": "127.0.0.1", "port_value": 9444}}, "filter_chains": []any{map[string]any{"transport_socket": tlsSocket, "filters": []any{map[string]any{"name": "envoy.filters.network.http_connection_manager", "typed_config": authHCM}}}}}
-	resources["listeners"] = append(listeners, prod.Listener, business, auth)
-	resources["clusters"] = append(resources["clusters"].([]any), prod.Clusters...)
+	// Relay the raw PROXY+TLS bytes over a same-node socket to the actual
+	// proxy listener, just as olaresd does. The mapped proxy listener itself
+	// receives a different physical peer address and models remote frpc.
+	relay := map[string]any{
+		"name":    "intranet-fixture-relay",
+		"address": map[string]any{"socket_address": map[string]any{"address": "0.0.0.0", "port_value": 10007}},
+		"filter_chains": []any{map[string]any{"filters": []any{map[string]any{
+			"name": "envoy.filters.network.tcp_proxy", "typed_config": map[string]any{
+				"@type":       "type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy",
+				"stat_prefix": "intranet-fixture-relay", "cluster": "intranet-fixture-proxy",
+			},
+		}}}},
+	}
+	relayCluster := map[string]any{
+		"name": "intranet-fixture-proxy", "type": "STATIC", "connect_timeout": "1s",
+		"load_assignment": map[string]any{"cluster_name": "intranet-fixture-proxy", "endpoints": []any{map[string]any{
+			"lb_endpoints": []any{map[string]any{"endpoint": map[string]any{
+				"address": map[string]any{"socket_address": map[string]any{"address": "127.0.0.1", "port_value": 10006}},
+			}}},
+		}}},
+	}
+	resources["listeners"] = append(listeners, prod.Listener, prod.ProxyListener, business, auth, relay)
+	resources["clusters"] = append(append(resources["clusters"].([]any), prod.Clusters...), relayCluster)
 	resources["secrets"] = prod.Secrets
 	// Keep failure diagnostics free of credentials, request headers and bodies.
 	var diagnostics func(any)

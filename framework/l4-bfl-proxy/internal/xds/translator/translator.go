@@ -257,6 +257,36 @@ func buildClientIdentityStripFilter() *hcmv3.HttpFilter {
 	}
 }
 
+// The port-80 intranet proxy opens a TLS connection to the PROXY listener
+// on the same node. Use the physical socket addresses: PROXY metadata can
+// replace the apparent client and local addresses. Remote frpc connections
+// on this listener and direct TLS on the public listener retain HTTPS.
+const intranetForwardedProto = `function envoy_on_request(handle)
+  local host = (handle:headers():get(":authority") or ""):lower()
+  if not host:match("^[%w.-]+%.olares%.local$") then
+    return
+  end
+
+  local stream = handle:streamInfo()
+  local remote = stream:downstreamDirectRemoteAddress():match("^(.+):%d+$")
+  local local_address = stream:downstreamDirectLocalAddress():match("^(.+):%d+$")
+  if remote and remote == local_address then
+    handle:headers():replace("x-forwarded-proto", "http")
+  end
+end
+`
+
+func buildIntranetForwardedProtoFilter() *hcmv3.HttpFilter {
+	return &hcmv3.HttpFilter{
+		Name: "envoy.filters.http.lua",
+		ConfigType: &hcmv3.HttpFilter_TypedConfig{TypedConfig: mustAny(&luav3.Lua{
+			DefaultSourceCode: &corev3.DataSource{
+				Specifier: &corev3.DataSource_InlineString{InlineString: intranetForwardedProto},
+			},
+		})},
+	}
+}
+
 // mustAny marshals a proto.Message into an anypb.Any, panicking on error.
 // All callers use well-known Envoy types whose type URLs are always registered,
 // so a failure here indicates a programming error rather than a runtime condition.
@@ -677,6 +707,9 @@ func buildMultiUserHTTPSListener(port uint32, proxyProtocol bool, httpListeners 
 		// config change — the filter chain itself is byte-identical → no
 		// Envoy listener drain on deny_all policy switch.
 		httpFilters := []*hcmv3.HttpFilter{buildClientIdentityStripFilter()}
+		if proxyProtocol {
+			httpFilters = append(httpFilters, buildIntranetForwardedProtoFilter())
+		}
 		extAuthzFilter := buildExtAuthzFilter(autheliaClusterName, clusterMap, httpIR.UserName)
 		if extAuthzFilter != nil {
 			httpFilters = append(httpFilters, extAuthzFilter)
