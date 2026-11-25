@@ -436,7 +436,7 @@ func (e *consumerPlacementError) Unwrap() error { return ErrConsumerUnplaceable 
 
 func placementReason(req Requirement, availability *AvailabilityResult, pressure PressureSnapshot) string {
 	if req.PerPod == appcfg.PerPodSplit {
-		return fmt.Sprintf("cannot form %d groups of cards, each group on one node, that together hold the required GPU memory", req.Replicas)
+		return fmt.Sprintf("cannot give each of the %d replicas its own group of cards on one node that together hold the required GPU memory", req.Replicas)
 	}
 	if availability == nil {
 		return "insufficient_resources"
