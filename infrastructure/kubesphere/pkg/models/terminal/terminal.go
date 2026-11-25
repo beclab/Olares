@@ -26,6 +26,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"path"
 	"sort"
 	"strconv"
 	"strings"
@@ -360,8 +361,14 @@ type hostUser struct {
 
 var rootHostUser = hostUser{Name: "root", UID: 0, GID: 0, Home: "/root"}
 
+func isNoLoginShell(shell string) bool {
+	base := path.Base(strings.TrimSpace(shell))
+	return base == "nologin" || base == "false"
+}
+
 // selectHostUser picks the user for the node shell from passwd content:
 // "olares" first, then the normal user with the smallest uid, otherwise root.
+// Users with nologin/false shells are skipped.
 func selectHostUser(passwd string) hostUser {
 	var candidates []hostUser
 	for _, line := range strings.Split(passwd, "\n") {
@@ -379,6 +386,9 @@ func selectHostUser(passwd string) hostUser {
 		}
 		gid, err := strconv.Atoi(fields[3])
 		if err != nil {
+			continue
+		}
+		if isNoLoginShell(fields[6]) {
 			continue
 		}
 		u := hostUser{Name: fields[0], UID: uid, GID: gid, Home: fields[5]}
@@ -415,7 +425,7 @@ func buildNodeShellCmd(u hostUser) []string {
 		"nsenter", "-t", "1", "-m", "-u", "-i", "-n", "-p",
 		"-S", strconv.Itoa(u.UID), "-G", strconv.Itoa(u.GID), "-w",
 		"env", "HOME=" + u.Home, "USER=" + u.Name,
-		"/bin/bash",
+		"/bin/bash", "-c", `cd "$HOME" 2>/dev/null; exec /bin/bash`,
 	}
 }
 
