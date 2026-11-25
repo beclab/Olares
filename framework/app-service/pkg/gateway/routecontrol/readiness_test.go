@@ -239,6 +239,19 @@ func TestServingReadinessWaitsForPolicyAndMeshedEndpoints(t *testing.T) {
 		policy := desiredApplicationExtAuthSecurityPolicy(desktop)
 		policy.Object["status"] = security.DeepCopy().Object["status"]
 		policy.SetGeneration(security.GetGeneration())
+		backends, _, err := unstructured.NestedSlice(policy.Object, "spec", "extAuth", "http", "backendRefs")
+		if err != nil || len(backends) != 1 {
+			t.Fatalf("expected one Desktop authorization backend: %v, %v", backends, err)
+		}
+		setWeight := func(weight int64) {
+			t.Helper()
+			backends[0].(map[string]any)["weight"] = weight
+			if err := unstructured.SetNestedSlice(policy.Object, backends, "spec", "extAuth", "http", "backendRefs"); err != nil {
+				t.Fatal(err)
+			}
+		}
+		// A fake client does not apply the SecurityPolicy CRD's backend weight default.
+		setWeight(1)
 		check := func(want string) {
 			t.Helper()
 			c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gw, desktopRoute, policy, ctp).Build()
@@ -248,6 +261,9 @@ func TestServingReadinessWaitsForPolicyAndMeshedEndpoints(t *testing.T) {
 			}
 		}
 		check("authorization listener is not programmed")
+		setWeight(0)
+		check("does not enforce the expected external authorization")
+		setWeight(1)
 		unstructured.RemoveNestedField(policy.Object, "spec", "extAuth", "http", "pathOverride")
 		if err := unstructured.SetNestedField(policy.Object, "/api/verify", "spec", "extAuth", "http", "path"); err != nil {
 			t.Fatal(err)
