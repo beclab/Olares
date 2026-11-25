@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -110,12 +111,17 @@ func TestDesktopEntryProbeUsesFreshMaterialVerifiedTLSAndFixedDestination(t *tes
 	_, foreignCA := entryProbeMaterial(t)
 	pool := x509.NewCertPool()
 	pool.AppendCertsFromPEM(secret.Data["ca.crt"])
+	var aliasFailure atomic.Bool
 	server := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if aliasFailure.Load() && r.Host == "desktop.alice.olares.local" {
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
 		if len(r.TLS.PeerCertificates) != 1 {
 			t.Error("probe did not authenticate its Entry client")
 		}
-		if r.Host != "auth.alice.example.org" {
-			http.Redirect(w, r, "https://auth.alice.example.org/", 302)
+		if strings.HasPrefix(r.Host, "desktop.") {
+			http.Redirect(w, r, "https://auth."+strings.TrimPrefix(r.Host, "desktop.")+"/", 302)
 		}
 	}))
 	server.TLS = &tls.Config{Certificates: []tls.Certificate{cert}, ClientAuth: tls.RequireAndVerifyClientCert, ClientCAs: pool, MinVersion: tls.VersionTLS12}
@@ -181,6 +187,14 @@ func TestDesktopEntryProbeUsesFreshMaterialVerifiedTLSAndFixedDestination(t *tes
 	if err := probeDesktopEntryWithDialer(t.Context(), c, srr, dial); err != nil {
 		t.Fatal("valid generated domains did not recover", err)
 	}
+	aliasFailure.Store(true)
+	if err := probeDesktopEntryWithDialer(t.Context(), c, srr, dial); err == nil || !strings.Contains(err.Error(), "desktop.alice.olares.local") {
+		t.Fatal("local alias 403 was hidden by a healthy canonical domain", err)
+	}
+	aliasFailure.Store(false)
+	if err := probeDesktopEntryWithDialer(t.Context(), c, srr, dial); err != nil {
+		t.Fatal("local alias did not recover", err)
+	}
 	for _, mode := range []string{"wrong-host", "bad-key", "bad-ca", "untrusted-server", "missing-secret", "wrong-service", "wrong-zone", "cancelled"} {
 		t.Run(mode, func(t *testing.T) {
 			candidate, sec, service, zone := srr.DeepCopy(), secret.DeepCopy(), svc.DeepCopy(), cm.DeepCopy()
@@ -225,5 +239,38 @@ func TestDesktopEntryProbeUsesFreshMaterialVerifiedTLSAndFixedDestination(t *tes
 	cancel()
 	if err := verifyDesktopEntryResponses(ctx, server.Client(), server.URL, server.URL, "desktop.alice.example.org", "auth.alice.example.org"); err == nil || !strings.Contains(err.Error(), "probe failed") {
 		t.Fatal(fmt.Sprint(err))
+	}
+}
+
+func TestDesktopEntryLoginProtocolMatchesPlatformDomain(t *testing.T) {
+	for _, tc := range []struct {
+		name, domain, portal string
+		ok                   bool
+	}{
+		{"public-https", "alice.example.org", "https://auth.alice.example.org/", true},
+		{"public-http-denied", "alice.example.org", "http://auth.alice.example.org/", false},
+		{"local-http", "alice.olares.local", "http://auth.alice.olares.local/", true},
+		{"local-http-port", "alice.olares.local", "http://auth.alice.olares.local:80/", true},
+		{"local-https", "alice.olares.local", "https://auth.alice.olares.local/", true},
+		{"foreign-local-tenant", "alice.olares.local", "http://auth.bob.olares.local/", false},
+		{"local-wrong-port", "alice.olares.local", "http://auth.alice.olares.local:443/", false},
+		{"local-userinfo", "alice.olares.local", "http://bob@auth.alice.olares.local/", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			login, desktop := "auth."+tc.domain, "desktop."+tc.domain
+			server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Host == login {
+					return
+				}
+				http.Redirect(w, r, tc.portal, 302)
+			}))
+			defer server.Close()
+			c := server.Client()
+			c.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+			err := verifyDesktopEntryResponses(t.Context(), c, server.URL, server.URL, desktop, login)
+			if (err == nil) != tc.ok {
+				t.Fatal("unexpected platform login protocol decision", err)
+			}
+		})
 	}
 }

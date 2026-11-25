@@ -41,7 +41,9 @@ func (r *SharedRouteReconciler) servingReadiness(ctx context.Context, srr *srrv1
 
 // Probe only the fixed Entry Service using verified Entry TLS. No user session
 // or supplied tenant header is sent: the trusted gateway must establish the
-// tenant context and reject anonymous Desktop navigation with a login redirect.
+// tenant context and reject anonymous Desktop navigation with a tenant-bound
+// login redirect. Public portals require HTTPS; platform local aliases also
+// retain their existing HTTP login contract.
 func probeDesktopEntry(ctx context.Context, reader client.Reader, srr *srrv1alpha1.SharedRouteRegistry) error {
 	return probeDesktopEntryWithDialer(ctx, reader, srr, (&net.Dialer{Timeout: 3 * time.Second}).DialContext)
 }
@@ -57,7 +59,7 @@ func probeDesktopEntryWithDialer(ctx context.Context, reader client.Reader, srr 
 		return err
 	}
 	z := strings.ToLower(strings.TrimSpace(zone.Data["zone"]))
-	desktop, login := "desktop."+z, "auth."+z
+	desktop := "desktop." + z
 	// Match the complete platform-generated domain set, including the local
 	// alias, without depending on the API's list ordering. Checking only for
 	// the primary domain would permit additional, unbound tenant authorities.
@@ -98,7 +100,13 @@ func probeDesktopEntryWithDialer(ctx context.Context, reader client.Reader, srr 
 	}
 	defer transport.CloseIdleConnections()
 	httpClient := &http.Client{Transport: transport, Timeout: 3 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
-	return verifyDesktopEntryResponses(ctx, httpClient, "https://"+net.JoinHostPort(sni, strconv.Itoa(8443)), "https://"+net.JoinHostPort(sni, strconv.Itoa(9444)), desktop, login)
+	logins := gateway.SystemPlaneHostPatterns(gateway.SystemPlaneService{Name: "auth"}, z, srr.Annotations[gateway.AnnotationExtAuthUser], false)
+	for i, host := range expected {
+		if err := verifyDesktopEntryResponses(ctx, httpClient, "https://"+net.JoinHostPort(sni, strconv.Itoa(8443)), "https://"+net.JoinHostPort(sni, strconv.Itoa(9444)), host, logins[i]); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func verifyDesktopEntryResponses(ctx context.Context, c *http.Client, entry, auth, desktop, login string) error {
@@ -140,7 +148,9 @@ func verifyDesktopEntryResponses(ctx context.Context, c *http.Client, entry, aut
 			switch resp.StatusCode {
 			case 302, 303, 307, 308:
 				u, err := url.Parse(resp.Header.Get("Location"))
-				if err == nil && u.Scheme == "https" && u.User == nil && strings.EqualFold(u.Hostname(), login) && (u.Port() == "" || u.Port() == "443") {
+				if err == nil && u.User == nil && strings.EqualFold(u.Hostname(), login) &&
+					((u.Scheme == "https" && (u.Port() == "" || u.Port() == "443")) ||
+						(strings.HasSuffix(strings.ToLower(login), ".olares.local") && u.Scheme == "http" && (u.Port() == "" || u.Port() == "80"))) {
 					continue
 				}
 			}
