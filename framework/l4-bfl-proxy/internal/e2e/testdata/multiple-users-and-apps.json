@@ -420,6 +420,82 @@
                           },
                           {
                             "remove": "x-caller-appid"
+                          },
+                          {
+                            "remove": "x-caller-user"
+                          },
+                          {
+                            "remove": "x-olares-caller-jwt"
+                          },
+                          {
+                            "remove": "remote-user"
+                          },
+                          {
+                            "remove": "remote-groups"
+                          },
+                          {
+                            "remove": "remote-name"
+                          },
+                          {
+                            "remove": "remote-email"
+                          },
+                          {
+                            "remove": "remote-access-token"
+                          },
+                          {
+                            "remove": "authelia-nonce"
+                          },
+                          {
+                            "remove": "forwarded"
+                          },
+                          {
+                            "remove": "x-forwarded-for"
+                          },
+                          {
+                            "remove": "x-real-ip"
+                          },
+                          {
+                            "remove": "x-original-forwarded-for"
+                          },
+                          {
+                            "remove": "x-envoy-external-address"
+                          },
+                          {
+                            "remove": "x-forwarded-host"
+                          },
+                          {
+                            "remove": "x-forwarded-proto"
+                          },
+                          {
+                            "remove": "x-forwarded-port"
+                          },
+                          {
+                            "remove": "x-forwarded-uri"
+                          },
+                          {
+                            "remove": "x-forwarded-method"
+                          },
+                          {
+                            "remove": "x-original-url"
+                          },
+                          {
+                            "remove": "x-original-method"
+                          },
+                          {
+                            "removeOnMatch": {
+                              "keyMatcher": {
+                                "prefix": "remote-",
+                                "ignoreCase": true
+                              }
+                            }
+                          },
+                          {
+                            "removeOnMatch": {
+                              "keyMatcher": {
+                                "prefix": "authelia-",
+                                "ignoreCase": true
+                              }
+                            }
                           }
                         ]
                       }
@@ -441,6 +517,14 @@
                             {
                               "key": "X-Forwarded-Proto",
                               "value": "%REQ(x-forwarded-proto?:SCHEME)%"
+                            },
+                            {
+                              "key": "X-Forwarded-For",
+                              "value": "%DOWNSTREAM_REMOTE_ADDRESS_WITHOUT_PORT%"
+                            },
+                            {
+                              "key": "X-Real-IP",
+                              "value": "%DOWNSTREAM_REMOTE_ADDRESS_WITHOUT_PORT%"
                             },
                             {
                               "key": "X-Original-URL",
@@ -594,6 +678,82 @@
                         },
                         {
                           "remove": "x-caller-appid"
+                        },
+                        {
+                          "remove": "x-caller-user"
+                        },
+                        {
+                          "remove": "x-olares-caller-jwt"
+                        },
+                        {
+                          "remove": "remote-user"
+                        },
+                        {
+                          "remove": "remote-groups"
+                        },
+                        {
+                          "remove": "remote-name"
+                        },
+                        {
+                          "remove": "remote-email"
+                        },
+                        {
+                          "remove": "remote-access-token"
+                        },
+                        {
+                          "remove": "authelia-nonce"
+                        },
+                        {
+                          "remove": "forwarded"
+                        },
+                        {
+                          "remove": "x-forwarded-for"
+                        },
+                        {
+                          "remove": "x-real-ip"
+                        },
+                        {
+                          "remove": "x-original-forwarded-for"
+                        },
+                        {
+                          "remove": "x-envoy-external-address"
+                        },
+                        {
+                          "remove": "x-forwarded-host"
+                        },
+                        {
+                          "remove": "x-forwarded-proto"
+                        },
+                        {
+                          "remove": "x-forwarded-port"
+                        },
+                        {
+                          "remove": "x-forwarded-uri"
+                        },
+                        {
+                          "remove": "x-forwarded-method"
+                        },
+                        {
+                          "remove": "x-original-url"
+                        },
+                        {
+                          "remove": "x-original-method"
+                        },
+                        {
+                          "removeOnMatch": {
+                            "keyMatcher": {
+                              "prefix": "remote-",
+                              "ignoreCase": true
+                            }
+                          }
+                        },
+                        {
+                          "removeOnMatch": {
+                            "keyMatcher": {
+                              "prefix": "authelia-",
+                              "ignoreCase": true
+                            }
+                          }
                         }
                       ]
                     }
@@ -666,6 +826,82 @@
                           },
                           {
                             "remove": "x-caller-appid"
+                          },
+                          {
+                            "remove": "x-caller-user"
+                          },
+                          {
+                            "remove": "x-olares-caller-jwt"
+                          },
+                          {
+                            "remove": "remote-user"
+                          },
+                          {
+                            "remove": "remote-groups"
+                          },
+                          {
+                            "remove": "remote-name"
+                          },
+                          {
+                            "remove": "remote-email"
+                          },
+                          {
+                            "remove": "remote-access-token"
+                          },
+                          {
+                            "remove": "authelia-nonce"
+                          },
+                          {
+                            "remove": "forwarded"
+                          },
+                          {
+                            "remove": "x-forwarded-for"
+                          },
+                          {
+                            "remove": "x-real-ip"
+                          },
+                          {
+                            "remove": "x-original-forwarded-for"
+                          },
+                          {
+                            "remove": "x-envoy-external-address"
+                          },
+                          {
+                            "remove": "x-forwarded-host"
+                          },
+                          {
+                            "remove": "x-forwarded-proto"
+                          },
+                          {
+                            "remove": "x-forwarded-port"
+                          },
+                          {
+                            "remove": "x-forwarded-uri"
+                          },
+                          {
+                            "remove": "x-forwarded-method"
+                          },
+                          {
+                            "remove": "x-original-url"
+                          },
+                          {
+                            "remove": "x-original-method"
+                          },
+                          {
+                            "removeOnMatch": {
+                              "keyMatcher": {
+                                "prefix": "remote-",
+                                "ignoreCase": true
+                              }
+                            }
+                          },
+                          {
+                            "removeOnMatch": {
+                              "keyMatcher": {
+                                "prefix": "authelia-",
+                                "ignoreCase": true
+                              }
+                            }
                           }
                         ]
                       }
@@ -687,6 +923,14 @@
                             {
                               "key": "X-Forwarded-Proto",
                               "value": "%REQ(x-forwarded-proto?:SCHEME)%"
+                            },
+                            {
+                              "key": "X-Forwarded-For",
+                              "value": "%DOWNSTREAM_REMOTE_ADDRESS_WITHOUT_PORT%"
+                            },
+                            {
+                              "key": "X-Real-IP",
+                              "value": "%DOWNSTREAM_REMOTE_ADDRESS_WITHOUT_PORT%"
                             },
                             {
                               "key": "X-Original-URL",
@@ -840,6 +1084,82 @@
                         },
                         {
                           "remove": "x-caller-appid"
+                        },
+                        {
+                          "remove": "x-caller-user"
+                        },
+                        {
+                          "remove": "x-olares-caller-jwt"
+                        },
+                        {
+                          "remove": "remote-user"
+                        },
+                        {
+                          "remove": "remote-groups"
+                        },
+                        {
+                          "remove": "remote-name"
+                        },
+                        {
+                          "remove": "remote-email"
+                        },
+                        {
+                          "remove": "remote-access-token"
+                        },
+                        {
+                          "remove": "authelia-nonce"
+                        },
+                        {
+                          "remove": "forwarded"
+                        },
+                        {
+                          "remove": "x-forwarded-for"
+                        },
+                        {
+                          "remove": "x-real-ip"
+                        },
+                        {
+                          "remove": "x-original-forwarded-for"
+                        },
+                        {
+                          "remove": "x-envoy-external-address"
+                        },
+                        {
+                          "remove": "x-forwarded-host"
+                        },
+                        {
+                          "remove": "x-forwarded-proto"
+                        },
+                        {
+                          "remove": "x-forwarded-port"
+                        },
+                        {
+                          "remove": "x-forwarded-uri"
+                        },
+                        {
+                          "remove": "x-forwarded-method"
+                        },
+                        {
+                          "remove": "x-original-url"
+                        },
+                        {
+                          "remove": "x-original-method"
+                        },
+                        {
+                          "removeOnMatch": {
+                            "keyMatcher": {
+                              "prefix": "remote-",
+                              "ignoreCase": true
+                            }
+                          }
+                        },
+                        {
+                          "removeOnMatch": {
+                            "keyMatcher": {
+                              "prefix": "authelia-",
+                              "ignoreCase": true
+                            }
+                          }
                         }
                       ]
                     }
@@ -932,6 +1252,82 @@
                           },
                           {
                             "remove": "x-caller-appid"
+                          },
+                          {
+                            "remove": "x-caller-user"
+                          },
+                          {
+                            "remove": "x-olares-caller-jwt"
+                          },
+                          {
+                            "remove": "remote-user"
+                          },
+                          {
+                            "remove": "remote-groups"
+                          },
+                          {
+                            "remove": "remote-name"
+                          },
+                          {
+                            "remove": "remote-email"
+                          },
+                          {
+                            "remove": "remote-access-token"
+                          },
+                          {
+                            "remove": "authelia-nonce"
+                          },
+                          {
+                            "remove": "forwarded"
+                          },
+                          {
+                            "remove": "x-forwarded-for"
+                          },
+                          {
+                            "remove": "x-real-ip"
+                          },
+                          {
+                            "remove": "x-original-forwarded-for"
+                          },
+                          {
+                            "remove": "x-envoy-external-address"
+                          },
+                          {
+                            "remove": "x-forwarded-host"
+                          },
+                          {
+                            "remove": "x-forwarded-proto"
+                          },
+                          {
+                            "remove": "x-forwarded-port"
+                          },
+                          {
+                            "remove": "x-forwarded-uri"
+                          },
+                          {
+                            "remove": "x-forwarded-method"
+                          },
+                          {
+                            "remove": "x-original-url"
+                          },
+                          {
+                            "remove": "x-original-method"
+                          },
+                          {
+                            "removeOnMatch": {
+                              "keyMatcher": {
+                                "prefix": "remote-",
+                                "ignoreCase": true
+                              }
+                            }
+                          },
+                          {
+                            "removeOnMatch": {
+                              "keyMatcher": {
+                                "prefix": "authelia-",
+                                "ignoreCase": true
+                              }
+                            }
                           }
                         ]
                       }
@@ -953,6 +1349,14 @@
                             {
                               "key": "X-Forwarded-Proto",
                               "value": "%REQ(x-forwarded-proto?:SCHEME)%"
+                            },
+                            {
+                              "key": "X-Forwarded-For",
+                              "value": "%DOWNSTREAM_REMOTE_ADDRESS_WITHOUT_PORT%"
+                            },
+                            {
+                              "key": "X-Real-IP",
+                              "value": "%DOWNSTREAM_REMOTE_ADDRESS_WITHOUT_PORT%"
                             },
                             {
                               "key": "X-Original-URL",
@@ -1106,6 +1510,82 @@
                         },
                         {
                           "remove": "x-caller-appid"
+                        },
+                        {
+                          "remove": "x-caller-user"
+                        },
+                        {
+                          "remove": "x-olares-caller-jwt"
+                        },
+                        {
+                          "remove": "remote-user"
+                        },
+                        {
+                          "remove": "remote-groups"
+                        },
+                        {
+                          "remove": "remote-name"
+                        },
+                        {
+                          "remove": "remote-email"
+                        },
+                        {
+                          "remove": "remote-access-token"
+                        },
+                        {
+                          "remove": "authelia-nonce"
+                        },
+                        {
+                          "remove": "forwarded"
+                        },
+                        {
+                          "remove": "x-forwarded-for"
+                        },
+                        {
+                          "remove": "x-real-ip"
+                        },
+                        {
+                          "remove": "x-original-forwarded-for"
+                        },
+                        {
+                          "remove": "x-envoy-external-address"
+                        },
+                        {
+                          "remove": "x-forwarded-host"
+                        },
+                        {
+                          "remove": "x-forwarded-proto"
+                        },
+                        {
+                          "remove": "x-forwarded-port"
+                        },
+                        {
+                          "remove": "x-forwarded-uri"
+                        },
+                        {
+                          "remove": "x-forwarded-method"
+                        },
+                        {
+                          "remove": "x-original-url"
+                        },
+                        {
+                          "remove": "x-original-method"
+                        },
+                        {
+                          "removeOnMatch": {
+                            "keyMatcher": {
+                              "prefix": "remote-",
+                              "ignoreCase": true
+                            }
+                          }
+                        },
+                        {
+                          "removeOnMatch": {
+                            "keyMatcher": {
+                              "prefix": "authelia-",
+                              "ignoreCase": true
+                            }
+                          }
                         }
                       ]
                     }
@@ -1178,6 +1658,82 @@
                           },
                           {
                             "remove": "x-caller-appid"
+                          },
+                          {
+                            "remove": "x-caller-user"
+                          },
+                          {
+                            "remove": "x-olares-caller-jwt"
+                          },
+                          {
+                            "remove": "remote-user"
+                          },
+                          {
+                            "remove": "remote-groups"
+                          },
+                          {
+                            "remove": "remote-name"
+                          },
+                          {
+                            "remove": "remote-email"
+                          },
+                          {
+                            "remove": "remote-access-token"
+                          },
+                          {
+                            "remove": "authelia-nonce"
+                          },
+                          {
+                            "remove": "forwarded"
+                          },
+                          {
+                            "remove": "x-forwarded-for"
+                          },
+                          {
+                            "remove": "x-real-ip"
+                          },
+                          {
+                            "remove": "x-original-forwarded-for"
+                          },
+                          {
+                            "remove": "x-envoy-external-address"
+                          },
+                          {
+                            "remove": "x-forwarded-host"
+                          },
+                          {
+                            "remove": "x-forwarded-proto"
+                          },
+                          {
+                            "remove": "x-forwarded-port"
+                          },
+                          {
+                            "remove": "x-forwarded-uri"
+                          },
+                          {
+                            "remove": "x-forwarded-method"
+                          },
+                          {
+                            "remove": "x-original-url"
+                          },
+                          {
+                            "remove": "x-original-method"
+                          },
+                          {
+                            "removeOnMatch": {
+                              "keyMatcher": {
+                                "prefix": "remote-",
+                                "ignoreCase": true
+                              }
+                            }
+                          },
+                          {
+                            "removeOnMatch": {
+                              "keyMatcher": {
+                                "prefix": "authelia-",
+                                "ignoreCase": true
+                              }
+                            }
                           }
                         ]
                       }
@@ -1199,6 +1755,14 @@
                             {
                               "key": "X-Forwarded-Proto",
                               "value": "%REQ(x-forwarded-proto?:SCHEME)%"
+                            },
+                            {
+                              "key": "X-Forwarded-For",
+                              "value": "%DOWNSTREAM_REMOTE_ADDRESS_WITHOUT_PORT%"
+                            },
+                            {
+                              "key": "X-Real-IP",
+                              "value": "%DOWNSTREAM_REMOTE_ADDRESS_WITHOUT_PORT%"
                             },
                             {
                               "key": "X-Original-URL",
@@ -1352,6 +1916,82 @@
                         },
                         {
                           "remove": "x-caller-appid"
+                        },
+                        {
+                          "remove": "x-caller-user"
+                        },
+                        {
+                          "remove": "x-olares-caller-jwt"
+                        },
+                        {
+                          "remove": "remote-user"
+                        },
+                        {
+                          "remove": "remote-groups"
+                        },
+                        {
+                          "remove": "remote-name"
+                        },
+                        {
+                          "remove": "remote-email"
+                        },
+                        {
+                          "remove": "remote-access-token"
+                        },
+                        {
+                          "remove": "authelia-nonce"
+                        },
+                        {
+                          "remove": "forwarded"
+                        },
+                        {
+                          "remove": "x-forwarded-for"
+                        },
+                        {
+                          "remove": "x-real-ip"
+                        },
+                        {
+                          "remove": "x-original-forwarded-for"
+                        },
+                        {
+                          "remove": "x-envoy-external-address"
+                        },
+                        {
+                          "remove": "x-forwarded-host"
+                        },
+                        {
+                          "remove": "x-forwarded-proto"
+                        },
+                        {
+                          "remove": "x-forwarded-port"
+                        },
+                        {
+                          "remove": "x-forwarded-uri"
+                        },
+                        {
+                          "remove": "x-forwarded-method"
+                        },
+                        {
+                          "remove": "x-original-url"
+                        },
+                        {
+                          "remove": "x-original-method"
+                        },
+                        {
+                          "removeOnMatch": {
+                            "keyMatcher": {
+                              "prefix": "remote-",
+                              "ignoreCase": true
+                            }
+                          }
+                        },
+                        {
+                          "removeOnMatch": {
+                            "keyMatcher": {
+                              "prefix": "authelia-",
+                              "ignoreCase": true
+                            }
+                          }
                         }
                       ]
                     }
@@ -1709,8 +2349,8 @@
         },
         {
           "header": {
-            "key": "X-Original-Forwarded-For",
-            "value": "%REQ(X-FORWARDED-FOR)%"
+            "key": "X-Forwarded-For",
+            "value": "%DOWNSTREAM_REMOTE_ADDRESS_WITHOUT_PORT%"
           },
           "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
         }
@@ -2169,8 +2809,8 @@
         },
         {
           "header": {
-            "key": "X-Original-Forwarded-For",
-            "value": "%REQ(X-FORWARDED-FOR)%"
+            "key": "X-Forwarded-For",
+            "value": "%DOWNSTREAM_REMOTE_ADDRESS_WITHOUT_PORT%"
           },
           "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
         }
@@ -2440,8 +3080,8 @@
         },
         {
           "header": {
-            "key": "X-Original-Forwarded-For",
-            "value": "%REQ(X-FORWARDED-FOR)%"
+            "key": "X-Forwarded-For",
+            "value": "%DOWNSTREAM_REMOTE_ADDRESS_WITHOUT_PORT%"
           },
           "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
         }
@@ -2900,8 +3540,8 @@
         },
         {
           "header": {
-            "key": "X-Original-Forwarded-For",
-            "value": "%REQ(X-FORWARDED-FOR)%"
+            "key": "X-Forwarded-For",
+            "value": "%DOWNSTREAM_REMOTE_ADDRESS_WITHOUT_PORT%"
           },
           "appendAction": "OVERWRITE_IF_EXISTS_OR_ADD"
         }
