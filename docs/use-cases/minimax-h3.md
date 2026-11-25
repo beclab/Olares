@@ -38,7 +38,7 @@ AI prompt optimization uses a chat model connected through Router to refine and 
 4. In **Settings**, click **Open the Model Console**. Wait until it shows **Ready** and ComfyUI, the generation engine, shows **up**.
 
 ::: tip First generation takes longer
-The first generation also loads the models into memory, so it takes longer than later runs. Follow its progress in **Results**.
+The first generation can take longer while the models load into memory. Follow its progress in **Results**.
 :::
 
 ## Configure a chat model for AI optimization
@@ -147,8 +147,8 @@ When combining inputs, mention each one where you describe its purpose, such as 
    ```
 
 4. Replace `@[person reference]` with an image mention: delete the placeholder, type `@` in its place, and select the reference image you added.
-5. Set **Aspect** to **16:9**, **Duration** to **5 s**, and **Quality** to **720p**. Choose **Fast** for this preview, then click **Generate**.
-6. Open the result and compare the person's face, outfit, and scarf with the reference.
+5. Set **Aspect** to **16:9**, **Duration** to **5 s**, and **Quality** to **720p**. Optionally, set **Speed** to **Fast** under **Advanced settings** for a quicker preview.
+6. Click **Generate** and wait for the task to complete. Open the result and compare the person's face, outfit, and scarf with the reference.
 
    ![Use a courtyard frame as a reference for a new fashion video on a seaside terrace](/images/manual/use-cases/minimax-h3-reference-result.jpg#bordered)
 
