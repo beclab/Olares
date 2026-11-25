@@ -14,6 +14,9 @@ spec:
   matchConditions:
     - name: enrolled-http-pod
       expression: >-
+        (request.namespace.startsWith('user-system-') &&
+         ((has(object.spec.serviceAccountName) && object.spec.serviceAccountName == 'bytetrade-sys-ops') ||
+          (has(object.metadata.labels) && 'app' in object.metadata.labels && object.metadata.labels['app'] == 'systemserver'))) ||
         (has(object.metadata.annotations) &&
          'traffic.olares.io/mtls-mode' in object.metadata.annotations &&
          object.metadata.annotations['traffic.olares.io/mtls-mode'] == 'Required') ||
@@ -38,14 +41,29 @@ spec:
         request.namespace == 'os-gateway' && has(object.metadata.labels) &&
         'gateway.envoyproxy.io/owning-gateway-name' in object.metadata.labels &&
         object.metadata.labels['gateway.envoyproxy.io/owning-gateway-name'] == 'app-access-internal'
+    - name: systemServer
+      expression: >-
+        request.namespace.startsWith('user-system-') &&
+        ((has(object.spec.serviceAccountName) && object.spec.serviceAccountName == 'bytetrade-sys-ops') ||
+         (has(object.metadata.labels) && 'app' in object.metadata.labels && object.metadata.labels['app'] == 'systemserver') ||
+         (oldObject != null && has(oldObject.metadata.labels) && 'app' in oldObject.metadata.labels && oldObject.metadata.labels['app'] == 'systemserver'))
     - name: nativeProxy
       expression: >-
         has(object.metadata.annotations) &&
         'config.linkerd.io/proxy-enable-native-sidecar' in object.metadata.annotations &&
         object.metadata.annotations['config.linkerd.io/proxy-enable-native-sidecar'] == 'true'
     - name: inboundPolicy
-      expression: "variables.internalGateway || variables.bflAPI ? 'deny' : 'cluster-authenticated'"
+      expression: "variables.internalGateway || variables.bflAPI || variables.systemServer ? 'deny' : 'cluster-authenticated'"
   validations:
+    - expression: >-
+        !variables.systemServer ||
+        (has(object.metadata.labels) && 'app' in object.metadata.labels && object.metadata.labels['app'] == 'systemserver' &&
+         has(object.spec.serviceAccountName) && object.spec.serviceAccountName == 'bytetrade-sys-ops' &&
+         has(object.metadata.annotations) && 'traffic.olares.io/mtls-mode' in object.metadata.annotations &&
+         object.metadata.annotations['traffic.olares.io/mtls-mode'] == 'Required' && variables.nativeProxy &&
+         object.spec.containers.exists(c, c.name == 'system-server' && has(c.env) &&
+           c.env.exists(e, e.name == 'NONCE_AUTHORIZATION_MODE' && has(e.value) && e.value == 'linkerd' && !has(e.valueFrom))))
+      message: System-server nonce requires retained mesh enrollment and the native proxy.
     - expression: >-
         has(object.metadata.annotations) &&
         'linkerd.io/inject' in object.metadata.annotations &&

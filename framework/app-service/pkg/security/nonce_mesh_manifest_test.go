@@ -24,7 +24,7 @@ func renderNonceManifests(t *testing.T, namespace, tenant string, paths ...strin
 		}
 		c.Templates = append(c.Templates, &chart.File{Name: "templates/" + filepath.Base(path), Data: data})
 	}
-	values, err := chartutil.ToRenderValues(c, map[string]any{"rootPath": "/olares", "bfl": map[string]any{"username": tenant}}, chartutil.ReleaseOptions{Namespace: namespace, Name: "nonce-test"}, nil)
+	values, err := chartutil.ToRenderValues(c, map[string]any{"rootPath": "/olares", "autheliaBackendImage": "beclab/auth:0.2.63-1.12.8-50b54e7c", "bfl": map[string]any{"username": tenant}}, chartutil.ReleaseOptions{Namespace: namespace, Name: "nonce-test"}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -64,11 +64,41 @@ func renderNonceManifests(t *testing.T, namespace, tenant string, paths ...strin
 func TestNonceMeshIdentityAndTenantBinding(t *testing.T) {
 	for _, tenant := range []string{"alice", "bob"} {
 		t.Run(tenant, func(t *testing.T) {
-			docs := renderNonceManifests(t, "user-space-"+tenant, tenant, "../../../system-server/.olares/config/user/helm-charts/systemserver/templates/nonce-mesh.yaml")
+			docs := renderNonceManifests(t, "user-space-"+tenant, tenant, "../../../system-server/.olares/config/user/helm-charts/systemserver/templates/nonce-mesh.yaml",
+				"../../../system-server/.olares/config/user/helm-charts/systemserver/templates/systemserver_deploy.yaml")
 			for _, doc := range docs {
 				meta := doc["metadata"].(map[string]any)
 				if ns, ok := meta["namespace"]; ok && ns != "user-system-"+tenant {
 					t.Fatal("cross-tenant resource")
+				}
+			}
+			pod := docs["Deployment/system-server"]["spec"].(map[string]any)["template"].(map[string]any)
+			ann := pod["metadata"].(map[string]any)["annotations"].(map[string]any)
+			if ann["config.linkerd.io/default-inbound-policy"] != "deny" || ann["config.linkerd.io/proxy-enable-native-sidecar"] != "true" {
+				t.Fatal("system-server deployment can fail open")
+			}
+			declared := map[any]bool{}
+			for _, container := range pod["spec"].(map[string]any)["containers"].([]any) {
+				c := container.(map[string]any)
+				for _, port := range c["ports"].([]any) {
+					declared[port.(map[string]any)["containerPort"]] = true
+				}
+				if c["name"] == "system-server" {
+					enrolled := false
+					for _, env := range c["env"].([]any) {
+						e := env.(map[string]any)
+						if e["name"] == "NONCE_AUTHORIZATION_MODE" && e["value"] == "linkerd" {
+							enrolled = true
+						}
+					}
+					if !enrolled {
+						t.Fatal("mesh-only handler not explicitly enrolled")
+					}
+				}
+			}
+			for key, doc := range docs {
+				if strings.HasPrefix(key, "Server/") && !declared[doc["spec"].(map[string]any)["port"]] {
+					t.Fatalf("Linkerd Server port not declared on Pod: %s", key)
 				}
 			}
 			server := docs["Server/systemserver-api"]["spec"].(map[string]any)
@@ -92,26 +122,50 @@ func TestNonceMeshIdentityAndTenantBinding(t *testing.T) {
 				}
 			}
 			nonce := docs["HTTPRoute/systemserver-nonce"]["spec"].(map[string]any)
-			if !reflect.DeepEqual(nonce["rules"], []any{map[string]any{"matches": []any{map[string]any{"path": map[string]any{"type": "PathPrefix", "value": "/permission/v1alpha1/nonce"}}}}}) {
+			if !reflect.DeepEqual(nonce["rules"], []any{map[string]any{"matches": []any{map[string]any{"path": map[string]any{"type": "Exact", "value": "/permission/v1alpha1/nonce"}, "method": "GET"}}}}) {
 				t.Fatal("nonce variants may fall through to generic route")
 			}
 			identity := docs["MeshTLSAuthentication/systemserver-nonce"]["spec"].(map[string]any)
 			if !reflect.DeepEqual(identity, map[string]any{"identityRefs": []any{map[string]any{"kind": "ServiceAccount", "name": "authelia-backend", "namespace": "os-framework"}}}) {
 				t.Fatal("shared or cross-tenant identity can obtain nonce")
 			}
-			subjects := docs["ClusterRoleBinding/systemserver-nonce-reviewer-"+tenant]["subjects"]
-			if !reflect.DeepEqual(subjects, []any{map[string]any{"kind": "ServiceAccount", "name": "bytetrade-sys-ops", "namespace": "user-system-" + tenant}}) {
-				t.Fatal("reviewer bound across tenants")
+			if docs["ClusterRoleBinding/systemserver-nonce-reviewer-"+tenant] != nil {
+				t.Fatal("obsolete TokenReview permission retained")
 			}
+			existing := docs["HTTPRoute/systemserver-api-existing"]["spec"].(map[string]any)
+			if !reflect.DeepEqual(existing["rules"], []any{map[string]any{"matches": []any{
+				map[string]any{"path": map[string]any{"type": "PathPrefix", "value": "/permission/v2alpha1"}},
+				map[string]any{"path": map[string]any{"type": "PathPrefix", "value": "/provider/v2alpha1"}},
+			}}}) {
+				t.Fatal("a fallback route can authorize nonce when its policy is missing")
+			}
+			for _, port := range []string{"28080", "6379", "27017", "5432", "4222", "9091", "3010", "4568", "8080", "3000"} {
+				server := docs["Server/systemserver-existing-"+port]["spec"].(map[string]any)
+				if server["accessPolicy"] != "cluster-authenticated" {
+					t.Fatal("other listener compatibility lost")
+				}
+			}
+
 		})
 	}
 }
 
-func TestAutheliaDedicatedLeastPrivilegeAndRotatingCredential(t *testing.T) {
+func TestAutheliaDedicatedLeastPrivilegeWithoutNonceToken(t *testing.T) {
 	docs := renderNonceManifests(t, "os-framework", "alice",
 		"../../../authelia/.olares/config/cluster/deploy/auth_backend_identity.yaml",
 		"../../../authelia/.olares/config/cluster/deploy/auth_backend_deploy.yaml")
 	spec := docs["Deployment/authelia-backend"]["spec"].(map[string]any)["template"].(map[string]any)["spec"].(map[string]any)
+	pod := docs["Deployment/authelia-backend"]["spec"].(map[string]any)["template"].(map[string]any)
+	if pod["metadata"].(map[string]any)["annotations"].(map[string]any)["config.linkerd.io/proxy-enable-native-sidecar"] != "true" {
+		t.Fatal("database init can start before its mesh proxy")
+	}
+	for _, container := range spec["containers"].([]any) {
+		c := container.(map[string]any)
+		if c["name"] == "authelia" && c["image"] != "beclab/auth:0.2.63-1.12.8-50b54e7c" {
+			t.Fatal("identity migration changed the retained auth image")
+		}
+	}
+
 	if spec["serviceAccountName"] != "authelia-backend" || spec["serviceAccount"] != "authelia-backend" {
 		t.Fatal("Authelia retains shared administrator identity")
 	}
@@ -138,36 +192,10 @@ func TestAutheliaDedicatedLeastPrivilegeAndRotatingCredential(t *testing.T) {
 			t.Fatal("Secret role bound to wrong identity")
 		}
 	}
-	found := false
 	for _, volume := range spec["volumes"].([]any) {
 		v := volume.(map[string]any)
-		if v["name"] != "nonce-credential" {
-			continue
-		}
-		found = true
-		projected := v["projected"].(map[string]any)
-		token := projected["sources"].([]any)[0].(map[string]any)["serviceAccountToken"].(map[string]any)
-		if projected["defaultMode"] != 256 || !reflect.DeepEqual(token, map[string]any{"audience": "olares-system-server-nonce", "expirationSeconds": 600, "path": "token"}) {
-			t.Fatal("credential is not short-lived and audience-scoped")
-		}
-	}
-	if !found {
-		t.Fatal("missing projected credential")
-	}
-	for _, container := range spec["containers"].([]any) {
-		c := container.(map[string]any)
-		if c["name"] != "authelia" {
-			continue
-		}
-		mounted := false
-		for _, mount := range c["volumeMounts"].([]any) {
-			m := mount.(map[string]any)
-			if m["name"] == "nonce-credential" {
-				mounted = m["readOnly"] == true && m["mountPath"] == "/var/run/secrets/olares/nonce" && m["subPath"] == nil
-			}
-		}
-		if !mounted {
-			t.Fatal("credential rotation mount is unsafe")
+		if v["name"] == "nonce-credential" {
+			t.Fatal("Authelia still requires a new nonce token")
 		}
 	}
 }

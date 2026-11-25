@@ -16,6 +16,7 @@ const (
 	BflUserKey                = "X-BFL-USER"
 	AuthTokenCookieName       = "auth_token"
 	AutheliaNonceKey          = "Authelia-Nonce"
+	AutheliaNoncePath         = "/permission/v1alpha1/nonce"
 )
 
 var (

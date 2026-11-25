@@ -3,6 +3,7 @@ package permission
 import (
 	"errors"
 	"fmt"
+	"os"
 	"time"
 
 	"bytetrade.io/web3os/system-server/pkg/apiserver/v1alpha1/api"
@@ -10,27 +11,24 @@ import (
 	"bytetrade.io/web3os/system-server/pkg/constants"
 
 	"github.com/emicklei/go-restful/v3"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
 )
 
 type Handler struct {
-	permissionCtrl *PermissionControl
-	accessMgr      *AccessManager
-	kubeconfig     *rest.Config
-	kubeClientSet  kubernetes.Interface
+	permissionCtrl    *PermissionControl
+	accessMgr         *AccessManager
+	kubeconfig        *rest.Config
+	nonceMeshRequired bool
 }
 
 func newHandler(ctrlSet *PermissionControlSet, kubeconfig *rest.Config) *Handler {
 
-	client := kubernetes.NewForConfigOrDie(kubeconfig)
-
 	return &Handler{
-		permissionCtrl: ctrlSet.Ctrl,
-		accessMgr:      ctrlSet.Mgr,
-		kubeconfig:     kubeconfig,
-		kubeClientSet:  client,
+		permissionCtrl:    ctrlSet.Ctrl,
+		accessMgr:         ctrlSet.Mgr,
+		kubeconfig:        kubeconfig,
+		nonceMeshRequired: os.Getenv("NONCE_AUTHORIZATION_MODE") == "linkerd",
 	}
 }
 

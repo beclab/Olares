@@ -11,7 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
-func TestNonceBootstrapAPIEgressBeforeReadiness(t *testing.T) {
+func TestSystemServerBootstrapAPIEgressBeforeReadiness(t *testing.T) {
 	svc := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "kubernetes"}, Spec: corev1.ServiceSpec{
 		Type: corev1.ServiceTypeClusterIP, ClusterIP: "10.96.0.1", Ports: []corev1.ServicePort{{Name: "https", Protocol: corev1.ProtocolTCP, Port: 443}},
 	}}
@@ -27,7 +27,7 @@ func TestNonceBootstrapAPIEgressBeforeReadiness(t *testing.T) {
 	rules := policies[0].Spec.Egress
 	dependencies := security.BuildTrafficGroupDependencyPolicies("user-system-alice", svc, ep)
 	if len(dependencies) != 1 || !reflect.DeepEqual(rules[len(rules)-len(dependencies[0].Spec.Egress):], dependencies[0].Spec.Egress) {
-		t.Fatal("nonce TokenReview lost its API egress before readiness")
+		t.Fatal("system-server discovery lost its API egress before readiness")
 	}
 	seen := map[int32]bool{}
 	for _, rule := range rules {

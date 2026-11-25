@@ -394,6 +394,7 @@ spec:
         traffic.olares.io/platform-mesh: "true"
       annotations:
         linkerd.io/inject: enabled
+        config.linkerd.io/proxy-enable-native-sidecar: "true"
         config.linkerd.io/default-inbound-policy: cluster-authenticated
         traffic.olares.io/mtls-mode: Required
     spec:
@@ -443,7 +444,7 @@ spec:
           privileged: true
       containers:      
       - name: authelia
-        image: beclab/auth:0.2.62
+        image: {{ .Values.autheliaBackendImage | default "beclab/auth:0.2.62" | quote }}
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 9091
@@ -469,9 +470,6 @@ spec:
           value: "os.groups"
 
         volumeMounts:
-        - name: nonce-credential
-          mountPath: /var/run/secrets/olares/nonce
-          readOnly: true
         - name: config
           mountPath: /app/configuration.yml
           subPath: configuration.yaml
@@ -479,14 +477,6 @@ spec:
           mountPath: /config
 
       volumes:
-      - name: nonce-credential
-        projected:
-          defaultMode: 0400
-          sources:
-          - serviceAccountToken:
-              audience: olares-system-server-nonce
-              expirationSeconds: 600
-              path: token
       - name: config
         configMap:
           name: authelia-configs

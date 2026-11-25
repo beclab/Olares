@@ -4,10 +4,13 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
+	"path"
 	"strconv"
 	"strings"
 
+	"bytetrade.io/web3os/system-server/pkg/constants"
 	permv2alpha1 "bytetrade.io/web3os/system-server/pkg/permission/v2alpha1"
 	"bytetrade.io/web3os/system-server/pkg/utils"
 	appclientset "github.com/beclab/api/pkg/generated/clientset/versioned"
@@ -27,6 +30,7 @@ import (
 )
 
 var _ middleware.ProxyBalancer = (*server)(nil)
+var _ middleware.TargetProvider = (*server)(nil)
 var serviceKey = "Provider-Service"
 
 type server struct {
@@ -67,6 +71,26 @@ func (s *server) Next(ctx echo.Context) *middleware.ProxyTarget {
 
 	klog.V(5).Info("RBAC: no provider service found in context")
 	return nil
+}
+
+// NextTarget rejects the reserved nonce endpoint before either HTTP forwarding
+// or Echo's raw WebSocket dial. A provider target can otherwise reach the API
+// inside this Pod without traversing Linkerd's inbound authorization.
+func (s *server) NextTarget(ctx echo.Context) (*middleware.ProxyTarget, error) {
+	target := s.Next(ctx)
+	if target == nil {
+		return nil, echo.NewHTTPError(http.StatusServiceUnavailable, "provider unavailable")
+	}
+	// Use the same director as Echo's HTTP proxy to include a target path prefix.
+	// Raw WebSocket forwarding instead writes the original request unchanged.
+	forwarded := ctx.Request().Clone(ctx.Request().Context())
+	httputil.NewSingleHostReverseProxy(target.URL).Director(forwarded)
+	if path.Clean(ctx.Request().URL.Path) == constants.AutheliaNoncePath ||
+		path.Clean(forwarded.URL.Path) == constants.AutheliaNoncePath {
+		ctx.Response().Header().Set("Cache-Control", "no-store")
+		return nil, echo.NewHTTPError(http.StatusForbidden, "reserved provider endpoint")
+	}
+	return target, nil
 }
 
 // RemoveTarget implements middleware.ProxyBalancer.

@@ -75,7 +75,8 @@ spec:
         # Static Envoy bootstrap changes require a new Pod, not just a CM update.
         traffic.olares.io/auth-proxy-context-version: "1"
         linkerd.io/inject: enabled
-        config.linkerd.io/default-inbound-policy: cluster-authenticated
+        config.linkerd.io/default-inbound-policy: deny
+        config.linkerd.io/proxy-enable-native-sidecar: "true"
         traffic.olares.io/mtls-mode: Required
 {{ if .Values.telemetry }}
         instrumentation.opentelemetry.io/go-container-names: system-server
@@ -92,11 +93,15 @@ spec:
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80
+        - name: provider-api
+          containerPort: 28080
         command:
         - /system-server
         - -v
         - "6"
         env:
+        - name: NONCE_AUTHORIZATION_MODE
+          value: linkerd
         - name: MY_NAMESPACE
           valueFrom:
             fieldRef:
@@ -116,6 +121,12 @@ spec:
           containerPort: 27017
         - name: pg-proxy
           containerPort: 5432
+        - name: nats-proxy
+          containerPort: 4222
+        - name: infisical-proxy
+          containerPort: 8080
+        - name: bfl-proxy
+          containerPort: 3000
         - name: auth-proxy
           containerPort: 9091
         - name: knowledge-proxy

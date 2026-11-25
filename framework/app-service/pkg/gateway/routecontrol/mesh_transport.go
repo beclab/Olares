@@ -197,7 +197,7 @@ func authTransportPair(ctx context.Context, c client.Client, labels map[string]s
 		security.SystemServerProviderEgressRules(tenant, infisical, bfl, appService)...)
 	policies[0].Spec.Egress = append(policies[0].Spec.Egress, security.SystemServerNativeEgressRules(native)...)
 	// Route egress isolates this Pod before the namespace readiness gate. Its
-	// proxy must acquire identity/policy, and nonce TokenReview needs the API.
+	// proxy must acquire identity/policy, and the business server needs API discovery.
 	for _, dependency := range []struct {
 		component string
 		ports     []int32
