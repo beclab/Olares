@@ -18,6 +18,9 @@ import (
 var (
 	ErrConsumerRequired = errors.New("the app has several GPU consumers; name the consumer the binding is for")
 	ErrUnknownConsumer  = errors.New("the app declares no such GPU consumer")
+	// ErrConsumerUnplaceable is wrapped by every failure to find cards for a
+	// consumer; the message names the consumer and why.
+	ErrConsumerUnplaceable = errors.New("no available compute resource for GPU consumer")
 )
 
 // ConsumerRequirement is the requirement of one consumer in its chosen mode.
@@ -161,17 +164,23 @@ func BuildConsumerInstallPlans(ctx context.Context, c client.Client, appConfig *
 	return calculateConsumerPlans(appConfig, nodes), nil
 }
 
-func consumersInstallable(appConfig *appcfg.ApplicationConfig, nodes []Node) (bool, string) {
+// consumersInstallable runs the install placement against the current
+// cluster without recording it, so the check and the allocation agree.
+func consumersInstallable(ctx context.Context, c client.Client, appConfig *appcfg.ApplicationConfig) error {
 	reqs, err := ConsumerRequirements(appConfig)
 	if err != nil {
-		return false, err.Error()
+		return err
 	}
-	for _, req := range reqs {
-		if result := EvaluateInstallMode(req, nodes); result.Status != StatusInstallable {
-			return false, fmt.Sprintf("GPU consumer %s: %s", req.Consumer, result.Reason)
-		}
+	nodes, err := FetchNodeComputeAllocationsExcludingApp(ctx, c, appConfig.AppName, appConfig.OwnerName)
+	if err != nil {
+		return err
 	}
-	return true, ""
+	pressure, err := FetchPressureSnapshot(ctx)
+	if err != nil {
+		return err
+	}
+	_, _, err = placeConsumers(appConfig, reqs, nil, nodes, pressure)
+	return err
 }
 
 // addedResourcesForConsumers adds every consumer's per-pod demand times its
@@ -419,7 +428,19 @@ type consumerPlacementError struct {
 }
 
 func (e *consumerPlacementError) Error() string {
-	return fmt.Sprintf("no available compute resource for GPU consumer %s: %s", e.consumer, e.reason)
+	return fmt.Sprintf("%s %s: %s", ErrConsumerUnplaceable, e.consumer, e.reason)
+}
+
+func (e *consumerPlacementError) Unwrap() error { return ErrConsumerUnplaceable }
+
+func placementReason(req Requirement, availability *AvailabilityResult) string {
+	if req.PerPod == appcfg.PerPodSplit {
+		return fmt.Sprintf("cannot form %d groups of cards, each group on one node, that together hold the required GPU memory", req.Replicas)
+	}
+	if availability != nil && availability.Reason != "" {
+		return availability.Reason
+	}
+	return "insufficient_resources"
 }
 
 // placeConsumers places every consumer in order on a working copy of the
@@ -460,7 +481,8 @@ func placeConsumersOn(appConfig *appcfg.ApplicationConfig, reqs []Requirement, m
 			var ok bool
 			selections, ok = pickConsumerSelection(req, availability, pressure)
 			if !ok {
-				return nil, nil, &consumerPlacementError{consumer: req.Consumer, reason: explainPlacement(req, availability, pressure)}
+				klog.Infof("compute: GPU consumer %s/%s/%s not placed: %s", appConfig.OwnerName, appConfig.AppName, req.Consumer, explainPlacement(req, availability, pressure))
+				return nil, nil, &consumerPlacementError{consumer: req.Consumer, reason: placementReason(req, availability)}
 			}
 		}
 		rows, validation := bindAllocations(appConfig, req, selections, nodes, pressure)

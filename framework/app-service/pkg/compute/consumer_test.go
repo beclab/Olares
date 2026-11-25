@@ -95,7 +95,7 @@ func TestConsumersPlaceAtomically(t *testing.T) {
 	nodes := []Node{nvidiaNode("a", exclusiveCard("a0"), exclusiveCard("a1"))}
 	rows, _, err := placeConsumers(app, reqs, nil, nodes, PressureSnapshot{})
 	var placement *consumerPlacementError
-	if !errors.As(err, &placement) || placement.consumer != "llm" || rows != nil {
+	if !errors.As(err, &placement) || placement.consumer != "llm" || rows != nil || !errors.Is(err, ErrConsumerUnplaceable) {
 		t.Fatalf("expected llm to fail with nothing placed, got rows=%v err=%v", rows, err)
 	}
 	for _, device := range nodes[0].Devices {

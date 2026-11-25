@@ -42,15 +42,10 @@ func calculateInstallComputePlan(appConfig *appcfg.ApplicationConfig, nodes []No
 
 func AppInstallable(ctx context.Context, c client.Client, appConfig *appcfg.ApplicationConfig) (bool, error) {
 	if appConfig.HasGPUConsumers() {
-		nodes, err := FetchNodeComputeAllocations(ctx, c)
-		if err != nil {
+		if err := consumersInstallable(ctx, c, appConfig); err != nil {
 			return false, err
 		}
-		ok, reason := consumersInstallable(appConfig, nodes)
-		if !ok {
-			klog.Infof("compute: app %s/%s is not installable: %s", appConfig.OwnerName, appConfig.AppName, reason)
-		}
-		return ok, nil
+		return true, nil
 	}
 	plan, err := BuildInstallComputePlan(ctx, c, appConfig)
 	if err != nil {
