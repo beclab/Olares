@@ -41,6 +41,15 @@ type DeviceInventoryResponse struct {
 	Devices []DeviceInventoryItem `json:"devices"`
 }
 
+type ClusterDeviceInventoryItem struct {
+	DeviceInventoryItem
+	Reserved bool `json:"reserved,omitempty"`
+}
+
+type ClusterDeviceInventoryResponse struct {
+	Devices []ClusterDeviceInventoryItem `json:"devices"`
+}
+
 type AttachmentCapability struct {
 	Type       string   `json:"type"`
 	Containers []string `json:"containers"`
@@ -129,6 +138,37 @@ func attachmentsResponse(app *appv1alpha1.Application) AttachmentsResponse {
 		attachments = []appv1alpha1.Attachment{}
 	}
 	return AttachmentsResponse{ResourceVersion: app.ResourceVersion, Attachments: attachments}
+}
+
+func (h *Handler) getClusterDeviceInventory(req *restful.Request, resp *restful.Response) {
+	ctx := req.Request.Context()
+	client := req.Attribute(constants.KubeSphereClientAttribute).(*clientset.ClientSet)
+	items, err := collectDeviceInventory(ctx, client, nil)
+	if err != nil {
+		api.HandleError(resp, req, err)
+		return
+	}
+
+	reservations, err := deviceReservations(ctx, client, "")
+	if err != nil {
+		api.HandleError(resp, req, err)
+		return
+	}
+
+	devices := make([]ClusterDeviceInventoryItem, 0, len(items))
+	for _, item := range items {
+		key := item.Node + "/" + item.Type + "/" + item.ResourceName
+		_, reserved := reservations[key]
+		devices = append(devices, ClusterDeviceInventoryItem{
+			DeviceInventoryItem: item,
+			// Keep physical selectability separate from exclusive reservations so
+			// callers can offer transfers for bindings they are allowed to manage.
+			Reserved: reserved && item.AccessMode != "shared",
+		})
+	}
+	if err := resp.WriteAsJson(&ClusterDeviceInventoryResponse{Devices: devices}); err != nil {
+		api.HandleInternalError(resp, req, err)
+	}
 }
 
 func (h *Handler) getDeviceInventory(req *restful.Request, resp *restful.Response) {
@@ -232,7 +272,7 @@ func collectDeviceInventory(ctx context.Context, client *clientset.ClientSet, al
 			"device.bluetooth": inventory.Bluetooth,
 		}
 		for capability, devices := range byType {
-			if _, ok := allowed[capability]; !ok {
+			if _, ok := allowed[capability]; allowed != nil && !ok {
 				continue
 			}
 			for _, item := range devices {
@@ -270,14 +310,25 @@ func sortDeviceInventory(items []DeviceInventoryItem) {
 }
 
 func applyDeviceReservations(ctx context.Context, client *clientset.ClientSet, current *appv1alpha1.Application, items []DeviceInventoryItem) error {
-	applications, err := client.AppClient.AppV1alpha1().Applications().List(ctx, metav1.ListOptions{})
+	reserved, err := deviceReservations(ctx, client, current.Name)
 	if err != nil {
 		return err
+	}
+	for i := range items {
+		applyDeviceReservation(&items[i], reserved)
+	}
+	return nil
+}
+
+func deviceReservations(ctx context.Context, client *clientset.ClientSet, exceptApp string) (map[string]string, error) {
+	applications, err := client.AppClient.AppV1alpha1().Applications().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
 	}
 	reserved := make(map[string]string)
 	for i := range applications.Items {
 		application := &applications.Items[i]
-		if application.Name == current.Name {
+		if application.Name == exceptApp {
 			continue
 		}
 		for _, attachment := range application.Spec.Attachments {
@@ -286,10 +337,7 @@ func applyDeviceReservations(ctx context.Context, client *clientset.ClientSet, c
 			}
 		}
 	}
-	for i := range items {
-		applyDeviceReservation(&items[i], reserved)
-	}
-	return nil
+	return reserved, nil
 }
 
 func applyDeviceReservation(item *DeviceInventoryItem, reserved map[string]string) {
