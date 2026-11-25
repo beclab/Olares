@@ -486,8 +486,18 @@ func (r *Runner) Reconcile(ctx context.Context, req Request) (ReconcileOutcome, 
 	world.InFlightKind = r.workloads.kind(req.Name)
 	klog.Infof("Reconcile: resultConsumed: %v", resultConsumed)
 	action := popped
-	if action == nil {
+	switch action.(type) {
+	case nil:
 		action = r.actionWithoutPending(world)
+	case domain.WorkloadReady, domain.WorkloadFailed:
+		// A stop accepted during scale-up must be consumed before the Helm
+		// result moves the app out of Resuming. Use its request ID and reason.
+		if world.Current() == appv1.Resuming && domain.OperationRequestPending(world.AM, appv1.StopOp) {
+			action = domain.TriggerOp{Op: appv1.StopOp}
+			// Discard the superseded callback. On retry the AM's request ID
+			// tells us whether to enter Stopping or continue the stop.
+			popped = nil
+		}
 	}
 	// Thread the Action into World so handlers can inspect
 	// Action-specific fields (WorkloadFailed.Reason etc.) without
@@ -497,12 +507,9 @@ func (r *Runner) Reconcile(ctx context.Context, req Request) (ReconcileOutcome, 
 	world.Action = action
 
 	timedOut, deadlineAfter := r.deadlineState(world)
-	// A workloadResultQueued claim means the workload already returned and
-	// its result is sitting in popped. Consuming that result wins over
-	// this Reconcile happening after the deadline. A still-running
-	// workload, a Tick, or a user operation does not: those are replaced
-	// with TimeoutFired and the in-flight claim is preempted so a late
-	// result is discarded.
+	// A completed workload takes precedence over the deadline when Reconcile
+	// consumes its queued result. For other actions, fire the timeout and
+	// preempt any in-flight claim so a late result is discarded.
 	if timedOut && !resultConsumed {
 		r.workloads.preemptClaim(req.Name)
 		action = domain.TimeoutFired{}
