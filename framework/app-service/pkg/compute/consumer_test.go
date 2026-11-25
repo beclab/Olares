@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
@@ -189,4 +190,19 @@ func TestAutoSelectConsumerModes(t *testing.T) {
 func shortHash(raw string) string {
 	sum := sha256.Sum256([]byte(raw))
 	return hex.EncodeToString(sum[:])[:8]
+}
+
+func TestConsumersReportCumulativePressure(t *testing.T) {
+	app := &appcfg.ApplicationConfig{AppName: "llm", OwnerName: "alice"}
+	reqs := []Requirement{consumerReq("a", appcfg.PerPodOne, 1, 8*gi), consumerReq("b", appcfg.PerPodOne, 1, 8*gi)}
+	for i := range reqs {
+		reqs[i].Mode = utils.NvidiaCardType
+		reqs[i].RequiredMemory = 70 * gi
+	}
+	nodes := []Node{nvidiaNode("a", exclusiveCard("a0"), exclusiveCard("a1"))}
+	_, _, err := placeConsumers(app, reqs, nil, nodes, nodePressure("a"))
+	var placement *consumerPlacementError
+	if !errors.As(err, &placement) || placement.consumer != "b" || !strings.HasPrefix(placement.reason, "node-pressure") {
+		t.Fatalf("the second consumer should fail on the pair's memory, got %v", err)
+	}
 }

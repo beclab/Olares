@@ -433,9 +433,22 @@ func (e *consumerPlacementError) Error() string {
 
 func (e *consumerPlacementError) Unwrap() error { return ErrConsumerUnplaceable }
 
-func placementReason(req Requirement, availability *AvailabilityResult) string {
+func placementReason(req Requirement, availability *AvailabilityResult, pressure PressureSnapshot) string {
 	if req.PerPod == appcfg.PerPodSplit {
 		return fmt.Sprintf("cannot form %d groups of cards, each group on one node, that together hold the required GPU memory", req.Replicas)
+	}
+	if availability != nil && len(availability.Nodes) > 0 {
+		added := AddedResources{CPU: req.RequiredCPU, Memory: req.RequiredMemory, Disk: req.RequiredDisk}
+		pressured := true
+		for _, node := range availability.Nodes {
+			if len(pressure.PressuredDimensions(Node{NodeName: node.NodeName}, added)) == 0 {
+				pressured = false
+				break
+			}
+		}
+		if pressured {
+			return "node-pressure: with the app's other consumers, every candidate node would pass its CPU, memory or disk threshold"
+		}
 	}
 	if availability != nil && availability.Reason != "" {
 		return availability.Reason
@@ -482,7 +495,7 @@ func placeConsumersOn(appConfig *appcfg.ApplicationConfig, reqs []Requirement, m
 			selections, ok = pickConsumerSelection(req, availability, pressure)
 			if !ok {
 				klog.Infof("compute: GPU consumer %s/%s/%s not placed: %s", appConfig.OwnerName, appConfig.AppName, req.Consumer, explainPlacement(req, availability, pressure))
-				return nil, nil, &consumerPlacementError{consumer: req.Consumer, reason: placementReason(req, availability)}
+				return nil, nil, &consumerPlacementError{consumer: req.Consumer, reason: placementReason(req, availability, pressure)}
 			}
 		}
 		rows, validation := bindAllocations(appConfig, req, selections, nodes, pressure)
