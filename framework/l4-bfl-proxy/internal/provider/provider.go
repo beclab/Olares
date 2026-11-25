@@ -40,6 +40,7 @@ const (
 	userAnnotationIsEphemeral = "bytetrade.io/is-ephemeral"
 	userDenyAllPolicy         = "bytetrade.io/deny-all"
 	userLocalDomainIPDns      = "bytetrade.io/local-domain-dns-record"
+	userRoleOwner             = "owner"
 
 	settingsCustomDomain                 = "customDomain"
 	settingsCustomDomainThirdLevelDomain = "third_level_domain"
@@ -522,6 +523,20 @@ func (p *Provider) buildAppInfos(username string, appList []*appv1alpha1.Applica
 func (p *Provider) listUsers(ctx context.Context, userList []iamv1alpha2.User, rawAppsMap map[string][]*appv1alpha1.Application, userEnvList []sysv1alpha1.UserEnv) ([]*message.UserInfo, error) {
 	var result []*message.UserInfo
 
+	// All users follow the single Only VPN switch stored on the owner.
+	denyAllStatus := "0"
+	ownerFound := false
+	for i := range userList {
+		if getAnnotation(&userList[i], userAnnotationOwnerRole) == userRoleOwner {
+			denyAllStatus = getAnnotation(&userList[i], userDenyAllPolicy)
+			ownerFound = true
+			break
+		}
+	}
+	if !ownerFound && len(userList) > 0 {
+		return nil, errors.New("owner user not found")
+	}
+
 	// Fetch cluster-wide data once; reused for every user below.
 	fsGlobal, err := p.getFileserverGlobalData(ctx)
 	if err != nil {
@@ -533,7 +548,7 @@ func (p *Provider) listUsers(ctx context.Context, userList []iamv1alpha2.User, r
 			if userList[i].Name == name {
 				return &userList[i]
 			}
-			if name == "cli" && userList[i].Annotations[userAnnotationOwnerRole] == "owner" {
+			if name == "cli" && userList[i].Annotations[userAnnotationOwnerRole] == userRoleOwner {
 				return &userList[i]
 			}
 		}
@@ -580,7 +595,6 @@ func (p *Provider) listUsers(ctx context.Context, userList []iamv1alpha2.User, r
 		var (
 			did, zone, localDomainIP string
 			accLevel, allowCIDR      string
-			denyAllStatus            string
 			allowedDomains           []string
 			serverNameDomains        []string
 		)
@@ -601,7 +615,6 @@ func (p *Provider) listUsers(ctx context.Context, userList []iamv1alpha2.User, r
 		accLevel = getAnnotation(annoUser, userLauncherAccessLevel)
 		allowCIDR = getAnnotation(annoUser, userLauncherAllowCIDR)
 		serverNameDomains = []string{zone, annoUser.Name + ".olares.local"}
-		denyAllStatus = getAnnotation(annoUser, userDenyAllPolicy)
 		allowedDomains = getPublicAccessDomain(zone, publicAppIDs, publicCustomDomainApps, denyAllStatus)
 
 		customDomainCerts := customDomainCertsForUser(user.Name, rawAppsMap[user.Name])
