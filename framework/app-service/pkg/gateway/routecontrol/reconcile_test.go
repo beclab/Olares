@@ -236,10 +236,10 @@ func TestReconcileSharedRouteGatewayModeApplicationSection(t *testing.T) {
 	if got := parentRef["name"]; got != "app-gateway" {
 		t.Fatalf("parentRefs[0].name = %v, want app-gateway", got)
 	}
-	if got := mustHTTPRouteSectionName(t, route); got != "https" {
-		t.Fatalf("HTTPRoute sectionName = %q, want https", got)
+	parents, _, _ := unstructured.NestedSlice(route.Object, "spec", "parentRefs")
+	if len(parents) != 1 || mustHTTPRouteSectionName(t, route) != l4MTLSGatewaySectN {
+		t.Fatalf("protected HTTPRoute must be Entry-only, got %v", parents)
 	}
-	mustIncludeParentSection(t, route, l4MTLSGatewaySectN)
 
 	policy := &unstructured.Unstructured{}
 	policy.SetGroupVersionKind(securityPolicyGVK)
@@ -409,8 +409,10 @@ func TestReconcileSharedRouteGatewayModeApplicationBootstrapReady(t *testing.T) 
 	if err := c.Get(context.Background(), types.NamespacedName{Namespace: "demo-shared", Name: "shared-demo-app-bootstrap"}, route); err != nil {
 		t.Fatalf("HTTPRoute not created: %v", err)
 	}
-	mustIncludeParentSection(t, route, "https")
-	mustIncludeParentSection(t, route, l4MTLSGatewaySectN)
+	parents, _, _ := unstructured.NestedSlice(route.Object, "spec", "parentRefs")
+	if len(parents) != 1 || mustHTTPRouteSectionName(t, route) != l4MTLSGatewaySectN {
+		t.Fatalf("protected HTTPRoute must be Entry-only, got %v", parents)
+	}
 }
 
 func TestReconcileSharedRouteDirectMode(t *testing.T) {

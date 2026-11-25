@@ -270,7 +270,7 @@ func TestDesiredApplicationExtAuthSecurityPolicy(t *testing.T) {
 		t.Fatalf("failOpen = %#v", ext["failOpen"])
 	}
 	httpCfg, ok := ext["http"].(map[string]any)
-	if !ok || httpCfg["path"] != AutheliaVerifyPath {
+	if !ok || httpCfg["pathOverride"] != AutheliaVerifyPath || httpCfg["path"] != nil {
 		t.Fatalf("http = %#v", ext["http"])
 	}
 	backends, ok := httpCfg["backendRefs"].([]any)
@@ -346,6 +346,76 @@ func TestApplyDesktopExtAuthReplacesLegacyPath(t *testing.T) {
 	if got.GetResourceVersion() != version {
 		t.Fatal("reconciling the defaulted authorization policy should not rewrite it")
 	}
+}
+
+func TestApplicationEntryMigrationWaitsForGatewayBeforeTrustingOriginalHeaders(t *testing.T) {
+	ctx := t.Context()
+	gw := GatewayRef{}
+	srr := desktopEntrance()
+	srr.SetName("app-olares-app-files")
+	route := &unstructured.Unstructured{}
+	route.SetGroupVersionKind(schema.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1", Kind: "HTTPRoute"})
+	route.SetNamespace(srr.Namespace)
+	route.SetName(srr.Name)
+	route.SetGeneration(1)
+	setOwnerSRR(route, srr)
+	want := parentRefsForSRR(gw, srr)
+	public := copyAnyStringMap(want[0].(map[string]any))
+	public["sectionName"] = defaultGatewaySectN
+	if err := unstructured.SetNestedSlice(route.Object, []any{public, want[0]}, "spec", "parentRefs"); err != nil {
+		t.Fatal(err)
+	}
+	legacy := desiredApplicationExtAuthSecurityPolicy(srr)
+	unstructured.RemoveNestedField(legacy.Object, "spec", "extAuth", "http", "pathOverride")
+	if err := unstructured.SetNestedField(legacy.Object, AutheliaVerifyPath, "spec", "extAuth", "http", "path"); err != nil {
+		t.Fatal(err)
+	}
+	c := fake.NewClientBuilder().WithScheme(testSchemeWithSecurityPolicy(t)).WithObjects(route, legacy).Build()
+	assertReady := func(want bool) {
+		t.Helper()
+		got, err := entryAuthMigrationReady(ctx, c, gw, srr)
+		if err != nil || got != want {
+			t.Fatalf("migration ready = %v, %v, want %v", got, err, want)
+		}
+	}
+	assertReady(false)
+	if err := c.Get(ctx, types.NamespacedName{Namespace: route.GetNamespace(), Name: route.GetName()}, route); err != nil {
+		t.Fatal(err)
+	}
+	parents, _, _ := unstructured.NestedSlice(route.Object, "spec", "parentRefs")
+	if len(parents) != 1 || !slices.ContainsFunc(parents, func(ref any) bool {
+		return ref.(map[string]any)["sectionName"] == l4MTLSGatewaySectN
+	}) {
+		t.Fatalf("old route still exposes a non-Entry listener: %v", parents)
+	}
+	observe := func(generation int64) {
+		t.Helper()
+		status := []any{map[string]any{
+			"controllerName": "gateway.envoyproxy.io/gatewayclass-controller", "parentRef": want[0],
+			"conditions": []any{
+				map[string]any{"type": "Accepted", "status": "True", "observedGeneration": generation},
+				map[string]any{"type": "ResolvedRefs", "status": "True", "observedGeneration": generation},
+			},
+		}}
+		if err := unstructured.SetNestedSlice(route.Object, status, "status", "parents"); err != nil {
+			t.Fatal(err)
+		}
+		if err := c.Update(ctx, route); err != nil {
+			t.Fatal(err)
+		}
+	}
+	route.SetGeneration(2)
+	observe(1)
+	assertReady(false)
+	live := legacy.DeepCopy()
+	if err := c.Get(ctx, types.NamespacedName{Namespace: live.GetNamespace(), Name: live.GetName()}, live); err != nil {
+		t.Fatal(err)
+	}
+	if path, _, _ := unstructured.NestedString(live.Object, "spec", "extAuth", "http", "path"); path != AutheliaVerifyPath {
+		t.Fatal("the transition replaced the authorization policy before Entry was accepted")
+	}
+	observe(2)
+	assertReady(true)
 }
 
 func TestReconcileSharedRouteAuthModeNoneSkipsExtAuthAndStampsUser(t *testing.T) {
@@ -460,7 +530,7 @@ func TestReconcileSharedRouteGatewayModeCreatesApplicationExtAuth(t *testing.T) 
 	if _, found, _ := unstructured.NestedMap(got.Object, "spec", "jwt"); found {
 		t.Fatal("application SecurityPolicy must not contain jwt")
 	}
-	path, found, err := unstructured.NestedString(got.Object, "spec", "extAuth", "http", "path")
+	path, found, err := unstructured.NestedString(got.Object, "spec", "extAuth", "http", "pathOverride")
 	if err != nil || !found || path != AutheliaVerifyPath {
 		t.Fatalf("extAuth path = %q found=%v err=%v", path, found, err)
 	}

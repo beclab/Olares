@@ -76,7 +76,10 @@ func TestEntryIdentityRealEnvoy(t *testing.T) {
 	if authProxy == nil {
 		t.Fatal("missing shipped authorization proxy")
 	}
-	policy := desiredApplicationExtAuthSecurityPolicy(desktopEntrance())
+	app := desktopEntrance()
+	app.SetName("app-olares-app-files")
+	policy := desiredApplicationExtAuthSecurityPolicy(app)
+	checkPath, _, _ := unstructured.NestedString(policy.Object, "spec", "extAuth", "http", "pathOverride")
 	backendHeaders, _, _ := unstructured.NestedStringSlice(policy.Object, "spec", "extAuth", "http", "headersToBackend")
 	requestHeaders, _, _ := unstructured.NestedStringSlice(policy.Object, "spec", "extAuth", "headersToExtAuth")
 	patterns := func(names []string) []any {
@@ -89,7 +92,7 @@ func TestEntryIdentityRealEnvoy(t *testing.T) {
 	authFilter := map[string]any{"name": "envoy.filters.http.ext_authz", "typed_config": typ("envoy.extensions.filters.http.ext_authz.v3.ExtAuthz", map[string]any{
 		"transport_api_version": "V3", "failure_mode_allow": false, "status_on_error": map[string]any{"code": "ServiceUnavailable"},
 		"allowed_headers": map[string]any{"patterns": patterns(requestHeaders)},
-		"http_service":    map[string]any{"server_uri": map[string]any{"uri": "http://tenant-auth:9091", "cluster": "tenant-auth", "timeout": "2s"}, "path_override": "/api/verify", "authorization_response": map[string]any{"allowed_upstream_headers": map[string]any{"patterns": patterns(backendHeaders)}}},
+		"http_service":    map[string]any{"server_uri": map[string]any{"uri": "http://tenant-auth:9091", "cluster": "tenant-auth", "timeout": "2s"}, "path_override": checkPath, "authorization_response": map[string]any{"allowed_upstream_headers": map[string]any{"patterns": patterns(backendHeaders)}}},
 	})}
 	token, jwtFilter, sharedRoute := callerJWTEnvoyContract(t)
 	northSharedRoute := map[string]any{}
@@ -122,6 +125,12 @@ func TestEntryIdentityRealEnvoy(t *testing.T) {
 		return map[string]any{"prefix": "/", "headers": headers}
 	}
 	decisions := []any{
+		// Reproduce the authorizer's slash normalization for the Files host.
+		// A prefix here would incorrectly turn the browser navigation into a redirect.
+		map[string]any{"match": map[string]any{"prefix": "/", "headers": []any{
+			map[string]any{"name": ":authority", "string_match": map[string]any{"exact": "files.alice.olares.local"}},
+			map[string]any{"name": ":path", "string_match": map[string]any{"safe_regex": map[string]any{"regex": `^/api/verify(\?.*)?$`}}, "invert_match": true},
+		}}, "direct_response": map[string]any{"status": 301}, "response_headers_to_add": []any{add("Location", AutheliaVerifyPath)}},
 		// An explicitly authorized different subject must remain that subject.
 		// This fixture does not grant cross-tenant Desktop access in production.
 		map[string]any{"match": match("session=delegate", true), "direct_response": map[string]any{"status": 200}, "response_headers_to_add": []any{add("Remote-User", "bob"), add("X-BFL-USER", "bob"), add("Remote-Groups", "viewer"), add("Remote-Name", "%REQ(x-forwarded-for)%"), add("Remote-Email", "%REQ(x-original-url)%")}},
@@ -229,6 +238,32 @@ end`
 	}
 	localBridgeClient := proxyClient("10007")
 	remoteProxyClient := proxyClient("10006")
+	for _, path := range []string{"/", "/api/items?view=recent"} {
+		t.Run("protected application"+path, func(t *testing.T) {
+			const host = "files.alice.olares.local"
+			req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://"+host+path, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			req.Header.Set("Cookie", "session=alice")
+			req.Header.Set("X-Original-URL", "https://untrusted.example.org/")
+			resp, err := localBridgeClient.Do(req)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer resp.Body.Close()
+			if resp.StatusCode != http.StatusOK || resp.Header.Get("Location") != "" {
+				t.Fatalf("application navigation returned HTTP %d, Location %q", resp.StatusCode, resp.Header.Get("Location"))
+			}
+			var got map[string]string
+			if err := json.NewDecoder(io.LimitReader(resp.Body, 8192)).Decode(&got); err != nil {
+				t.Fatal(err)
+			}
+			if want := "http://" + host + path; got["authurl"] != want || got["user"] != "alice" {
+				t.Fatalf("unexpected target or identity after authorization: %v", got)
+			}
+		})
+	}
 	for _, tc := range []struct {
 		name, host, scheme string
 		client             *http.Client

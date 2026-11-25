@@ -201,7 +201,7 @@ func applySecurityPolicy(ctx context.Context, c client.Client, srr *srrv1alpha1.
 
 // desiredApplicationExtAuthSecurityPolicy checks the canonical Authelia endpoint.
 func desiredApplicationExtAuthSecurityPolicy(srr *srrv1alpha1.SharedRouteRegistry) *unstructured.Unstructured {
-	if srr == nil {
+	if !needsL4Authz(srr) {
 		return nil
 	}
 	user := ""
@@ -214,6 +214,9 @@ func desiredApplicationExtAuthSecurityPolicy(srr *srrv1alpha1.SharedRouteRegistr
 	routeName := httpRouteName(srr)
 	autheliaNS := "user-system-" + user
 	authHTTP := map[string]any{
+		// Forward the verified browser resource to the fixed Authelia endpoint
+		// without appending the business path to the authorization URI.
+		"pathOverride": AutheliaVerifyPath,
 		// Only authenticated response headers may establish upstream identity.
 		"headersToBackend": []any{"authorization", "proxy-authorization", "x-bfl-user", "remote-user", "remote-groups", "remote-name", "remote-email", "remote-access-token", "authelia-nonce"},
 		"backendRefs": []any{
@@ -228,16 +231,7 @@ func desiredApplicationExtAuthSecurityPolicy(srr *srrv1alpha1.SharedRouteRegistr
 			},
 		},
 	}
-	headers := []any{"authorization", "cookie", "x-forwarded-for", "x-authorization", "x-bfl-user"}
-	if isSystemDesktopRoute(srr) {
-		// Unlike a path prefix, the override does not append the Desktop path.
-		// This route only accepts Entry mTLS. L4 supplies the original request
-		// metadata after authenticating the browser.
-		authHTTP["pathOverride"] = AutheliaVerifyPath
-		headers = append(headers, "accept", "x-original-url", "x-original-method")
-	} else {
-		authHTTP["path"] = AutheliaVerifyPath
-	}
+	headers := []any{"authorization", "cookie", "x-forwarded-for", "x-authorization", "x-bfl-user", "accept", "x-original-url", "x-original-method"}
 	return &unstructured.Unstructured{Object: map[string]any{
 		"apiVersion": "gateway.envoyproxy.io/v1alpha1",
 		"kind":       "SecurityPolicy",

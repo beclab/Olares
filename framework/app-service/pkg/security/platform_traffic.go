@@ -121,12 +121,11 @@ var systemServerAppStoreFlow = platformServiceFlow{
 	targetPort:  8080,
 }
 
-// The monitoring provider is optional and still uses native transport.
-var systemServerMonitoringFlow = platformServiceFlow{
-	service:     types.NamespacedName{Namespace: "os-framework", Name: "monitoring-server"},
-	to:          map[string]string{"app": "monitoring-server"},
-	servicePort: 80,
-	targetPort:  8000,
+// These HTTP providers still use native transport. Their absence must not
+// prevent the tenant system-server from starting or being isolated.
+var systemServerOptionalNativeFlows = []platformServiceFlow{
+	{service: types.NamespacedName{Namespace: "os-framework", Name: "monitoring-server"}, to: map[string]string{"app": "monitoring-server"}, servicePort: 80, targetPort: 8000},
+	{service: types.NamespacedName{Namespace: "os-framework", Name: "files-service"}, to: map[string]string{"app": "files"}, servicePort: 80, targetPort: 80},
 }
 
 const (
@@ -361,11 +360,15 @@ func SystemServerCitusEgressRule() netv1.NetworkPolicyEgressRule {
 
 // SystemServerDependencyServices lists the Services read when generating route egress.
 func SystemServerDependencyServices() []types.NamespacedName {
-	keys := make([]types.NamespacedName, 0, len(systemServerNativeFlows)+2)
+	keys := make([]types.NamespacedName, 0, len(systemServerNativeFlows)+len(systemServerOptionalNativeFlows)+1)
 	for _, flow := range systemServerNativeFlows {
 		keys = append(keys, flow.service)
 	}
-	return append(keys, systemServerAppStoreFlow.service, systemServerMonitoringFlow.service)
+	keys = append(keys, systemServerAppStoreFlow.service)
+	for _, flow := range systemServerOptionalNativeFlows {
+		keys = append(keys, flow.service)
+	}
+	return keys
 }
 
 // SystemServerDependencyEgressRules scopes the verified native dependencies and
@@ -387,7 +390,10 @@ func SystemServerDependencyEgressRules(services map[types.NamespacedName]*corev1
 			Ports: []netv1.NetworkPolicyPort{tcpPort(flow.targetPort), tcpPort(4143)},
 		})
 	}
-	return append(rules, systemServerMonitoringFlow.egressRules(services[systemServerMonitoringFlow.service])...)
+	for _, flow := range systemServerOptionalNativeFlows {
+		rules = append(rules, flow.egressRules(services[flow.service])...)
+	}
+	return rules
 }
 
 // SystemServerProviderEgressRules scopes the verified provider proxy destinations.

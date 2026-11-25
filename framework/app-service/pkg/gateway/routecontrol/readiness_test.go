@@ -2,6 +2,7 @@ package routecontrol
 
 import (
 	"context"
+	"slices"
 	"strings"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway"
@@ -167,7 +168,15 @@ func TestServingReadinessWaitsForPolicyAndMeshedEndpoints(t *testing.T) {
 		for _, item := range objects {
 			fixtures = append(fixtures, item.DeepCopyObject().(client.Object))
 		}
-		fixtures[2].SetName(securityPolicyName(protected))
+		protectedRoute := fixtures[1].(*unstructured.Unstructured)
+		parents := parentRefsForSRR(GatewayRef{}, protected)
+		if err := unstructured.SetNestedSlice(protectedRoute.Object, parents, "spec", "parentRefs"); err != nil {
+			t.Fatal(err)
+		}
+		protectedPolicy := desiredApplicationExtAuthSecurityPolicy(protected)
+		protectedPolicy.Object["status"] = security.DeepCopy().Object["status"]
+		protectedPolicy.SetGeneration(security.GetGeneration())
+		fixtures[2] = protectedPolicy
 		check := func(message string) {
 			t.Helper()
 			c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(fixtures...).Build()
@@ -175,6 +184,13 @@ func TestServingReadinessWaitsForPolicyAndMeshedEndpoints(t *testing.T) {
 			if err == nil || !strings.Contains(err.Error(), message) {
 				t.Fatalf("readiness = %v, expected %q", err, message)
 			}
+		}
+		if err := unstructured.SetNestedSlice(protectedRoute.Object, append(slices.Clone(parents), map[string]any{"sectionName": "https"}), "spec", "parentRefs"); err != nil {
+			t.Fatal(err)
+		}
+		check("must only attach to Entry mTLS")
+		if err := unstructured.SetNestedSlice(protectedRoute.Object, parents, "spec", "parentRefs"); err != nil {
+			t.Fatal(err)
 		}
 		check("authorization listener is not programmed")
 		newGateway := fixtures[0].(*unstructured.Unstructured)
@@ -238,6 +254,9 @@ func TestServingReadinessWaitsForPolicyAndMeshedEndpoints(t *testing.T) {
 		desktopRoute := route.DeepCopy()
 		desktopRoute.SetName(desktop.Name)
 		desktopRoute.SetNamespace(desktop.Namespace)
+		if err := unstructured.SetNestedSlice(desktopRoute.Object, parentRefsForSRR(GatewayRef{}, desktop), "spec", "parentRefs"); err != nil {
+			t.Fatal(err)
+		}
 		policy := desiredApplicationExtAuthSecurityPolicy(desktop)
 		policy.Object["status"] = security.DeepCopy().Object["status"]
 		policy.SetGeneration(security.GetGeneration())

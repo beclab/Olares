@@ -48,6 +48,12 @@ func servingReadiness(ctx context.Context, c client.Client, gw GatewayRef, srr *
 	if !entryParentReady(route, gw) {
 		return fmt.Errorf("HTTPRoute not accepted on the entry mTLS listener for its current generation")
 	}
+	if needsL4Authz(srr) {
+		parents, _, err := unstructured.NestedSlice(route.Object, "spec", "parentRefs")
+		if err != nil || !reflect.DeepEqual(parents, parentRefsForSRR(gw, srr)) {
+			return fmt.Errorf("protected HTTPRoute must only attach to Entry mTLS")
+		}
+	}
 
 	if isSystemDesktopRoute(srr) && srrAuthMode(srr) != gateway.AuthModeExtAuth {
 		return fmt.Errorf("Desktop Entry requires external authorization")
@@ -57,9 +63,11 @@ func servingReadiness(ctx context.Context, c client.Client, gw GatewayRef, srr *
 		if err != nil {
 			return err
 		}
-		if isSystemDesktopRoute(srr) && !reflect.DeepEqual(policy.Object["spec"],
-			desiredApplicationExtAuthSecurityPolicy(srr).Object["spec"]) {
-			return fmt.Errorf("Desktop Entry does not enforce the expected external authorization")
+		if needsL4Authz(srr) {
+			desired := desiredApplicationExtAuthSecurityPolicy(srr)
+			if desired == nil || !reflect.DeepEqual(policy.Object["spec"], desired.Object["spec"]) {
+				return fmt.Errorf("Entry does not enforce the expected external authorization")
+			}
 		}
 	}
 	validation := schema.GroupVersionKind{Group: "gateway.envoyproxy.io", Version: "v1alpha1", Kind: "ClientTrafficPolicy"}

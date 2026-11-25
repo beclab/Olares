@@ -91,8 +91,8 @@ func gatewaySectionForSRR(gw GatewayRef, srr *srrv1alpha1.SharedRouteRegistry) (
 	}
 }
 
-// parentRefsForSRR returns Gateway parentRefs including the L4 Entry mTLS listener
-// so north-south traffic from l4-bfl-proxy reaches the same HTTPRoutes.
+// Protected browser routes trust original request metadata only from L4 Entry.
+// Shared and explicitly unauthenticated routes keep their other listeners.
 func parentRefsForSRR(gw GatewayRef, srr *srrv1alpha1.SharedRouteRegistry) []any {
 	base := map[string]any{
 		"group":     "gateway.networking.k8s.io",
@@ -102,7 +102,7 @@ func parentRefsForSRR(gw GatewayRef, srr *srrv1alpha1.SharedRouteRegistry) []any
 	}
 	l4Ref := copyAnyStringMap(base)
 	l4Ref["sectionName"] = l4MTLSGatewaySectN
-	if isMainSystemEntry(srr) {
+	if isMainSystemEntry(srr) || needsL4Authz(srr) {
 		return []any{l4Ref}
 	}
 	var refs []any
@@ -219,6 +219,9 @@ func reconcileGatewayMode(ctx context.Context, c client.Client, gw GatewayRef, s
 	if isSystemDesktopRoute(srr) && srrAuthMode(srr) != gateway.AuthModeExtAuth {
 		return routeUnavailable(ctx, c, gw, srr, ReasonInvalidSpec, "Desktop Entry requires external authorization", nil)
 	}
+	if isApplicationSRR(srr) && !needsL4Authz(srr) && srrAuthMode(srr) != gateway.AuthModeNone {
+		return routeUnavailable(ctx, c, gw, srr, ReasonInvalidSpec, "unsupported application authorization mode", nil)
+	}
 	if err := validateL4AuthzAuthorities(ctx, c, srr); err != nil {
 		return waitForHTTPRouteMesh(ctx, c, gw, srr, err)
 	}
@@ -270,6 +273,16 @@ func reconcileGatewayMode(ctx context.Context, c client.Client, gw GatewayRef, s
 	if err := ensureSharedNamespaceLinkerdInject(ctx, c, injectNS, true); err != nil {
 		return ReconcileResult{}, fmt.Errorf("enable shared namespace linkerd inject: %w", err)
 	}
+	if needsL4Authz(srr) {
+		ready, err := entryAuthMigrationReady(ctx, c, gw, srr)
+		if err != nil {
+			return ReconcileResult{}, fmt.Errorf("restrict application authorization to Entry mTLS: %w", err)
+		}
+		if !ready {
+			return ReconcileResult{Status: metav1.ConditionFalse, Reason: ReasonAwaitingDataPlane,
+				Message: "HTTPRoute is moving to the Entry mTLS listener before its authorization policy is updated"}, nil
+		}
+	}
 	if err := applySecurityPolicy(ctx, c, srr); err != nil {
 		return ReconcileResult{}, fmt.Errorf("apply SecurityPolicy: %w", err)
 	}
@@ -299,6 +312,37 @@ func reconcileGatewayMode(ctx context.Context, c client.Client, gw GatewayRef, s
 		Message:       "HTTPRoute and NetworkPolicy reconciled",
 		HTTPRouteName: routeName,
 	}, nil
+}
+
+// Move an existing route while its old policy is still in effect. Only trust
+// L4 metadata after the gateway has observed the Entry-only route generation.
+func entryAuthMigrationReady(ctx context.Context, c client.Client, gw GatewayRef, srr *srrv1alpha1.SharedRouteRegistry) (bool, error) {
+	route := &unstructured.Unstructured{}
+	route.SetGroupVersionKind(schema.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1", Kind: "HTTPRoute"})
+	if err := c.Get(ctx, client.ObjectKey{Namespace: srr.Namespace, Name: httpRouteName(srr)}, route); err != nil {
+		return apierrors.IsNotFound(err), client.IgnoreNotFound(err)
+	}
+	parents, _, err := unstructured.NestedSlice(route.Object, "spec", "parentRefs")
+	if err != nil {
+		return false, err
+	}
+	if desired := parentRefsForSRR(gw, srr); !reflect.DeepEqual(parents, desired) {
+		owner := metav1.GetControllerOf(route)
+		if owner == nil || owner.Kind != "SharedRouteRegistry" || owner.UID != srr.UID {
+			return false, fmt.Errorf("HTTPRoute %s/%s is not owned by SharedRouteRegistry %s", route.GetNamespace(), route.GetName(), srr.Name)
+		}
+		if err := unstructured.SetNestedSlice(route.Object, desired, "spec", "parentRefs"); err != nil {
+			return false, err
+		}
+		return false, c.Update(ctx, route)
+	}
+	policy := &unstructured.Unstructured{}
+	policy.SetGroupVersionKind(securityPolicyGVK)
+	if err := c.Get(ctx, client.ObjectKey{Namespace: srr.Namespace, Name: securityPolicyName(srr)}, policy); client.IgnoreNotFound(err) != nil {
+		return false, err
+	}
+	path, _, err := unstructured.NestedString(policy.Object, "spec", "extAuth", "http", "pathOverride")
+	return err == nil && (path == AutheliaVerifyPath || entryParentReady(route, gw)), err
 }
 
 func waitForHTTPRouteMesh(ctx context.Context, c client.Client, gw GatewayRef, srr *srrv1alpha1.SharedRouteRegistry, cause error) (ReconcileResult, error) {
