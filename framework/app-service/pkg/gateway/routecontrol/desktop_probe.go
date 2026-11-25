@@ -13,8 +13,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway"
 	srrv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/gateway/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -54,10 +56,14 @@ func probeDesktopEntryWithDialer(ctx context.Context, reader client.Reader, srr 
 	if err := reader.Get(ctx, client.ObjectKey{Namespace: srr.Namespace, Name: zoneSSLConfigMapName}, &zone); err != nil {
 		return err
 	}
-	z := strings.TrimSpace(zone.Data["zone"])
+	z := strings.ToLower(strings.TrimSpace(zone.Data["zone"]))
 	desktop, login := "desktop."+z, "auth."+z
-	if z == "" || len(validation.IsDNS1123Subdomain(desktop)) != 0 || len(srr.Spec.HostPatterns) != 1 || srr.Spec.HostPatterns[0] != desktop {
-		return fmt.Errorf("Desktop readiness requires its exact managed zone authority")
+	// Match the complete platform-generated domain set, including the local
+	// alias, without depending on the API's list ordering. Checking only for
+	// the primary domain would permit additional, unbound tenant authorities.
+	expected := gateway.SystemPlaneHostPatterns(gateway.SystemPlaneService{Name: "desktop"}, z, srr.Annotations[gateway.AnnotationExtAuthUser], false)
+	if z == "" || len(validation.IsDNS1123Subdomain(desktop)) != 0 || !sets.New(srr.Spec.HostPatterns...).Equal(sets.New(expected...)) {
+		return fmt.Errorf("Desktop readiness requires its exact managed zone authorities")
 	}
 	var service corev1.Service
 	if err := reader.Get(ctx, client.ObjectKey{Namespace: defaultGatewayNS, Name: entryMeshService.ServiceName}, &service); err != nil {

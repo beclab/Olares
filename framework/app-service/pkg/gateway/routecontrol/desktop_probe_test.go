@@ -136,6 +136,51 @@ func TestDesktopEntryProbeUsesFreshMaterialVerifiedTLSAndFixedDestination(t *tes
 	if err := probeDesktopEntryWithDialer(t.Context(), c, srr, dial); err != nil || requests == 0 {
 		t.Fatal("verified Entry probe failed", err)
 	}
+
+	// Exercise the platform-generated pair, including the local alias, without
+	// relying on list order. No alias is removed to satisfy the readiness check.
+	t.Run("generated-domain-pair", func(t *testing.T) {
+		if len(srr.Spec.HostPatterns) != 2 || srr.Spec.HostPatterns[0] != "desktop.alice.example.org" || srr.Spec.HostPatterns[1] != "desktop.alice.olares.local" {
+			t.Fatal("fixture must use the platform's primary and local domains")
+		}
+		candidate := srr.DeepCopy()
+		candidate.Spec.HostPatterns[0], candidate.Spec.HostPatterns[1] = candidate.Spec.HostPatterns[1], candidate.Spec.HostPatterns[0]
+		before := requests
+		if err := probeDesktopEntryWithDialer(t.Context(), c, candidate, dial); err != nil || requests == before {
+			t.Fatal("reordered platform domains did not reach the authenticated Entry probe", err)
+		}
+	})
+	for _, tc := range []struct {
+		name  string
+		hosts []string
+	}{
+		{"foreign-primary", []string{"desktop.bob.example.org", "desktop.alice.olares.local"}},
+		{"foreign-local-alias", []string{"desktop.alice.example.org", "desktop.bob.olares.local"}},
+		{"foreign-pair", []string{"desktop.bob.example.org", "desktop.bob.olares.local"}},
+		{"same-user-different-zone", []string{"desktop.alice.other.org", "desktop.alice.olares.local"}},
+		{"extra-foreign-domain", []string{"desktop.alice.example.org", "desktop.alice.olares.local", "desktop.bob.example.org"}},
+		{"wildcard", []string{"desktop.alice.example.org", "*.alice.olares.local"}},
+		{"missing-local-alias", []string{"desktop.alice.example.org"}},
+		{"missing-primary", []string{"desktop.alice.olares.local"}},
+		{"empty-domains", nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			candidate := srr.DeepCopy()
+			candidate.Spec.HostPatterns = tc.hosts
+			before := requests
+			err := probeDesktopEntryWithDialer(t.Context(), c, candidate, dial)
+			if err == nil || !strings.Contains(err.Error(), "managed zone authorities") {
+				t.Fatal("unbound domain set was not rejected", err)
+			}
+			if requests != before {
+				t.Fatal("unbound domains reached the network")
+			}
+		})
+	}
+	// Invalid route snapshots must not poison a later valid probe.
+	if err := probeDesktopEntryWithDialer(t.Context(), c, srr, dial); err != nil {
+		t.Fatal("valid generated domains did not recover", err)
+	}
 	for _, mode := range []string{"wrong-host", "bad-key", "bad-ca", "untrusted-server", "missing-secret", "wrong-service", "wrong-zone", "cancelled"} {
 		t.Run(mode, func(t *testing.T) {
 			candidate, sec, service, zone := srr.DeepCopy(), secret.DeepCopy(), svc.DeepCopy(), cm.DeepCopy()
