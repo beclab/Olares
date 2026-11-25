@@ -1,11 +1,15 @@
 package routecontrol
 
 import (
+	"bytes"
 	"encoding/json"
+	"io"
 	"os"
+	"strings"
 	"testing"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	k8syaml "k8s.io/apimachinery/pkg/util/yaml"
 )
 
 // Reuse the normal policy fixture as the backend of the actual L4-generated
@@ -65,6 +69,7 @@ func addTerminalEntryFixture(t *testing.T, bootstrap map[string]any) string {
 		"@type":                      "type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext",
 		"require_client_certificate": true,
 		"common_tls_context": map[string]any{
+			"alpn_protocols":                     entryALPNProtocols(t),
 			"tls_certificate_sds_secret_configs": []any{map[string]any{"name": "main-tls-alice"}},
 			"validation_context":                 map[string]any{"trusted_ca": map[string]any{"inline_string": prod.CA}, "match_typed_subject_alt_names": []any{map[string]any{"san_type": "DNS", "matcher": map[string]any{"exact": "l4-bfl-proxy.entry.client"}}}},
 		},
@@ -124,4 +129,46 @@ func addTerminalEntryFixture(t *testing.T, bootstrap map[string]any) string {
 	}
 	diagnostics(resources["listeners"])
 	return prod.CA
+}
+
+// Mirror the shipped Entry ALPN configuration, including Gateway's h2-first
+// default when omitted. Otherwise the fixture silently masks codec mismatch.
+func entryALPNProtocols(t *testing.T) []string {
+	t.Helper()
+	raw, err := os.ReadFile("../../../../app-gateway/.olares/config/cluster/deploy/l4-mtls-channel.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	dec := k8syaml.NewYAMLOrJSONDecoder(bytes.NewReader(raw), 4096)
+	var protocols []string
+	count := 0
+	for {
+		var obj map[string]any
+		err = dec.Decode(&obj)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		if obj["kind"] != "ClientTrafficPolicy" {
+			continue
+		}
+		actual, found, err := unstructured.NestedStringSlice(obj, "spec", "tls", "alpnProtocols")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !found {
+			actual = []string{"h2", "http/1.1"}
+		}
+		if count > 0 && strings.Join(actual, ",") != strings.Join(protocols, ",") {
+			t.Fatal("Entry listeners disagree on ALPN")
+		}
+		protocols = actual
+		count++
+	}
+	if count != 2 {
+		t.Fatal("missing dual Entry protocol contract")
+	}
+	return protocols
 }

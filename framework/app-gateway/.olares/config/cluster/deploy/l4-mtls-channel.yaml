@@ -104,6 +104,9 @@ spec:
         - {type: Prefix, value: remote-}
         - {type: Prefix, value: authelia-}
   tls:
+    # The L4 upstream clusters currently use HTTP/1.1. Do not negotiate h2
+    # until their HTTP codec is configured for it.
+    alpnProtocols: [http/1.1]
     clientValidation:
       mode: RequireAndVerify
       subjectAltNames:
@@ -139,6 +142,9 @@ spec:
         - {type: Prefix, value: remote-}
         - {type: Prefix, value: authelia-}
   tls:
+    # The L4 upstream clusters currently use HTTP/1.1. Do not negotiate h2
+    # until their HTTP codec is configured for it.
+    alpnProtocols: [http/1.1]
     clientValidation:
       mode: RequireAndVerify
       subjectAltNames:
