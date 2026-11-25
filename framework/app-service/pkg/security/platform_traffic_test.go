@@ -1,6 +1,7 @@
 package security
 
 import (
+	"maps"
 	"reflect"
 	"slices"
 	"testing"
@@ -12,6 +13,58 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
+
+func TestGatewayBootstrapScopesDiscoveryAndValidatesControllerVIP(t *testing.T) {
+	controller := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: "os-gateway", Name: "envoy-gateway"},
+		Spec: corev1.ServiceSpec{Type: corev1.ServiceTypeClusterIP, ClusterIP: "10.96.0.24",
+			Selector: maps.Clone(envoyControllerPods),
+			Ports:    []corev1.ServicePort{{Port: 18000, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt(18000)}}}}
+	for _, mode := range []string{"valid", "missing", "foreign-selector", "wrong-port", "deleting"} {
+		t.Run(mode, func(t *testing.T) {
+			svc := controller.DeepCopy()
+			switch mode {
+			case "missing":
+				svc = nil
+			case "foreign-selector":
+				svc.Spec.Selector = map[string]string{"app": "other"}
+			case "wrong-port":
+				svc.Spec.Ports[0].TargetPort = intstr.FromInt(18001)
+			case "deleting":
+				now := metav1.Now()
+				svc.DeletionTimestamp = &now
+			}
+			rules := GatewayBootstrapEgressRules(nil, svc)
+			wantCount := 3
+			if mode == "valid" {
+				wantCount = 4
+			}
+			if len(rules) != wantCount {
+				t.Fatalf("unexpected bootstrap grants: %+v", rules)
+			}
+			dns := rules[0]
+			if len(dns.To) != 1 || dns.To[0].NamespaceSelector.MatchLabels["kubernetes.io/metadata.name"] != "kube-system" ||
+				!reflect.DeepEqual(dns.To[0].PodSelector.MatchLabels, map[string]string{"k8s-app": "kube-dns"}) ||
+				!reflect.DeepEqual(dns.Ports, []netv1.NetworkPolicyPort{tcpPort(53), udpPort(53)}) {
+				t.Fatalf("DNS grant escaped CoreDNS: %+v", dns)
+			}
+			mesh := rules[1]
+			if len(mesh.To) != 1 || mesh.To[0].NamespaceSelector.MatchLabels["kubernetes.io/metadata.name"] != "os-mesh" ||
+				!reflect.DeepEqual(mesh.Ports, []netv1.NetworkPolicyPort{tcpPort(8080), tcpPort(8086), tcpPort(8090)}) {
+				t.Fatalf("unexpected mesh control-plane grant: %+v", mesh)
+			}
+			xds := rules[2]
+			if len(xds.To) != 1 || xds.To[0].NamespaceSelector.MatchLabels["kubernetes.io/metadata.name"] != "os-gateway" ||
+				!reflect.DeepEqual(xds.To[0].PodSelector.MatchLabels, envoyControllerPods) ||
+				!reflect.DeepEqual(xds.Ports, []netv1.NetworkPolicyPort{tcpPort(18000)}) {
+				t.Fatalf("xDS grant escaped its native controller: %+v", xds)
+			}
+			if mode == "valid" && (rules[3].To[0].IPBlock.CIDR != "10.96.0.24/32" ||
+				!reflect.DeepEqual(rules[3].Ports, []netv1.NetworkPolicyPort{tcpPort(18000)})) {
+				t.Fatalf("controller VIP grant widened: %+v", rules[3])
+			}
+		})
+	}
+}
 
 func TestPlatformTrafficUsesPairedServiceAndTargetPorts(t *testing.T) {
 	key := types.NamespacedName{Namespace: "os-platform", Name: "redis-cluster-proxy"}

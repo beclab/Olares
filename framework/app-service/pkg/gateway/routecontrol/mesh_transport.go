@@ -253,6 +253,18 @@ func applyMeshTransport(ctx context.Context, c client.Client, gw GatewayRef, srr
 		return err
 	}
 	policies := transportPair(labels, "http", gatewayPeer, backend)
+	// Every route egress write must carry the data plane's bootstrap grants.
+	// Waiting for the namespace isolation gate here deadlocks xDS delivery.
+	var dns, controller corev1.Service
+	for key, dependency := range map[client.ObjectKey]*corev1.Service{
+		{Namespace: metav1.NamespaceSystem, Name: security.CoreDNSServiceName}: &dns,
+		{Namespace: "os-gateway", Name: "envoy-gateway"}:                       &controller,
+	} {
+		if err := c.Get(ctx, key, dependency); client.IgnoreNotFound(err) != nil {
+			return fmt.Errorf("read gateway bootstrap Service %s: %w", key, err)
+		}
+	}
+	policies[0].Spec.Egress = append(policies[0].Spec.Egress, security.GatewayBootstrapEgressRules(&dns, &controller)...)
 	if isApplicationSRR(srr) && srrAuthMode(srr) != gateway.AuthModeNone {
 		auth := make([]meshTransportBackend, 0, 2)
 		for _, namespace := range []string{autheliaNSForSRR(srr), "os-framework"} {
