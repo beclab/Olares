@@ -295,3 +295,14 @@ func TestCertsVolumeForViewer(t *testing.T) {
 		t.Fatalf("empty viewer secret = %#v", v2.Secret)
 	}
 }
+
+func TestInternalCallerJWTOverridesClientHeaderOnBothHTTPPaths(t *testing.T) {
+	got := RenderNginxConf(NginxConfInput{FailClosed: true, EnableHTTPS: true})
+	directive := "proxy_set_header " + callerjwt.CallerJWTHeaderName + " $mesh_in_caller_jwt;"
+	if strings.Count(got, directive) != 2 {
+		t.Fatal("HTTP and terminated HTTPS must overwrite the caller JWT from the platform token")
+	}
+	if strings.Contains(strings.ToLower(got), "$http_x_olares_caller_jwt") {
+		t.Fatal("internal credential must never be derived from a client header")
+	}
+}

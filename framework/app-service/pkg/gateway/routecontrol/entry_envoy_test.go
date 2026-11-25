@@ -47,7 +47,7 @@ func TestEntryIdentityRealEnvoy(t *testing.T) {
 	}
 	listener := func(name string, port int, hcm map[string]any) map[string]any {
 		addr := socket(port)
-		if port == 10000 {
+		if port == 10000 || port == 10004 {
 			addr = map[string]any{"socket_address": map[string]any{"address": "0.0.0.0", "port_value": port}}
 		}
 		return map[string]any{"name": name, "address": addr, "filter_chains": []any{map[string]any{"filters": []any{map[string]any{"name": "envoy.filters.network.http_connection_manager", "typed_config": hcm}}}}}
@@ -87,15 +87,28 @@ func TestEntryIdentityRealEnvoy(t *testing.T) {
 		"allowed_headers": map[string]any{"patterns": patterns(requestHeaders)},
 		"http_service":    map[string]any{"server_uri": map[string]any{"uri": "http://tenant-auth:9091", "cluster": "tenant-auth", "timeout": "2s"}, "path_override": "/api/verify", "authorization_response": map[string]any{"allowed_upstream_headers": map[string]any{"patterns": patterns(backendHeaders)}}},
 	})}
-	edge := hcm([]any{map[string]any{"match": map[string]any{"prefix": "/"}, "route": map[string]any{"cluster": "business"}}}, []any{authFilter, router})
-	mutations := []any{}
-	for _, v := range entryIdentityHeaderSettings()["remove"].([]any) {
-		mutations = append(mutations, map[string]any{"remove": v})
+	token, jwtFilter, sharedRoute := callerJWTEnvoyContract(t)
+	northSharedRoute := map[string]any{}
+	for k, v := range sharedRoute {
+		northSharedRoute[k] = v
 	}
-	for _, v := range entryIdentityHeaderSettings()["removeOnMatch"].([]any) {
-		mutations = append(mutations, map[string]any{"remove_on_match": map[string]any{"key_matcher": map[string]any{"prefix": v.(map[string]any)["value"], "ignore_case": true}}})
+	northSharedRoute["typed_per_filter_config"] = map[string]any{"envoy.filters.http.ext_authz": typ("envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute", map[string]any{"disabled": true})}
+	edge := hcm([]any{northSharedRoute, map[string]any{"match": map[string]any{"prefix": "/"}, "route": map[string]any{"cluster": "business"}}}, []any{jwtFilter, authFilter, router})
+	internal := hcm([]any{sharedRoute}, []any{jwtFilter, router})
+	setEarlyStrip := func(h map[string]any, settings map[string]any) {
+		mutations := []any{}
+		for _, v := range settings["remove"].([]any) {
+			mutations = append(mutations, map[string]any{"remove": v})
+		}
+		if prefixes, ok := settings["removeOnMatch"].([]any); ok {
+			for _, v := range prefixes {
+				mutations = append(mutations, map[string]any{"remove_on_match": map[string]any{"key_matcher": map[string]any{"prefix": v.(map[string]any)["value"], "ignore_case": true}}})
+			}
+		}
+		h["early_header_mutation_extensions"] = []any{map[string]any{"name": "envoy.http.early_header_mutation.header_mutation", "typed_config": typ("envoy.extensions.http.early_header_mutation.header_mutation.v3.HeaderMutation", map[string]any{"mutations": mutations})}}
 	}
-	edge["early_header_mutation_extensions"] = []any{map[string]any{"name": "envoy.http.early_header_mutation.header_mutation", "typed_config": typ("envoy.extensions.http.early_header_mutation.header_mutation.v3.HeaderMutation", map[string]any{"mutations": mutations})}}
+	setEarlyStrip(edge, entryIdentityHeaderSettings())
+	setEarlyStrip(internal, internalIdentityHeaderSettings(t))
 	// Each fake session represents a policy decision, not a real user's cookie.
 	match := func(cookie string, tenant bool) map[string]any {
 		headers := []any{map[string]any{"name": "cookie", "string_match": map[string]any{"exact": cookie}}}
@@ -116,11 +129,11 @@ func TestEntryIdentityRealEnvoy(t *testing.T) {
 	}
 	echoScript := `function envoy_on_request(h)
  local r=h:headers()
- h:respond({[":status"]="200",["content-type"]="application/json"},string.format('{"user":%q,"remote":%q,"groups":%q,"cookie":%q,"xff":%q,"authip":%q,"authurl":%q}',r:get("x-bfl-user") or "",r:get("remote-user") or "",r:get("remote-groups") or "",r:get("cookie") or "",r:get("x-forwarded-for") or "",r:get("remote-name") or "",r:get("remote-email") or ""))
+ h:respond({[":status"]="200",["content-type"]="application/json"},string.format('{"user":%q,"remote":%q,"groups":%q,"cookie":%q,"xff":%q,"authip":%q,"authurl":%q,"caller":%q,"appid":%q,"jwt":%q}',r:get("x-bfl-user") or "",r:get("remote-user") or "",r:get("remote-groups") or "",r:get("cookie") or "",r:get("x-forwarded-for") or "",r:get("remote-name") or "",r:get("remote-email") or "",r:get("x-caller-user") or "",r:get("x-caller-appid") or "",r:get("x-olares-caller-jwt") and "present" or ""))
 end`
 	echoFilter := map[string]any{"name": "envoy.filters.http.lua", "typed_config": typ("envoy.extensions.filters.http.lua.v3.Lua", map[string]any{"default_source_code": map[string]any{"inline_string": echoScript}})}
 	echo := hcm([]any{map[string]any{"match": map[string]any{"prefix": "/"}, "direct_response": map[string]any{"status": 500}}}, []any{echoFilter, router})
-	bootstrap := map[string]any{"static_resources": map[string]any{"listeners": []any{listener("entry", 10000, edge), authProxy, listener("authorizer", 11000, hcm(decisions, []any{router})), listener("business", 10002, echo)}, "clusters": []any{cluster("tenant-auth", 9091), cluster("cluster_auth_backend_proxy", 11000), cluster("business", 10002)}}}
+	bootstrap := map[string]any{"static_resources": map[string]any{"listeners": []any{listener("entry", 10000, edge), listener("internal", 10004, internal), authProxy, listener("authorizer", 11000, hcm(decisions, []any{router})), listener("business", 10002, echo)}, "clusters": []any{cluster("tenant-auth", 9091), cluster("cluster_auth_backend_proxy", 11000), cluster("business", 10002)}}}
 	edgeFixture, err := os.ReadFile(os.Getenv("ENTRY_EDGE_FIXTURE"))
 	if err != nil {
 		t.Fatal("generate ENTRY_EDGE_FIXTURE from the L4 TestEntryEdgeIdentityContract first", err)
@@ -147,7 +160,7 @@ end`
 	if err = os.WriteFile(path, encoded, 0644); err != nil {
 		t.Fatal(err)
 	}
-	id := docker("run", "-d", "--rm", "--read-only", "--cap-drop=ALL", "--security-opt=no-new-privileges", "--memory=256m", "--pids-limit=64", "--tmpfs", "/tmp:rw,noexec,nosuid,size=16m", "-p", "127.0.0.1::10000", "-p", "127.0.0.1::10003", "-v", path+":/bootstrap.json:ro", entryEnvoyImage, "--disable-hot-restart", "--concurrency", "1", "-l", "error", "-c", "/bootstrap.json")
+	id := docker("run", "-d", "--rm", "--read-only", "--cap-drop=ALL", "--security-opt=no-new-privileges", "--memory=256m", "--pids-limit=64", "--tmpfs", "/tmp:rw,noexec,nosuid,size=16m", "-p", "127.0.0.1::10000", "-p", "127.0.0.1::10003", "-p", "127.0.0.1::10004", "-v", path+":/bootstrap.json:ro", entryEnvoyImage, "--disable-hot-restart", "--concurrency", "1", "-l", "error", "-c", "/bootstrap.json")
 	t.Cleanup(func() {
 		cleanup, done := context.WithTimeout(context.Background(), 15*time.Second)
 		defer done()
@@ -188,6 +201,9 @@ end`
 				req.Header.Add("rEmOtE-uSeR", "admin")
 				req.Header.Set("X-BFL-USER", "bob")
 				req.Header.Set("Remote-Groups", "admin")
+				req.Header.Set("X-Olares-Caller-Jwt", token)
+				req.Header.Set("X-Caller-User", "mallory")
+				req.Header.Set("X-Caller-Appid", "forged-app")
 				req.Header.Set("X-Original-URL", "https://desktop.alice.example.org/")
 				req.Header.Set("X-Forwarded-Proto", "gopher")
 				if mode == "untrusted-edge" {
@@ -218,6 +234,9 @@ end`
 					var got map[string]string
 					if err = json.Unmarshal(body, &got); err != nil {
 						t.Fatal(err, string(body))
+					}
+					if got["jwt"] != "" || got["caller"] != "" || got["appid"] != "" {
+						t.Fatal("internal credential or caller claim leaked to application")
 					}
 					if got["user"] != tc.user || got["remote"] != tc.user {
 						t.Fatalf("identity crossed the authorization boundary: %v", got)
@@ -252,5 +271,58 @@ end`
 			})
 		}
 	}
+	internalAddress := docker("port", id, "10004/tcp")
+	for _, tc := range []struct {
+		name, address, credential string
+		status                    int
+	}{
+		{"external-valid-jwt-entry", address, token, 401},
+		{"external-valid-jwt-l4", edgeAddress, token, 401},
+		{"internal-injected-jwt", internalAddress, token, 200},
+		{"internal-missing-jwt", internalAddress, "", 401},
+		{"internal-invalid-jwt", internalAddress, "not-a-signed-token", 401},
+		{"internal-recovery", internalAddress, token, 200},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			req, _ := http.NewRequestWithContext(ctx, http.MethodGet, "http://"+tc.address+"/shared", nil)
+			req.Host = "shared.alice.example.org"
+			if tc.credential != "" {
+				req.Header.Set("X-Olares-Caller-Jwt", tc.credential)
+			}
+			req.Header.Set("X-Caller-User", "mallory")
+			req.Header.Set("X-Caller-Appid", "forged-app")
+			resp, err := client.Do(req)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer resp.Body.Close()
+			body, err := io.ReadAll(io.LimitReader(resp.Body, 8192))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if resp.StatusCode != tc.status {
+				t.Fatalf("HTTP %d want %d", resp.StatusCode, tc.status)
+			}
+			if tc.status != 200 {
+				// The same token succeeds internally. Require a missing-token denial
+				// here, rather than accepting an unrelated L4 authorization failure.
+				if tc.credential != "not-a-signed-token" && !strings.Contains(string(body), "Jwt is missing") {
+					t.Fatal("request was not rejected for the removed or absent JWT")
+				}
+				if resp.Header.Get("Content-Type") == "application/json" {
+					t.Fatal("denied request reached business echo")
+				}
+				return
+			}
+			var got map[string]string
+			if err = json.Unmarshal(body, &got); err != nil {
+				t.Fatal(err)
+			}
+			if got["caller"] != "alice" || got["appid"] != "test-client" || got["jwt"] != "" {
+				t.Fatal("verified caller identity or credential removal failed", got)
+			}
+		})
+	}
+
 	t.Log(fmt.Sprintf("Envoy contract fixture passed with %s; cleanup registered", entryEnvoyImage))
 }

@@ -12,6 +12,8 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
+// The Shared fixture routes directly to the JWT verifier without the Entry
+// strip, so an Entry strip cannot mask a missing L4 strip.
 // Export generated edge configuration for app-service's real Envoy fixture.
 // The normal suite always checks the edge identity and client-IP contract.
 func TestEntryEdgeIdentityContract(t *testing.T) {
@@ -21,8 +23,8 @@ func TestEntryEdgeIdentityContract(t *testing.T) {
 		ExtAuth:        &ir.ExtAuthConfigIR{Cluster: "authelia_backend_alice", PathPrefix: "/api/verify/"},
 	}
 	input := &ir.Xds{
-		HTTPListeners: []*ir.HTTPListenerIR{{Name: "entry_fixture_edge", Address: "0.0.0.0", Port: 10003, UserName: "alice", VirtualHosts: []*ir.VirtualHostIR{{Name: "desktop", Domains: []string{"desktop.alice.example.org"}, Routes: []*ir.HTTPRouteIR{routeIR}}}}},
-		Clusters:      []*ir.ClusterIR{{Name: "fixture_agw", Host: "127.0.0.1", Port: 10000}, {Name: "authelia_backend_alice", Host: "127.0.0.1", Port: 9091}},
+		HTTPListeners: []*ir.HTTPListenerIR{{Name: "entry_fixture_edge", Address: "0.0.0.0", Port: 10003, UserName: "alice", VirtualHosts: []*ir.VirtualHostIR{{Name: "desktop", Domains: []string{"desktop.alice.example.org"}, Routes: []*ir.HTTPRouteIR{routeIR}}, {Name: "shared", Domains: []string{"shared.alice.example.org"}, Routes: []*ir.HTTPRouteIR{{Name: "shared", PathPrefix: "/", Cluster: "fixture_internal"}}}}}},
+		Clusters:      []*ir.ClusterIR{{Name: "fixture_agw", Host: "127.0.0.1", Port: 10000}, {Name: "authelia_backend_alice", Host: "127.0.0.1", Port: 9091}, {Name: "fixture_internal", Host: "127.0.0.1", Port: 10004}},
 	}
 	snap := (&XdsTranslator{}).Translate(input)
 	listener := asListener(t, snap.Listeners[0])
@@ -30,7 +32,7 @@ func TestEntryEdgeIdentityContract(t *testing.T) {
 	strip := &hm.HeaderMutation{}
 	require.NoError(t, h.HttpFilters[0].GetTypedConfig().UnmarshalTo(strip))
 	route := asRouteConfig(t, snap.Routes[0])
-	for _, name := range []string{"remote-user", "remote-groups", "x-bfl-user", "x-caller-user", "forwarded", "x-forwarded-for", "x-real-ip", "x-original-forwarded-for", "x-envoy-external-address", "x-original-url"} {
+	for _, name := range []string{"remote-user", "remote-groups", "x-bfl-user", "x-caller-user", "x-olares-caller-jwt", "forwarded", "x-forwarded-for", "x-real-ip", "x-original-forwarded-for", "x-envoy-external-address", "x-original-url"} {
 		require.Contains(t, headerMutationRemoves(t, strip.GetMutations().GetRequestMutations()), name)
 	}
 	for _, name := range []string{"X-Forwarded-For", "X-Real-IP"} {
