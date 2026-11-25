@@ -131,15 +131,15 @@ func TestDesktopEntryProbeUsesFreshMaterialVerifiedTLSAndFixedDestination(t *tes
 	cm := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: srr.Namespace, Name: zoneSSLConfigMapName}, Data: map[string]string{"zone": "alice.example.org"}}
 	svc := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: defaultGatewayNS, Name: entryMeshService.ServiceName}, Spec: corev1.ServiceSpec{Type: corev1.ServiceTypeClusterIP, ClusterIP: "10.96.0.10"}}
 	c := fake.NewClientBuilder().WithScheme(testScheme(t)).WithObjects(cm, svc, secret).Build()
-	requests := 0
+	var requests atomic.Int32
 	dial := func(ctx context.Context, network, address string) (net.Conn, error) {
 		if address != "10.96.0.10:8443" && address != "10.96.0.10:9444" {
 			t.Errorf("probe escaped fixed Entry: %s", address)
 		}
-		requests++
+		requests.Add(1)
 		return (&net.Dialer{}).DialContext(ctx, network, server.Listener.Addr().String())
 	}
-	if err := probeDesktopEntryWithDialer(t.Context(), c, srr, dial); err != nil || requests == 0 {
+	if err := probeDesktopEntryWithDialer(t.Context(), c, srr, dial); err != nil || requests.Load() == 0 {
 		t.Fatal("verified Entry probe failed", err)
 	}
 
@@ -151,8 +151,8 @@ func TestDesktopEntryProbeUsesFreshMaterialVerifiedTLSAndFixedDestination(t *tes
 		}
 		candidate := srr.DeepCopy()
 		candidate.Spec.HostPatterns[0], candidate.Spec.HostPatterns[1] = candidate.Spec.HostPatterns[1], candidate.Spec.HostPatterns[0]
-		before := requests
-		if err := probeDesktopEntryWithDialer(t.Context(), c, candidate, dial); err != nil || requests == before {
+		before := requests.Load()
+		if err := probeDesktopEntryWithDialer(t.Context(), c, candidate, dial); err != nil || requests.Load() == before {
 			t.Fatal("reordered platform domains did not reach the authenticated Entry probe", err)
 		}
 	})
@@ -173,12 +173,12 @@ func TestDesktopEntryProbeUsesFreshMaterialVerifiedTLSAndFixedDestination(t *tes
 		t.Run(tc.name, func(t *testing.T) {
 			candidate := srr.DeepCopy()
 			candidate.Spec.HostPatterns = tc.hosts
-			before := requests
+			before := requests.Load()
 			err := probeDesktopEntryWithDialer(t.Context(), c, candidate, dial)
 			if err == nil || !strings.Contains(err.Error(), "managed zone authorities") {
 				t.Fatal("unbound domain set was not rejected", err)
 			}
-			if requests != before {
+			if requests.Load() != before {
 				t.Fatal("unbound domains reached the network")
 			}
 		})
