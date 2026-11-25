@@ -68,7 +68,9 @@ func (h *Handler) consumerGPUPatch(ctx context.Context, workload string, tpl *co
 		return nil, false, err
 	}
 
-	if !compute.UsesGPUExtendedResource(req.Mode) && len(rows) > 0 {
+	// Without HAMI nothing ties the pod to the device its row accounts for:
+	// an extended resource alone lets the scheduler pick any node with one.
+	if !capability.HAMI && len(rows) > 0 {
 		if existing := tpl.Spec.NodeSelector[corev1.LabelHostname]; existing != "" && existing != rows[0].NodeName {
 			return nil, false, fmt.Errorf("attachment node %s conflicts with compute allocation node %s", existing, rows[0].NodeName)
 		}

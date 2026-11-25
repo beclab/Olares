@@ -127,6 +127,29 @@ func TestConsumerPatchLeavesZeroReplicasAndSkipsPlainWorkloads(t *testing.T) {
 	}
 }
 
+func TestConsumerPatchPinsNonHAMIModesToTheirRow(t *testing.T) {
+	handler := consumerWebhookHandler(t, []compute.Allocation{
+		{AppName: "llm", Owner: "alice", Mode: "intel", NodeName: "b", DeviceID: "b-intel-0", Consumer: "igpu"},
+	})
+	cfg := &appcfg.ApplicationConfig{
+		AppName:          "llm",
+		OwnerName:        "alice",
+		SelectedGpuTypes: map[string]string{"igpu": "intel"},
+		WorkloadOptions: appcfg.WorkloadOptions{
+			"igpu": {Accelerator: &manifest.WorkloadAccelerator{Modes: []appcfg.ResourceMode{{Mode: "intel"}}}},
+		},
+	}
+	tpl := &corev1.PodTemplateSpec{Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "igpu"}}}}
+	patch, inject, err := handler.consumerGPUPatch(context.Background(), "igpu", tpl, ptr.To[int32](1), cfg)
+	if err != nil || !inject {
+		t.Fatalf("unexpected %v %v", inject, err)
+	}
+	selector, ok := decodePatch(t, patch)["/spec/template/spec/nodeSelector"]
+	if !ok || string(selector.Value) != `{"kubernetes.io/hostname":"b"}` {
+		t.Fatalf("intel pod must run on the node its row accounts for: %s", patch)
+	}
+}
+
 func TestConsumerPodLabels(t *testing.T) {
 	cfg := consumerWebhookConfig()
 	labels := consumerPodLabels(cfg, "server")
