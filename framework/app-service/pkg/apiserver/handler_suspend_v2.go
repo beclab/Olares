@@ -269,7 +269,7 @@ func (h *Handler) resumeV2(req *restful.Request, resp *restful.Response) {
 	// downstream-failure via defer + bindingAccepted bool; we
 	// preserve that shape in the outer shell so
 	// deliverResumeV2 stays a straightforward translator.
-	bindingResult, err := compute.ApplyBindingSelection(req.Request.Context(), h.ctrlClient, appCfg, request.ComputeBinding, includeSharedServer)
+	bindingResult, err := h.resumeBinding(req.Request.Context(), appCfg, request, includeSharedServer, false)
 	if err != nil {
 		api.HandleError(resp, req, err)
 		return
@@ -285,6 +285,7 @@ func (h *Handler) resumeV2(req *restful.Request, resp *restful.Response) {
 		api.HandleFailedCheck(resp, api.CheckTypeComputeBindingUnavailable, ComputeBindingFailedCheck{
 			Availability: bindingResult.Availability,
 			Validation:   bindingResult.Validation,
+			Consumer:     bindingResult.Consumer,
 		})
 		return
 	case compute.BindingApplyStatusApplied, compute.BindingApplyStatusNotRequired:

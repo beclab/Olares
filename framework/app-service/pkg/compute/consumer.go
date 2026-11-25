@@ -466,6 +466,7 @@ func placeConsumersOn(appConfig *appcfg.ApplicationConfig, reqs []Requirement, m
 		rows, validation := bindAllocations(appConfig, req, selections, nodes, pressure)
 		if !validation.OK {
 			if isManual {
+				validation.Consumer = req.Consumer
 				return nil, validation, nil
 			}
 			return nil, nil, &consumerPlacementError{consumer: req.Consumer, reason: validation.Code}
@@ -556,6 +557,7 @@ func applyConsumerBindings(ctx context.Context, c client.Client, appConfig *appc
 		if validation != nil {
 			result.Status = BindingApplyStatusUnavailable
 			result.Validation = validation
+			result.Consumer = validation.Consumer
 			return nil, errBindingUnavailable
 		}
 		placed = rows
@@ -695,4 +697,90 @@ func consumerSelections(appConfig *appcfg.ApplicationConfig, selections []Bindin
 		return nil, err
 	}
 	return map[string][]BindingSelection{req.Consumer: selections}, nil
+}
+
+// PrepareConsumerUpgrade runs before an app is upgraded to a version
+// declaring workload accelerators. It carries the previous mode choices over,
+// moves rows written for spec.accelerator onto the single consumer that
+// replaces it when they still fit, and re-places every consumer whose rows
+// no longer fit. A stopped app keeps no rows; resume places it.
+func PrepareConsumerUpgrade(ctx context.Context, c client.Client, prev, next *appcfg.ApplicationConfig) error {
+	if err := RequireConsumerAwareHAMI(ctx, c); err != nil {
+		return err
+	}
+	consumers := next.GPUConsumers()
+	carried := map[string]string{}
+	for _, consumer := range consumers {
+		if mode := prev.SelectedGpuTypes[consumer.Name]; mode != "" && consumerDeclaresMode(consumer, mode) {
+			carried[consumer.Name] = mode
+		}
+	}
+	if !prev.HasGPUConsumers() && len(consumers) == 1 && consumerDeclaresMode(consumers[0], prev.SelectedGpuType) {
+		carried[consumers[0].Name] = prev.SelectedGpuType
+	}
+	chosen, pending, err := AutoSelectConsumerModes(ctx, c, next, carried)
+	if err != nil {
+		return err
+	}
+	if len(pending) > 0 {
+		return fmt.Errorf("choose a compute mode for GPU consumers %v before upgrading", pending)
+	}
+	next.SelectedGpuTypes = chosen
+
+	reqs, err := ConsumerRequirements(next)
+	if err != nil {
+		return err
+	}
+	rows, err := FindAllocationsForApp(ctx, c, next.AppName, next.OwnerName)
+	if err != nil {
+		return err
+	}
+	if len(rows) == 0 {
+		return nil
+	}
+	var gpuReqs []Requirement
+	for _, req := range reqs {
+		if req.Mode != utils.CPUType {
+			gpuReqs = append(gpuReqs, req)
+		}
+	}
+	if len(gpuReqs) == 1 && LegacyRowsFitConsumer(gpuReqs[0], rows) {
+		klog.Infof("compute: app %s/%s rows move to GPU consumer %s on upgrade", next.OwnerName, next.AppName, gpuReqs[0].Consumer)
+		return MigrateLegacyAllocations(ctx, c, next.AppName, next.OwnerName, gpuReqs[0].Consumer)
+	}
+	manual := map[string][]BindingSelection{}
+	for _, req := range gpuReqs {
+		var selections []BindingSelection
+		for _, row := range rows {
+			if row.Consumer == req.Consumer && row.Mode == req.Mode {
+				selections = append(selections, BindingSelection{NodeName: row.NodeName, DeviceID: row.DeviceID, Memory: row.Memory})
+			}
+		}
+		if len(selections) > 0 {
+			manual[req.Consumer] = selections
+		}
+	}
+	if len(manual) == len(gpuReqs) && len(rows) == countSelections(manual) {
+		return nil
+	}
+	result, err := ApplyConsumerBindings(ctx, c, next, manual)
+	if err != nil {
+		return err
+	}
+	if result.Status == BindingApplyStatusUnavailable {
+		code := ""
+		if result.Validation != nil {
+			code = result.Validation.Code
+		}
+		return fmt.Errorf("the upgraded GPU consumers cannot be placed: %s", code)
+	}
+	return nil
+}
+
+func countSelections(manual map[string][]BindingSelection) int {
+	n := 0
+	for _, selections := range manual {
+		n += len(selections)
+	}
+	return n
 }

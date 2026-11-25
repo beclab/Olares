@@ -357,6 +357,7 @@ func (h *Handler) gpuLimitMutate(ctx context.Context, req *admissionv1.Admission
 	}
 
 	var tpl *corev1.PodTemplateSpec
+	var replicas *int32
 	annotations := make(map[string]string)
 
 	switch req.Kind.Kind {
@@ -367,6 +368,7 @@ func (h *Handler) gpuLimitMutate(ctx context.Context, req *admissionv1.Admission
 			return h.sidecarWebhook.AdmissionError(req.UID, err)
 		}
 		tpl = &d.Spec.Template
+		replicas = d.Spec.Replicas
 		annotations = d.Annotations
 	case "StatefulSet":
 		var s *appsv1.StatefulSet
@@ -375,6 +377,7 @@ func (h *Handler) gpuLimitMutate(ctx context.Context, req *admissionv1.Admission
 			return h.sidecarWebhook.AdmissionError(req.UID, err)
 		}
 		tpl = &s.Spec.Template
+		replicas = s.Spec.Replicas
 		annotations = s.Annotations
 	}
 
@@ -427,6 +430,24 @@ func (h *Handler) gpuLimitMutate(ctx context.Context, req *admissionv1.Admission
 
 	appName := appcfg.AppName
 	if len(appName) == 0 {
+		return resp
+	}
+
+	if appcfg.HasGPUConsumers() {
+		if tpl == nil {
+			return resp
+		}
+		patchBytes, inject, err := h.consumerGPUPatch(ctx, req.Name, tpl, replicas, appcfg)
+		if err != nil {
+			klog.Errorf("[gpu-limit] consumer patch for %s/%s failed: %v", req.Namespace, req.Name, err)
+			return h.sidecarWebhook.AdmissionError(req.UID, err)
+		}
+		if !inject {
+			return cleanupAndReturn()
+		}
+		if len(patchBytes) > 0 {
+			h.sidecarWebhook.PatchAdmissionResponse(resp, combineJSONPatches(attachmentPatch, patchBytes))
+		}
 		return resp
 	}
 
@@ -1335,8 +1356,13 @@ func makePatches(req *admissionv1.AdmissionRequest, appCfg *appcfg.ApplicationCo
 	var patchBytes []byte
 	var tpl *corev1.PodTemplateSpec
 	var gpuPolicy string
+	var consumerLabels map[string]string
 	computeReq, ok := compute.SelectedRequirement(appCfg)
 	requiresGPU := ok && computeReq.Mode != utils.CPUType
+	if appCfg.HasGPUConsumers() {
+		consumerLabels = consumerPodLabels(appCfg, req.Name)
+		requiresGPU = false
+	}
 	if requiresGPU {
 		switch p := strings.TrimSpace(appCfg.PodGPUConsumePolicy); p {
 		case "all", "single":
@@ -1368,6 +1394,9 @@ func makePatches(req *admissionv1.AdmissionRequest, appCfg *appcfg.ApplicationCo
 		tpl.ObjectMeta.Labels[constants.ApplicationRawAppNameLabel] = appCfg.RawAppName
 		if gpuPolicy != "" {
 			tpl.ObjectMeta.Labels[constants.AppPodGPUConsumePolicy] = gpuPolicy
+		}
+		for k, v := range consumerLabels {
+			tpl.ObjectMeta.Labels[k] = v
 		}
 		if len(fixedMAC) != 0 && fixedMAC[0] {
 			if deploy.Spec.Replicas != nil && *deploy.Spec.Replicas > 1 {
@@ -1401,6 +1430,9 @@ func makePatches(req *admissionv1.AdmissionRequest, appCfg *appcfg.ApplicationCo
 
 		if gpuPolicy != "" {
 			tpl.ObjectMeta.Labels[constants.AppPodGPUConsumePolicy] = gpuPolicy
+		}
+		for k, v := range consumerLabels {
+			tpl.ObjectMeta.Labels[k] = v
 		}
 		current, err := json.Marshal(sts)
 		if err != nil {

@@ -56,6 +56,7 @@ type ComputeBindingValidationData struct {
 type ComputeBindingFailedCheck struct {
 	Availability *compute.AvailabilityResult      `json:"availability"`
 	Validation   *compute.BindingValidationResult `json:"validation,omitempty"`
+	Consumer     string                           `json:"consumer,omitempty"`
 }
 
 type UpdateDeviceSupportTypeRequest struct {
@@ -399,7 +400,7 @@ func (h *Handler) validateComputeBinding(req *restful.Request, resp *restful.Res
 		return
 	}
 
-	bindingResult, err := compute.ValidateBindingForResume(req.Request.Context(), h.ctrlClient, appCfg, request.ComputeBinding, includeSharedServer)
+	bindingResult, err := h.resumeBinding(req.Request.Context(), appCfg, request, includeSharedServer, true)
 	if err != nil {
 		api.HandleError(resp, req, err)
 		return
@@ -421,6 +422,7 @@ func (h *Handler) validateComputeBinding(req *restful.Request, resp *restful.Res
 		api.HandleFailedCheck(resp, api.CheckTypeComputeBindingUnavailable, ComputeBindingFailedCheck{
 			Availability: bindingResult.Availability,
 			Validation:   bindingResult.Validation,
+			Consumer:     bindingResult.Consumer,
 		})
 		return
 	}

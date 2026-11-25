@@ -204,9 +204,10 @@ type BindingSelection struct {
 }
 
 type BindingValidationResult struct {
-	OK     bool   `json:"ok"`
-	Code   string `json:"code,omitempty"`
-	Reason string `json:"reason,omitempty"`
+	OK       bool   `json:"ok"`
+	Code     string `json:"code,omitempty"`
+	Reason   string `json:"reason,omitempty"`
+	Consumer string `json:"consumer,omitempty"`
 	// NodePressure is populated only when the binding is rejected because
 	// a selected node would be pushed past its resource pressure
 	// threshold (Code "node-pressure:<node>"). It breaks the rejection
