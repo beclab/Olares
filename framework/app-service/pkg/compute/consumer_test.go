@@ -206,3 +206,24 @@ func TestConsumersReportCumulativePressure(t *testing.T) {
 		t.Fatalf("the second consumer should fail on the pair's memory, got %v", err)
 	}
 }
+
+func TestConsumerPressureReasonNamesEveryCandidateNode(t *testing.T) {
+	app := &appcfg.ApplicationConfig{AppName: "llm", OwnerName: "alice"}
+	reqs := []Requirement{consumerReq("a", appcfg.PerPodOne, 1, 8*gi), consumerReq("b", appcfg.PerPodOne, 1, 8*gi)}
+	for i := range reqs {
+		reqs[i].RequiredMemory = 70 * gi
+	}
+	small := exclusiveCard("b0")
+	small.Memory = 4 * gi
+	nodes := []Node{nvidiaNode("a", exclusiveCard("a0"), exclusiveCard("a1")), nvidiaNode("b", small)}
+	_, _, err := placeConsumers(app, reqs, nil, nodes, nodePressure("a", "b"))
+	var placement *consumerPlacementError
+	if !errors.As(err, &placement) || placement.consumer != "b" {
+		t.Fatalf("the second consumer should fail, got %v", err)
+	}
+	for _, want := range []string{"node-pressure", "a (memory)", "no card fits on b (" + NodeStatusNotEnough + ")"} {
+		if !strings.Contains(placement.reason, want) {
+			t.Fatalf("reason %q should contain %q", placement.reason, want)
+		}
+	}
+}

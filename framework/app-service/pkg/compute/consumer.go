@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/prometheus"
@@ -437,23 +438,35 @@ func placementReason(req Requirement, availability *AvailabilityResult, pressure
 	if req.PerPod == appcfg.PerPodSplit {
 		return fmt.Sprintf("cannot form %d groups of cards, each group on one node, that together hold the required GPU memory", req.Replicas)
 	}
-	if availability != nil && len(availability.Nodes) > 0 {
-		added := AddedResources{CPU: req.RequiredCPU, Memory: req.RequiredMemory, Disk: req.RequiredDisk}
-		pressured := true
-		for _, node := range availability.Nodes {
-			if len(pressure.PressuredDimensions(Node{NodeName: node.NodeName}, added)) == 0 {
-				pressured = false
-				break
+	if availability == nil {
+		return "insufficient_resources"
+	}
+	added := AddedResources{CPU: req.RequiredCPU, Memory: req.RequiredMemory, Disk: req.RequiredDisk}
+	var pressured, unfit []string
+	for _, node := range availability.Nodes {
+		if dimensions := pressure.PressuredDimensions(Node{NodeName: node.NodeName}, added); len(dimensions) > 0 {
+			resources := make([]string, 0, len(dimensions))
+			for _, dimension := range dimensions {
+				resources = append(resources, dimension.Resource)
 			}
+			pressured = append(pressured, fmt.Sprintf("%s (%s)", node.NodeName, strings.Join(resources, ",")))
+			continue
 		}
-		if pressured {
-			return "node-pressure: with the app's other consumers, every candidate node would pass its CPU, memory or disk threshold"
+		if node.Status != NodeStatusAvailable {
+			unfit = append(unfit, fmt.Sprintf("%s (%s)", node.NodeName, node.Status))
 		}
 	}
-	if availability != nil && availability.Reason != "" {
-		return availability.Reason
+	if len(pressured) == 0 {
+		if availability.Reason != "" {
+			return availability.Reason
+		}
+		return "insufficient_resources"
 	}
-	return "insufficient_resources"
+	reason := "node-pressure: with the app's other consumers, " + strings.Join(pressured, ", ") + " would pass the pressure threshold"
+	if len(unfit) > 0 {
+		reason += "; no card fits on " + strings.Join(unfit, ", ")
+	}
+	return reason
 }
 
 // placeConsumers places every consumer in order on a working copy of the
