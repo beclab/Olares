@@ -4,8 +4,10 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"strings"
+	"sync/atomic"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -31,6 +33,11 @@ func createHAMIBinding(ctx context.Context, c client.Client, allocation Allocati
 		constants.ApplicationOwnerLabel: allocation.Owner,
 		allocationModeLabelKey:          allocation.Mode,
 	})
+	if allocation.Consumer != "" {
+		labels := obj.GetLabels()
+		labels[constants.AppGPUConsumerLabel] = allocation.Consumer
+		obj.SetLabels(labels)
+	}
 	spec := map[string]any{
 		"uuid":    allocation.DeviceID,
 		"appName": allocation.AppName,
@@ -47,6 +54,9 @@ func createHAMIBinding(ctx context.Context, c client.Client, allocation Allocati
 	// these). Leaving Spec.Memory nil keeps HAMI from emitting the
 	// per-pod gpumem annotation, so the pod is not artificially capped
 	// below the device's full capacity.
+	if allocation.Consumer != "" {
+		spec["consumer"] = allocation.Consumer
+	}
 	if allocation.Memory > 0 {
 		mem := resource.NewQuantity(allocation.Memory/mib, resource.DecimalSI)
 		spec["memory"] = mem.String()
@@ -72,7 +82,13 @@ func createHAMIBinding(ctx context.Context, c client.Client, allocation Allocati
 
 func hamiBindingName(allocation Allocation) string {
 	raw := fmt.Sprintf("%s-%s-%s", allocation.AppName, allocation.Owner, allocation.DeviceID)
-	sum := sha256.Sum256([]byte(raw))
+	hashed := raw
+	// Rows without a consumer keep their original name so bindings written
+	// before consumers existed are never recreated.
+	if allocation.Consumer != "" {
+		hashed = fmt.Sprintf("%s-%s-%s-%s", allocation.AppName, allocation.Owner, allocation.Consumer, allocation.DeviceID)
+	}
+	sum := sha256.Sum256([]byte(hashed))
 	suffix := "-" + hex.EncodeToString(sum[:])[:8]
 
 	var b strings.Builder
@@ -116,4 +132,43 @@ func deleteHAMIBindingsForApp(ctx context.Context, c client.Client, appName, own
 		}
 	}
 	return nil
+}
+
+const hamiGPUBindingCRDName = "gpubindings.gpu.bytetrade.io"
+
+var consumerAwareHAMI atomic.Bool
+
+// ErrHAMIConsumerUnsupported means the installed GPUBinding CRD predates
+// spec.consumer: the API server would prune the field and HAMI would match
+// every binding of the app to every consumer.
+var ErrHAMIConsumerUnsupported = errors.New("the GPU scheduler is too old for apps declaring workload accelerators; finish upgrading Olares first")
+
+// RequireConsumerAwareHAMI checks that the GPUBinding CRD carries
+// spec.consumer. A positive answer is cached: the CRD is never downgraded
+// under a running app-service.
+func RequireConsumerAwareHAMI(ctx context.Context, c client.Client) error {
+	if consumerAwareHAMI.Load() {
+		return nil
+	}
+	crd := &unstructured.Unstructured{}
+	crd.SetAPIVersion("apiextensions.k8s.io/v1")
+	crd.SetKind("CustomResourceDefinition")
+	if err := c.Get(ctx, client.ObjectKey{Name: hamiGPUBindingCRDName}, crd); err != nil {
+		if apierrors.IsNotFound(err) || meta.IsNoMatchError(err) {
+			return ErrHAMIConsumerUnsupported
+		}
+		return fmt.Errorf("read %s: %w", hamiGPUBindingCRDName, err)
+	}
+	versions, _, _ := unstructured.NestedSlice(crd.Object, "spec", "versions")
+	for _, version := range versions {
+		v, ok := version.(map[string]any)
+		if !ok {
+			continue
+		}
+		if _, found, _ := unstructured.NestedMap(v, "schema", "openAPIV3Schema", "properties", "spec", "properties", "consumer"); found {
+			consumerAwareHAMI.Store(true)
+			return nil
+		}
+	}
+	return ErrHAMIConsumerUnsupported
 }

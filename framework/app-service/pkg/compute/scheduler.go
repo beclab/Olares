@@ -41,6 +41,17 @@ func calculateInstallComputePlan(appConfig *appcfg.ApplicationConfig, nodes []No
 }
 
 func AppInstallable(ctx context.Context, c client.Client, appConfig *appcfg.ApplicationConfig) (bool, error) {
+	if appConfig.HasGPUConsumers() {
+		nodes, err := FetchNodeComputeAllocations(ctx, c)
+		if err != nil {
+			return false, err
+		}
+		ok, reason := consumersInstallable(appConfig, nodes)
+		if !ok {
+			klog.Infof("compute: app %s/%s is not installable: %s", appConfig.OwnerName, appConfig.AppName, reason)
+		}
+		return ok, nil
+	}
 	plan, err := BuildInstallComputePlan(ctx, c, appConfig)
 	if err != nil {
 		return false, err
@@ -67,6 +78,9 @@ func AllocateForInstall(ctx context.Context, c client.Client, appConfig *appcfg.
 		return nil, DeleteAllocationsForApp(ctx, c, appConfig.AppName, appConfig.OwnerName)
 	}
 	appConfig = targetConfig
+	if appConfig.HasGPUConsumers() {
+		return allocateConsumersForInstall(ctx, c, appConfig)
+	}
 	req, ok := SelectedRequirement(appConfig)
 	if !ok {
 		return nil, fmt.Errorf("compute type %s not found in application resources", appConfig.SelectedGpuType)
@@ -530,6 +544,7 @@ func buildAllocation(appConfig *appcfg.ApplicationConfig, req Requirement, node 
 		NodeName: node.NodeName,
 		DeviceID: device.ID,
 		Memory:   memory,
+		Consumer: req.Consumer,
 	}
 }
 
