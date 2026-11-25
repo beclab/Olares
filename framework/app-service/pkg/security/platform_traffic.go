@@ -106,11 +106,19 @@ var platformServiceFlows = []platformServiceFlow{
 	{"l4-authz", platformWorkload{"os-network", map[string]string{"app": "l4-bfl-proxy", "tier": "bfl"}}, types.NamespacedName{Namespace: "os-gateway", Name: "app-gateway-l4-mtls"}, gatewayDataPlanePods("app-gateway"), 9444, 9444, ""},
 }
 
-// The tenant system-server's native TCP proxy dials these platform Services.
-// The destination Pods do not need a Linkerd proxy or an HTTP permission.
+// These system-server dependencies still use native transport.
 var systemServerNativeFlows = []platformServiceFlow{
 	{service: types.NamespacedName{Namespace: "os-platform", Name: "nats"}, to: natsPods, servicePort: 4222, targetPort: 4222, targetName: "nats"},
 	{service: types.NamespacedName{Namespace: "os-platform", Name: "redis-cluster-proxy"}, to: kvrocksPods, servicePort: 6379, targetPort: 6666},
+	// The current LLDAP workload is not meshed. Limit token verification to its HTTP API port.
+	{service: types.NamespacedName{Namespace: "os-platform", Name: "lldap-service"}, to: map[string]string{"app": "lldap"}, servicePort: 17170, targetPort: 17170},
+}
+
+var systemServerAppStoreFlow = platformServiceFlow{
+	service:     types.NamespacedName{Namespace: "os-framework", Name: "appstore-svc"},
+	to:          map[string]string{"app": "appstore"},
+	servicePort: 81,
+	targetPort:  8080,
 }
 
 const (
@@ -219,7 +227,9 @@ func ActivePlatformTrafficServices(namespace string, pods []corev1.Pod) []types.
 		return pod.Labels["app"] == "systemserver" && pod.Labels["traffic.olares.io/platform-mesh"] == "true"
 	}) {
 		keys = append(keys, types.NamespacedName{Namespace: "os-platform", Name: "citus-headless"})
-		keys = append(keys, SystemServerNativeServices()...)
+		for _, flow := range systemServerNativeFlows {
+			keys = append(keys, flow.service)
+		}
 	}
 	return keys
 }
@@ -341,21 +351,33 @@ func SystemServerCitusEgressRule() netv1.NetworkPolicyEgressRule {
 	}
 }
 
-// SystemServerNativeServices lists the Service identities used by the native proxy.
-func SystemServerNativeServices() []types.NamespacedName {
-	keys := make([]types.NamespacedName, 0, len(systemServerNativeFlows))
+// SystemServerDependencyServices lists the Services read when generating route egress.
+func SystemServerDependencyServices() []types.NamespacedName {
+	keys := make([]types.NamespacedName, 0, len(systemServerNativeFlows)+1)
 	for _, flow := range systemServerNativeFlows {
 		keys = append(keys, flow.service)
 	}
-	return keys
+	return append(keys, systemServerAppStoreFlow.service)
 }
 
-// SystemServerNativeEgressRules permits only the verified Services and target
-// ports, including the Service VIP on CNIs that evaluate egress before DNAT.
-func SystemServerNativeEgressRules(services map[types.NamespacedName]*corev1.Service) []netv1.NetworkPolicyEgressRule {
+// SystemServerDependencyEgressRules scopes the verified native dependencies and
+// the enrolled AppStore endpoints used by the system-server provider proxy.
+func SystemServerDependencyEgressRules(services map[types.NamespacedName]*corev1.Service) []netv1.NetworkPolicyEgressRule {
 	var rules []netv1.NetworkPolicyEgressRule
 	for _, flow := range systemServerNativeFlows {
 		rules = append(rules, flow.egressRules(services[flow.service])...)
+	}
+	flow := systemServerAppStoreFlow
+	if flow.matchesService(services[flow.service]) {
+		// The VIP can select unenrolled Market Pods during a rollout. Allow
+		// only Linkerd-discovered endpoints of the enrolled workload.
+		destination := maps.Clone(flow.to)
+		destination[platformMeshControlPlaneLabel] = "os-mesh"
+		destination["traffic.olares.io/platform-mesh"] = "true"
+		rules = append(rules, netv1.NetworkPolicyEgressRule{
+			To:    []netv1.NetworkPolicyPeer{platformPeer(flow.service.Namespace, destination)},
+			Ports: []netv1.NetworkPolicyPort{tcpPort(flow.targetPort), tcpPort(4143)},
+		})
 	}
 	return rules
 }

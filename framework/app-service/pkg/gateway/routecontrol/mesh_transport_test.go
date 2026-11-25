@@ -324,7 +324,30 @@ func TestSystemLoginStartsBackendTransportBeforeFrontend(t *testing.T) {
 			Ports:    []corev1.ServicePort{{Port: 6379, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt32(6666)}},
 		},
 	}
-	authBackends = append(authBackends, dns, infisical, bfl, appService, nats, redis)
+	lldap := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "os-platform", Name: "lldap-service"},
+		Spec: corev1.ServiceSpec{
+			Type: corev1.ServiceTypeClusterIP, ClusterIP: "10.96.0.16",
+			Selector: map[string]string{"app": "lldap"},
+			Ports: []corev1.ServicePort{
+				{Port: 3890, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt32(3890)},
+				{Port: 17170, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt32(17170)},
+				{Port: 17171, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt32(17171)},
+			},
+		},
+	}
+	market := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "os-framework", Name: "appstore-svc"},
+		Spec: corev1.ServiceSpec{
+			Type: corev1.ServiceTypeClusterIP, ClusterIP: "10.96.0.17",
+			Selector: map[string]string{"app": "appstore"},
+			Ports: []corev1.ServicePort{
+				{Port: 81, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt32(8080)},
+				{Port: 40010, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt32(40010)},
+			},
+		},
+	}
+	authBackends = append(authBackends, dns, infisical, bfl, appService, nats, redis, lldap, market)
 	c := fake.NewClientBuilder().WithScheme(testSchemeWithSecurityPolicy(t)).WithObjects(authBackends...).Build()
 	if err := gateway.EnsureSystemPlaneRoutes(ctx, c, "alice", "alice.olares.com", "user-space-alice", false); err != nil {
 		t.Fatal(err)
@@ -425,6 +448,20 @@ func TestSystemLoginStartsBackendTransportBeforeFrontend(t *testing.T) {
 					Ports: []netv1.NetworkPolicyPort{meshTransportPort(6379)},
 				},
 				{
+					To:    []netv1.NetworkPolicyPeer{(meshTransportPeer{"os-platform", map[string]string{"app": "lldap"}}).networkPolicyPeer()},
+					Ports: []netv1.NetworkPolicyPort{meshTransportPort(17170)},
+				},
+				{
+					To:    []netv1.NetworkPolicyPeer{{IPBlock: &netv1.IPBlock{CIDR: "10.96.0.16/32"}}},
+					Ports: []netv1.NetworkPolicyPort{meshTransportPort(17170)},
+				},
+				{
+					To: []netv1.NetworkPolicyPeer{(meshTransportPeer{"os-framework", map[string]string{
+						"app": "appstore", "linkerd.io/control-plane-ns": "os-mesh", "traffic.olares.io/platform-mesh": "true",
+					}}).networkPolicyPeer()},
+					Ports: []netv1.NetworkPolicyPort{meshTransportPort(8080), meshTransportPort(4143)},
+				},
+				{
 					To:    []netv1.NetworkPolicyPeer{(meshTransportPeer{"os-mesh", map[string]string{"linkerd.io/control-plane-component": "identity"}}).networkPolicyPeer()},
 					Ports: []netv1.NetworkPolicyPort{meshTransportPort(8080)},
 				},
@@ -484,6 +521,14 @@ func TestSystemLoginStartsBackendTransportBeforeFrontend(t *testing.T) {
 	if err := c.Update(ctx, redis); err != nil {
 		t.Fatal(err)
 	}
+	lldap.Spec.Ports[1].TargetPort = intstr.FromInt32(17171)
+	if err := c.Update(ctx, lldap); err != nil {
+		t.Fatal(err)
+	}
+	market.Spec.Selector["app"] = "other"
+	if err := c.Update(ctx, market); err != nil {
+		t.Fatal(err)
+	}
 	checkRoute(ReasonAwaitingDataPlane)
 	if err := c.Get(ctx, client.ObjectKeyFromObject(systemEgress), systemEgress); err != nil {
 		t.Fatal(err)
@@ -499,6 +544,14 @@ func TestSystemLoginStartsBackendTransportBeforeFrontend(t *testing.T) {
 	}
 	redis.Spec.Ports[0].TargetPort = intstr.FromInt32(6666)
 	if err := c.Update(ctx, redis); err != nil {
+		t.Fatal(err)
+	}
+	lldap.Spec.Ports[1].TargetPort = intstr.FromInt32(17170)
+	if err := c.Update(ctx, lldap); err != nil {
+		t.Fatal(err)
+	}
+	market.Spec.Selector["app"] = "appstore"
+	if err := c.Update(ctx, market); err != nil {
 		t.Fatal(err)
 	}
 	checkRoute(ReasonAwaitingDataPlane)

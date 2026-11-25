@@ -267,6 +267,54 @@ func TestAutheliaLLDAPTokenTrafficRequiresMatchingService(t *testing.T) {
 	}
 }
 
+func TestSystemServerDesktopDependenciesRequireVerifiedServices(t *testing.T) {
+	lldapKey := types.NamespacedName{Namespace: "os-platform", Name: "lldap-service"}
+	marketKey := types.NamespacedName{Namespace: "os-framework", Name: "appstore-svc"}
+	for _, tc := range []struct {
+		key         types.NamespacedName
+		app         string
+		servicePort int32
+		targetPort  int32
+		wantRules   int
+	}{
+		{lldapKey, "lldap", 17170, 17170, 2},
+		{marketKey, "appstore", 81, 8080, 1},
+	} {
+		t.Run(tc.key.Name, func(t *testing.T) {
+			service := &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{Namespace: tc.key.Namespace, Name: tc.key.Name},
+				Spec: corev1.ServiceSpec{Type: corev1.ServiceTypeClusterIP, ClusterIP: "10.96.0.10",
+					Selector: map[string]string{"app": tc.app}, Ports: []corev1.ServicePort{{
+						Port: tc.servicePort, TargetPort: intstr.FromInt32(tc.targetPort), Protocol: corev1.ProtocolTCP,
+					}},
+				},
+			}
+			if !slices.Contains(SystemServerDependencyServices(), tc.key) {
+				t.Fatal("route reconciliation cannot discover the dependency Service")
+			}
+			services := map[types.NamespacedName]*corev1.Service{tc.key: service}
+			if got := len(SystemServerDependencyEgressRules(services)); got != tc.wantRules {
+				t.Fatalf("verified Service yielded %d rules, want %d", got, tc.wantRules)
+			}
+			service.Spec.Ports[0].TargetPort = intstr.FromInt32(tc.targetPort + 1)
+			if got := SystemServerDependencyEgressRules(services); len(got) != 0 {
+				t.Fatalf("retargeted Service retained egress: %+v", got)
+			}
+			delete(services, tc.key)
+			if got := SystemServerDependencyEgressRules(services); len(got) != 0 {
+				t.Fatalf("absent Service retained egress: %+v", got)
+			}
+		})
+	}
+	tenant := "user-system-alice"
+	active := []corev1.Pod{{ObjectMeta: metav1.ObjectMeta{Namespace: tenant, Labels: map[string]string{
+		"app": "systemserver", "traffic.olares.io/platform-mesh": "true",
+	}}}}
+	if !slices.Contains(ActivePlatformTrafficServices(tenant, active), lldapKey) || slices.Contains(ActivePlatformTrafficServices(tenant, nil), lldapKey) {
+		t.Fatal("LLDAP token verification is a readiness dependency of the active system-server")
+	}
+}
+
 func TestL4HostIngressTracksOnlySelectedNodeAddresses(t *testing.T) {
 	l4 := corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{Namespace: "os-network", Labels: map[string]string{"app": "l4-bfl-proxy", "tier": "bfl"}},
