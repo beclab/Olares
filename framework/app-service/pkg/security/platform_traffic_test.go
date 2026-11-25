@@ -66,6 +66,45 @@ func TestGatewayBootstrapScopesDiscoveryAndValidatesControllerVIP(t *testing.T) 
 	}
 }
 
+func TestDesktopReadinessTrafficIsScopedToMeshedAppServiceAndEntry(t *testing.T) {
+	svc := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: "os-gateway", Name: "app-gateway-l4-mtls"},
+		Spec: corev1.ServiceSpec{Type: corev1.ServiceTypeClusterIP, ClusterIP: "10.96.0.24", Selector: gatewayDataPlanePods("app-gateway"),
+			Ports: []corev1.ServicePort{{Port: 8443, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt(8443)}, {Port: 9444, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt(9444)}}}}
+	for _, port := range []int32{8443, 9444} {
+		flowName := "entry"
+		if port == 9444 {
+			flowName = "authz"
+		}
+		for _, ns := range []string{"os-framework", "os-gateway"} {
+			policies := BuildPlatformTrafficPolicies(ns, map[types.NamespacedName]*corev1.Service{{Namespace: svc.Namespace, Name: svc.Name}: svc})
+			found := false
+			for _, p := range policies {
+				if p.Name != "olares-platform-app-service-"+flowName+"-readiness-egress" && p.Name != "olares-platform-app-service-"+flowName+"-readiness-ingress" {
+					continue
+				}
+				found = true
+				if !IsTrafficGroupManagedNP(&p) {
+					t.Fatal("readiness grant is not protected from the legacy sweep")
+				}
+				if ns == "os-framework" {
+					if !reflect.DeepEqual(p.Spec.PodSelector.MatchLabels, map[string]string{"tier": "app-service", "linkerd.io/control-plane-ns": "os-mesh"}) ||
+						len(p.Spec.Egress) != 2 || !reflect.DeepEqual(p.Spec.Egress[0].Ports, []netv1.NetworkPolicyPort{tcpPort(port), tcpPort(4143)}) ||
+						p.Spec.Egress[0].To[0].NamespaceSelector.MatchLabels["kubernetes.io/metadata.name"] != "os-gateway" ||
+						p.Spec.Egress[0].To[0].PodSelector.MatchLabels["gateway.envoyproxy.io/owning-gateway-name"] != "app-gateway" {
+						t.Fatalf("readiness source or destination widened: %+v", p.Spec)
+					}
+				} else if len(p.Spec.Ingress) != 1 || p.Spec.Ingress[0].From[0].NamespaceSelector.MatchLabels["kubernetes.io/metadata.name"] != "os-framework" ||
+					!reflect.DeepEqual(p.Spec.Ingress[0].From[0].PodSelector.MatchLabels, map[string]string{"tier": "app-service", "linkerd.io/control-plane-ns": "os-mesh"}) {
+					t.Fatalf("readiness ingress trusts another caller: %+v", p.Spec)
+				}
+			}
+			if !found {
+				t.Fatal("missing readiness peer policy", ns, port)
+			}
+		}
+	}
+}
+
 func TestPlatformTrafficUsesPairedServiceAndTargetPorts(t *testing.T) {
 	key := types.NamespacedName{Namespace: "os-platform", Name: "redis-cluster-proxy"}
 	svc := &corev1.Service{

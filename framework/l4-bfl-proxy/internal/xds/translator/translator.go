@@ -196,8 +196,11 @@ func SetTimeouts(tcpIdle, httpStream, connect, route, clusterIdle time.Duration)
 // filter chain or reach Authelia/upstream. Envoy matches case-insensitively.
 func clientSpoofableIdentityHeaders() []string {
 	return []string{
-		"x-bfl-user",
-		"x-caller-appid",
+		"x-bfl-user", "x-caller-appid", "x-caller-user",
+		"remote-user", "remote-groups", "remote-name", "remote-email", "remote-access-token", "authelia-nonce",
+		// Forwarding context is regenerated from the accepted connection.
+		"forwarded", "x-forwarded-for", "x-real-ip", "x-original-forwarded-for", "x-envoy-external-address",
+		"x-forwarded-host", "x-forwarded-proto", "x-forwarded-port", "x-forwarded-uri", "x-forwarded-method", "x-original-url", "x-original-method",
 	}
 }
 
@@ -214,42 +217,43 @@ func spoofableAppIdentityHeadersToRemove() []string {
 
 const earlyHeaderMutationExtensionName = "envoy.http.early_header_mutation.header_mutation"
 
-// buildEarlyClientIdentityStripExtensions strips forged north-south identity
-// headers before the HTTP filter chain runs.
-func buildEarlyClientIdentityStripExtensions() []*corev3.TypedExtensionConfig {
-	mutations := make([]*mutationrulesv3.HeaderMutation, 0, len(clientSpoofableIdentityHeaders()))
-	for _, h := range clientSpoofableIdentityHeaders() {
+// clientHeaderSanitizationMutations is shared by early mutation and the first
+// HTTP filter. Prefix removal prevents future Remote-/Authelia- claims from
+// silently becoming client-spoofable when the authorizer adds a new field.
+func clientHeaderSanitizationMutations() []*mutationrulesv3.HeaderMutation {
+	mutations := make([]*mutationrulesv3.HeaderMutation, 0, len(clientSpoofableIdentityHeaders())+2)
+	for _, header := range clientSpoofableIdentityHeaders() {
+		mutations = append(mutations, &mutationrulesv3.HeaderMutation{Action: &mutationrulesv3.HeaderMutation_Remove{Remove: header}})
+	}
+	for _, prefix := range []string{"remote-", "authelia-"} {
 		mutations = append(mutations, &mutationrulesv3.HeaderMutation{
-			Action: &mutationrulesv3.HeaderMutation_Remove{Remove: h},
+			Action: &mutationrulesv3.HeaderMutation_RemoveOnMatch_{
+				RemoveOnMatch: &mutationrulesv3.HeaderMutation_RemoveOnMatch{
+					KeyMatcher: &matcherv3.StringMatcher{MatchPattern: &matcherv3.StringMatcher_Prefix{Prefix: prefix}, IgnoreCase: true},
+				},
+			},
 		})
 	}
+	return mutations
+}
+
+// buildEarlyClientIdentityStripExtensions strips north-south forgeries before
+// the HTTP filter chain. Auth and business hops rebuild forwarding context.
+func buildEarlyClientIdentityStripExtensions() []*corev3.TypedExtensionConfig {
 	return []*corev3.TypedExtensionConfig{{
-		Name: earlyHeaderMutationExtensionName,
-		TypedConfig: mustAny(&earlyheadermutationv3.HeaderMutation{
-			Mutations: mutations,
-		}),
+		Name:        earlyHeaderMutationExtensionName,
+		TypedConfig: mustAny(&earlyheadermutationv3.HeaderMutation{Mutations: clientHeaderSanitizationMutations()}),
 	}}
 }
 
-// buildClientIdentityStripFilter strips the same forged headers again as the
-// first HTTP filter (before ExtAuth) so any path that skipped early mutation
-// still cannot carry client-supplied identity into ExtAuth or upstream.
+// Repeat the strip before ExtAuth so paths that skip early mutation cannot
+// introduce client-provided identities into the authorization request.
 func buildClientIdentityStripFilter() *hcmv3.HttpFilter {
-	mutations := make([]*mutationrulesv3.HeaderMutation, 0, len(clientSpoofableIdentityHeaders()))
-	for _, h := range clientSpoofableIdentityHeaders() {
-		mutations = append(mutations, &mutationrulesv3.HeaderMutation{
-			Action: &mutationrulesv3.HeaderMutation_Remove{Remove: h},
-		})
-	}
 	return &hcmv3.HttpFilter{
 		Name: "envoy.filters.http.header_mutation",
-		ConfigType: &hcmv3.HttpFilter_TypedConfig{
-			TypedConfig: mustAny(&headermutationv3.HeaderMutation{
-				Mutations: &headermutationv3.Mutations{
-					RequestMutations: mutations,
-				},
-			}),
-		},
+		ConfigType: &hcmv3.HttpFilter_TypedConfig{TypedConfig: mustAny(&headermutationv3.HeaderMutation{
+			Mutations: &headermutationv3.Mutations{RequestMutations: clientHeaderSanitizationMutations()},
+		})},
 	}
 }
 
@@ -646,7 +650,7 @@ func buildMultiUserHTTPSListener(port uint32, proxyProtocol bool, httpListeners 
 				{Header: &corev3.HeaderValue{Key: "X-Forwarded-Host", Value: "%REQ(:AUTHORITY)%"}, AppendAction: corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD},
 				{Header: &corev3.HeaderValue{Key: "X-Forwarded-Proto", Value: xForwardedProtoValue}, AppendAction: corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD},
 				{Header: &corev3.HeaderValue{Key: "X-Real-IP", Value: "%DOWNSTREAM_REMOTE_ADDRESS_WITHOUT_PORT%"}, AppendAction: corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD},
-				{Header: &corev3.HeaderValue{Key: "X-Original-Forwarded-For", Value: "%REQ(X-FORWARDED-FOR)%"}, AppendAction: corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD},
+				{Header: &corev3.HeaderValue{Key: "X-Forwarded-For", Value: "%DOWNSTREAM_REMOTE_ADDRESS_WITHOUT_PORT%"}, AppendAction: corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD},
 			},
 			// Client identity forgeries are stripped in HCM early mutation + a
 			// HeaderMutation filter before ExtAuth. RDS must not remove
@@ -1132,6 +1136,8 @@ func autheliaAuthorizationRequest(userName string) *extauthzv3.AuthorizationRequ
 	request := &extauthzv3.AuthorizationRequest{
 		HeadersToAdd: []*corev3.HeaderValue{
 			{Key: "X-Forwarded-Proto", Value: xForwardedProtoValue},
+			{Key: "X-Forwarded-For", Value: "%DOWNSTREAM_REMOTE_ADDRESS_WITHOUT_PORT%"},
+			{Key: "X-Real-IP", Value: "%DOWNSTREAM_REMOTE_ADDRESS_WITHOUT_PORT%"},
 			// Authelia ForwardAuth/Verify uses these for the post-login rd=
 			// target. Values are Envoy formatters evaluated from the original
 			// downstream request (not the /api/verify/<path> check URI).

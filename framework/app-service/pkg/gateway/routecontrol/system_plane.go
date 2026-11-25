@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway"
+	srrv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/gateway/v1alpha1"
 )
 
 const userSpaceNSPrefix = "user-space-"
@@ -56,7 +57,26 @@ func (r *SystemPlaneRouteReconciler) Reconcile(ctx context.Context, req reconcil
 		klog.Errorf("system-plane: ensure routes user=%s ns=%s: %v", user, cm.Namespace, err)
 		return reconcile.Result{}, err
 	}
-	return reconcile.Result{}, nil
+	return reconcile.Result{}, clearLegacyDesktopIdentity(ctx, r.Client, cm.Namespace)
+}
+
+// Retire legacy metadata in the owning controller. The route compiler also
+// ignores this stamp, so safety does not depend on cleanup winning a race.
+func clearLegacyDesktopIdentity(ctx context.Context, c client.Client, namespace string) error {
+	var desktop srrv1alpha1.SharedRouteRegistry
+	err := c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: gateway.SystemPlaneSRRName("desktop")}, &desktop)
+	if apierrors.IsNotFound(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if !isSystemDesktopRoute(&desktop) || desktop.Annotations[gateway.AnnotationStampBFLUser] == "" {
+		return nil
+	}
+	patched := desktop.DeepCopy()
+	delete(patched.Annotations, gateway.AnnotationStampBFLUser)
+	return c.Patch(ctx, patched, client.MergeFrom(&desktop))
 }
 
 // SetupWithManager watches zone-ssl-config ConfigMaps in user-space namespaces.

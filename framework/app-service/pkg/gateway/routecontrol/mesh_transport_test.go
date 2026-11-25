@@ -512,6 +512,11 @@ func TestSystemLoginStartsBackendTransportBeforeFrontend(t *testing.T) {
 	if err := c.Get(ctx, client.ObjectKey{Namespace: key.Namespace, Name: "sys-desktop"}, desktop); err != nil {
 		t.Fatal(err)
 	}
+	// Unlike the API server, the fake client does not assign registry UIDs.
+	desktop.SetUID("desktop-entry")
+	if err := c.Update(ctx, desktop); err != nil {
+		t.Fatal(err)
+	}
 	desktopService := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: key.Namespace, Name: "edge-desktop"},
 		Spec: corev1.ServiceSpec{Ports: []corev1.ServicePort{{Name: "http", Port: 80, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt(91)}}}}
 	desktopBackend := meshedServiceObjects(desktopService)

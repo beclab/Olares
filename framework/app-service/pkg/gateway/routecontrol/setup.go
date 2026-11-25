@@ -21,7 +21,9 @@ import (
 // on SRR.status. The generated HTTPRoute is owned by the SRR so deleting the
 // SRR garbage-collects the route and re-creates it on drift.
 type SharedRouteReconciler struct {
-	Client client.Client
+	Client          client.Client
+	ReadinessReader client.Reader
+	desktopProbe    func(context.Context, client.Reader, *srrv1alpha1.SharedRouteRegistry) error
 }
 
 // Reconcile applies the route objects for one SRR.
@@ -52,13 +54,14 @@ func (r *SharedRouteReconciler) Reconcile(ctx context.Context, req reconcile.Req
 		retry = 5 * time.Second
 	}
 	if rerr == nil && res.HTTPRouteName != "" {
-		if err := servingReadiness(ctx, r.Client, GatewayRef{}, srr, res.HTTPRouteName); err != nil {
+		if err := r.servingReadiness(ctx, srr, res.HTTPRouteName); err != nil {
 			res.Status, res.Reason, res.Message = metav1.ConditionFalse, ReasonAwaitingDataPlane, err.Error()
 			retry = 5 * time.Second
 		} else {
 			res.Message = "Entry route and current mesh endpoints are ready"
 			if isSystemDesktopRoute(srr) {
 				res.Reason = ReasonDesktopEntryAuthorizationReady
+				res.Message = "Entry anonymous authorization probes and current mesh endpoints are ready"
 			}
 			// Endpoint changes need not modify the owned Route.
 			retry = 30 * time.Second
@@ -78,6 +81,9 @@ func (r *SharedRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 	if r.Client == nil {
 		r.Client = mgr.GetClient()
+	}
+	if r.ReadinessReader == nil {
+		r.ReadinessReader = mgr.GetAPIReader()
 	}
 	ownedRoute := &unstructured.Unstructured{}
 	ownedRoute.SetGroupVersionKind(schema.GroupVersionKind{

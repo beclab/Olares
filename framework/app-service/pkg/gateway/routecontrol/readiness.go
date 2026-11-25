@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"slices"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
@@ -176,6 +177,10 @@ func validEntryClientPolicy(policy *unstructured.Unstructured, gw GatewayRef, se
 		ref["name"] != gw.gatewayName() || ref["sectionName"] != section {
 		return false
 	}
+	headers, _, _ := unstructured.NestedMap(policy.Object, "spec", "headers", "earlyRequestHeaders")
+	if !validEntryIdentityHeaders(headers) {
+		return false
+	}
 	validation, _, _ := unstructured.NestedMap(policy.Object, "spec", "tls", "clientValidation")
 	if validation["mode"] != "RequireAndVerify" {
 		return false
@@ -324,4 +329,56 @@ func hasInterceptedHTTPPort(ports []discoveryv1.EndpointPort, portName string, e
 		}
 	}
 	return false
+}
+
+// Forwarding headers are trusted only from the Entry mTLS peer. Do not erase
+// that verified edge context and replace the browser IP with a mesh Pod IP.
+func entryIdentityHeaderSettings() map[string]any {
+	return map[string]any{
+		"remove":        []any{"x-bfl-user", "x-caller-user", "x-caller-appid", "remote-user", "remote-groups", "remote-name", "remote-email", "remote-access-token", "authelia-nonce"},
+		"removeOnMatch": []any{map[string]any{"type": "Prefix", "value": "remote-"}, map[string]any{"type": "Prefix", "value": "authelia-"}},
+	}
+}
+
+// The CRD declares removal names as a set. Compare semantics rather than list
+// order, while rejecting additions that could recreate an unverified identity.
+func validEntryIdentityHeaders(headers map[string]any) bool {
+	if len(headers) != 2 {
+		return false
+	}
+	want := entryIdentityHeaderSettings()
+	removed, ok := headers["remove"].([]any)
+	if !ok || len(removed) != len(want["remove"].([]any)) {
+		return false
+	}
+	seen := map[string]bool{}
+	for _, value := range removed {
+		name, ok := value.(string)
+		if !ok {
+			return false
+		}
+		seen[strings.ToLower(name)] = true
+	}
+	for _, value := range want["remove"].([]any) {
+		if !seen[value.(string)] {
+			return false
+		}
+	}
+	patterns, ok := headers["removeOnMatch"].([]any)
+	if !ok || len(patterns) != 2 {
+		return false
+	}
+	matched := map[string]bool{}
+	for _, value := range patterns {
+		p, ok := value.(map[string]any)
+		if !ok || len(p) != 2 || p["type"] != "Prefix" {
+			return false
+		}
+		prefix, ok := p["value"].(string)
+		if !ok {
+			return false
+		}
+		matched[prefix] = true
+	}
+	return matched["remote-"] && matched["authelia-"]
 }

@@ -35,6 +35,7 @@ var (
 	envoyControllerPods = map[string]string{"control-plane": "envoy-gateway", "app.kubernetes.io/name": "gateway-helm", "app.kubernetes.io/instance": "app-gateway-eg"}
 	platformAuthelia    = platformWorkload{"os-framework", map[string]string{"app": "authelia-backend", "traffic.olares.io/platform-mesh": "true"}}
 	platformVault       = platformWorkload{"os-framework", map[string]string{"app": "vault-server", platformMeshControlPlaneLabel: "os-mesh"}}
+	entryProbeCaller    = platformWorkload{"os-framework", map[string]string{"tier": "app-service", platformMeshControlPlaneLabel: "os-mesh"}}
 	bflPods             = map[string]string{"tier": "bfl"}
 )
 
@@ -99,6 +100,8 @@ var platformServiceFlows = []platformServiceFlow{
 	{"authelia-lldap-token", platformAuthelia, types.NamespacedName{Namespace: "os-platform", Name: "lldap-service"}, map[string]string{"app": "lldap"}, 17170, 17170, ""},
 	{"entry-gateway-xds", platformWorkload{"os-gateway", gatewayDataPlanePods("app-gateway")}, types.NamespacedName{Namespace: "os-gateway", Name: "envoy-gateway"}, envoyControllerPods, 18000, 18000, ""},
 	{"internal-gateway-xds", platformWorkload{"os-gateway", gatewayDataPlanePods("app-access-internal")}, types.NamespacedName{Namespace: "os-gateway", Name: "envoy-gateway"}, envoyControllerPods, 18000, 18000, ""},
+	{"app-service-entry-readiness", entryProbeCaller, types.NamespacedName{Namespace: "os-gateway", Name: "app-gateway-l4-mtls"}, gatewayDataPlanePods("app-gateway"), 8443, 8443, ""},
+	{"app-service-authz-readiness", entryProbeCaller, types.NamespacedName{Namespace: "os-gateway", Name: "app-gateway-l4-mtls"}, gatewayDataPlanePods("app-gateway"), 9444, 9444, ""},
 	{"l4-entry", platformWorkload{"os-network", map[string]string{"app": "l4-bfl-proxy", "tier": "bfl"}}, types.NamespacedName{Namespace: "os-gateway", Name: "app-gateway-l4-mtls"}, gatewayDataPlanePods("app-gateway"), 8443, 8443, ""},
 	{"l4-authz", platformWorkload{"os-network", map[string]string{"app": "l4-bfl-proxy", "tier": "bfl"}}, types.NamespacedName{Namespace: "os-gateway", Name: "app-gateway-l4-mtls"}, gatewayDataPlanePods("app-gateway"), 9444, 9444, ""},
 }
