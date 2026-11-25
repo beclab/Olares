@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/cel-go/cel"
 	"gopkg.in/yaml.v3"
 )
 
@@ -189,13 +190,54 @@ func TestBFLStrictEnrollmentRequiresDenyFallback(t *testing.T) {
 		}
 	}
 	variables := meshField(t, policy, "spec", "variables").([]any)
+	var expression string
 	for _, variable := range variables {
-		if meshField(t, variable, "name") == "inboundPolicy" &&
-			strings.Contains(meshField(t, variable, "expression").(string), "variables.bflAPI ? 'deny'") {
-			return
+		if meshField(t, variable, "name") == "inboundPolicy" {
+			expression = meshField(t, variable, "expression").(string)
+			break
 		}
 	}
-	t.Fatal("the BFL API must deny inbound traffic if its authorization resources are unavailable")
+	if expression == "" {
+		t.Fatal("missing inboundPolicy expression")
+	}
+	env, err := cel.NewEnv(cel.Variable("variables", cel.DynType))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ast, issues := env.Compile(expression)
+	if issues.Err() != nil {
+		t.Fatal(issues.Err())
+	}
+	program, err := env.Program(ast)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		name                                  string
+		bflAPI, internalGateway, systemServer bool
+		want                                  string
+	}{
+		{"ordinary workload", false, false, false, "cluster-authenticated"},
+		{"BFL API", true, false, false, "deny"},
+		{"internal gateway", false, true, false, "deny"},
+		{"system-server", false, false, true, "deny"},
+		{"BFL API and internal gateway", true, true, false, "deny"},
+		{"BFL API and system-server", true, false, true, "deny"},
+		{"internal gateway and system-server", false, true, true, "deny"},
+		{"all protected workloads", true, true, true, "deny"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			value, _, err := program.Eval(map[string]any{"variables": map[string]any{
+				"bflAPI": tc.bflAPI, "internalGateway": tc.internalGateway, "systemServer": tc.systemServer,
+			}})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if value.Value() != tc.want {
+				t.Fatalf("inbound policy = %v, want %s", value.Value(), tc.want)
+			}
+		})
+	}
 }
 
 func readMeshManifest(t *testing.T, name string) map[string]map[string]any {
