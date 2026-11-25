@@ -207,6 +207,12 @@ func addServiceToContainer(c *restful.Container, handler *Handler) error {
 		Param(ws.PathParameter(ParamAppName, "the name of a application")).
 		Returns(http.StatusOK, "Success to get the application settings", nil))
 
+	ws.Route(ws.GET("/hardware/device-inventory").
+		To(handler.getClusterDeviceInventory).
+		Doc("List physical devices and exclusive reservation status for all nodes").
+		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
+		Returns(http.StatusOK, "Cluster device inventory", &ClusterDeviceInventoryResponse{}))
+
 	ws.Route(ws.GET("/applications/{"+ParamAppName+"}/device-inventory").
 		To(handler.getDeviceInventory).
 		Doc("list selectable physical devices for an application workload").
