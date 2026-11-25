@@ -54,7 +54,7 @@ spec:
           effect: NoSchedule
       containers:
         - name: generic-device-plugin
-          image: beclab/generic-device-plugin:0.0.1
+          image: beclab/generic-device-plugin:0.0.2
           imagePullPolicy: IfNotPresent
           args:
             - --platform-devices
