@@ -196,7 +196,7 @@ func SetTimeouts(tcpIdle, httpStream, connect, route, clusterIdle time.Duration)
 // filter chain or reach Authelia/upstream. Envoy matches case-insensitively.
 func clientSpoofableIdentityHeaders() []string {
 	return []string{
-		"x-bfl-user", "x-caller-appid", "x-caller-user",
+		"x-bfl-user", "x-caller-appid", "x-caller-user", "x-olares-caller-jwt",
 		"remote-user", "remote-groups", "remote-name", "remote-email", "remote-access-token", "authelia-nonce",
 		// Forwarding context is regenerated from the accepted connection.
 		"forwarded", "x-forwarded-for", "x-real-ip", "x-original-forwarded-for", "x-envoy-external-address",

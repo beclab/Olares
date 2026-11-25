@@ -122,6 +122,7 @@ func TestEntryIdentityResponseAndIngressContract(t *testing.T) {
 	}
 	dec := k8syaml.NewYAMLOrJSONDecoder(bytes.NewReader(raw), 4096)
 	policies := 0
+	sections := map[string]bool{}
 	for {
 		var obj map[string]any
 		err = dec.Decode(&obj)
@@ -135,6 +136,12 @@ func TestEntryIdentityResponseAndIngressContract(t *testing.T) {
 			continue
 		}
 		policies++
+		section, _, _ := unstructured.NestedString(obj, "spec", "targetRef", "sectionName")
+		target, _, _ := unstructured.NestedString(obj, "spec", "targetRef", "name")
+		if target != "app-gateway" || (section != "l4-mtls" && section != "l4-authz") || sections[section] {
+			t.Fatal("northbound strip must target each Entry listener exactly once")
+		}
+		sections[section] = true
 		h, _, _ := unstructured.NestedMap(obj, "spec", "headers", "earlyRequestHeaders")
 		got, _ := json.Marshal(h)
 		want, _ := json.Marshal(entryIdentityHeaderSettings())
@@ -164,5 +171,19 @@ func TestEntryIdentityRemovalSetDoesNotFlapOrReintroduceClaims(t *testing.T) {
 	h["remove"] = names[:len(names)-1]
 	if validEntryIdentityHeaders(h) {
 		t.Fatal("incomplete identity strip accepted")
+	}
+}
+
+func TestEntryRejectsPolicyWithoutInternalCredentialRemoval(t *testing.T) {
+	h := entryIdentityHeaderSettings()
+	removed := []any{}
+	for _, name := range h["remove"].([]any) {
+		if name != "x-olares-caller-jwt" {
+			removed = append(removed, name)
+		}
+	}
+	h["remove"] = removed
+	if validEntryIdentityHeaders(h) {
+		t.Fatal("Entry is ready while permitting external caller JWT replay")
 	}
 }

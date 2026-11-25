@@ -335,7 +335,7 @@ func hasInterceptedHTTPPort(ports []discoveryv1.EndpointPort, portName string, e
 // that verified edge context and replace the browser IP with a mesh Pod IP.
 func entryIdentityHeaderSettings() map[string]any {
 	return map[string]any{
-		"remove":        []any{"x-bfl-user", "x-caller-user", "x-caller-appid", "remote-user", "remote-groups", "remote-name", "remote-email", "remote-access-token", "authelia-nonce"},
+		"remove":        []any{"x-bfl-user", "x-caller-user", "x-caller-appid", "x-olares-caller-jwt", "remote-user", "remote-groups", "remote-name", "remote-email", "remote-access-token", "authelia-nonce"},
 		"removeOnMatch": []any{map[string]any{"type": "Prefix", "value": "remote-"}, map[string]any{"type": "Prefix", "value": "authelia-"}},
 	}
 }

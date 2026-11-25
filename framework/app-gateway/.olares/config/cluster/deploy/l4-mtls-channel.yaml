@@ -95,10 +95,11 @@ spec:
     name: app-gateway
     sectionName: l4-mtls
   # L4 supplies trusted forwarding context. Strip claimed user identities
-  # before ExtAuth; only the authorizer's response may reintroduce them.
+  # before authentication, including internal-only caller JWTs. This listener
+  # must not apply its JWT removal to the east-west injection path.
   headers:
     earlyRequestHeaders:
-      remove: [x-bfl-user, x-caller-user, x-caller-appid, remote-user, remote-groups, remote-name, remote-email, remote-access-token, authelia-nonce]
+      remove: [x-bfl-user, x-caller-user, x-caller-appid, x-olares-caller-jwt, remote-user, remote-groups, remote-name, remote-email, remote-access-token, authelia-nonce]
       removeOnMatch:
         - {type: Prefix, value: remote-}
         - {type: Prefix, value: authelia-}
@@ -129,10 +130,11 @@ spec:
     name: app-gateway
     sectionName: l4-authz
   # L4 supplies trusted forwarding context. Strip claimed user identities
-  # before ExtAuth; only the authorizer's response may reintroduce them.
+  # before authentication, including internal-only caller JWTs. This listener
+  # must not apply its JWT removal to the east-west injection path.
   headers:
     earlyRequestHeaders:
-      remove: [x-bfl-user, x-caller-user, x-caller-appid, remote-user, remote-groups, remote-name, remote-email, remote-access-token, authelia-nonce]
+      remove: [x-bfl-user, x-caller-user, x-caller-appid, x-olares-caller-jwt, remote-user, remote-groups, remote-name, remote-email, remote-access-token, authelia-nonce]
       removeOnMatch:
         - {type: Prefix, value: remote-}
         - {type: Prefix, value: authelia-}
