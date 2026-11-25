@@ -19,7 +19,7 @@ import (
 )
 
 func desktopEntrance() *srrv1alpha1.SharedRouteRegistry {
-	return &srrv1alpha1.SharedRouteRegistry{ObjectMeta: metav1.ObjectMeta{Namespace: "user-space-alice", Name: "sys-desktop", UID: "desktop", Labels: map[string]string{ManagedByLabel: ManagedByValue, InstanceLabel: gateway.SystemPlaneInstance, gateway.LabelSystemPlane: gateway.LabelSystemPlaneValue}, Annotations: map[string]string{gateway.AnnotationExtAuthUser: "alice"}}, Spec: srrv1alpha1.SharedRouteRegistrySpec{EntranceClass: srrv1alpha1.EntranceClassApplication, HostPatterns: []string{"desktop.alice.example.org"}, Upstream: srrv1alpha1.UpstreamRef{ServiceName: "desktop", Port: 80}}}
+	return &srrv1alpha1.SharedRouteRegistry{ObjectMeta: metav1.ObjectMeta{Namespace: "user-space-alice", Name: "sys-desktop", UID: "desktop", Labels: map[string]string{ManagedByLabel: ManagedByValue, InstanceLabel: gateway.SystemPlaneInstance, gateway.LabelSystemPlane: gateway.LabelSystemPlaneValue}, Annotations: map[string]string{gateway.AnnotationExtAuthUser: "alice"}}, Spec: srrv1alpha1.SharedRouteRegistrySpec{EntranceClass: srrv1alpha1.EntranceClassApplication, HostPatterns: gateway.SystemPlaneHostPatterns(gateway.SystemPlaneService{Name: "desktop"}, "alice.example.org", "alice", false), Upstream: srrv1alpha1.UpstreamRef{ServiceName: "desktop", Port: 80}}}
 }
 
 // Render the shipped template, not a second copy of its Envoy configuration.
