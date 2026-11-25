@@ -144,6 +144,9 @@ func ReconcileSharedRoute(ctx context.Context, c client.Client, gw GatewayRef, s
 	if srr == nil {
 		return ReconcileResult{}, fmt.Errorf("srr is nil")
 	}
+	if isSystemDesktopRoute(srr) && srr.Spec.RouteMode == srrv1alpha1.RouteModeDirect {
+		return routeUnavailable(ctx, c, gw, srr, ReasonInvalidSpec, "Desktop Entry requires gateway authorization", nil)
+	}
 	switch srr.Spec.RouteMode {
 	case srrv1alpha1.RouteModeDirect:
 		if err := reconcileL4AuthzRoute(ctx, c, gw, srr, false); err != nil {
@@ -818,6 +821,11 @@ func statusEqual(a, b srrv1alpha1.SharedRouteRegistryStatus) bool {
 
 func stampedBFLUser(srr *srrv1alpha1.SharedRouteRegistry) string {
 	if srr == nil || srr.Annotations == nil {
+		return ""
+	}
+	// A late route mutation must never replace the authenticated session user.
+	// Legacy owner stamps are valid only on explicitly unauthenticated apps.
+	if isApplicationSRR(srr) && srrAuthMode(srr) != gateway.AuthModeNone {
 		return ""
 	}
 	return strings.TrimSpace(srr.Annotations[gateway.AnnotationStampBFLUser])

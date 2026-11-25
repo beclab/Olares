@@ -214,6 +214,8 @@ func desiredApplicationExtAuthSecurityPolicy(srr *srrv1alpha1.SharedRouteRegistr
 	routeName := httpRouteName(srr)
 	autheliaNS := "user-system-" + user
 	authHTTP := map[string]any{
+		// Only authenticated response headers may establish upstream identity.
+		"headersToBackend": []any{"authorization", "proxy-authorization", "x-bfl-user", "remote-user", "remote-groups", "remote-name", "remote-email", "remote-access-token", "authelia-nonce"},
 		"backendRefs": []any{
 			map[string]any{
 				"group":     "",

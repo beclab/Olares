@@ -94,6 +94,14 @@ spec:
     kind: Gateway
     name: app-gateway
     sectionName: l4-mtls
+  # L4 supplies trusted forwarding context. Strip claimed user identities
+  # before ExtAuth; only the authorizer's response may reintroduce them.
+  headers:
+    earlyRequestHeaders:
+      remove: [x-bfl-user, x-caller-user, x-caller-appid, remote-user, remote-groups, remote-name, remote-email, remote-access-token, authelia-nonce]
+      removeOnMatch:
+        - {type: Prefix, value: remote-}
+        - {type: Prefix, value: authelia-}
   tls:
     clientValidation:
       mode: RequireAndVerify
@@ -120,6 +128,14 @@ spec:
     kind: Gateway
     name: app-gateway
     sectionName: l4-authz
+  # L4 supplies trusted forwarding context. Strip claimed user identities
+  # before ExtAuth; only the authorizer's response may reintroduce them.
+  headers:
+    earlyRequestHeaders:
+      remove: [x-bfl-user, x-caller-user, x-caller-appid, remote-user, remote-groups, remote-name, remote-email, remote-access-token, authelia-nonce]
+      removeOnMatch:
+        - {type: Prefix, value: remote-}
+        - {type: Prefix, value: authelia-}
   tls:
     clientValidation:
       mode: RequireAndVerify

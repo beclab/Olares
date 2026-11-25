@@ -72,6 +72,8 @@ spec:
         app: systemserver
         traffic.olares.io/platform-mesh: "true"
       annotations:
+        # Static Envoy bootstrap changes require a new Pod, not just a CM update.
+        traffic.olares.io/auth-proxy-context-version: "1"
         linkerd.io/inject: enabled
         config.linkerd.io/default-inbound-policy: cluster-authenticated
         traffic.olares.io/mtls-mode: Required
@@ -210,6 +212,9 @@ data:
                     "@type": type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
                     stat_prefix: destination
                     cluster: cluster_nats_proxy
+        # Bind tenant context only on the authorization hop, never on the
+        # original browser/business request. Session identity comes back from
+        # Authelia and is imported by the gateway after authorization succeeds.
         - name: listener_auth_backend_proxy
           address:
             socket_address:
@@ -217,11 +222,33 @@ data:
               port_value: 9091
           filter_chains:
             - filters:
-                - name: envoy.filters.network.tcp_proxy
+                - name: envoy.filters.network.http_connection_manager
                   typed_config:
-                    "@type": type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
-                    stat_prefix: destination
-                    cluster: cluster_auth_backend_proxy
+                    "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                    stat_prefix: auth_backend_proxy
+                    use_remote_address: false
+                    skip_xff_append: true
+                    request_headers_timeout: 10s
+                    stream_idle_timeout: 60s
+                    route_config:
+                      name: tenant_auth_backend
+                      virtual_hosts:
+                        - name: tenant_auth_backend
+                          domains: ["*"]
+                          routes:
+                            - match: { prefix: "/" }
+                              route:
+                                cluster: cluster_auth_backend_proxy
+                                timeout: 15s
+                              request_headers_to_add:
+                                - header:
+                                    key: X-BFL-USER
+                                    value: {{ .Values.bfl.username | quote }}
+                                  append_action: OVERWRITE_IF_EXISTS_OR_ADD
+                    http_filters:
+                      - name: envoy.filters.http.router
+                        typed_config:
+                          "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
         - name: listener_knowledge_api_proxy
           address:
             socket_address:

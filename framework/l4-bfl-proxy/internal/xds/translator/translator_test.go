@@ -62,8 +62,11 @@ func headerMutationRemoves(t *testing.T, mutations []*mutationrulesv3.HeaderMuta
 	t.Helper()
 	out := make([]string, 0, len(mutations))
 	for _, m := range mutations {
-		require.NotEmpty(t, m.GetRemove())
-		out = append(out, m.GetRemove())
+		if m.GetRemove() != "" {
+			out = append(out, m.GetRemove())
+			continue
+		}
+		require.Contains(t, []string{"remote-", "authelia-"}, m.GetRemoveOnMatch().GetKeyMatcher().GetPrefix())
 	}
 	return out
 }
@@ -1012,7 +1015,7 @@ func TestTranslate_HTTPSListeners(t *testing.T) {
 	require.Len(t, hcm.GetEarlyHeaderMutationExtensions(), 1)
 	early := &earlyheadermutationv3.HeaderMutation{}
 	require.NoError(t, hcm.GetEarlyHeaderMutationExtensions()[0].GetTypedConfig().UnmarshalTo(early))
-	assert.Equal(t, []string{"x-bfl-user", "x-caller-appid"}, headerMutationRemoves(t, early.GetMutations()),
+	assert.Equal(t, clientSpoofableIdentityHeaders(), headerMutationRemoves(t, early.GetMutations()),
 		"early mutation must strip forged client identity before any HTTP filter")
 
 	require.GreaterOrEqual(t, len(hcm.GetHttpFilters()), 2)
@@ -1020,7 +1023,7 @@ func TestTranslate_HTTPSListeners(t *testing.T) {
 		"HeaderMutation must be the first HTTP filter (before ExtAuth)")
 	stripFilter := &headermutationv3.HeaderMutation{}
 	require.NoError(t, hcm.GetHttpFilters()[0].GetTypedConfig().UnmarshalTo(stripFilter))
-	assert.Equal(t, []string{"x-bfl-user", "x-caller-appid"},
+	assert.Equal(t, clientSpoofableIdentityHeaders(),
 		headerMutationRemoves(t, stripFilter.GetMutations().GetRequestMutations()))
 	assert.Equal(t, "envoy.filters.http.ext_authz", hcm.GetHttpFilters()[1].GetName(),
 		"ExtAuth must run after client identity strip")
@@ -1057,7 +1060,9 @@ func TestSpoofableAppIdentityHeadersToRemove(t *testing.T) {
 	got := spoofableAppIdentityHeadersToRemove()
 	require.Equal(t, []string{"x-caller-appid"}, got)
 	require.Equal(t, got, spoofableAppIdentityHeadersToRemove())
-	require.Equal(t, []string{"x-bfl-user", "x-caller-appid"}, clientSpoofableIdentityHeaders())
+	for _, name := range []string{"x-bfl-user", "remote-user", "remote-groups", "x-forwarded-for", "x-real-ip", "forwarded", "x-original-forwarded-for"} {
+		require.Contains(t, clientSpoofableIdentityHeaders(), name)
+	}
 }
 
 func TestAutheliaAllowedUpstreamHeadersIncludesXBFLUser(t *testing.T) {
@@ -1316,9 +1321,9 @@ func TestTranslateRoute_NonDefaultPathKeepsFullOverride(t *testing.T) {
 	assert.Equal(t, "/api/authz/ext-authz/", hs.GetPathPrefix())
 	require.NotNil(t, hs.GetAuthorizationRequest())
 	headers := hs.GetAuthorizationRequest().GetHeadersToAdd()
-	require.Len(t, headers, 7)
-	assert.Equal(t, "X-BFL-USER", headers[6].GetKey())
-	assert.Equal(t, "alice", headers[6].GetValue())
+	require.Len(t, headers, 9)
+	assert.Equal(t, "X-BFL-USER", headers[8].GetKey())
+	assert.Equal(t, "alice", headers[8].GetValue())
 }
 
 func TestTranslateRoute_BypassSourceCIDR(t *testing.T) {

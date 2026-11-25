@@ -59,6 +59,19 @@ func TestSystemPlaneRouteReconcilerCreatesSRRs(t *testing.T) {
 	if desktop.Annotations[gateway.AnnotationAuthMode] != gateway.AuthModeExtAuth {
 		t.Fatalf("desktop mode=%s", desktop.Annotations[gateway.AnnotationAuthMode])
 	}
+	desktop.Annotations[gateway.AnnotationStampBFLUser] = "alice"
+	if err := c.Update(context.Background(), desktop); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := r.Reconcile(context.Background(), reconcile.Request{NamespacedName: types.NamespacedName{Namespace: cm.Namespace, Name: cm.Name}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Get(context.Background(), types.NamespacedName{Namespace: cm.Namespace, Name: desktop.Name}, desktop); err != nil {
+		t.Fatal(err)
+	}
+	if desktop.Annotations[gateway.AnnotationStampBFLUser] != "" {
+		t.Fatal("legacy Desktop owner stamp survived reconciliation")
+	}
 	if err := c.Delete(context.Background(), cm); err != nil {
 		t.Fatal(err)
 	}

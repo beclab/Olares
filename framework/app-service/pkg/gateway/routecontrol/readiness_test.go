@@ -75,6 +75,7 @@ func TestServingReadinessWaitsForPolicyAndMeshedEndpoints(t *testing.T) {
 	entryPolicy := func(gvk schema.GroupVersionKind, name, section string, status map[string]any) *unstructured.Unstructured {
 		policy := obj(gvk, defaultGatewayNS, name, status)
 		policy.Object["spec"] = map[string]any{
+			"headers": map[string]any{"earlyRequestHeaders": entryIdentityHeaderSettings()},
 			"targetRef": map[string]any{
 				"group": "gateway.networking.k8s.io", "kind": "Gateway", "name": defaultGatewayName, "sectionName": section,
 			},
