@@ -48,6 +48,33 @@ func gatewayDataPlanePods(gateway string) map[string]string {
 	}
 }
 
+// GatewayBootstrapEgressRules must accompany the first route egress policy.
+// Route policies already isolate the data plane before namespace-wide egress
+// readiness can be established. Keep DNS, mesh discovery and xDS reachable in
+// that same write so configuration updates can finish without that readiness.
+func GatewayBootstrapEgressRules(dns, controller *corev1.Service) []netv1.NetworkPolicyEgressRule {
+	rules := []netv1.NetworkPolicyEgressRule{
+		CoreDNSEgressRule(dns),
+		{
+			To: []netv1.NetworkPolicyPeer{{NamespaceSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{"kubernetes.io/metadata.name": "os-mesh"},
+			}}},
+			Ports: []netv1.NetworkPolicyPort{tcpPort(8080), tcpPort(8086), tcpPort(8090)},
+		},
+	}
+	flow := platformServiceFlow{service: types.NamespacedName{Namespace: "os-gateway", Name: "envoy-gateway"},
+		to: envoyControllerPods, servicePort: 18000, targetPort: 18000}
+	if verified := flow.egressRules(controller); len(verified) > 0 {
+		return append(rules, verified...)
+	}
+	// The fixed Pod peer is safe even while the Service is absent or invalid.
+	// Service VIP grants require the same validation as platform traffic flows.
+	return append(rules, netv1.NetworkPolicyEgressRule{
+		To:    []netv1.NetworkPolicyPeer{platformPeer(flow.service.Namespace, flow.to)},
+		Ports: []netv1.NetworkPolicyPort{tcpPort(18000)},
+	})
+}
+
 func workload(namespace, key, value string) platformWorkload {
 	return platformWorkload{namespace, map[string]string{key: value}}
 }

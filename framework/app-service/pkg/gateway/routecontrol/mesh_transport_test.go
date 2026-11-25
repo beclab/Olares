@@ -2,11 +2,13 @@ package routecontrol
 
 import (
 	"context"
+	"errors"
 	"reflect"
 	"slices"
 	"testing"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway"
+	"github.com/beclab/Olares/framework/app-service/pkg/security"
 
 	srrv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/gateway/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -19,6 +21,7 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -59,7 +62,15 @@ func TestGatewayTransportScopesAndWithdrawsOnBackendLoss(t *testing.T) {
 				t.Fatalf("backend ingress widened: %+v", rule)
 			}
 		}
-		for _, rule := range policy.Spec.Egress {
+		routeRules := policy.Spec.Egress
+		if len(routeRules) > 0 {
+			bootstrap := security.GatewayBootstrapEgressRules(nil, nil)
+			if len(routeRules) != 2+len(bootstrap) || !reflect.DeepEqual(routeRules[2:], bootstrap) {
+				t.Fatalf("unexpected gateway bootstrap grants: %+v", routeRules)
+			}
+			routeRules = routeRules[:2]
+		}
+		for _, rule := range routeRules {
 			for _, peer := range rule.To {
 				if peer.IPBlock != nil {
 					if peer.IPBlock.CIDR != "10.96.0.12/32" || !reflect.DeepEqual(rule.Ports, []netv1.NetworkPolicyPort{meshTransportPort(80)}) {
@@ -85,6 +96,85 @@ func TestGatewayTransportScopesAndWithdrawsOnBackendLoss(t *testing.T) {
 	}
 	if err := c.List(ctx, &policies, selector); err != nil || len(policies.Items) != 0 {
 		t.Fatalf("stale transport permits remained: %+v %v", policies.Items, err)
+	}
+}
+
+func TestGatewayBootstrapPrecedesIsolationAndRepairsOldRoutePolicy(t *testing.T) {
+	ctx := t.Context()
+	svc := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: "user-space-alice", Name: "demo"},
+		Spec: corev1.ServiceSpec{Selector: map[string]string{"app": "demo"},
+			Ports: []corev1.ServicePort{{Name: "http", Port: 80, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt(8080)}}}}
+	srr := &srrv1alpha1.SharedRouteRegistry{ObjectMeta: metav1.ObjectMeta{Namespace: svc.Namespace, Name: "demo", UID: "route"},
+		Spec: srrv1alpha1.SharedRouteRegistrySpec{RouteMode: srrv1alpha1.RouteModeGateway,
+			EntranceClass: srrv1alpha1.EntranceClassShared, HostPatterns: []string{"demo.example.org"},
+			Upstream: srrv1alpha1.UpstreamRef{ServiceName: svc.Name, Port: 80}}}
+	objects := meshedServiceObjects(svc, srr)
+	objects[2].(*discoveryv1.EndpointSlice).Ports[0].Port = ptr.To(int32(8080))
+	var writes int
+	checkWrite := func(obj client.Object) {
+		t.Helper()
+		np, ok := obj.(*netv1.NetworkPolicy)
+		if !ok || np.Namespace != "os-gateway" || len(np.Spec.Egress) == 0 {
+			return
+		}
+		writes++
+		if np.Spec.PodSelector.MatchLabels["gateway.envoyproxy.io/owning-gateway-name"] != "app-gateway" ||
+			np.Spec.PodSelector.MatchLabels["linkerd.io/control-plane-ns"] != "os-mesh" {
+			t.Fatalf("bootstrap widened source selector: %+v", np.Spec.PodSelector)
+		}
+		ports := map[int]bool{}
+		for _, rule := range np.Spec.Egress {
+			if len(rule.To) == 0 {
+				t.Fatal("bootstrap grants an unrestricted destination")
+			}
+			for _, port := range rule.Ports {
+				ports[port.Port.IntValue()] = true
+			}
+		}
+		for _, port := range []int{53, 8080, 8086, 8090, 18000} {
+			if !ports[port] {
+				t.Fatalf("first egress write lacks bootstrap port %d", port)
+			}
+		}
+	}
+	c := fake.NewClientBuilder().WithScheme(testScheme(t)).WithObjects(objects...).
+		WithInterceptorFuncs(interceptor.Funcs{Create: func(ctx context.Context, c client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
+			checkWrite(obj)
+			return c.Create(ctx, obj, opts...)
+		}}).Build()
+	if result, err := ReconcileSharedRoute(ctx, c, GatewayRef{}, srr); err != nil || result.Status != metav1.ConditionTrue || writes == 0 {
+		t.Fatalf("route bootstrap failed without namespace readiness: %+v %v, writes %d", result, err, writes)
+	}
+	key := client.ObjectKey{Namespace: "os-gateway", Name: "olares-route-" + transportLabels(client.ObjectKeyFromObject(srr))[routeTransportLabel] + "-http-egress"}
+	var old netv1.NetworkPolicy
+	if err := c.Get(ctx, key, &old); err != nil {
+		t.Fatal(err)
+	}
+	want := old.DeepCopy()
+	old.Spec.Egress = old.Spec.Egress[:1]
+	if err := c.Update(ctx, &old); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ReconcileSharedRoute(ctx, c, GatewayRef{}, srr); err != nil {
+		t.Fatal(err)
+	}
+	var repaired netv1.NetworkPolicy
+	if err := c.Get(ctx, key, &repaired); err != nil || !reflect.DeepEqual(repaired.Spec, want.Spec) || repaired.UID != old.UID {
+		t.Fatalf("old route policy was not repaired in place: %v", err)
+	}
+	readError := errors.New("bootstrap service unavailable")
+	broken := interceptor.NewClient(c, interceptor.Funcs{Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+		if key == (client.ObjectKey{Namespace: "os-gateway", Name: "envoy-gateway"}) {
+			return readError
+		}
+		return c.Get(ctx, key, obj, opts...)
+	}})
+	if err := applyMeshTransport(ctx, broken, GatewayRef{}, srr, svc, 80, nil); !errors.Is(err, readError) {
+		t.Fatalf("bootstrap read failure ignored: %v", err)
+	}
+	var after netv1.NetworkPolicy
+	if err := c.Get(ctx, key, &after); err != nil || after.ResourceVersion != repaired.ResourceVersion {
+		t.Fatalf("failed dependency read changed live grants: %v", err)
 	}
 }
 
