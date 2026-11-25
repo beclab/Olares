@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
@@ -79,6 +80,12 @@ func (h *Handler) consumerGPUPatch(ctx context.Context, workload string, tpl *co
 		}
 	}
 
+	for key, value := range consumerPodLabels(appCfg, workload) {
+		if patchBytes, err = appendJSONPatch(patchBytes, templateLabelOp(tpl, key, &value)); err != nil {
+			return nil, false, err
+		}
+	}
+
 	// Zero replicas is the install gate or a suspended app; leave it alone.
 	if replicas != nil && *replicas > 0 && len(rows) > 0 {
 		want := consumer.PodReplicas(len(rows), len(nodes))
@@ -91,6 +98,40 @@ func (h *Handler) consumerGPUPatch(ctx context.Context, workload string, tpl *co
 		}
 	}
 	return patchBytes, true, nil
+}
+
+// templateLabelOp sets (value non-nil) or removes a pod template label. The
+// app-label webhook only sees creates, so labels an upgrade must change are
+// written here, where updates are admitted too.
+func templateLabelOp(tpl *corev1.PodTemplateSpec, key string, value *string) map[string]any {
+	if value == nil {
+		return map[string]any{"op": constants.PatchOpRemove, "path": "/spec/template/metadata/labels/" + jsonPointerEscape(key)}
+	}
+	if tpl.Labels == nil {
+		tpl.Labels = map[string]string{}
+		return map[string]any{"op": constants.PatchOpAdd, "path": "/spec/template/metadata/labels", "value": map[string]string{key: *value}}
+	}
+	return map[string]any{"op": constants.PatchOpAdd, "path": "/spec/template/metadata/labels/" + jsonPointerEscape(key), "value": *value}
+}
+
+// staleConsumerLabelsPatch removes the consumer labels a workload that holds
+// no cards may carry from an earlier render.
+func staleConsumerLabelsPatch(tpl *corev1.PodTemplateSpec) ([]byte, error) {
+	var patchBytes []byte
+	var err error
+	for _, key := range []string{constants.AppGPUConsumerLabel, constants.AppPodGPUConsumePolicy} {
+		if _, ok := tpl.Labels[key]; !ok {
+			continue
+		}
+		if patchBytes, err = appendJSONPatch(patchBytes, templateLabelOp(tpl, key, nil)); err != nil {
+			return nil, err
+		}
+	}
+	return patchBytes, nil
+}
+
+func jsonPointerEscape(s string) string {
+	return strings.NewReplacer("~", "~0", "/", "~1").Replace(s)
 }
 
 func appendJSONPatch(patchBytes []byte, op map[string]any) ([]byte, error) {

@@ -153,6 +153,7 @@ func (o *Ops) refreshUpgradeChart(ctx context.Context, req ports.WorkloadRequest
 	}
 	appConfig.Ports = cfg.Ports
 	appConfig.TailScale = cfg.TailScale
+	appConfig.SelectedGpuTypes = cfg.SelectedGpuTypes
 	return o.patchSpecConfig(ctx, req, appConfig)
 }
 

@@ -443,6 +443,14 @@ func (h *Handler) gpuLimitMutate(ctx context.Context, req *admissionv1.Admission
 			return h.sidecarWebhook.AdmissionError(req.UID, err)
 		}
 		if !inject {
+			strip, err := staleConsumerLabelsPatch(tpl)
+			if err != nil {
+				return h.sidecarWebhook.AdmissionError(req.UID, err)
+			}
+			if len(strip) > 0 {
+				attachmentPatch = combineJSONPatches(attachmentPatch, strip)
+				h.sidecarWebhook.PatchAdmissionResponse(resp, attachmentPatch)
+			}
 			return cleanupAndReturn()
 		}
 		if len(patchBytes) > 0 {
@@ -1356,13 +1364,9 @@ func makePatches(req *admissionv1.AdmissionRequest, appCfg *appcfg.ApplicationCo
 	var patchBytes []byte
 	var tpl *corev1.PodTemplateSpec
 	var gpuPolicy string
-	var consumerLabels map[string]string
 	computeReq, ok := compute.SelectedRequirement(appCfg)
-	requiresGPU := ok && computeReq.Mode != utils.CPUType
-	if appCfg.HasGPUConsumers() {
-		consumerLabels = consumerPodLabels(appCfg, req.Name)
-		requiresGPU = false
-	}
+	// Consumer apps get their GPU labels from the gpu-limit webhook.
+	requiresGPU := ok && computeReq.Mode != utils.CPUType && !appCfg.HasGPUConsumers()
 	if requiresGPU {
 		switch p := strings.TrimSpace(appCfg.PodGPUConsumePolicy); p {
 		case "all", "single":
@@ -1394,9 +1398,6 @@ func makePatches(req *admissionv1.AdmissionRequest, appCfg *appcfg.ApplicationCo
 		tpl.ObjectMeta.Labels[constants.ApplicationRawAppNameLabel] = appCfg.RawAppName
 		if gpuPolicy != "" {
 			tpl.ObjectMeta.Labels[constants.AppPodGPUConsumePolicy] = gpuPolicy
-		}
-		for k, v := range consumerLabels {
-			tpl.ObjectMeta.Labels[k] = v
 		}
 		if len(fixedMAC) != 0 && fixedMAC[0] {
 			if deploy.Spec.Replicas != nil && *deploy.Spec.Replicas > 1 {
@@ -1430,9 +1431,6 @@ func makePatches(req *admissionv1.AdmissionRequest, appCfg *appcfg.ApplicationCo
 
 		if gpuPolicy != "" {
 			tpl.ObjectMeta.Labels[constants.AppPodGPUConsumePolicy] = gpuPolicy
-		}
-		for k, v := range consumerLabels {
-			tpl.ObjectMeta.Labels[k] = v
 		}
 		current, err := json.Marshal(sts)
 		if err != nil {

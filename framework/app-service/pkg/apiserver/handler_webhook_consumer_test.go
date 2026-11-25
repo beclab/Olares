@@ -139,14 +139,38 @@ func TestConsumerPatchPinsNonHAMIModesToTheirRow(t *testing.T) {
 			"igpu": {Accelerator: &manifest.WorkloadAccelerator{Modes: []appcfg.ResourceMode{{Mode: "intel"}}}},
 		},
 	}
-	tpl := &corev1.PodTemplateSpec{Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "igpu"}}}}
+	tpl := &corev1.PodTemplateSpec{
+		ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"app": "igpu"}},
+		Spec:       corev1.PodSpec{Containers: []corev1.Container{{Name: "igpu"}}},
+	}
 	patch, inject, err := handler.consumerGPUPatch(context.Background(), "igpu", tpl, ptr.To[int32](1), cfg)
 	if err != nil || !inject {
 		t.Fatalf("unexpected %v %v", inject, err)
 	}
-	selector, ok := decodePatch(t, patch)["/spec/template/spec/nodeSelector"]
+	ops := decodePatch(t, patch)
+	selector, ok := ops["/spec/template/spec/nodeSelector"]
 	if !ok || string(selector.Value) != `{"kubernetes.io/hostname":"b"}` {
 		t.Fatalf("intel pod must run on the node its row accounts for: %s", patch)
+	}
+	if label := ops["/spec/template/metadata/labels/gpu.bytetrade.io~1consumer"]; string(label.Value) != `"igpu"` {
+		t.Fatalf("the template must carry the consumer label, which upgrades only see here: %s", patch)
+	}
+}
+
+func TestStaleConsumerLabelsAreRemoved(t *testing.T) {
+	tpl := &corev1.PodTemplateSpec{ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{
+		"app": "web", constants.AppGPUConsumerLabel: "web", constants.AppPodGPUConsumePolicy: "single",
+	}}}
+	patch, err := staleConsumerLabelsPatch(tpl)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ops := decodePatch(t, patch)
+	if len(ops) != 2 || ops["/spec/template/metadata/labels/gpu.bytetrade.io~1consumer"].Op != constants.PatchOpRemove {
+		t.Fatalf("both GPU labels should be removed: %s", patch)
+	}
+	if patch, _ := staleConsumerLabelsPatch(&corev1.PodTemplateSpec{}); len(patch) != 0 {
+		t.Fatalf("nothing to remove, got %s", patch)
 	}
 }
 
