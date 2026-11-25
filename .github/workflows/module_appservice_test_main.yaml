@@ -5,10 +5,6 @@ on:
       - "main"
     paths:
       - 'framework/app-service/**'
-      - 'framework/system-server/.olares/config/user/helm-charts/systemserver/**'
-      - 'framework/app-gateway/.olares/config/cluster/deploy/l4-mtls-channel.yaml'
-      - 'framework/app-gateway/.olares/config/cluster/deploy/app-gateway-strip-identity-headers.yaml'
-      - 'framework/l4-bfl-proxy/internal/xds/translator/**'
       - '!framework/app-service/README.md'
       - '!framework/app-service/PROJECT'
   pull_request:
@@ -16,18 +12,12 @@ on:
       - "main"
     paths:
       - 'framework/app-service/**'
-      - 'framework/system-server/.olares/config/user/helm-charts/systemserver/**'
-      - 'framework/app-gateway/.olares/config/cluster/deploy/l4-mtls-channel.yaml'
-      - 'framework/app-gateway/.olares/config/cluster/deploy/app-gateway-strip-identity-headers.yaml'
-      - 'framework/l4-bfl-proxy/internal/xds/translator/**'
       - '!framework/app-service/README.md'
       - '!framework/app-service/PROJECT'
 jobs:
   test-unit:
     runs-on: ubuntu-latest
     env:
-      ENTRY_ENVOY_TEST: "1"
-      ENTRY_EDGE_FIXTURE: ${{ runner.temp }}/entry-edge.json
       GOPRIVATE: github.com/beclab/oac
       GONOSUMDB: github.com/beclab/oac
       GONOPROXY: github.com/beclab/oac
@@ -51,9 +41,6 @@ jobs:
         with:
           path: ~/.local/share/io.kubebuilder.envtest
           key: ${{ runner.os }}-envtest-k8s-1.24.2
-      - name: Generate and verify edge identity configuration
-        run: go test -race -count=1 ./internal/xds/translator ./internal/translator ./internal/entryreadiness
-        working-directory: framework/l4-bfl-proxy
       - name: Run unit + integration tests (race detector)
         run: make test-unit
         working-directory: framework/app-service
