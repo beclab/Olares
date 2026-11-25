@@ -1,6 +1,6 @@
 ---
 outline: [2, 3]
-description: Create videos with sound locally using MiniMax H3 on Olares, animate images, continue a shot, and guide new clips with reference media.
+description: Create videos with sound locally using MiniMax H3 on Olares, animate images, continue a video, and guide new clips with reference media.
 head:
   - - meta
     - name: keywords
@@ -19,20 +19,10 @@ AI prompt optimization uses a chat model connected through Router to refine and 
 ## Learning objectives
 
 - Install the app and check that its video models are ready.
-- Create a short fashion film from a text description.
-- Use frames and reference media to guide another shot.
-- Save still frames, reuse settings, and download your videos.
-
-:::info MiniMax H3 or FastH3?
-MiniMax H3 offers two speed settings:
-
-- **Quality priority**: Uses 20 generation steps for all three input modes: **Text**, **Frames**, and **References**.
-- **Fast**: Uses Lightning LoRA to reduce generation time, with 8 steps for **Text** and **Frames**, or 4 steps for **References**.
-
-FastH3 is a separate app that uses eight-step distilled models.
-
-Choose MiniMax H3 when you want to try ideas quickly, then spend more time on a version you plan to keep. Choose FastH3 when your priority is to try many different prompts and movements quickly. Both support text, frames, and reference media.
-:::
+- Generate a video from text and refine it with AI optimization.
+- Animate an image, and continue a video from its last frame.
+- Guide a new video with reference media.
+- Find and download your videos.
 
 ## Prerequisites
 
@@ -45,7 +35,7 @@ Choose MiniMax H3 when you want to try ideas quickly, then spend more time on a 
 1. Open Market and search for "MiniMax H3".
 2. Click **Get**, then **Install**, and wait for installation to complete.
 3. Open MiniMax H3 from Launchpad. On first start, the app prepares its video models. Wait for the workspace to open.
-4. In **Settings**, click **Open the Model Console**. Wait until it shows **Ready** and ComfyUI shows **up**.
+4. In **Settings**, click **Open the Model Console**. Wait until it shows **Ready** and ComfyUI, the generation engine, shows **up**.
 
 ::: tip First generation takes longer
 The first generation also loads the models into memory, so it takes longer than later runs. Follow its progress in **Results**.
@@ -96,7 +86,7 @@ Use **Text** to start with a description alone. This example creates a five-seco
 
    | Setting | <nobr>This example</nobr> | How to choose |
    | --- | --- | --- |
-   | **Speed** | **Quality priority** | Select **Fast** for a quicker preview with fewer generation steps. |
+   | **Speed** | **Quality priority** | MiniMax H3 offers two speed settings:<ul><li>**Quality priority**: 20 generation steps for all three input modes.</li><li>**Fast**: Fewer steps for quicker results, 8 for **Text** and **Frames**, or 4 for **References**.</li></ul> |
    | **Seed** | **Random** | Keep the default for your first generation. |
 
 7. Click **Generate** and wait for the task to complete.
@@ -108,17 +98,18 @@ Use **Text** to start with a description alone. This example creates a five-seco
 
 ## Animate images with Frames
 
-Use **Frames** to animate a photograph or illustration. A start frame sets the opening image, and an optional end frame guides where the shot ends.
+Use **Frames** to animate a photograph or illustration, or a frame from a generated video. A start frame sets the opening image, and an optional end frame guides where the shot ends.
 
 1. Go to **Create** and select **Frames**. Click **Start frame** and upload an image or choose one from the library.
 2. To use a frame from a generated video instead, pause the video at the desired moment, fine-tuning with **Previous frame** and **Next frame**, then choose **Grab frame** > **Use as first frame** or **Use as last frame**.
 3. To guide where the shot ends, add an image under **End frame (Optional)**. Keep the subject and composition compatible with the start frame.
 4. In **Prompt**, describe how the subject and camera should move and what should stay the same, such as the person's appearance, outfit, and lighting.
 5. Choose the duration and quality, then click **Generate**. **Aspect** follows the start frame.
+6. Wait for the task to complete, then open the result and play it.
 
 ### Continue from the last frame
 
-To continue the courtyard video from the previous section, use **Continue** to load its last frame as the next clip's start frame.
+Use **Continue** to load a video's last frame as the start frame of the next clip. This example continues the courtyard video from the text section.
 
 1. Open the finished video and click **Continue** below the player. This switches to **Frames** and adds the video's last frame as **Start frame**.
 2. Replace the prompt with what should happen next. For example:
@@ -143,7 +134,7 @@ The reference tray accepts up to five images, one video, and one audio clip, wit
 When combining inputs, mention each one where you describe its purpose, such as a person image for appearance or a video for motion. Include at least an image or a video. An audio clip alone is not enough for **References**.
 :::
 
-1. Open the courtyard video, pause at a clear view of the person, and choose **Grab frame** > **Library only**.
+1. Open the courtyard video from the text section, pause at a clear view of the person, and choose **Grab frame** > **Library only**.
 2. Select **References**. Click **Add media** > **From library**, select the saved frame, and click **Choose**. Use **Upload files** instead to start with your own material.
 3. In **Prompt**, type `@` and choose the image. Explain what to keep from it and what to change:
 
@@ -161,7 +152,9 @@ When combining inputs, mention each one where you describe its purpose, such as 
 
 ## Find and download your videos
 
-### Find a video
+**Create** groups your results by generation task, and **Library** stores your videos and saved frames.
+
+### Find videos
 
 Choose where to search based on what you remember:
 
@@ -173,11 +166,11 @@ Choose where to search based on what you remember:
 - A single video: Open it from **Results** or **Library**, then click **Download** below the player to save it to your computer.
 - Multiple videos: Go to **Library**, select **Videos**, select the checkboxes for the videos you want, and click **Download**.
 
-## Common issues
+## FAQs
 
 ### Why is the first generation taking longer?
 
-The app loads its models before generating. Check **Settings** > **Open the Model Console** if model preparation has not finished, and follow the task status in **Results**. Higher resolution and longer clips also take more work. Use **Fast** to preview a shot before refining it.
+The app loads its models before generating. Check **Settings** > **Open the Model Console** if model preparation has not finished, and follow the task status in **Results**. Higher resolution and longer clips also take more work.
 
 ### Why is Generate unavailable in References mode?
 
@@ -186,6 +179,15 @@ Add at least one reference image or video and enter a prompt. Check the file cou
 ### Can I adjust the underlying workflow?
 
 Open **Settings** and find **Open workflows in ComfyUI**. Choose the workflow for **Text**, **Frames**, or **References**, including its fast variant when needed, to open the node editor.
+
+### What is the difference between MiniMax H3 and FastH3?
+
+MiniMax H3 offers two speed settings:
+
+- **Quality priority**: Uses 20 generation steps for **Text**, **Frames**, and **References**.
+- **Fast**: Uses Lightning LoRA to reduce generation time, with 8 steps for **Text** and **Frames**, or 4 steps for **References**.
+
+FastH3 is a separate app that uses eight-step distilled models. Choose MiniMax H3 when you want to try ideas quickly, then spend more time on a version you plan to keep. Choose FastH3 when your priority is to try many different prompts and movements quickly. Both support text, frames, and reference media.
 
 ## Learn more
 
