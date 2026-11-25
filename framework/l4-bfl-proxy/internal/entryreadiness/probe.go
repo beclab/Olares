@@ -52,6 +52,8 @@ func (g Gateway) verify(ctx context.Context, client *http.Client, zone string) e
 		path string
 	}{
 		{g.EntryPort, login, "/"},
+		{g.EntryPort, desktop, "/"},
+		{g.EntryPort, desktop, "/favicon.ico"},
 		{g.AuthPort, desktop, "/api/verify"},
 	} {
 		address := "https://" + net.JoinHostPort(g.Host, strconv.FormatUint(uint64(probe.port), 10)) + probe.path
@@ -60,35 +62,43 @@ func (g Gateway) verify(ctx context.Context, client *http.Client, zone string) e
 			return err
 		}
 		req.Host = probe.host
-		if probe.port == g.AuthPort {
+		if probe.host == desktop {
+			originalPath := probe.path
+			if probe.port == g.AuthPort {
+				originalPath = "/"
+			}
 			req.Header.Set("Accept", "text/html")
-			req.Header.Set("X-Original-URL", "https://"+desktop+"/")
+			req.Header.Set("X-Original-URL", "https://"+desktop+originalPath)
 			req.Header.Set("X-Original-Method", http.MethodGet)
 			req.Header.Set("X-Forwarded-Host", desktop)
 			req.Header.Set("X-Forwarded-Proto", "https")
 		}
 		resp, err := client.Do(req)
 		if err != nil {
-			return fmt.Errorf("probe Entry mTLS on port %d: %w", probe.port, err)
+			return fmt.Errorf("probe Entry mTLS on port %d for %s%s: %w", probe.port, probe.host, probe.path, err)
 		}
 		_ = resp.Body.Close()
-		if probe.port == g.EntryPort && resp.StatusCode == http.StatusOK {
+		if probe.host == login && resp.StatusCode == http.StatusOK {
 			continue
 		}
-		if probe.port == g.AuthPort {
+		if probe.host == desktop {
 			switch resp.StatusCode {
 			case http.StatusUnauthorized, http.StatusForbidden:
-				continue
+				// A browser navigation must receive a login redirect. The
+				// separate authorization listener can also deny anonymously.
+				if probe.port == g.AuthPort {
+					continue
+				}
 			case http.StatusFound, http.StatusSeeOther, http.StatusTemporaryRedirect, http.StatusPermanentRedirect:
 				target, err := url.Parse(resp.Header.Get("Location"))
 				if err == nil && target.Scheme == "https" && target.User == nil &&
 					strings.EqualFold(target.Hostname(), login) && (target.Port() == "" || target.Port() == "443") {
 					continue
 				}
-				return fmt.Errorf("Entry authorization on port %d did not redirect to its HTTPS login host", probe.port)
+				return fmt.Errorf("Entry authorization on port %d for %s%s did not redirect to its HTTPS login host", probe.port, probe.host, probe.path)
 			}
 		}
-		return fmt.Errorf("Entry readiness probe on port %d returned HTTP %d", probe.port, resp.StatusCode)
+		return fmt.Errorf("Entry readiness probe on port %d for %s%s returned HTTP %d", probe.port, probe.host, probe.path, resp.StatusCode)
 	}
 	return nil
 }

@@ -333,6 +333,19 @@ func TestApplyDesktopExtAuthReplacesLegacyPath(t *testing.T) {
 	if len(backends) != 1 || backends[0].(map[string]any)["namespace"] != "user-system-alice" {
 		t.Fatalf("Desktop authorization must use the tenant backend: %v", backends)
 	}
+	if backends[0].(map[string]any)["weight"] != int64(1) {
+		t.Fatalf("authorization policy must explicitly set the API default backend weight: %v", backends)
+	}
+	version := got.GetResourceVersion()
+	if err := applySecurityPolicy(ctx, c, srr); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Get(ctx, types.NamespacedName{Namespace: got.GetNamespace(), Name: got.GetName()}, got); err != nil {
+		t.Fatal(err)
+	}
+	if got.GetResourceVersion() != version {
+		t.Fatal("reconciling the defaulted authorization policy should not rewrite it")
+	}
 }
 
 func TestReconcileSharedRouteAuthModeNoneSkipsExtAuthAndStampsUser(t *testing.T) {

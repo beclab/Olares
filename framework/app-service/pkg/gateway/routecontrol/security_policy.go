@@ -221,6 +221,8 @@ func desiredApplicationExtAuthSecurityPolicy(srr *srrv1alpha1.SharedRouteRegistr
 				"name":      AutheliaBackendServiceName,
 				"namespace": autheliaNS,
 				"port":      int64(AutheliaBackendPort),
+				// Match API server defaulting so the live policy stays stable.
+				"weight": int64(1),
 			},
 		},
 	}
