@@ -39,6 +39,11 @@ spec:
             properties:
               appName:
                 type: string
+              consumer:
+                description: |-
+                  Consumer names the workload inside the app that may use this card.
+                  Empty matches every pod of the app.
+                type: string
               memory:
                 anyOf:
                 - type: integer
@@ -81,11 +86,13 @@ spec:
                           items:
                             type: string
                           type: array
+                          x-kubernetes-list-type: atomic
                       required:
                       - key
                       - operator
                       type: object
                     type: array
+                    x-kubernetes-list-type: atomic
                   matchLabels:
                     additionalProperties:
                       type: string
