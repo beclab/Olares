@@ -330,6 +330,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               link: "/use-cases/concat",
             },
             {
+              text: "MiniMax H3",
+              link: "/use-cases/minimax-h3",
+            },
+            {
               text: "Music Studio",
               link: "/use-cases/music-studio",
             },
