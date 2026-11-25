@@ -13,6 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -329,6 +330,79 @@ func TestServingReadinessWaitsForPolicyAndMeshedEndpoints(t *testing.T) {
 			c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(fixtures...).Build()
 			if err := servingReadiness(ctx, c, GatewayRef{}, srr, "route"); (err == nil) != (tc.mutate == nil) {
 				t.Fatalf("unexpected servingReadiness result: %v", err)
+			}
+		})
+	}
+}
+
+func defaultDenyAuthProxyFixture(objects []client.Object, namespace string) *unstructured.Unstructured {
+	for _, object := range objects {
+		if pod, ok := object.(*corev1.Pod); ok && pod.Namespace == namespace {
+			pod.Labels["app"] = "systemserver"
+			pod.Annotations[mesh.LinkerdDefaultInboundPolicyAnnotation] = "deny"
+			pod.Spec.Containers[0].Env[0].Value = "deny"
+			pod.Spec.Containers = append(pod.Spec.Containers, corev1.Container{
+				Name: "proxy", Ports: []corev1.ContainerPort{{Name: "auth-proxy", ContainerPort: 9091, Protocol: corev1.ProtocolTCP}},
+			})
+		}
+	}
+	return &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": "policy.linkerd.io/v1beta3",
+		"kind":       "Server",
+		"metadata":   map[string]any{"name": "systemserver-existing-9091", "namespace": namespace},
+		"spec": map[string]any{
+			"port": int64(9091), "accessPolicy": "cluster-authenticated",
+			"podSelector": map[string]any{"matchLabels": map[string]any{"app": "systemserver"}},
+		},
+	}}
+}
+
+func TestAuthProxyMeshReadinessChecksEndpointPort(t *testing.T) {
+	const namespace = "user-system-alice"
+	for _, tc := range []struct {
+		name   string
+		change func(*corev1.Pod, *discoveryv1.EndpointSlice, *unstructured.Unstructured)
+		want   string
+	}{
+		{name: "Service port differs from protected target"},
+		{name: "wrong target", change: func(_ *corev1.Pod, ep *discoveryv1.EndpointSlice, _ *unstructured.Unstructured) {
+			ep.Ports[0].Port = ptr.To(int32(80))
+		}, want: "unsupported inbound policy"},
+		{name: "invalid endpoint port", change: func(_ *corev1.Pod, ep *discoveryv1.EndpointSlice, _ *unstructured.Unstructured) {
+			ep.Ports[0].Port = ptr.To(int32(65536))
+		}, want: "without an intercepted HTTP target port"},
+		{name: "wrong server port", change: func(_ *corev1.Pod, _ *discoveryv1.EndpointSlice, server *unstructured.Unstructured) {
+			server.Object["spec"].(map[string]any)["port"] = int64(80)
+		}, want: "does not enforce"},
+		{name: "plaintext allowed", change: func(_ *corev1.Pod, _ *discoveryv1.EndpointSlice, server *unstructured.Unstructured) {
+			server.Object["spec"].(map[string]any)["accessPolicy"] = "all-unauthenticated"
+		}, want: "does not enforce"},
+		{name: "different pods", change: func(_ *corev1.Pod, _ *discoveryv1.EndpointSlice, server *unstructured.Unstructured) {
+			server.Object["spec"].(map[string]any)["podSelector"] = map[string]any{"matchLabels": map[string]any{"app": "other"}}
+		}, want: "does not enforce"},
+		{name: "proxy default drift", change: func(pod *corev1.Pod, _ *discoveryv1.EndpointSlice, _ *unstructured.Unstructured) {
+			pod.Spec.Containers[0].Env[0].Value = mesh.InboundPolicyClusterAuthenticated
+		}, want: "proxy policy does not match"},
+		{name: "undeclared target", change: func(pod *corev1.Pod, _ *discoveryv1.EndpointSlice, _ *unstructured.Unstructured) {
+			pod.Spec.Containers[1].Ports = nil
+		}, want: "undeclared TCP port"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			objects := meshedServiceObjects(&corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: AutheliaBackendServiceName},
+				Spec: corev1.ServiceSpec{Selector: map[string]string{"app": "systemserver"},
+					Ports: []corev1.ServicePort{{Name: "http", Port: 8080, TargetPort: intstr.FromInt32(9091)}}},
+			})
+			server := defaultDenyAuthProxyFixture(objects, namespace)
+			endpoint := objects[2].(*discoveryv1.EndpointSlice)
+			endpoint.Ports[0].Port = ptr.To(int32(9091))
+			if tc.change != nil {
+				tc.change(objects[1].(*corev1.Pod), endpoint, server)
+			}
+			c := fake.NewClientBuilder().WithScheme(testScheme(t)).WithObjects(append(objects, server)...).Build()
+			err := meshedReadyEndpoints(t.Context(), c, namespace, srrv1alpha1.UpstreamRef{ServiceName: AutheliaBackendServiceName, Port: 8080})
+			if tc.want == "" && err != nil || tc.want != "" && (err == nil || !strings.Contains(err.Error(), tc.want)) {
+				t.Fatalf("readiness = %v, want %q", err, tc.want)
 			}
 		})
 	}

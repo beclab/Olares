@@ -278,7 +278,8 @@ func meshedReadyEndpoints(ctx context.Context, c client.Client, ns string, upstr
 			if endpoint.Conditions.Ready != nil && !*endpoint.Conditions.Ready {
 				continue
 			}
-			if !hasInterceptedHTTPPort(sl.Ports, portName, entryPort) {
+			targetPort := interceptedHTTPPort(sl.Ports, portName, entryPort)
+			if targetPort == 0 {
 				return fmt.Errorf("%s/%s has a serving endpoint without an intercepted HTTP target port", ns, serviceName)
 			}
 			ref := endpoint.TargetRef
@@ -291,10 +292,11 @@ func meshedReadyEndpoints(ctx context.Context, c client.Client, ns string, upstr
 			}
 			if pod.UID != ref.UID || !selector.Matches(labels.Set(pod.Labels)) || !pod.DeletionTimestamp.IsZero() ||
 				mesh.CheckHTTPMeshInterception(&pod) != nil || !mesh.LinkerdProxyReady(&pod) ||
-				pod.Annotations[mesh.LinkerdDefaultInboundPolicyAnnotation] != mesh.InboundPolicyClusterAuthenticated ||
-				!mesh.HasHTTPMeshInit(&pod) ||
-				!mesh.ProxyHasInboundPolicy(&pod, mesh.InboundPolicyClusterAuthenticated) {
+				!mesh.HasHTTPMeshInit(&pod) {
 				return fmt.Errorf("%s/%s has a serving endpoint without an enforced Linkerd mesh posture", ns, serviceName)
+			}
+			if err := endpointInboundPolicyReady(ctx, c, &pod, serviceName, targetPort); err != nil {
+				return fmt.Errorf("%s/%s has a serving endpoint without an enforced Linkerd mesh posture: %w", ns, serviceName, err)
 			}
 			if len(endpoint.Addresses) == 0 {
 				return fmt.Errorf("%s/%s has a serving endpoint without an address", ns, serviceName)
@@ -313,22 +315,72 @@ func meshedReadyEndpoints(ctx context.Context, c client.Client, ns string, upstr
 	return nil
 }
 
+// A default-deny system-server exposes the tenant Auth proxy through a
+// dedicated Server. Evaluate that exception only on the resolved endpoint
+// port, never on the Service port or the nonce API listener.
+func endpointInboundPolicyReady(ctx context.Context, c client.Client, pod *corev1.Pod, serviceName string, targetPort int32) error {
+	policy := pod.Annotations[mesh.LinkerdDefaultInboundPolicyAnnotation]
+	if !mesh.ProxyHasInboundPolicy(pod, policy) {
+		return fmt.Errorf("proxy policy does not match the Pod annotation")
+	}
+	if policy == mesh.InboundPolicyClusterAuthenticated {
+		return nil
+	}
+	if policy != "deny" || serviceName != AutheliaBackendServiceName || targetPort != AutheliaBackendPort ||
+		!strings.HasPrefix(pod.Namespace, "user-system-") || pod.Labels["app"] != "systemserver" {
+		return fmt.Errorf("unsupported inbound policy %q for target port %d", policy, targetPort)
+	}
+	server := &unstructured.Unstructured{}
+	server.SetGroupVersionKind(schema.GroupVersionKind{Group: "policy.linkerd.io", Version: "v1beta3", Kind: "Server"})
+	key := client.ObjectKey{Namespace: pod.Namespace, Name: fmt.Sprintf("systemserver-existing-%d", targetPort)}
+	if err := c.Get(ctx, key, server); err != nil {
+		return fmt.Errorf("get Linkerd Server %s: %w", key, err)
+	}
+	access, _, _ := unstructured.NestedString(server.Object, "spec", "accessPolicy")
+	selector, _, _ := unstructured.NestedMap(server.Object, "spec", "podSelector")
+	port, _, _ := unstructured.NestedInt64(server.Object, "spec", "port")
+	if !server.GetDeletionTimestamp().IsZero() || access != mesh.InboundPolicyClusterAuthenticated ||
+		port != int64(targetPort) || !reflect.DeepEqual(selector, map[string]any{"matchLabels": map[string]any{"app": "systemserver"}}) {
+		return fmt.Errorf("Linkerd Server %s does not enforce the expected system-server policy on port %d", key, targetPort)
+	}
+	for _, containers := range [][]corev1.Container{pod.Spec.Containers, pod.Spec.InitContainers} {
+		for _, container := range containers {
+			for _, p := range container.Ports {
+				if p.ContainerPort == targetPort && (p.Protocol == "" || p.Protocol == corev1.ProtocolTCP) {
+					return nil
+				}
+			}
+		}
+	}
+	return fmt.Errorf("Linkerd Server %s targets an undeclared TCP port %d", key, targetPort)
+}
+
 func hasInterceptedHTTPPort(ports []discoveryv1.EndpointPort, portName string, entryPort int32) bool {
+	return interceptedHTTPPort(ports, portName, entryPort) != 0
+}
+
+func interceptedHTTPPort(ports []discoveryv1.EndpointPort, portName string, entryPort int32) int32 {
 	for _, port := range ports {
 		if ptr.Deref(port.Name, "") != portName || ptr.Deref(port.Protocol, corev1.ProtocolTCP) != corev1.ProtocolTCP || port.Port == nil {
 			continue
 		}
 		if entryPort != 0 {
-			return *port.Port == entryPort
+			if *port.Port == entryPort {
+				return entryPort
+			}
+			return 0
 		}
 		switch *port.Port {
 		case 3389, 4140, 4143, 4190, 4191:
-			return false
+			return 0
 		default:
-			return true
+			if *port.Port > 0 && *port.Port <= 65535 {
+				return *port.Port
+			}
+			return 0
 		}
 	}
-	return false
+	return 0
 }
 
 // Forwarding headers are trusted only from the Entry mTLS peer. Do not erase

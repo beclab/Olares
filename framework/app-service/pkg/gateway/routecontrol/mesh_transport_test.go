@@ -5,6 +5,7 @@ import (
 	"errors"
 	"reflect"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway"
@@ -262,6 +263,8 @@ func TestSystemLoginStartsBackendTransportBeforeFrontend(t *testing.T) {
 			}
 		}
 	}
+	server := defaultDenyAuthProxyFixture(authBackends, "user-system-alice")
+	authBackends = append(authBackends, server)
 	dns := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{Namespace: "kube-system", Name: "coredns"},
 		Spec: corev1.ServiceSpec{
@@ -592,6 +595,34 @@ func TestSystemLoginStartsBackendTransportBeforeFrontend(t *testing.T) {
 	}
 	checkRoute(ReasonReconciled)
 	verify(4)
+
+	// Loss of the Auth proxy Server must withdraw both routes. Recreating it
+	// must recover both while the endpoint Pod keeps its default deny policy.
+	if err := c.Delete(ctx, server); err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range []*srrv1alpha1.SharedRouteRegistry{srr, desktop} {
+		result, err := ReconcileSharedRoute(ctx, c, GatewayRef{}, entry)
+		if err != nil || result.Reason != ReasonAwaitingDataPlane ||
+			!strings.Contains(result.Message, "systemserver-existing-9091") {
+			t.Fatalf("%s without Auth proxy policy: %+v, %v", entry.Name, result, err)
+		}
+		route := &unstructured.Unstructured{}
+		route.SetGroupVersionKind(l4AuthzRoute(desktop).GroupVersionKind())
+		if err := c.Get(ctx, client.ObjectKeyFromObject(entry), route); !apierrors.IsNotFound(err) {
+			t.Fatalf("%s was not withdrawn: %v", entry.Name, err)
+		}
+	}
+	server.SetResourceVersion("")
+	if err := c.Create(ctx, server); err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range []*srrv1alpha1.SharedRouteRegistry{srr, desktop} {
+		result, err := ReconcileSharedRoute(ctx, c, GatewayRef{}, entry)
+		if err != nil || result.Reason != ReasonReconciled || result.HTTPRouteName != entry.Name {
+			t.Fatalf("%s did not recover: %+v, %v", entry.Name, result, err)
+		}
+	}
 }
 
 func TestSystemLoginBootstrapDoesNotTrustForeignTenant(t *testing.T) {
