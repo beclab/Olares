@@ -76,9 +76,8 @@ func OnResumingStop(_ context.Context, w domain.World) domain.Result {
 //     only CallWorkload{Resume} after restart.
 //   - unknown phase    → hard fail via Err (safety net).
 //
-// Pending-pod abort (bytetrade.io/pending-pod) is checked after
-// scale succeeds and routes to Stopping. Mid-resume CancelOp is
-// handled by cancel_handoff.go.
+// The pod controller requests StopOp on scheduling failure. Mid-resume
+// CancelOp is handled by cancel_handoff.go.
 func OnResumingTick(_ context.Context, w domain.World) domain.Result {
 	phase := resumingPhase(w)
 
@@ -109,9 +108,6 @@ func OnResumingWorkloadReady(_ context.Context, w domain.World) domain.Result {
 
 	switch phase {
 	case PhaseResumingScale:
-		if pendingPodAbort(w) {
-			return handoffToStoppingFromResume(w)
-		}
 		return handoffToInitializing(w)
 
 	case "":
@@ -206,44 +202,6 @@ func resumeWorkload() domain.CallWorkload {
 		Kind:      domain.WorkloadResume,
 		OnSuccess: domain.WorkloadReady{},
 		OnFailure: domain.WorkloadFailed{Reason: "HelmResumeFailed"},
-	}
-}
-
-// pendingPodAbort reports whether the pod-abnormal-suspend
-// controller asked to abort this resume. Legacy resuming_app.go
-// checks the annotation during IsStartUp; the wait now lives in
-// Initializing, so the closest equivalent is this post-scale check.
-func pendingPodAbort(w domain.World) bool {
-	if w.AM == nil || w.AM.Annotations == nil {
-		return false
-	}
-	return w.AM.Annotations[AnnotPendingPod] == "true"
-}
-
-// handoffToStoppingFromResume aborts a resume whose pending-pod
-// annotation was stamped mid-scale. Stopping owns teardown.
-func handoffToStoppingFromResume(w domain.World) domain.Result {
-	reason := "PendingPodStop"
-	if w.AM != nil {
-		if carried, ok := legacyStoppedReason(w.AM.Status.Reason); ok && carried == w.AM.Status.Reason {
-			reason = carried
-		}
-	}
-	return domain.Result{
-		Next: appv1.Stopping,
-		Effects: []domain.Effect{
-			domain.PatchAM{Status: appv1.ApplicationManagerStatus{
-				State:   appv1.Stopping,
-				Message: "resume aborted: pending-pod stop requested",
-				Reason:  reason,
-				Payload: map[string]string{},
-			}},
-			domain.EmitEvent{
-				Type:    "Normal",
-				Reason:  reason,
-				Message: "resume aborted: pending-pod stop requested",
-			},
-		},
 	}
 }
 

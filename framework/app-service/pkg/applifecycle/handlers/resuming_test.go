@@ -9,10 +9,12 @@ import (
 	appv1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/applifecycle/domain"
 	"github.com/beclab/Olares/framework/app-service/pkg/applifecycle/handlers"
 	"github.com/beclab/Olares/framework/app-service/pkg/applifecycle/ports"
 	"github.com/beclab/Olares/framework/app-service/pkg/applifecycle/runner"
+	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 )
 
 // -----------------------------------------------------------------
@@ -128,19 +130,19 @@ func TestOnResumingWorkloadReady_ScalePhase_HandsOffToInitializing(t *testing.T)
 	}
 }
 
-func TestOnResumingWorkloadReady_PendingPod_HandsOffToStopping(t *testing.T) {
+func TestOnResumingWorkloadReady_IgnoresLegacyPendingPod(t *testing.T) {
 	am := newResumingAM("app1", map[string]string{
 		handlers.PayloadResumingPhase: handlers.PhaseResumingScale,
 	})
 	am.Annotations = map[string]string{
-		handlers.AnnotPendingPod: "true",
+		api.AppStopByControllerDuePendingPod: "true",
 	}
 	res := handlers.OnResumingWorkloadReady(context.Background(), resumingWorldFor(am))
 	if res.Err != nil {
 		t.Fatalf("Err = %v", res.Err)
 	}
-	if res.Next != appv1.Stopping {
-		t.Fatalf("Next = %q, want Stopping", res.Next)
+	if res.Next != appv1.Initializing {
+		t.Fatalf("Next = %q, want Initializing with a stale pending-pod annotation", res.Next)
 	}
 }
 
@@ -240,6 +242,61 @@ func TestResuming_EndToEnd_HappyPath(t *testing.T) {
 	// No OpRecord at the resume-scale exit.
 	if len(got.Status.OpRecords) != 0 {
 		t.Fatalf("OpRecords = %+v, want empty (terminal record lands at Initializing→Running)", got.Status.OpRecords)
+	}
+}
+
+// The controller can write its stop request after Helm returns but before the
+// runner processes the callback. The stop must keep its own ID and reason.
+func TestResuming_QueuedScaleResultHonorsPendingStop(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		result domain.Action
+		reason string
+	}{
+		{"scale succeeded", domain.WorkloadReady{}, constants.AppUnschedulable},
+		{"scale failed", domain.WorkloadFailed{Reason: "HelmResumeFailed"}, constants.AppHamiSchedulable},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
+			h := newE2EHarness(t)
+			am := newResumingAM("myapp", map[string]string{
+				handlers.PayloadResumingPhase: handlers.PhaseResumingScale,
+			})
+			am.Spec.OpType = appv1.StopOp
+			am.Annotations = map[string]string{
+				domain.AnnotationOperationRequestID: "pod-stop",
+				api.AppStopReasonKey:                tc.reason,
+				api.AppStopMessageKey:               "pod could not be scheduled",
+			}
+			h.amStore.Add(am)
+			h.runner.Pending().Deliver(am.Name, tc.result)
+			req := runner.Request{Name: am.Name}
+			if _, err := h.runner.Reconcile(ctx, req); err != nil {
+				t.Fatal(err)
+			}
+			got, err := h.amStore.Get(ctx, am.Name)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got.Status.State != appv1.Stopping || got.Status.OpType != appv1.StopOp ||
+				got.Status.OpID != "pod-stop" || got.Status.Reason != tc.reason {
+				t.Fatalf("state=%s op=%s id=%s reason=%s", got.Status.State, got.Status.OpType, got.Status.OpID, got.Status.Reason)
+			}
+			if _, err := h.runner.Reconcile(ctx, req); err != nil {
+				t.Fatal(err)
+			}
+			drainAndRebuild(t, h)
+			if _, err := h.runner.Reconcile(ctx, req); err != nil {
+				t.Fatal(err)
+			}
+			got, err = h.amStore.Get(ctx, am.Name)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got.Status.State != appv1.Stopped || got.Status.Reason != tc.reason {
+				t.Fatalf("state=%s reason=%s, want Stopped with %s", got.Status.State, got.Status.Reason, tc.reason)
+			}
+		})
 	}
 }
 

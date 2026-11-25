@@ -486,8 +486,15 @@ func (r *Runner) Reconcile(ctx context.Context, req Request) (ReconcileOutcome, 
 	world.InFlightKind = r.workloads.kind(req.Name)
 	klog.Infof("Reconcile: resultConsumed: %v", resultConsumed)
 	action := popped
-	if action == nil {
+	switch action.(type) {
+	case nil:
 		action = r.actionWithoutPending(world)
+	case domain.WorkloadReady, domain.WorkloadFailed:
+		// A stop accepted during scale-up must be consumed before the Helm
+		// result moves the app out of Resuming. Use its request ID and reason.
+		if world.Current() == appv1.Resuming && domain.OperationRequestPending(world.AM, appv1.StopOp) {
+			action = domain.TriggerOp{Op: appv1.StopOp}
+		}
 	}
 	// Thread the Action into World so handlers can inspect
 	// Action-specific fields (WorkloadFailed.Reason etc.) without

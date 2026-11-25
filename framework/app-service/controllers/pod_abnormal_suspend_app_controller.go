@@ -332,9 +332,6 @@ func (r *PodAbnormalSuspendAppController) suspendResolved(ctx context.Context, a
 	if strings.HasSuffix(podNamespace, "-shared") {
 		patched.Annotations[api.AppStopAllKey] = "true"
 	}
-	if reason == constants.AppHamiSchedulable || reason == constants.AppUnschedulable {
-		patched.Annotations[api.AppStopByControllerDuePendingPod] = "true"
-	}
 	patched.Annotations[api.AppStopReasonKey] = reason
 	patched.Annotations[api.AppStopMessageKey] = message
 	patched.Annotations[domain.AnnotationOperationRequestID] = uuid.NewString()

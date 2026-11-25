@@ -237,6 +237,10 @@ func TestSuspendV2_HTTPShell_SignaturesCompile(t *testing.T) {
 // includeSharedServer=true stamps AppResumeAllKey="true".
 func TestResumeV2_DeliversTriggerOp(t *testing.T) {
 	f := newSuspendResumeV2Fixture(t, appv1alpha1.Stopped)
+	f.am.Annotations[api.AppStopByControllerDuePendingPod] = "true"
+	if err := f.handler.ctrlClient.Update(context.Background(), f.am); err != nil {
+		t.Fatal(err)
+	}
 	seededStatus := f.am.Status.DeepCopy()
 
 	if err := f.handler.deliverResumeV2(context.Background(), f.req, f.resp,
