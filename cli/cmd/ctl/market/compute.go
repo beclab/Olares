@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"os"
@@ -209,11 +210,87 @@ func preflightComputeMode(ctx context.Context, opts *MarketOptions, mc *MarketCl
 // TTY prompts a choice and a non-interactive session returns
 // computeModeSelectError.
 func resolveComputeMode(raw json.RawMessage, appName, preset string, interactive bool) (string, error) {
+	plan, err := decodeComputeModePlan(raw)
+	if err != nil {
+		return "", err
+	}
+	return chooseComputeMode(plan, appName, preset, interactive)
+}
+
+func decodeComputeModePlan(raw json.RawMessage) ([]computeModePlan, error) {
 	var plan []computeModePlan
 	if err := json.Unmarshal(raw, &plan); err != nil {
-		return "", fmt.Errorf("parse compute mode options: %w", err)
+		return nil, fmt.Errorf("parse compute mode options: %w", err)
 	}
+	return plan, nil
+}
 
+// isConsumerModeSelect reports whether a computeModeSelect payload is the
+// per-consumer object rather than a single app's list of modes.
+func isConsumerModeSelect(raw json.RawMessage) bool {
+	trimmed := strings.TrimSpace(string(raw))
+	return strings.HasPrefix(trimmed, "{")
+}
+
+// resolveComputeSelection answers a computeModeSelect 422: one mode for an
+// app declaring spec.accelerator, or a mode for each pending GPU consumer,
+// taken from --consumer-mode, an interactive prompt, or a clear error.
+func resolveComputeSelection(raw json.RawMessage, appName, preset string, consumerPresets map[string]string, interactive bool) (computeSelection, error) {
+	if !isConsumerModeSelect(raw) {
+		mode, err := resolveComputeMode(raw, appName, preset, interactive)
+		return computeSelection{Mode: mode}, err
+	}
+	var prompt consumerModeSelect
+	if err := json.Unmarshal(raw, &prompt); err != nil {
+		return computeSelection{}, fmt.Errorf("parse compute mode options: %w", err)
+	}
+	chosen := make(map[string]string, len(consumerPresets)+len(prompt.Pending))
+	for consumer, mode := range consumerPresets {
+		chosen[consumer] = mode
+	}
+	for _, consumer := range prompt.Pending {
+		var plan []computeModePlan
+		for _, entry := range prompt.Consumers {
+			if entry.Consumer == consumer {
+				plan = entry.Modes
+			}
+		}
+		label := fmt.Sprintf("%s (workload %s)", appName, consumer)
+		mode, err := chooseComputeMode(plan, label, consumerPresets[consumer], interactive)
+		if err != nil {
+			var selectErr *computeModeSelectError
+			if errors.As(err, &selectErr) {
+				return computeSelection{}, fmt.Errorf("workload %q of %q supports several compute modes; re-run with --consumer-mode %s=<mode> (installable: %s)",
+					consumer, appName, consumer, strings.Join(selectErr.installable, ", "))
+			}
+			return computeSelection{}, err
+		}
+		chosen[consumer] = mode
+	}
+	return computeSelection{Consumers: chosen}, nil
+}
+
+// parseConsumerModeFlags decodes repeated --consumer-mode <workload>=<mode>.
+func parseConsumerModeFlags(raw []string) (map[string]string, error) {
+	if len(raw) == 0 {
+		return nil, nil
+	}
+	out := make(map[string]string, len(raw))
+	for _, item := range raw {
+		workload, mode, ok := strings.Cut(strings.TrimSpace(item), "=")
+		workload, mode = strings.TrimSpace(workload), strings.TrimSpace(mode)
+		if !ok || workload == "" || mode == "" {
+			return nil, fmt.Errorf("invalid --consumer-mode %q: expected <workload>=<mode>", item)
+		}
+		if _, dup := out[workload]; dup {
+			return nil, fmt.Errorf("invalid --consumer-mode %q: workload %q given twice", item, workload)
+		}
+		out[workload] = mode
+	}
+	return out, nil
+}
+
+func chooseComputeMode(plan []computeModePlan, appName, preset string, interactive bool) (string, error) {
 	installable := make([]string, 0, len(plan))
 	for _, p := range plan {
 		if p.Status == "installable" {
@@ -326,7 +403,15 @@ func resolveComputeBinding(raw json.RawMessage, checkType, appName string, inter
 	if rejected && reason != "" {
 		fmt.Fprintf(os.Stderr, "Previous compute binding is no longer valid: %s\n", reason)
 	}
-	return promptComputeBinding(appName, prompt.Availability, operable)
+	label := appName
+	if prompt.Consumer != "" {
+		label = fmt.Sprintf("%s (workload %s)", appName, prompt.Consumer)
+	}
+	picked, err := promptComputeBinding(label, prompt.Availability, operable)
+	for i := range picked {
+		picked[i].Consumer = prompt.Consumer
+	}
+	return picked, err
 }
 
 // bindingWasRejected reports whether the prompt reflects a prior binding that
@@ -429,7 +514,15 @@ func parseComputeBindingFlags(raw []string) ([]BindingSelection, error) {
 	}
 	out := make([]BindingSelection, 0, len(raw))
 	for _, item := range raw {
-		parts := strings.Split(strings.TrimSpace(item), ":")
+		spec := strings.TrimSpace(item)
+		consumer := ""
+		if before, after, ok := strings.Cut(spec, "="); ok {
+			consumer, spec = strings.TrimSpace(before), strings.TrimSpace(after)
+			if consumer == "" {
+				return nil, fmt.Errorf("invalid --compute-binding %q: the workload before '=' must be non-empty", item)
+			}
+		}
+		parts := strings.Split(spec, ":")
 		if len(parts) < 2 || len(parts) > 3 {
 			return nil, fmt.Errorf("invalid --compute-binding %q: expected <node>:<device>[:<mem>] (mem e.g. 8, 8Gi, 512Mi)", item)
 		}
@@ -438,7 +531,7 @@ func parseComputeBindingFlags(raw []string) ([]BindingSelection, error) {
 		if node == "" || device == "" {
 			return nil, fmt.Errorf("invalid --compute-binding %q: node and device must be non-empty", item)
 		}
-		sel := BindingSelection{NodeName: node, DeviceID: device}
+		sel := BindingSelection{NodeName: node, DeviceID: device, Consumer: consumer}
 		if len(parts) == 3 {
 			mem, err := parseBindingMemory(parts[2])
 			if err != nil {

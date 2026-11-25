@@ -52,6 +52,7 @@ type MarketOptions struct {
 	// are 1.12.6+ only; on 1.12.5 they are rejected (the backend uses a
 	// different, untouched code path).
 	ComputeMode    string
+	ConsumerModes  []string
 	ComputeBinding []string
 
 	// Mine narrows the catalog list verb to the active profile's apps —
@@ -242,6 +243,8 @@ func (o *MarketOptions) addEnvFlag(cmd *cobra.Command) {
 func (o *MarketOptions) addComputeModeFlag(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.ComputeMode, "compute-mode", "",
 		"compute mode to install with (e.g. cpu, nvidia); only on Olares 1.12.6+. Omit to be prompted when the app supports multiple modes")
+	cmd.Flags().StringArrayVar(&o.ConsumerModes, "consumer-mode", nil,
+		"compute mode for one GPU consumer in <workload>=<mode> form, for apps declaring workloadOptions.<workload>.accelerator (repeatable). Omit to be prompted for each consumer that has more than one runnable mode")
 }
 
 // addComputeBindingFlag wires --compute-binding on resume (Olares 1.12.6+).
@@ -252,7 +255,7 @@ func (o *MarketOptions) addComputeModeFlag(cmd *cobra.Command) {
 // non-interactive sessions are told to pass this flag. On 1.12.5 it is rejected.
 func (o *MarketOptions) addComputeBindingFlag(cmd *cobra.Command) {
 	cmd.Flags().StringArrayVar(&o.ComputeBinding, "compute-binding", nil,
-		"bind a compute device in <node>:<device>[:<mem>] form; mem accepts Gi/Mi (e.g. node:gpu-0:8 or node:gpu-0:512Mi). Repeatable; only on Olares 1.12.6+")
+		"bind a compute device in [<workload>=]<node>:<device>[:<mem>] form; mem accepts Gi/Mi (e.g. node:gpu-0:8 or node:gpu-0:512Mi). Prefix <workload>= to bind a card to one GPU consumer. Repeatable; only on Olares 1.12.6+")
 }
 
 func (o *MarketOptions) addEntranceTitleFlag(cmd *cobra.Command) {

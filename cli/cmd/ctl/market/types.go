@@ -1,5 +1,10 @@
 package market
 
+import (
+	"sort"
+	"strings"
+)
+
 type AppQueryInfo struct {
 	AppID          string `json:"appid"`
 	SourceDataName string `json:"sourceDataName"`
@@ -28,6 +33,9 @@ type InstallRequest struct {
 	// is omitempty so a 1.12.5 install — where the CLI never sets it —
 	// keeps the exact same wire bytes as before this field existed.
 	SelectedGpuType string `json:"selectedGpuType,omitempty"`
+	// SelectedGpuTypes picks a mode per GPU consumer, keyed by workload, for
+	// apps declaring workloadOptions.<workload>.accelerator.
+	SelectedGpuTypes map[string]string `json:"selectedGpuTypes,omitempty"`
 }
 
 // BindingSelection is one device a resume picks for an app's compute
@@ -38,6 +46,9 @@ type BindingSelection struct {
 	NodeName string `json:"nodeName"`
 	DeviceID string `json:"deviceId"`
 	Memory   int64  `json:"memory,omitempty"`
+	// Consumer names the workload the card is for, for apps declaring
+	// workload accelerators; Market groups such bindings per consumer.
+	Consumer string `json:"consumer,omitempty"`
 }
 
 // computeModePlan mirrors one entry of app-service compute.ModePlanResult,
@@ -57,6 +68,42 @@ type computeModePlan struct {
 type computeBindingPrompt struct {
 	Availability *computeAvailability      `json:"availability"`
 	Validation   *computeBindingValidation `json:"validation,omitempty"`
+	// Consumer is the GPU consumer the prompt is about, when the app
+	// declares workload accelerators.
+	Consumer string `json:"consumer,omitempty"`
+}
+
+// computeSelection is the compute mode an install or clone asks for: one
+// mode for an app declaring spec.accelerator, or one per GPU consumer.
+type computeSelection struct {
+	Mode      string
+	Consumers map[string]string
+}
+
+func (s computeSelection) String() string {
+	if len(s.Consumers) == 0 {
+		return s.Mode
+	}
+	names := make([]string, 0, len(s.Consumers))
+	for name := range s.Consumers {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	parts := make([]string, 0, len(names))
+	for _, name := range names {
+		parts = append(parts, name+"="+s.Consumers[name])
+	}
+	return strings.Join(parts, ", ")
+}
+
+// consumerModeSelect mirrors the computeModeSelect payload app-service
+// returns for apps declaring workload accelerators.
+type consumerModeSelect struct {
+	Consumers []struct {
+		Consumer string            `json:"consumer"`
+		Modes    []computeModePlan `json:"modes"`
+	} `json:"consumers"`
+	Pending []string `json:"pending"`
 }
 
 // computeAvailability mirrors app-service compute.AvailabilityResult.
@@ -149,6 +196,8 @@ type CloneRequest struct {
 	// Olares 1.12.6+ (the auto-select / computeModeSelect surface); omitempty
 	// keeps a 1.12.5 clone — where the CLI never sets it — byte-identical.
 	SelectedGpuType string `json:"selectedGpuType,omitempty"`
+	// SelectedGpuTypes picks a mode per GPU consumer, keyed by workload.
+	SelectedGpuTypes map[string]string `json:"selectedGpuTypes,omitempty"`
 	// TemplateClone marks an instance created from a template app (no
 	// installable body), mirroring the SPA's onClone() which sets
 	// templateClone:true for templateOnly apps (1.12.6+). omitempty keeps
