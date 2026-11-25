@@ -7,7 +7,7 @@
 {{- $desktop := dict "name" "system-frontend" "namespace" $ns -}}
 {{- $wizard := dict "name" "bfl-wizard" "namespace" $ns -}}
 {{- $login := dict "name" "bfl-login" "namespace" $ns -}}
-{{- $authelia := dict "name" "os-internal" "namespace" "os-framework" -}}
+{{- $authelia := dict "name" "authelia-backend" "namespace" "os-framework" -}}
 {{- $vault := dict "name" "bfl-vault" "namespace" "os-framework" -}}
 {{- $tapr := dict "name" "tapr-images" "namespace" $systemNS -}}
 {{- $systemServer := dict "name" "bytetrade-sys-ops" "namespace" $systemNS -}}

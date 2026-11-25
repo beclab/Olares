@@ -2,79 +2,54 @@ package permission
 
 import (
 	"context"
-	"fmt"
-	"net"
 	"net/http"
+	"slices"
+	"strings"
+	"time"
 
-	"bytetrade.io/web3os/system-server/pkg/apiserver/v1alpha1/api"
 	"bytetrade.io/web3os/system-server/pkg/constants"
-	"bytetrade.io/web3os/system-server/pkg/utils"
-
 	"github.com/emicklei/go-restful/v3"
+	authenticationv1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/klog/v2"
 )
 
+const (
+	nonceAudience = "olares-system-server-nonce"
+	nonceCaller   = "system:serviceaccount:os-framework:authelia-backend"
+)
+
+// nonce is also protected by the inbound mesh route. Verify a bound, audience-
+// scoped credential here so missing mesh policy or a direct connection cannot
+// turn the endpoint into an unauthenticated credential dispenser.
 func (h *Handler) nonce(req *restful.Request, resp *restful.Response) {
-	h.limitIP(req, resp, func(req *restful.Request, resp *restful.Response) {
-		resp.Write([]byte(constants.Nonce))
-	})
-}
-
-func (h *Handler) limitIP(req *restful.Request, resp *restful.Response, next func(req *restful.Request, resp *restful.Response)) {
-	authIps, err := h.getAutheliaIP(req.Request.Context())
-	if err != nil {
-		api.HandleError(resp, req, err)
+	resp.Header().Set("Cache-Control", "no-store")
+	headers := req.Request.Header.Values("Authorization")
+	if len(headers) != 1 {
+		http.Error(resp, "nonce access denied", http.StatusForbidden)
+		return
+	}
+	fields := strings.Fields(headers[0])
+	if len(fields) != 2 || !strings.EqualFold(fields[0], "Bearer") || len(fields[1]) > 16384 {
+		http.Error(resp, "nonce access denied", http.StatusForbidden)
 		return
 	}
 
-	ip, err := getIPFromReq(req.Request)
+	ctx, cancel := context.WithTimeout(req.Request.Context(), time.Second)
+	defer cancel()
+	review, err := h.kubeClientSet.AuthenticationV1().TokenReviews().Create(ctx,
+		&authenticationv1.TokenReview{Spec: authenticationv1.TokenReviewSpec{
+			Token: fields[1], Audiences: []string{nonceAudience},
+		}}, metav1.CreateOptions{})
 	if err != nil {
-		api.HandleError(resp, req, err)
+		// Do not log the review object, token, or API error response body.
+		http.Error(resp, "nonce authentication unavailable", http.StatusServiceUnavailable)
 		return
 	}
-
-	if !utils.ListContains(authIps, ip.String()) {
-		api.HandleForbidden(resp, req, fmt.Errorf("request from %s is forbidden", ip.String()))
+	if review == nil || !review.Status.Authenticated || review.Status.Error != "" ||
+		review.Status.User.Username != nonceCaller || !slices.Contains(review.Status.Audiences, nonceAudience) {
+		http.Error(resp, "nonce access denied", http.StatusForbidden)
 		return
 	}
-
-	next(req, resp)
-}
-
-func (h *Handler) getAutheliaIP(ctx context.Context) ([]string, error) {
-	pods, err := h.kubeClientSet.CoreV1().Pods("os-framework").List(ctx, metav1.ListOptions{
-		LabelSelector: labels.SelectorFromSet(
-			labels.Set{
-				"app": "authelia-backend",
-			},
-		).String(),
-	})
-
-	if err != nil {
-		klog.Error("get authelia pods error, ", err)
-		return nil, err
-	}
-
-	var ips []string
-	for _, p := range pods.Items {
-		ips = append(ips, p.Status.PodIP)
-	}
-
-	return ips, nil
-}
-
-func getIPFromReq(req *http.Request) (net.IP, error) {
-	ip, _, err := net.SplitHostPort(req.RemoteAddr)
-	if err != nil {
-		return nil, fmt.Errorf("userip: %q is not IP:port", req.RemoteAddr)
-	}
-
-	userIP := net.ParseIP(ip)
-	if userIP == nil {
-		return nil, fmt.Errorf("userip: %q is not IP:port", req.RemoteAddr)
-	}
-
-	return userIP, nil
+	resp.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	resp.Write([]byte(constants.Nonce))
 }

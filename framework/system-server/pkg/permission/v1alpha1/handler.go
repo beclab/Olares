@@ -19,7 +19,7 @@ type Handler struct {
 	permissionCtrl *PermissionControl
 	accessMgr      *AccessManager
 	kubeconfig     *rest.Config
-	kubeClientSet  *kubernetes.Clientset
+	kubeClientSet  kubernetes.Interface
 }
 
 func newHandler(ctrlSet *PermissionControlSet, kubeconfig *rest.Config) *Handler {

@@ -196,6 +196,37 @@ func authTransportPair(ctx context.Context, c client.Client, labels map[string]s
 	policies[0].Spec.Egress = append(policies[0].Spec.Egress,
 		security.SystemServerProviderEgressRules(tenant, infisical, bfl, appService)...)
 	policies[0].Spec.Egress = append(policies[0].Spec.Egress, security.SystemServerNativeEgressRules(native)...)
+	// Route egress isolates this Pod before the namespace readiness gate. Its
+	// proxy must acquire identity/policy, and nonce TokenReview needs the API.
+	for _, dependency := range []struct {
+		component string
+		ports     []int32
+	}{
+		{"identity", []int32{8080}}, {"destination", []int32{8086, 8090}},
+	} {
+		rule := netv1.NetworkPolicyEgressRule{To: []netv1.NetworkPolicyPeer{
+			(meshTransportPeer{mesh.LinkerdNamespace, map[string]string{
+				"linkerd.io/control-plane-component": dependency.component,
+			}}).networkPolicyPeer(),
+		}}
+		for _, port := range dependency.ports {
+			rule.Ports = append(rule.Ports, meshTransportPort(port))
+		}
+		policies[0].Spec.Egress = append(policies[0].Spec.Egress, rule)
+	}
+	apiService, apiEndpoints := &corev1.Service{}, &corev1.Endpoints{}
+	apiKey := client.ObjectKey{Namespace: security.KubernetesAPINamespace, Name: security.KubernetesAPIName}
+	if err := c.Get(ctx, apiKey, apiService); client.IgnoreNotFound(err) != nil {
+		return nil, fmt.Errorf("get Kubernetes API Service: %w", err)
+	}
+	if err := c.Get(ctx, apiKey, apiEndpoints); client.IgnoreNotFound(err) != nil {
+		return nil, fmt.Errorf("get Kubernetes API Endpoints: %w", err)
+	}
+	for _, dependency := range security.BuildTrafficGroupDependencyPolicies(source.namespace, apiService, apiEndpoints) {
+		if dependency.Spec.PodSelector.MatchLabels["app"] == "systemserver" {
+			policies[0].Spec.Egress = append(policies[0].Spec.Egress, dependency.Spec.Egress...)
+		}
+	}
 	return policies, nil
 }
 

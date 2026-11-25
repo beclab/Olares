@@ -1,0 +1,120 @@
+{{- $ns := printf "user-system-%s" .Values.bfl.username -}}
+apiVersion: policy.linkerd.io/v1beta3
+kind: Server
+metadata:
+  name: systemserver-api
+  namespace: {{ $ns }}
+spec:
+  podSelector:
+    matchLabels:
+      app: systemserver
+  port: 80
+  proxyProtocol: HTTP/1
+  accessPolicy: deny
+---
+# Prefix matching also protects trailing-slash and wrong-method requests. The
+# application exposes only the exact GET and independently verifies its token.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: systemserver-nonce
+  namespace: {{ $ns }}
+spec:
+  parentRefs:
+    - group: policy.linkerd.io
+      kind: Server
+      name: systemserver-api
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /permission/v1alpha1/nonce
+---
+apiVersion: policy.linkerd.io/v1alpha1
+kind: MeshTLSAuthentication
+metadata:
+  name: systemserver-nonce
+  namespace: {{ $ns }}
+spec:
+  identityRefs:
+    - kind: ServiceAccount
+      name: authelia-backend
+      namespace: os-framework
+---
+apiVersion: policy.linkerd.io/v1alpha1
+kind: AuthorizationPolicy
+metadata:
+  name: systemserver-nonce
+  namespace: {{ $ns }}
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: systemserver-nonce
+  requiredAuthenticationRefs:
+    - group: policy.linkerd.io
+      kind: MeshTLSAuthentication
+      name: systemserver-nonce
+---
+# Preserve the previous cluster-authenticated policy for other API routes.
+# Linkerd selects the longest matching prefix; never grant at Server scope.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: systemserver-api-existing
+  namespace: {{ $ns }}
+spec:
+  parentRefs:
+    - group: policy.linkerd.io
+      kind: Server
+      name: systemserver-api
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+---
+apiVersion: policy.linkerd.io/v1alpha1
+kind: MeshTLSAuthentication
+metadata:
+  name: systemserver-api-existing
+  namespace: {{ $ns }}
+spec:
+  identities: ["*.serviceaccount.identity.linkerd.cluster.local"]
+---
+apiVersion: policy.linkerd.io/v1alpha1
+kind: AuthorizationPolicy
+metadata:
+  name: systemserver-api-existing
+  namespace: {{ $ns }}
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: systemserver-api-existing
+  requiredAuthenticationRefs:
+    - group: policy.linkerd.io
+      kind: MeshTLSAuthentication
+      name: systemserver-api-existing
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: systemserver-nonce-reviewer-{{ .Values.bfl.username }}
+rules:
+  - apiGroups: ["authentication.k8s.io"]
+    resources: ["tokenreviews"]
+    verbs: ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: systemserver-nonce-reviewer-{{ .Values.bfl.username }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: systemserver-nonce-reviewer-{{ .Values.bfl.username }}
+subjects:
+  - kind: ServiceAccount
+    name: bytetrade-sys-ops
+    namespace: {{ $ns }}

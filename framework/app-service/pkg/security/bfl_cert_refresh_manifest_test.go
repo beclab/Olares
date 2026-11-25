@@ -114,7 +114,7 @@ func TestBFLAPIMTLSActivatesOnlyForItsTenantAndDefaultsToDeny(t *testing.T) {
 		{"frontend-modules", "/bfl/settings/v1alpha1", "", []string{ns + "/system-frontend", ns + "/bfl-wizard"}},
 		{"frontend-backend", "/bfl/backend/v1/terminus-info", "GET", []string{ns + "/system-frontend", ns + "/bfl-wizard"}},
 		{"frontend-apps", "/bfl/backend/v1/myapps", "POST", []string{ns + "/system-frontend", ns + "/bfl-wizard", "user-system-example/bytetrade-sys-ops"}},
-		{"user-info", "/bfl/backend/v1/user-info", "GET", []string{ns + "/system-frontend", ns + "/bfl-wizard", "os-framework/os-internal"}},
+		{"user-info", "/bfl/backend/v1/user-info", "GET", []string{ns + "/system-frontend", ns + "/bfl-wizard", "os-framework/authelia-backend"}},
 		{"public-info", "/bfl/info/v1/olares-info", "OPTIONS", []string{ns + "/system-frontend", ns + "/bfl-wizard", ns + "/bfl-login", "os-framework/bfl-vault"}},
 		{"login-cluster", "/bfl/monitor/v1alpha1/cluster", "GET", []string{ns + "/system-frontend", ns + "/bfl-wizard", ns + "/bfl-login"}},
 		{"login-password", "/bfl/iam/v1alpha1/users", "PUT", []string{ns + "/system-frontend", ns + "/bfl-wizard", ns + "/bfl-login"}},

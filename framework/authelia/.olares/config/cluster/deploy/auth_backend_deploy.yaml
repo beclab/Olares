@@ -397,8 +397,8 @@ spec:
         config.linkerd.io/default-inbound-policy: cluster-authenticated
         traffic.olares.io/mtls-mode: Required
     spec:
-      serviceAccountName: os-internal
-      serviceAccount: os-internal
+      serviceAccountName: authelia-backend
+      serviceAccount: authelia-backend
       priorityClassName: "system-cluster-critical"
       affinity:
         nodeAffinity:
@@ -469,6 +469,9 @@ spec:
           value: "os.groups"
 
         volumeMounts:
+        - name: nonce-credential
+          mountPath: /var/run/secrets/olares/nonce
+          readOnly: true
         - name: config
           mountPath: /app/configuration.yml
           subPath: configuration.yaml
@@ -476,6 +479,14 @@ spec:
           mountPath: /config
 
       volumes:
+      - name: nonce-credential
+        projected:
+          defaultMode: 0400
+          sources:
+          - serviceAccountToken:
+              audience: olares-system-server-nonce
+              expirationSeconds: 600
+              path: token
       - name: config
         configMap:
           name: authelia-configs

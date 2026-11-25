@@ -1,0 +1,68 @@
+{{- if ne .Release.Namespace "os-framework" -}}
+{{- fail "Authelia backend identity belongs in os-framework" -}}
+{{- end }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: authelia-backend
+  namespace: os-framework
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: authelia-backend
+rules:
+  # Rule and OIDC discovery, node CIDR discovery, session user inventory.
+  - apiGroups: ["app.bytetrade.io"]
+    resources: ["applications"]
+    verbs: ["list"]
+  - apiGroups: ["iam.kubesphere.io"]
+    resources: ["users"]
+    verbs: ["list"]
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["list"]
+  # Existing Olares CLI credential authentication.
+  - apiGroups: ["authentication.k8s.io"]
+    resources: ["tokenreviews"]
+    verbs: ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: authelia-backend
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: authelia-backend
+subjects:
+  - kind: ServiceAccount
+    name: authelia-backend
+    namespace: os-framework
+{{- range $secret := list (dict "namespace" "os-platform" "name" "lldap-credentials") (dict "namespace" "kubesphere-system" "name" "redis-secret") }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: authelia-backend
+  namespace: {{ $secret.namespace }}
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames: [{{ $secret.name | quote }}]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: authelia-backend
+  namespace: {{ $secret.namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: authelia-backend
+subjects:
+  - kind: ServiceAccount
+    name: authelia-backend
+    namespace: os-framework
+{{- end }}

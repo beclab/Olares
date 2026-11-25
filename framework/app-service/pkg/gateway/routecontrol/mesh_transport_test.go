@@ -421,6 +421,14 @@ func TestSystemLoginStartsBackendTransportBeforeFrontend(t *testing.T) {
 					To:    []netv1.NetworkPolicyPeer{{IPBlock: &netv1.IPBlock{CIDR: "10.96.0.15/32"}}},
 					Ports: []netv1.NetworkPolicyPort{meshTransportPort(6379)},
 				},
+				{
+					To:    []netv1.NetworkPolicyPeer{(meshTransportPeer{"os-mesh", map[string]string{"linkerd.io/control-plane-component": "identity"}}).networkPolicyPeer()},
+					Ports: []netv1.NetworkPolicyPort{meshTransportPort(8080)},
+				},
+				{
+					To:    []netv1.NetworkPolicyPeer{(meshTransportPeer{"os-mesh", map[string]string{"linkerd.io/control-plane-component": "destination"}}).networkPolicyPeer()},
+					Ports: []netv1.NetworkPolicyPort{meshTransportPort(8086), meshTransportPort(8090)},
+				},
 			}) {
 				t.Fatalf("unexpected system-server bootstrap dependencies: %+v", p.Spec.Egress)
 			}
@@ -477,7 +485,7 @@ func TestSystemLoginStartsBackendTransportBeforeFrontend(t *testing.T) {
 	if err := c.Get(ctx, client.ObjectKeyFromObject(systemEgress), systemEgress); err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(systemEgress.Spec.Egress, wantEgress[:3]) {
+	if !reflect.DeepEqual(systemEgress.Spec.Egress, append(slices.Clone(wantEgress[:3]), wantEgress[len(wantEgress)-2:]...)) {
 		t.Fatalf("stale provider grants were retained: %+v", systemEgress.Spec.Egress)
 	}
 	if err := c.Create(ctx, &corev1.Service{
