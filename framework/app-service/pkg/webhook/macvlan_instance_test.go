@@ -2,6 +2,8 @@ package webhook
 
 import (
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/utils/maclease"
+	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -10,6 +12,49 @@ import (
 	"strings"
 	"testing"
 )
+
+func TestFixedMACTerminalPodBlocksUntilDeletionThenReusesMAC(t *testing.T) {
+	for _, phase := range []corev1.PodPhase{corev1.PodSucceeded, corev1.PodUnknown} {
+		t.Run(string(phase), func(t *testing.T) {
+			wh := testMacvlanWebhook()
+			old := macvlanPod()
+			old.UID = "old-pod-uid"
+			mac, err := wh.ensureOverlayMAC(t.Context(), old, false)
+			require.NoError(t, err)
+			app, err := wh.dynamicClient.AppV1alpha1().Applications().Get(t.Context(), "app-space-jellyfin", metav1.GetOptions{})
+			require.NoError(t, err)
+			require.NoError(t, maclease.Reserve(t.Context(), wh.kubeClient, old, app.Name, app.UID, mac))
+			old.Status.Phase = phase
+			_, err = wh.kubeClient.CoreV1().Pods(old.Namespace).Create(t.Context(), old, metav1.CreateOptions{})
+			require.NoError(t, err)
+			require.NoError(t, maclease.Reconcile(t.Context(), wh.kubeClient, app.UID))
+
+			replacement := macvlanPod()
+			replacement.Name = "replacement"
+			_, err = wh.ensureOverlayMAC(t.Context(), replacement, false)
+			require.ErrorContains(t, err, "still has pod")
+			require.ErrorContains(t, maclease.Reserve(t.Context(), wh.kubeClient, replacement, app.Name, app.UID, mac), "still occupied")
+
+			// Normal deletion may take time. Both admission guards must keep
+			// protecting the MAC while the old Pod is still terminating.
+			now := metav1.Now()
+			old.DeletionTimestamp = &now
+			_, err = wh.kubeClient.CoreV1().Pods(old.Namespace).Update(t.Context(), old, metav1.UpdateOptions{})
+			require.NoError(t, err)
+			_, err = wh.ensureOverlayMAC(t.Context(), replacement, false)
+			require.ErrorContains(t, err, "still has pod")
+			require.ErrorContains(t, maclease.Reserve(t.Context(), wh.kubeClient, replacement, app.Name, app.UID, mac), "still occupied")
+
+			require.NoError(t, wh.kubeClient.CoreV1().Pods(old.Namespace).Delete(t.Context(), old.Name, metav1.DeleteOptions{}))
+			reused, err := wh.ensureOverlayMAC(t.Context(), replacement, false)
+			require.NoError(t, err)
+			require.Equal(t, mac, reused)
+			require.NoError(t, maclease.Reserve(t.Context(), wh.kubeClient, replacement, app.Name, app.UID, reused))
+			require.NoError(t, maclease.Validate(t.Context(), wh.kubeClient, replacement, app.UID, reused))
+			require.Error(t, maclease.Validate(t.Context(), wh.kubeClient, old, app.UID, mac))
+		})
+	}
+}
 
 func testDeploymentOwner(name string) metav1.OwnerReference {
 	yes := true
