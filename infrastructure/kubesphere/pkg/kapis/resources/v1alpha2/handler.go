@@ -22,15 +22,12 @@ import (
 	"strings"
 
 	"github.com/emicklei/go-restful"
-	k8serr "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog"
 
 	"kubesphere.io/kubesphere/pkg/api"
 	"kubesphere.io/kubesphere/pkg/informers"
 	"kubesphere.io/kubesphere/pkg/models/components"
-	"kubesphere.io/kubesphere/pkg/models/kubeconfig"
-	"kubesphere.io/kubesphere/pkg/models/kubectl"
 	"kubesphere.io/kubesphere/pkg/models/quotas"
 	"kubesphere.io/kubesphere/pkg/models/resources/v1alpha2"
 	"kubesphere.io/kubesphere/pkg/models/resources/v1alpha2/resource"
@@ -45,8 +42,6 @@ type resourceHandler struct {
 	resourceQuotaGetter quotas.ResourceQuotaGetter
 	revisionGetter      revisions.RevisionGetter
 	//routerOperator      routers.RouterOperator
-	kubeconfigOperator kubeconfig.Interface
-	kubectlOperator    kubectl.Interface
 }
 
 func newResourceHandler(k8sClient kubernetes.Interface, factory informers.InformerFactory, masterURL string) *resourceHandler {
@@ -57,15 +52,7 @@ func newResourceHandler(k8sClient kubernetes.Interface, factory informers.Inform
 		resourceQuotaGetter: quotas.NewResourceQuotaGetter(factory.KubernetesSharedInformerFactory()),
 		revisionGetter:      revisions.NewRevisionGetter(factory.KubernetesSharedInformerFactory()),
 		//routerOperator:      routers.NewRouterOperator(k8sClient, factory.KubernetesSharedInformerFactory()),
-		kubeconfigOperator: kubeconfig.NewReadOnlyOperator(factory.KubernetesSharedInformerFactory().Core().V1().ConfigMaps().Lister(), masterURL),
-		kubectlOperator: kubectl.NewOperator(nil, factory.KubernetesSharedInformerFactory().Apps().V1().Deployments(),
-			factory.KubernetesSharedInformerFactory().Core().V1().Pods(),
-			factory.KubeSphereSharedInformerFactory().Iam().V1alpha2().Users(), ""),
 	}
-}
-
-func (r *resourceHandler) handleGetNamespacedResources(request *restful.Request, response *restful.Response) {
-	r.handleListNamespaceResources(request, response)
 }
 
 func (r *resourceHandler) handleListNamespaceResources(request *restful.Request, response *restful.Response) {
@@ -119,16 +106,6 @@ func (r *resourceHandler) handleGetComponentStatus(request *restful.Request, res
 func (r *resourceHandler) handleGetComponents(_ *restful.Request, response *restful.Response) {
 	result, err := r.componentsGetter.GetAllComponentsStatus()
 
-	if err != nil {
-		api.HandleInternalError(response, nil, err)
-		return
-	}
-
-	response.WriteAsJson(result)
-}
-
-func (r *resourceHandler) handleGetClusterQuotas(_ *restful.Request, response *restful.Response) {
-	result, err := r.resourceQuotaGetter.GetClusterQuota()
 	if err != nil {
 		api.HandleInternalError(response, nil, err)
 		return
@@ -307,37 +284,4 @@ func (r *resourceHandler) handleGetNamespacedAbnormalWorkloads(request *restful.
 
 	response.WriteAsJson(result)
 
-}
-
-func (r *resourceHandler) GetKubectlPod(request *restful.Request, response *restful.Response) {
-	user := request.PathParameter("user")
-
-	kubectlPod, err := r.kubectlOperator.GetKubectlPod(user)
-
-	if err != nil {
-		klog.Errorln(err)
-		response.WriteHeaderAndEntity(http.StatusInternalServerError, errors.Wrap(err))
-		return
-	}
-
-	response.WriteEntity(kubectlPod)
-}
-
-func (r *resourceHandler) GetKubeconfig(request *restful.Request, response *restful.Response) {
-	user := request.PathParameter("user")
-
-	kubectlConfig, err := r.kubeconfigOperator.GetKubeConfig(user)
-
-	if err != nil {
-		klog.Error(err)
-		if k8serr.IsNotFound(err) {
-			// recreate
-			response.WriteHeaderAndJson(http.StatusNotFound, errors.Wrap(err), restful.MIME_JSON)
-		} else {
-			response.WriteHeaderAndJson(http.StatusInternalServerError, errors.Wrap(err), restful.MIME_JSON)
-		}
-		return
-	}
-
-	response.Write([]byte(kubectlConfig))
 }

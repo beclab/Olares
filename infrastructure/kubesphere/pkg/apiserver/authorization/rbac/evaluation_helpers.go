@@ -19,16 +19,10 @@ limitations under the License.
 package rbac
 
 import (
-	"fmt"
 	"strings"
 
 	rbacv1 "k8s.io/api/rbac/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 )
-
-func RoleRefGroupKind(roleRef rbacv1.RoleRef) schema.GroupKind {
-	return schema.GroupKind{Group: roleRef.APIGroup, Kind: roleRef.Kind}
-}
 
 func VerbMatches(rule *rbacv1.PolicyRule, requestedVerb string) bool {
 	for _, ruleVerb := range rule.Verbs {
@@ -114,68 +108,4 @@ func NonResourceURLMatches(rule *rbacv1.PolicyRule, requestedURL string) bool {
 	return false
 }
 
-// subjectsStrings returns users, groups, serviceaccounts, unknown for display purposes.
-func SubjectsStrings(subjects []rbacv1.Subject) ([]string, []string, []string, []string) {
-	users := []string{}
-	groups := []string{}
-	sas := []string{}
-	others := []string{}
-
-	for _, subject := range subjects {
-		switch subject.Kind {
-		case rbacv1.ServiceAccountKind:
-			sas = append(sas, fmt.Sprintf("%s/%s", subject.Namespace, subject.Name))
-
-		case rbacv1.UserKind:
-			users = append(users, subject.Name)
-
-		case rbacv1.GroupKind:
-			groups = append(groups, subject.Name)
-
-		default:
-			others = append(others, fmt.Sprintf("%s/%s/%s", subject.Kind, subject.Namespace, subject.Name))
-		}
-	}
-
-	return users, groups, sas, others
-}
-
-func String(r rbacv1.PolicyRule) string {
-	return "PolicyRule" + CompactString(r)
-}
-
-// CompactString exposes a compact string representation for use in escalation error messages
-func CompactString(r rbacv1.PolicyRule) string {
-	formatStringParts := []string{}
-	formatArgs := []interface{}{}
-	if len(r.APIGroups) > 0 {
-		formatStringParts = append(formatStringParts, "APIGroups:%q")
-		formatArgs = append(formatArgs, r.APIGroups)
-	}
-	if len(r.Resources) > 0 {
-		formatStringParts = append(formatStringParts, "Resources:%q")
-		formatArgs = append(formatArgs, r.Resources)
-	}
-	if len(r.NonResourceURLs) > 0 {
-		formatStringParts = append(formatStringParts, "NonResourceURLs:%q")
-		formatArgs = append(formatArgs, r.NonResourceURLs)
-	}
-	if len(r.ResourceNames) > 0 {
-		formatStringParts = append(formatStringParts, "ResourceNames:%q")
-		formatArgs = append(formatArgs, r.ResourceNames)
-	}
-	if len(r.Verbs) > 0 {
-		formatStringParts = append(formatStringParts, "Verbs:%q")
-		formatArgs = append(formatArgs, r.Verbs)
-	}
-	formatString := "{" + strings.Join(formatStringParts, ", ") + "}"
-	return fmt.Sprintf(formatString, formatArgs...)
-}
-
 type SortableRuleSlice []rbacv1.PolicyRule
-
-func (s SortableRuleSlice) Len() int      { return len(s) }
-func (s SortableRuleSlice) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
-func (s SortableRuleSlice) Less(i, j int) bool {
-	return strings.Compare(s[i].String(), s[j].String()) < 0
-}

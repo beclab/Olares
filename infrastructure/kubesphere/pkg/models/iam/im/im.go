@@ -39,7 +39,6 @@ type IdentityManagementInterface interface {
 	DescribeUser(username string) (*iamv1alpha2.User, error)
 	ModifyPassword(username string, password string) error
 	ListLLdapUsers(query *query.Query) (*api.ListResult, error)
-	ListLLdapGroups(query *query.Query) (*api.ListResult, error)
 }
 
 func NewOperator(ksClient kubesphere.Interface, userGetter resources.Interface) IdentityManagementInterface {
@@ -145,29 +144,6 @@ func (im *imOperator) ListLLdapUsers(query *query.Query) (*api.ListResult, error
 
 		out := LLdapUser{Username: user.Name, Email: user.Spec.Email, Groups: user.Spec.Groups}
 		items = append(items, out)
-	}
-	result.Items = items
-	result.TotalItems = len(items)
-	return result, nil
-}
-
-func (im *imOperator) ListLLdapGroups(query *query.Query) (*api.ListResult, error) {
-	result := new(api.ListResult)
-	users, err := im.userGetter.List("", query)
-	if err != nil {
-		klog.Error(err)
-		return nil, err
-	}
-	items := make([]interface{}, 0)
-	for _, item := range users.Items {
-		user := item.(*iamv1alpha2.User)
-		// filter user that do not sync to lldap
-		if user.Annotations[syncToLLdapKey] != "true" {
-			continue
-		}
-		for i := range user.Spec.Groups {
-			items = append(items, user.Spec.Groups[i])
-		}
 	}
 	result.Items = items
 	result.TotalItems = len(items)

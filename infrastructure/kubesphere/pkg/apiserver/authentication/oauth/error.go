@@ -16,8 +16,6 @@ limitations under the License.
 
 package oauth
 
-import "fmt"
-
 // The following error type is defined in https://datatracker.ietf.org/doc/html/rfc6749#section-5.2
 var (
 	// ErrorInvalidClient
@@ -76,36 +74,6 @@ var (
 	ErrorServerError = Error{Type: "server_error"}
 )
 
-func NewInvalidRequest(error error) Error {
-	err := ErrorInvalidRequest
-	err.Description = error.Error()
-	return err
-}
-
-func NewInvalidScope(error error) Error {
-	err := ErrorInvalidScope
-	err.Description = error.Error()
-	return err
-}
-
-func NewInvalidClient(error error) Error {
-	err := ErrorInvalidClient
-	err.Description = error.Error()
-	return err
-}
-
-func NewInvalidGrant(error error) Error {
-	err := ErrorInvalidGrant
-	err.Description = error.Error()
-	return err
-}
-
-func NewServerError(error error) Error {
-	err := ErrorServerError
-	err.Description = error.Error()
-	return err
-}
-
 // Error wrapped OAuth error Response, for more details: https://datatracker.ietf.org/doc/html/rfc6749#section-5.2
 // The authorization server responds with an HTTP 400 (Bad Request)
 // status code (unless specified otherwise) and includes the following
@@ -122,8 +90,4 @@ type Error struct {
 	// Values for the "error_description" parameter MUST NOT include
 	// characters outside the set %x20-21 / %x23-5B / %x5D-7E.
 	Description string `json:"error_description,omitempty"`
-}
-
-func (e Error) Error() string {
-	return fmt.Sprintf("error=\"%s\", error_description=\"%s\"", e.Type, e.Description)
 }
