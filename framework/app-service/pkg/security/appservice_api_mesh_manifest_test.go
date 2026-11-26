@@ -183,6 +183,10 @@ func TestAppServiceAPIMeshRolloutAndPortBoundaries(t *testing.T) {
 		{"settings-system-envs-bob", "user-system-bob", "bytetrade-sys-ops", "GET", "/app-service/v1/systemenvs", "bob", "Exact"},
 		{"settings-user-envs-bob", "user-system-bob", "bytetrade-sys-ops", "GET", "/app-service/v1/userenvs", "bob", "Exact"},
 		{"settings-user-bob", "user-system-bob", "bytetrade-sys-ops", "GET", "/app-service/v1/users/bob", "bob", "Exact"},
+		{"settings-app-permissions-alice", "user-system-alice", "bytetrade-sys-ops", "GET", "^/app-service/v1/perms/[a-z0-9]([a-z0-9-]*[a-z0-9])?$", "alice", "RegularExpression"},
+		{"settings-app-permissions-bob", "user-system-bob", "bytetrade-sys-ops", "GET", "^/app-service/v1/perms/[a-z0-9]([a-z0-9-]*[a-z0-9])?$", "bob", "RegularExpression"},
+		{"settings-app-providers-alice", "user-system-alice", "bytetrade-sys-ops", "GET", "^/app-service/v1/apps/provider-registry/[a-z0-9]([a-z0-9-]*[a-z0-9])?$", "alice", "RegularExpression"},
+		{"settings-app-providers-bob", "user-system-bob", "bytetrade-sys-ops", "GET", "^/app-service/v1/apps/provider-registry/[a-z0-9]([a-z0-9-]*[a-z0-9])?$", "bob", "RegularExpression"},
 		{"settings-attachments-bob", "user-system-bob", "bytetrade-sys-ops", "GET", "^/app-service/v1/applications/[a-z0-9][a-z0-9-]*/(attachments|attachment-capabilities|device-inventory)$", "bob", "RegularExpression"},
 	} {
 		route := active["HTTPRoute/"+tc.name]["spec"].(map[string]any)
@@ -199,6 +203,23 @@ func TestAppServiceAPIMeshRolloutAndPortBoundaries(t *testing.T) {
 			for _, path := range []string{"/app-service/v1/applications/a/setup", "/app-service/v1/applications/a/attachments/extra", "/app-service/v1/applications/a/../a/attachments", "/app-service/v1/applications/a%2fb/attachments", "/app-service/v1/applications/a/attachments/", "/v1/applications/a/attachments"} {
 				if pattern.MatchString(path) {
 					t.Fatalf("Settings route admits unrelated path %s", path)
+				}
+			}
+		}
+		if strings.HasPrefix(tc.name, "settings-app-permissions-") || strings.HasPrefix(tc.name, "settings-app-providers-") {
+			prefix := "/app-service/v1/perms/"
+			if strings.HasPrefix(tc.name, "settings-app-providers-") {
+				prefix = "/app-service/v1/apps/provider-registry/"
+			}
+			pattern := regexp.MustCompile(tc.path)
+			for _, app := range []string{"a", "olares-app", "app-3"} {
+				if !pattern.MatchString(prefix + app) {
+					t.Fatalf("Settings route %s misses app %s", tc.name, app)
+				}
+			}
+			for _, suffix := range []string{"", "a/", "a-/b", "a%2fb", "../a", "provider-registry/type/group/version"} {
+				if pattern.MatchString(prefix + suffix) {
+					t.Fatalf("Settings route %s admits unrelated path %s", tc.name, prefix+suffix)
 				}
 			}
 		}

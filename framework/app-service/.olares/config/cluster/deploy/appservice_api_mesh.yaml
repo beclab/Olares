@@ -32,6 +32,8 @@
   (dict "name" "settings-system-envs" "path" "/app-service/v1/systemenvs")
   (dict "name" "settings-user-envs" "path" "/app-service/v1/userenvs")
   (dict "name" "settings-user" "path" (printf "/app-service/v1/users/%s" $tenant))
+  (dict "name" "settings-app-permissions" "path" "^/app-service/v1/perms/[a-z0-9]([a-z0-9-]*[a-z0-9])?$" "pathType" "RegularExpression")
+  (dict "name" "settings-app-providers" "path" "^/app-service/v1/apps/provider-registry/[a-z0-9]([a-z0-9-]*[a-z0-9])?$" "pathType" "RegularExpression")
   (dict "name" "settings-attachments" "path" "^/app-service/v1/applications/[a-z0-9][a-z0-9-]*/(attachments|attachment-capabilities|device-inventory)$" "pathType" "RegularExpression") -}}
 {{- range $read := $settingsReads -}}
 {{- $routes = append $routes (dict "name" (printf "%s-%s" $read.name $tenant) "namespace" (printf "user-system-%s" $tenant) "account" "bytetrade-sys-ops" "method" "GET" "path" $read.path "pathType" (default "Exact" $read.pathType) "userHeader" $tenant) -}}
