@@ -1,3 +1,7 @@
+{{- $marketMesh := default dict .Values.marketBackendMTLS -}}
+{{- if and $marketMesh.activate (or (not $marketMesh.prepare) (not .Values.marketLinkerd)) -}}
+{{- fail "Market mTLS activation requires prepared policy and the native Linkerd proxy" -}}
+{{- end -}}
 {{- $market_backend_nats_secret := (lookup "v1" "Secret" .Release.Namespace "market-backend-nats-secret") -}}
 {{- $nats_password := "" -}}
 {{ if $market_backend_nats_secret -}}
@@ -123,6 +127,9 @@ spec:
       labels:
         app: appstore
         io.bytetrade.app: "true"
+        {{- if $marketMesh.activate }}
+        traffic.olares.io/market-backend-mtls: required
+        {{- end }}
         {{- if .Values.marketLinkerd }}
         traffic.olares.io/platform-mesh: "true"
         {{- end }}
@@ -130,6 +137,9 @@ spec:
         {{- if .Values.marketLinkerd }}
         linkerd.io/inject: enabled
         config.linkerd.io/proxy-enable-native-sidecar: "true"
+        {{- if $marketMesh.activate }}
+        config.linkerd.io/default-inbound-policy: deny
+        {{- end }}
         {{- end }}
 {{ if .Values.telemetry }}
         instrumentation.opentelemetry.io/inject-go: "olares-instrumentation"
@@ -165,7 +175,14 @@ spec:
         image: beclab/market-backend:v0.6.139
         imagePullPolicy: IfNotPresent
         ports:
-          - containerPort: 81
+          - containerPort: 8080
+        {{- if $marketMesh.activate }}
+        readinessProbe:
+          exec:
+            command: ["wget", "-q", "-T", "2", "-O", "/dev/null", "http://127.0.0.1:8080/readyz"]
+          timeoutSeconds: 3
+          periodSeconds: 10
+        {{- end }}
         envFrom:
           - configMapRef:
               name: login-olares-cli-allow-list
@@ -310,10 +327,12 @@ spec:
       protocol: TCP
       port: 81
       targetPort: 8080
+    {{- if not $marketMesh.activate }}
     - name: "appstore-websocket"
       protocol: TCP
       port: 40010
       targetPort: 40010
+    {{- end }}
 ---
 apiVersion: apr.bytetrade.io/v1alpha1
 kind: MiddlewareRequest

@@ -7,6 +7,9 @@
 {{- fail "app-service API mTLS requires an explicit tenant inventory" -}}
 {{- end -}}
 {{- $routes := list (dict "name" "market-image-info" "namespace" "os-framework" "account" "market-sa" "method" "POST" "path" "/app-service/v1/apps/image-info") -}}
+{{- range $name, $path := dict "market-status-user" "/user-info" "market-status-user-resource" "/user/resource" "market-status-cluster-resource" "/cluster/resource" "market-status-version" "/terminus/version" -}}
+{{- $routes = append $routes (dict "name" $name "namespace" "os-framework" "account" "market-sa" "method" "GET" "path" (printf "/app-service/v1%s" $path)) -}}
+{{- end -}}
 {{- range $tenant := $mesh.tenants -}}
 {{- if or (gt (len $tenant) 51) (not (regexMatch "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$" $tenant)) -}}
 {{- fail "invalid app-service API mTLS tenant" -}}

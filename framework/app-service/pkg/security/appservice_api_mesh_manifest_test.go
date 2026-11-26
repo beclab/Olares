@@ -21,6 +21,8 @@ func renderAppServiceMeshManifests(t *testing.T, values map[string]any) (map[str
 		"../../.olares/config/cluster/deploy/appservice_deploy.yaml",
 		"../../.olares/config/cluster/deploy/appservice_api_mesh.yaml",
 		"../../../market/.olares/config/cluster/deploy/market_deploy.yaml",
+		"../../../market/.olares/config/cluster/deploy/market_backend_mesh.yaml",
+		"../../../../apps/.olares/config/user/helm-charts/system-apps/templates/market-frontend-mesh.yaml",
 	} {
 		data, err := os.ReadFile(file)
 		if err != nil {
@@ -131,6 +133,10 @@ func TestAppServiceAPIMeshRolloutAndPortBoundaries(t *testing.T) {
 		{"users-alice", "user-system-alice", "bytetrade-sys-ops", "GET", "/app-service/v1/users", "alice"},
 		{"users-bob", "user-system-bob", "bytetrade-sys-ops", "GET", "/app-service/v1/users", "bob"},
 		{"market-image-info", "os-framework", "market-sa", "POST", "/app-service/v1/apps/image-info", ""},
+		{"market-status-user", "os-framework", "market-sa", "GET", "/app-service/v1/user-info", ""},
+		{"market-status-user-resource", "os-framework", "market-sa", "GET", "/app-service/v1/user/resource", ""},
+		{"market-status-cluster-resource", "os-framework", "market-sa", "GET", "/app-service/v1/cluster/resource", ""},
+		{"market-status-version", "os-framework", "market-sa", "GET", "/app-service/v1/terminus/version", ""},
 	} {
 		route := active["HTTPRoute/"+tc.name]["spec"].(map[string]any)
 		match := map[string]any{
@@ -165,6 +171,90 @@ func TestAppServiceMeshRequiresExplicitValidTenants(t *testing.T) {
 		}})
 		if err == nil {
 			t.Fatalf("accepted invalid tenant inventory %v", tenants)
+		}
+	}
+}
+
+func TestMarketMeshRequiresEnrollmentAndMatchingTenant(t *testing.T) {
+	values := func(prepare, activate, inject bool, tenants ...string) map[string]any {
+		return map[string]any{
+			"marketLinkerd": inject,
+			"marketBackendMTLS": map[string]any{
+				"prepare": prepare, "activate": activate, "tenants": tenants,
+			},
+			"bfl":                                 map[string]any{"username": "alice"},
+			"marketFrontendGatewayServiceAccount": "expected-entry",
+		}
+	}
+	for _, input := range []map[string]any{
+		values(false, true, true, "alice"),
+		values(true, true, false, "alice"),
+		values(true, false, true),
+		values(true, false, true, "alice", "alice"),
+		values(true, false, true, "*"),
+	} {
+		if _, err := renderAppServiceMeshManifests(t, input); err == nil {
+			t.Fatalf("accepted incomplete or unsafe config %v", input)
+		}
+	}
+	for _, activate := range []bool{false, true} {
+		resources, err := renderAppServiceMeshManifests(t, values(true, activate, true, "alice", "bob"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		const enrollment = "traffic.olares.io/market-backend-mtls"
+		server := resources["Server/market-backend"]["spec"].(map[string]any)
+		if server["port"] != 8080 || server["accessPolicy"] != "deny" ||
+			!reflect.DeepEqual(server["podSelector"], map[string]any{"matchLabels": map[string]any{"app": "appstore", enrollment: "required"}}) {
+			t.Fatalf("wrong backend policy: %v", server)
+		}
+		pod := resources["Deployment/market-deployment"]["spec"].(map[string]any)["template"].(map[string]any)["metadata"].(map[string]any)
+		if (pod["labels"].(map[string]any)[enrollment] == "required") != activate ||
+			(pod["annotations"].(map[string]any)["config.linkerd.io/default-inbound-policy"] == "deny") != activate {
+			t.Fatalf("incorrect workload activation: %v", pod)
+		}
+		ports := resources["Service/appstore-svc"]["spec"].(map[string]any)["ports"].([]any)
+		wantPorts := []any{map[string]any{"name": "appstore-backend", "protocol": "TCP", "port": 81, "targetPort": 8080}}
+		if !activate {
+			wantPorts = append(wantPorts, map[string]any{"name": "appstore-websocket", "protocol": "TCP", "port": 40010, "targetPort": 40010})
+		}
+		if !reflect.DeepEqual(ports, wantPorts) {
+			t.Fatalf("unexpected Service port exposure: %v", ports)
+		}
+		if resources["ValidatingAdmissionPolicyBinding/olares-market-backend-mtls-pods"] == nil {
+			t.Fatal("missing Market pod admission binding")
+		}
+		for _, tenant := range []string{"alice", "bob"} {
+			name := "market-provider-" + tenant
+			route := resources["HTTPRoute/"+name]["spec"].(map[string]any)
+			wantMatch := map[string]any{
+				"path":    map[string]any{"type": "PathPrefix", "value": "/app-store/api/v2"},
+				"headers": []any{map[string]any{"name": "X-Bfl-User", "type": "Exact", "value": tenant}},
+			}
+			if !reflect.DeepEqual(route["rules"], []any{map[string]any{"matches": []any{wantMatch}}}) ||
+				!reflect.DeepEqual(route["parentRefs"], []any{map[string]any{"group": "policy.linkerd.io", "kind": "Server", "name": "market-backend"}}) {
+				t.Fatalf("tenant route is broader than its contract: %v", route)
+			}
+			authn := resources["MeshTLSAuthentication/"+name]["spec"].(map[string]any)
+			wantIdentity := map[string]any{"kind": "ServiceAccount", "name": "bytetrade-sys-ops", "namespace": "user-system-" + tenant}
+			if !reflect.DeepEqual(authn, map[string]any{"identityRefs": []any{wantIdentity}}) {
+				t.Fatalf("incorrect tenant identity: %v", authn)
+			}
+			authz := resources["AuthorizationPolicy/"+name]["spec"].(map[string]any)
+			wantPolicy := map[string]any{
+				"targetRef":                  map[string]any{"group": "gateway.networking.k8s.io", "kind": "HTTPRoute", "name": name},
+				"requiredAuthenticationRefs": []any{map[string]any{"group": "policy.linkerd.io", "kind": "MeshTLSAuthentication", "name": name}},
+			}
+			if !reflect.DeepEqual(authz, wantPolicy) {
+				t.Fatalf("incorrect authorization policy: %v", authz)
+			}
+		}
+		if frontend := resources["Server/market-frontend"]["spec"].(map[string]any); frontend["port"] != 90 || frontend["accessPolicy"] != "deny" {
+			t.Fatalf("incorrect frontend boundary: %v", frontend)
+		}
+		authn := resources["MeshTLSAuthentication/market-frontend-entry"]["spec"].(map[string]any)
+		if !reflect.DeepEqual(authn["identityRefs"], []any{map[string]any{"kind": "ServiceAccount", "name": "expected-entry", "namespace": "os-gateway"}}) {
+			t.Fatalf("incorrect Entry identity: %v", authn)
 		}
 	}
 }

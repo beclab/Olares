@@ -1,0 +1,136 @@
+{{- $mesh := default dict .Values.marketBackendMTLS -}}
+{{- if $mesh.prepare -}}
+{{- if ne .Release.Namespace "os-framework" -}}
+{{- fail "Market backend mesh policies belong in os-framework" -}}
+{{- end -}}
+{{- $tenants := default (list) $mesh.tenants -}}
+{{- if or (not $tenants) (ne (len $tenants) (len (uniq $tenants))) -}}
+{{- fail "Market backend mesh policies require a unique tenant inventory" -}}
+{{- end }}
+apiVersion: policy.linkerd.io/v1beta3
+kind: Server
+metadata:
+  name: market-backend
+  namespace: os-framework
+spec:
+  podSelector:
+    matchLabels:
+      app: appstore
+      traffic.olares.io/market-backend-mtls: required
+  port: 8080
+  proxyProtocol: HTTP/1
+  accessPolicy: deny
+{{- range $tenant := $tenants }}
+{{- if or (gt (len $tenant) 51) (not (regexMatch "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$" $tenant)) -}}
+{{- fail "invalid Market backend mTLS tenant" -}}
+{{- end }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: market-provider-{{ $tenant }}
+  namespace: os-framework
+spec:
+  parentRefs:
+    - group: policy.linkerd.io
+      kind: Server
+      name: market-backend
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /app-store/api/v2
+          headers:
+            - name: X-Bfl-User
+              type: Exact
+              value: {{ $tenant | quote }}
+---
+apiVersion: policy.linkerd.io/v1alpha1
+kind: MeshTLSAuthentication
+metadata:
+  name: market-provider-{{ $tenant }}
+  namespace: os-framework
+spec:
+  identityRefs:
+    - kind: ServiceAccount
+      name: bytetrade-sys-ops
+      namespace: user-system-{{ $tenant }}
+---
+apiVersion: policy.linkerd.io/v1alpha1
+kind: AuthorizationPolicy
+metadata:
+  name: market-provider-{{ $tenant }}
+  namespace: os-framework
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: market-provider-{{ $tenant }}
+  requiredAuthenticationRefs:
+    - group: policy.linkerd.io
+      kind: MeshTLSAuthentication
+      name: market-provider-{{ $tenant }}
+{{- end }}
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: olares-market-backend-mtls-pods
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["pods"]
+        scope: Namespaced
+  matchConditions:
+    - name: enrolled-market-backend
+      expression: >-
+        request.namespace == 'os-framework' &&
+        ((has(object.metadata.labels) &&
+          'traffic.olares.io/market-backend-mtls' in object.metadata.labels) ||
+         (oldObject != null && has(oldObject.metadata.labels) &&
+          'traffic.olares.io/market-backend-mtls' in oldObject.metadata.labels))
+  validations:
+    - expression: >-
+        has(object.metadata.labels) &&
+        'app' in object.metadata.labels && object.metadata.labels['app'] == 'appstore' &&
+        'traffic.olares.io/market-backend-mtls' in object.metadata.labels &&
+        object.metadata.labels['traffic.olares.io/market-backend-mtls'] == 'required' &&
+        object.spec.serviceAccountName == 'market-sa' &&
+        (!has(object.spec.hostNetwork) || !object.spec.hostNetwork) &&
+        object.spec.containers.all(c, !has(c.ports) || c.ports.all(p, !has(p.hostPort) || p.hostPort == 0))
+      message: Keep Market backend enrollment, identity and Pod networking.
+    - expression: >-
+        has(object.metadata.annotations) &&
+        'linkerd.io/inject' in object.metadata.annotations &&
+        object.metadata.annotations['linkerd.io/inject'] == 'enabled' &&
+        'config.linkerd.io/proxy-enable-native-sidecar' in object.metadata.annotations &&
+        object.metadata.annotations['config.linkerd.io/proxy-enable-native-sidecar'] == 'true' &&
+        'config.linkerd.io/default-inbound-policy' in object.metadata.annotations &&
+        object.metadata.annotations['config.linkerd.io/default-inbound-policy'] == 'deny' &&
+        ['config.linkerd.io/skip-inbound-ports', 'config.linkerd.io/skip-outbound-ports', 'config.linkerd.io/skip-subnets'].all(
+          a, !(a in object.metadata.annotations) || object.metadata.annotations[a] == '')
+      message: Keep the native proxy and full traffic interception.
+    - expression: >-
+        has(object.spec.initContainers) && object.spec.initContainers.size() >= 2 &&
+        object.spec.initContainers[0].name == 'linkerd-init' &&
+        object.spec.initContainers[1].name == 'linkerd-proxy' &&
+        has(object.spec.initContainers[1].restartPolicy) &&
+        object.spec.initContainers[1].restartPolicy == 'Always' &&
+        has(object.spec.initContainers[1].startupProbe) &&
+        has(object.spec.initContainers[1].env) &&
+        object.spec.initContainers[1].env.exists(e, e.name == 'LINKERD2_PROXY_INBOUND_DEFAULT_POLICY' &&
+          !has(e.valueFrom) && has(e.value) && e.value == 'deny')
+      message: Market backend enrollment requires the configured native Linkerd proxy.
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: olares-market-backend-mtls-pods
+spec:
+  policyName: olares-market-backend-mtls-pods
+  validationActions: [Deny, Audit]
+{{- end }}

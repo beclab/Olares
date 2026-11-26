@@ -1,0 +1,43 @@
+{{- with .Values.marketFrontendGatewayServiceAccount -}}
+{{- if or (gt (len .) 63) (not (regexMatch "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$" .)) -}}
+{{- fail "invalid Market Entry gateway ServiceAccount" -}}
+{{- end }}
+apiVersion: policy.linkerd.io/v1beta3
+kind: Server
+metadata:
+  name: market-frontend
+  namespace: user-space-{{ $.Values.bfl.username }}
+spec:
+  podSelector:
+    matchLabels:
+      app: olares-app
+  port: 90
+  proxyProtocol: HTTP/1
+  accessPolicy: deny
+---
+apiVersion: policy.linkerd.io/v1alpha1
+kind: MeshTLSAuthentication
+metadata:
+  name: market-frontend-entry
+  namespace: user-space-{{ $.Values.bfl.username }}
+spec:
+  identityRefs:
+    - kind: ServiceAccount
+      name: {{ . | quote }}
+      namespace: os-gateway
+---
+apiVersion: policy.linkerd.io/v1alpha1
+kind: AuthorizationPolicy
+metadata:
+  name: market-frontend-entry
+  namespace: user-space-{{ $.Values.bfl.username }}
+spec:
+  targetRef:
+    group: policy.linkerd.io
+    kind: Server
+    name: market-frontend
+  requiredAuthenticationRefs:
+    - group: policy.linkerd.io
+      kind: MeshTLSAuthentication
+      name: market-frontend-entry
+{{- end }}
