@@ -50,8 +50,15 @@ func (r *SharedRouteReconciler) Reconcile(ctx context.Context, req reconcile.Req
 		}
 	}
 	var retry time.Duration
-	if rerr == nil && res.Reason == ReasonAwaitingDataPlane {
-		retry = 5 * time.Second
+	if rerr == nil {
+		switch res.Reason {
+		case ReasonAwaitingDataPlane:
+			retry = 5 * time.Second
+		case ReasonBackendMissing:
+			// A newly provisioned tenant may publish the registry before its
+			// Service exists. There is no owned HTTPRoute to wake this controller.
+			retry = 30 * time.Second
+		}
 	}
 	if rerr == nil && res.HTTPRouteName != "" {
 		if err := r.servingReadiness(ctx, srr, res.HTTPRouteName); err != nil {
@@ -69,6 +76,9 @@ func (r *SharedRouteReconciler) Reconcile(ctx context.Context, req reconcile.Req
 	}
 	if statusErr := UpdateSRRStatus(ctx, r.Client, srr, res); statusErr != nil {
 		klog.Warningf("update SRR status %s/%s failed: %v", srr.Namespace, srr.Name, statusErr)
+		if rerr == nil {
+			rerr = statusErr
+		}
 	}
 	return reconcile.Result{RequeueAfter: retry}, rerr
 }

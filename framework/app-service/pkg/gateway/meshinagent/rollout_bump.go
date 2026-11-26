@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/mesh"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -17,6 +19,15 @@ import (
 // ErrWorkloadGone marks a rollout target that disappeared; callers retry instead
 // of recording success, so a workload recreated moments later is still rolled.
 var ErrWorkloadGone = errors.New("rollout target not found")
+
+var errOutboundExclusion = errors.New("update the application chart before rolling a workload with Linkerd outbound exclusions")
+
+func validateRolloutTemplate(template *corev1.PodTemplateSpec) error {
+	if template.Annotations[mesh.LinkerdSkipOutboundPortsAnnotation] != "" {
+		return errOutboundExclusion
+	}
+	return nil
+}
 
 // WorkloadRef identifies a Deployment or StatefulSet to roll.
 type WorkloadRef struct {
@@ -60,13 +71,16 @@ func bumpDeployment(ctx context.Context, c client.Client, ns, name, restartedAt 
 		klog.Errorf("mesh-in-rollout: get deploy %s/%s failed: %v", ns, name, err)
 		return err
 	}
+	if err := validateRolloutTemplate(&dep.Spec.Template); err != nil {
+		return err
+	}
 	base := dep.DeepCopy()
 	if dep.Spec.Template.Annotations == nil {
 		dep.Spec.Template.Annotations = map[string]string{}
 	}
 	dep.Spec.Template.Annotations[RestartedAtAnnotation] = restartedAt
 	ensureSurgeFirstStrategy(&dep)
-	if err := c.Patch(ctx, &dep, client.MergeFrom(base)); err != nil {
+	if err := c.Patch(ctx, &dep, client.MergeFromWithOptions(base, client.MergeFromWithOptimisticLock{})); err != nil {
 		klog.Errorf("mesh-in-rollout: patch deploy %s/%s failed: %v", ns, name, err)
 		return err
 	}
@@ -84,12 +98,15 @@ func bumpStatefulSet(ctx context.Context, c client.Client, ns, name, restartedAt
 		klog.Errorf("mesh-in-rollout: get sts %s/%s failed: %v", ns, name, err)
 		return err
 	}
+	if err := validateRolloutTemplate(&sts.Spec.Template); err != nil {
+		return err
+	}
 	base := sts.DeepCopy()
 	if sts.Spec.Template.Annotations == nil {
 		sts.Spec.Template.Annotations = map[string]string{}
 	}
 	sts.Spec.Template.Annotations[RestartedAtAnnotation] = restartedAt
-	if err := c.Patch(ctx, &sts, client.MergeFrom(base)); err != nil {
+	if err := c.Patch(ctx, &sts, client.MergeFromWithOptions(base, client.MergeFromWithOptimisticLock{})); err != nil {
 		klog.Errorf("mesh-in-rollout: patch sts %s/%s failed: %v", ns, name, err)
 		return err
 	}

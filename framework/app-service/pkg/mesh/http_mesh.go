@@ -1,6 +1,7 @@
 package mesh
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -128,11 +129,13 @@ func AnnotatePodForHTTPMesh(pod *corev1.Pod, enable bool, wave int, opaquePorts 
 	}
 }
 
+const InterceptionExclusionsError = "HTTP mesh forbids host networking and Linkerd interception exclusions"
+
 // CheckHTTPMeshInterception rejects Pod settings that can bypass Linkerd.
 func CheckHTTPMeshInterception(pod *corev1.Pod) error {
 	if pod.Spec.HostNetwork || pod.Annotations[LinkerdSkipInboundPortsAnnotation] != "" ||
 		pod.Annotations[LinkerdSkipOutboundPortsAnnotation] != "" || pod.Annotations[LinkerdSkipSubnetsAnnotation] != "" {
-		return fmt.Errorf("HTTP mesh forbids host networking and Linkerd interception exclusions")
+		return errors.New(InterceptionExclusionsError)
 	}
 	for _, containers := range [][]corev1.Container{pod.Spec.Containers, pod.Spec.InitContainers} {
 		for _, container := range containers {

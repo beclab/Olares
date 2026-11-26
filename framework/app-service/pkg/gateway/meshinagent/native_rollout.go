@@ -236,6 +236,9 @@ func bumpNativeSidecars(ctx context.Context, c client.Client, ref WorkloadRef) e
 		template.Annotations[nativeSidecarMigrationAnnotation] == nativeSidecarMigrationRevision {
 		return nil
 	}
+	if err := validateRolloutTemplate(template); err != nil {
+		return err
+	}
 	base := obj.DeepCopyObject().(client.Object)
 	if template.Annotations == nil {
 		template.Annotations = map[string]string{}

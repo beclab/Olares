@@ -747,3 +747,42 @@ func TestSystemLoginBootstrapDoesNotTrustForeignTenant(t *testing.T) {
 		t.Fatalf("foreign tenant received login transport: %+v %v", policies, err)
 	}
 }
+
+func TestSharedRouteReconcilesServiceCreatedAfterRegistry(t *testing.T) {
+	ctx := t.Context()
+	key := client.ObjectKey{Namespace: "user-space-alice", Name: "wizard"}
+	srr := &srrv1alpha1.SharedRouteRegistry{
+		ObjectMeta: metav1.ObjectMeta{Namespace: key.Namespace, Name: key.Name, UID: "fixture-route"},
+		Spec: srrv1alpha1.SharedRouteRegistrySpec{
+			RouteMode: srrv1alpha1.RouteModeGateway, EntranceClass: srrv1alpha1.EntranceClassShared,
+			HostPatterns: []string{"wizard.example.test"}, Upstream: srrv1alpha1.UpstreamRef{ServiceName: key.Name, Port: 80},
+		},
+	}
+	c := fake.NewClientBuilder().WithScheme(testScheme(t)).WithStatusSubresource(srr).
+		WithObjects(srr, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: key.Namespace}}).Build()
+	r := &SharedRouteReconciler{Client: c}
+	reconcileOnce := func() reconcile.Result {
+		t.Helper()
+		res, err := r.Reconcile(ctx, reconcile.Request{NamespacedName: key})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := c.Get(ctx, key, srr); err != nil {
+			t.Fatal(err)
+		}
+		return res
+	}
+	if got := reconcileOnce(); got.RequeueAfter <= 0 || srr.Status.Conditions[0].Reason != ReasonBackendMissing {
+		t.Fatalf("missing backend only registered once: %+v, %+v", got, srr.Status)
+	}
+	if err := c.Create(ctx, &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Namespace: key.Namespace, Name: key.Name},
+		Spec: corev1.ServiceSpec{ClusterIP: "10.96.0.10", Selector: map[string]string{"app": "wizard"},
+			Ports: []corev1.ServicePort{{Port: 80, TargetPort: intstr.FromInt(80), Protocol: corev1.ProtocolTCP}}},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if got := reconcileOnce(); got.RequeueAfter <= 0 || srr.Status.Conditions[0].Reason != ReasonAwaitingDataPlane || srr.Status.HTTPRouteName != "" {
+		t.Fatalf("Service creation either stuck or published an unready backend: %+v, %+v", got, srr.Status)
+	}
+}

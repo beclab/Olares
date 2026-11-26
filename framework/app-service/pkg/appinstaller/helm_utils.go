@@ -67,6 +67,9 @@ func BuildBaseHelmValues(ctx context.Context, kubeConfig *rest.Config, appConfig
 		return values, err
 	}
 	values["sysVersion"] = terminus.Spec.Version
+	// This platform release requires HTTP mesh. Older releases leave the
+	// value unset, so the same application chart keeps its legacy defaults.
+	values["olaresStrictMesh"] = true
 
 	nodeInfo, err := utils.GetNodeInfo(ctx)
 	if err != nil {

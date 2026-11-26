@@ -14,6 +14,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
@@ -655,5 +657,53 @@ func TestMeshInjectStateRoundTrip(t *testing.T) {
 	ready, epoch, err := LoadMeshInjectRolloutState(context.Background(), c)
 	if err != nil || !ready || epoch != "2" {
 		t.Fatalf("ready=%v epoch=%s err=%v", ready, epoch, err)
+	}
+}
+
+func TestLegacyOutboundExclusionBlocksAutomaticRolloutUntilChartUpgrade(t *testing.T) {
+	ctx := context.Background()
+	scheme := runtime.NewScheme()
+	if err := appsv1.AddToScheme(scheme); err != nil {
+		t.Fatal(err)
+	}
+	key := types.NamespacedName{Namespace: "router-alice", Name: "router"}
+	dep := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{Namespace: key.Namespace, Name: key.Name, UID: "old-release"},
+		Spec: appsv1.DeploymentSpec{
+			Template: corev1.PodTemplateSpec{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{
+				mesh.LinkerdSkipOutboundPortsAnnotation: "4222",
+			}}},
+		},
+	}
+	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(dep).Build()
+	ref := WorkloadRef{Kind: "Deployment", Namespace: key.Namespace, Name: key.Name, UID: dep.UID}
+	for name, rollout := range map[string]func(context.Context, client.Client, WorkloadRef) error{
+		"rule bump":                BumpWorkload,
+		"native sidecar migration": bumpNativeSidecars,
+	} {
+		t.Run(name, func(t *testing.T) {
+			if err := rollout(ctx, c, ref); !errors.Is(err, errOutboundExclusion) {
+				t.Fatalf("rollout error = %v, want chart migration required", err)
+			}
+		})
+	}
+	if err := c.Get(ctx, key, dep); err != nil {
+		t.Fatal(err)
+	}
+	if anns := dep.Spec.Template.Annotations; len(anns) != 1 || anns[mesh.LinkerdSkipOutboundPortsAnnotation] != "4222" {
+		t.Fatalf("legacy rollout modified the pod template: %v", anns)
+	}
+	delete(dep.Spec.Template.Annotations, mesh.LinkerdSkipOutboundPortsAnnotation)
+	if err := c.Update(ctx, dep); err != nil {
+		t.Fatal(err)
+	}
+	if err := BumpWorkload(ctx, c, ref); err != nil {
+		t.Fatalf("upgraded chart rollout failed: %v", err)
+	}
+	if err := c.Get(ctx, key, dep); err != nil {
+		t.Fatal(err)
+	}
+	if dep.Spec.Template.Annotations[RestartedAtAnnotation] == "" {
+		t.Fatal("upgraded chart did not get a rollout annotation")
 	}
 }

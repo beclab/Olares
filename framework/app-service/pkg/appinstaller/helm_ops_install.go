@@ -6,9 +6,9 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"k8s.io/klog/v2"
 	"net/http/httputil"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
@@ -17,6 +17,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/errcode"
 	"github.com/beclab/Olares/framework/app-service/pkg/helm"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
+	"github.com/beclab/Olares/framework/app-service/pkg/mesh"
 	"github.com/beclab/Olares/framework/app-service/pkg/podhealth"
 	"github.com/beclab/Olares/framework/app-service/pkg/tapr"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
@@ -30,6 +31,7 @@ import (
 	"helm.sh/helm/v3/pkg/cli"
 	helmrelease "helm.sh/helm/v3/pkg/release"
 	"helm.sh/helm/v3/pkg/storage/driver"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -39,11 +41,13 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/klog/v2"
 )
 
 var (
-	systemServerHost = ""
-	middlewareTypes  = []string{
+	errMeshStartupDenied = errors.New("application pod creation was rejected by HTTP mesh admission; upgrade the application chart to remove interception exclusions")
+	systemServerHost     = ""
+	middlewareTypes      = []string{
 		tapr.TypePostgreSQL.String(),
 		tapr.TypeMongoDB.String(),
 		tapr.TypeRedis.String(),
@@ -671,6 +675,7 @@ func (h *HelmOps) WaitForStartUp() (bool, error) {
 		return true, nil
 	}
 	timer := time.NewTicker(1 * time.Second)
+	defer timer.Stop()
 	// health fast-fails startup once a pod hits a condition that will not
 	// self-heal and it persists past that signal's grace, instead of polling
 	// until the outer installing TTL expires (which left CrashLoopBackOff apps
@@ -690,7 +695,7 @@ func (h *HelmOps) WaitForStartUp() (bool, error) {
 			if startedUp {
 				return true, nil
 			}
-			if errors.Is(err, errcode.ErrPodPending) || errors.Is(err, errcode.ErrServerSidePodPending) {
+			if errors.Is(err, errMeshStartupDenied) || errors.Is(err, errcode.ErrPodPending) || errors.Is(err, errcode.ErrServerSidePodPending) {
 				return false, err
 			}
 
@@ -746,12 +751,36 @@ func (h *HelmOps) isStartUp() (bool, error) {
 	if err != nil {
 		return false, err
 	}
+	if len(clientPods) == 0 {
+		deployment, err := h.client.KubeClient.Kubernetes().AppsV1().Deployments(h.app.Namespace).
+			Get(h.ctx, h.app.AppName, metav1.GetOptions{})
+		if err == nil && rejectedByMeshPolicy(deployment) {
+			return false, errMeshStartupDenied
+		}
+	}
 
 	clientStarted, err := h.checkIfStartup(clientPods, false)
 	if err != nil {
 		return false, err
 	}
 	return clientStarted, nil
+}
+
+func rejectedByMeshPolicy(dep *appsv1.Deployment) bool {
+	if dep.Status.ObservedGeneration < dep.Generation {
+		return false
+	}
+	template := &corev1.Pod{ObjectMeta: dep.Spec.Template.ObjectMeta, Spec: dep.Spec.Template.Spec}
+	if mesh.CheckHTTPMeshInterception(template) == nil {
+		return false
+	}
+	for _, condition := range dep.Status.Conditions {
+		if condition.Type == appsv1.DeploymentReplicaFailure && condition.Status == corev1.ConditionTrue &&
+			condition.Reason == "FailedCreate" && strings.Contains(condition.Message, mesh.InterceptionExclusionsError) {
+			return true
+		}
+	}
+	return false
 }
 
 func (h *HelmOps) findAppSelectedPods() (*corev1.PodList, error) {

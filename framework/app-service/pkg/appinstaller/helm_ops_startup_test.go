@@ -8,6 +8,8 @@ import (
 
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/errcode"
+	"github.com/beclab/Olares/framework/app-service/pkg/mesh"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -107,5 +109,40 @@ func TestStartupPendingErr(t *testing.T) {
 				t.Fatalf("err = %v, want %v", err, tc.want)
 			}
 		})
+	}
+}
+
+func TestRejectedByMeshPolicyRequiresCurrentFailedCreate(t *testing.T) {
+	deployment := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{Generation: 2},
+		Spec: appsv1.DeploymentSpec{
+			Template: corev1.PodTemplateSpec{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{
+				mesh.LinkerdSkipOutboundPortsAnnotation: "4222",
+			}}},
+		},
+		Status: appsv1.DeploymentStatus{
+			ObservedGeneration: 2,
+			Conditions: []appsv1.DeploymentCondition{{
+				Type: appsv1.DeploymentReplicaFailure, Status: corev1.ConditionTrue,
+				Reason: "FailedCreate", Message: "admission webhook denied the request: " + mesh.InterceptionExclusionsError,
+			}},
+		},
+	}
+	if !rejectedByMeshPolicy(deployment) {
+		t.Fatal("current mesh admission rejection was ignored")
+	}
+	stale := deployment.DeepCopy()
+	stale.Status.ObservedGeneration--
+	if rejectedByMeshPolicy(stale) {
+		t.Fatal("prior generation's admission error blocked an updated chart")
+	}
+	corrected := deployment.DeepCopy()
+	delete(corrected.Spec.Template.Annotations, mesh.LinkerdSkipOutboundPortsAnnotation)
+	if rejectedByMeshPolicy(corrected) {
+		t.Fatal("a retained condition blocked a compatible chart")
+	}
+	deployment.Status.Conditions[0].Message = "exceeded resource quota"
+	if rejectedByMeshPolicy(deployment) {
+		t.Fatal("unrelated retryable create failure was treated as a mesh rejection")
 	}
 }
