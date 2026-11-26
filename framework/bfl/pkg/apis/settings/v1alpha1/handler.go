@@ -567,13 +567,12 @@ func (h *Handler) handleGetPublicDomainAccessPolicy(req *restful.Request, resp *
 		response.HandleError(resp, errors.Errorf("get public domain access policy: new user operator err, %v", err))
 		return
 	}
-	user, err := userOp.GetUser(constants.Username)
+
+	denyAllAnno, err := userOp.GetDenyAllPolicy()
 	if err != nil {
-		response.HandleError(resp, errors.Errorf("get public domain access policy: get user err, %v", err))
+		response.HandleError(resp, errors.Wrap(err, "get public domain access policy"))
 		return
 	}
-
-	var denyAllAnno string = userOp.GetDenyAllPolicy(user)
 
 	var denyAll, _ = strconv.Atoi(denyAllAnno)
 
@@ -581,8 +580,18 @@ func (h *Handler) handleGetPublicDomainAccessPolicy(req *restful.Request, resp *
 }
 
 func (h *Handler) handleUpdatePublicDomainAccessPolicy(req *restful.Request, resp *restful.Response) {
-	var policy PublicDomainAccessPolicy
-	req.ReadEntity(&policy)
+	var payload struct {
+		DenyAll *int `json:"deny_all"`
+	}
+	if err := req.ReadEntity(&payload); err != nil {
+		response.HandleBadRequest(resp, errors.Wrap(err, "update public domain access policy: invalid request"))
+		return
+	}
+	if payload.DenyAll == nil {
+		response.HandleBadRequest(resp, errors.New("update public domain access policy: deny_all is required"))
+		return
+	}
+	policy := PublicDomainAccessPolicy{DenyAll: *payload.DenyAll}
 
 	log.Infow("update public domain access policy", "policy", policy)
 
@@ -599,6 +608,11 @@ func (h *Handler) handleUpdatePublicDomainAccessPolicy(req *restful.Request, res
 		user, err := userOp.GetUser(constants.Username)
 		if err != nil {
 			return errors.Errorf("get user err, %v", err)
+		}
+
+		role := userOp.GetUserAnnotation(user, constants.UserAnnotationOwnerRole)
+		if role != constants.RoleOwner {
+			return errors.New("permission denied: only owner can update global Only VPN policy")
 		}
 
 		if err = userOp.UpdateUser(user, []func(*iamV1alpha2.User){
