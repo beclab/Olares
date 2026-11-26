@@ -135,6 +135,7 @@ spec:
     metadata:
       labels:
         tier: backup
+        traffic.olares.io/platform-mesh: "true"
       annotations:
         linkerd.io/inject: enabled
         config.linkerd.io/proxy-enable-native-sidecar: "true"

@@ -22,9 +22,13 @@ func TestFirstWaveWorkloadsRenderNativeLinkerdWithoutTrafficExclusions(t *testin
 				t.Fatal(err)
 			}
 			pod := docs[tc.workload]["spec"].(map[string]any)["template"].(map[string]any)
-			annotations := pod["metadata"].(map[string]any)["annotations"].(map[string]any)
+			metadata := pod["metadata"].(map[string]any)
+			annotations := metadata["annotations"].(map[string]any)
 			if annotations["linkerd.io/inject"] != "enabled" || annotations["config.linkerd.io/proxy-enable-native-sidecar"] != "true" {
 				t.Fatalf("workload must request a native Linkerd proxy")
+			}
+			if labels := metadata["labels"].(map[string]any); labels["traffic.olares.io/platform-mesh"] != "true" {
+				t.Fatal("workload must match the Linkerd control-plane ingress selector")
 			}
 			opaquePorts, _ := annotations["config.linkerd.io/opaque-ports"].(string)
 			if opaquePorts != tc.opaquePorts {
