@@ -185,7 +185,7 @@ func (u upgraderBase) UpgradeSystemComponents() []task.Interface {
 		},
 		&task.LocalTask{
 			Name:   "UpgradeL4BFLProxy",
-			Action: &upgradeL4BFLProxy{Tag: "1.12.9-a0e6d62be"},
+			Action: &upgradeL4BFLProxy{Tag: "1.12.9-2cc1e9dd0"},
 			Retry:  6,
 			Delay:  15 * time.Second,
 		},
