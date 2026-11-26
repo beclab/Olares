@@ -487,11 +487,7 @@ func (wh *Webhook) ensureMasterPlacement(ctx context.Context, pod *corev1.Pod) e
 	return nil
 }
 
-const (
-	underlayMacvlanNetworkName = "underlay-macvlan"
-	underlayMacvlanNamespace   = "kube-system"
-	underlayMacvlanInterface   = "net1"
-)
+const underlayMacvlanInterface = "net1"
 
 // macvlanSelection is the one network selection a macvlan pod may carry. The
 // struct fixes the field order so the validating side can compare the rendered
@@ -508,8 +504,8 @@ type macvlanSelection struct {
 // only author of this annotation, which is what makes the value comparable.
 func platformMacvlanSelection(mac string) string {
 	raw, err := json.Marshal([]macvlanSelection{{
-		Name:      underlayMacvlanNetworkName,
-		Namespace: underlayMacvlanNamespace,
+		Name:      constants.OverlayMacvlanNetworkName,
+		Namespace: constants.OverlayMacvlanNetworkNamespace,
 		Interface: underlayMacvlanInterface,
 		Mac:       mac,
 	}})

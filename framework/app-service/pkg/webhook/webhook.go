@@ -1002,7 +1002,7 @@ func (wh *Webhook) isSelected(podSelectors []metav1.LabelSelector, pod *corev1.P
 
 // MacvlanInitContainerName is the name of the init container injected for pods
 // that need to reply via eth0 in macvlan setups.
-const MacvlanInitContainerName = "macvlan-reply-via-eth0"
+const MacvlanInitContainerName = constants.MacvlanReplyInitContainerName
 
 // macvlanInitScript is the shell script run inside the macvlan-init container.
 // It waits for an IPv4 address on eth0, then creates a dedicated routing table
