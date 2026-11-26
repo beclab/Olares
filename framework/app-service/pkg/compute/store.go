@@ -569,8 +569,8 @@ func attachBindings(nodes []Node, allocations []Allocation) {
 // the whole listing fails with an error.
 func AttachBoundAppSpecs(ctx context.Context, c client.Client, nodes []Node) error {
 	specs := make(map[string]*Requirement)
-	resolve := func(appName, owner string) (*Requirement, error) {
-		key := owner + "/" + appName
+	resolve := func(appName, owner, consumer string) (*Requirement, error) {
+		key := owner + "/" + appName + "/" + consumer
 		if spec, ok := specs[key]; ok {
 			return spec, nil
 		}
@@ -578,9 +578,18 @@ func AttachBoundAppSpecs(ctx context.Context, c client.Client, nodes []Node) err
 		if err != nil {
 			return nil, fmt.Errorf("failed to load app config for %s/%s: %w", owner, appName, err)
 		}
-		req, ok := SelectedRequirement(cfg)
-		if !ok {
-			return nil, fmt.Errorf("failed to resolve selected resource mode for %s/%s", owner, appName)
+		var req Requirement
+		if cfg.HasGPUConsumers() {
+			req, err = ConsumerRequirementFor(cfg, consumer)
+			if err != nil {
+				return nil, fmt.Errorf("failed to resolve GPU consumer %q of %s/%s: %w", consumer, owner, appName, err)
+			}
+		} else {
+			var ok bool
+			req, ok = SelectedRequirement(cfg)
+			if !ok {
+				return nil, fmt.Errorf("failed to resolve selected resource mode for %s/%s", owner, appName)
+			}
 		}
 		specs[key] = &req
 		return specs[key], nil
@@ -589,7 +598,7 @@ func AttachBoundAppSpecs(ctx context.Context, c client.Client, nodes []Node) err
 		for di := range nodes[ni].Devices {
 			bindings := nodes[ni].Devices[di].Bindings
 			for bi := range bindings {
-				spec, err := resolve(bindings[bi].AppName, bindings[bi].Owner)
+				spec, err := resolve(bindings[bi].AppName, bindings[bi].Owner, bindings[bi].Consumer)
 				if err != nil {
 					return err
 				}

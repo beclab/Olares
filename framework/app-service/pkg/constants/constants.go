@@ -47,6 +47,7 @@ const (
 	ApplicationTailScaleKey           = "applications.app.bytetrade.io/tailscale"
 	ApplicationRequiredGPU            = "applications.app.bytetrade.io/required_gpu"
 	AppPodGPUConsumePolicy            = "gpu.bytetrade.io/app-pod-consume-policy"
+	AppGPUConsumerLabel               = "gpu.bytetrade.io/consumer"
 	ApplicationPolicies               = "applications.app.bytetrade.io/policies"
 	ApplicationMobileSupported        = "applications.app.bytetrade.io/mobile_supported"
 	ApplicationClusterDep             = "applications.app.bytetrade.io/need_cluster_scoped_app"

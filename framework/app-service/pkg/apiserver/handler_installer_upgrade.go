@@ -7,6 +7,7 @@ import (
 
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
+	"github.com/beclab/Olares/framework/app-service/pkg/compute"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
@@ -188,6 +189,14 @@ func (h *upgradeHandlerHelper) setAndEncodingAppCofnig(prevCfg *appcfg.Applicati
 	if err != nil {
 		klog.Errorf("set expose ports failed %v", err)
 		return "", err
+	}
+
+	if h.appConfig.HasGPUConsumers() {
+		if err := compute.PrepareConsumerUpgrade(h.req.Request.Context(), h.h.ctrlClient, prevCfg, h.appConfig); err != nil {
+			klog.Errorf("Failed to prepare GPU consumers for upgrade err=%v", err)
+			api.HandleBadRequest(h.resp, h.req, err)
+			return "", err
+		}
 	}
 
 	encoding, err := json.Marshal(h.appConfig)

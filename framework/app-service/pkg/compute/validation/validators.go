@@ -456,6 +456,17 @@ func (computeModeValidator) AppliesTo(op Op) bool {
 
 func (computeModeValidator) Validate(ctx context.Context, in Input) (Decision, error) {
 	enough, err := compute.AppInstallable(ctx, in.Client, in.AppConfig)
+	if errors.Is(err, compute.ErrHAMIConsumerUnsupported) ||
+		errors.Is(err, compute.ErrConsumerRequired) ||
+		errors.Is(err, compute.ErrUnknownConsumer) ||
+		errors.Is(err, compute.ErrConsumerUnplaceable) {
+		return Decision{
+			OK:       false,
+			Resource: constants.Compute,
+			Reason:   constants.ComputeModeUnavailable,
+			Message:  err.Error(),
+		}, nil
+	}
 	if err != nil {
 		return Decision{}, err
 	}
