@@ -7,9 +7,9 @@ require (
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/apecloud/kubeblocks v1.0.0
 	github.com/argoproj/argo-workflows/v3 v3.7.10
-	github.com/beclab/api v0.0.27-0.20261125100039-ff4078330ac7
+	github.com/beclab/api v0.0.27
 	github.com/beclab/lldap-client v0.0.11
-	github.com/beclab/oac v0.0.4
+	github.com/beclab/oac v0.0.5
 	github.com/containerd/containerd v1.7.29
 	github.com/containers/image/v5 v5.36.1
 	github.com/emicklei/go-restful-openapi/v2 v2.11.0
