@@ -39,6 +39,9 @@ var (
 	bflPods             = map[string]string{"tier": "bfl"}
 )
 
+// BackupBackendService identifies the optional Backup API watched for BFL egress.
+var BackupBackendService = types.NamespacedName{Namespace: "os-framework", Name: "backup-server"}
+
 func gatewayDataPlanePods(gateway string) map[string]string {
 	return map[string]string{
 		"gateway.envoyproxy.io/owning-gateway-name":      gateway,
@@ -127,7 +130,13 @@ var systemServerOptionalNativeFlows = []platformServiceFlow{
 	// The existing Headscale wrapper authenticates management requests forwarded by system-server.
 	{service: types.NamespacedName{Namespace: "os-network", Name: "headscale-server-svc"}, to: map[string]string{"app": "headscale"}, servicePort: 8000, targetPort: 8000, targetName: "management"},
 	{service: types.NamespacedName{Namespace: "os-framework", Name: "monitoring-server"}, to: map[string]string{"app": "monitoring-server"}, servicePort: 80, targetPort: 8000},
+}
+
+// Files and Backup roll independently of their callers. Keep the verified
+// service path during enrollment and scope the proxy port to meshed Pods.
+var systemServerEnrollingFlows = []platformServiceFlow{
 	{service: types.NamespacedName{Namespace: "os-framework", Name: "files-service"}, to: map[string]string{"app": "files"}, servicePort: 80, targetPort: 80},
+	{service: BackupBackendService, to: map[string]string{"tier": "backup"}, servicePort: 8082, targetPort: 8082},
 }
 
 const (
@@ -183,6 +192,9 @@ func platformTrafficFlows(namespace string) []platformServiceFlow {
 		{"bfl-app-service", platformWorkload{space, map[string]string{
 			"tier": "bfl", platformMeshControlPlaneLabel: "os-mesh",
 		}}, types.NamespacedName{Namespace: system, Name: "app-service"}, systemProxy, 28080, 28080, ""},
+		{"bfl-backup-mesh", platformWorkload{space, map[string]string{
+			"tier": "bfl", platformMeshControlPlaneLabel: "os-mesh",
+		}}, BackupBackendService, map[string]string{"tier": "backup"}, 8082, 8082, ""},
 		{"desktop-app-service", frontend("olares-app"), types.NamespacedName{Namespace: system, Name: "app-service"}, systemProxy, 28080, 28080, ""},
 		{"desktop-nats", frontend("olares-app"), types.NamespacedName{Namespace: system, Name: "nats"}, systemProxy, 4222, 4222, ""},
 		{"desktop-redis", frontend("olares-app"), types.NamespacedName{Namespace: system, Name: "redis-cluster-proxy"}, systemProxy, 6379, 6379, ""},
@@ -220,6 +232,11 @@ func PlatformTrafficServices(namespace string) []types.NamespacedName {
 func ActivePlatformTrafficServices(namespace string, pods []corev1.Pod) []types.NamespacedName {
 	var keys []types.NamespacedName
 	for _, flow := range platformTrafficFlows(namespace) {
+		// Backup is optional for tenant bootstrap. Its egress grant still
+		// reconciles when the verified Service appears.
+		if flow.service == BackupBackendService {
+			continue
+		}
 		if flow.from.namespace == namespace && !slices.Contains(keys, flow.service) &&
 			slices.ContainsFunc(pods, func(pod corev1.Pod) bool {
 				for k, v := range flow.from.selector {
@@ -362,12 +379,15 @@ func SystemServerCitusEgressRule() netv1.NetworkPolicyEgressRule {
 
 // SystemServerDependencyServices lists the Services read when generating route egress.
 func SystemServerDependencyServices() []types.NamespacedName {
-	keys := make([]types.NamespacedName, 0, len(systemServerNativeFlows)+len(systemServerOptionalNativeFlows)+1)
+	keys := make([]types.NamespacedName, 0, len(systemServerNativeFlows)+len(systemServerOptionalNativeFlows)+len(systemServerEnrollingFlows)+1)
 	for _, flow := range systemServerNativeFlows {
 		keys = append(keys, flow.service)
 	}
 	keys = append(keys, systemServerAppStoreFlow.service)
 	for _, flow := range systemServerOptionalNativeFlows {
+		keys = append(keys, flow.service)
+	}
+	for _, flow := range systemServerEnrollingFlows {
 		keys = append(keys, flow.service)
 	}
 	return keys
@@ -394,6 +414,19 @@ func SystemServerDependencyEgressRules(services map[types.NamespacedName]*corev1
 	}
 	for _, flow := range systemServerOptionalNativeFlows {
 		rules = append(rules, flow.egressRules(services[flow.service])...)
+	}
+	for _, flow := range systemServerEnrollingFlows {
+		service := services[flow.service]
+		if !flow.matchesService(service) {
+			continue
+		}
+		rules = append(rules, flow.egressRules(service)...)
+		destination := maps.Clone(flow.to)
+		destination[platformMeshControlPlaneLabel] = "os-mesh"
+		rules = append(rules, netv1.NetworkPolicyEgressRule{
+			To:    []netv1.NetworkPolicyPeer{platformPeer(flow.service.Namespace, destination)},
+			Ports: []netv1.NetworkPolicyPort{tcpPort(4143)},
+		})
 	}
 	return rules
 }

@@ -26,6 +26,7 @@ spec:
         traffic.olares.io/platform-mesh: "true"
       annotations:
         linkerd.io/inject: enabled
+        config.linkerd.io/proxy-enable-native-sidecar: "true"
     spec:
       containers:
         - name: provider-proxy
@@ -39,13 +40,6 @@ spec:
             - "6"
           ports:
             - containerPort: 28080
-          resources:
-            requests:
-              cpu: 10m
-              memory: 200Mi
-            limits:
-              cpu: "500m"
-              memory: 350Mi
           resources: {}
           terminationMessagePath: /dev/termination-log
           terminationMessagePolicy: File

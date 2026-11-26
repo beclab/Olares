@@ -50,6 +50,9 @@ spec:
       labels:
         app: files
       annotations:
+        linkerd.io/inject: enabled
+        config.linkerd.io/proxy-enable-native-sidecar: "true"
+        config.linkerd.io/opaque-ports: "445"
 {{ if .Values.telemetry }}
         instrumentation.opentelemetry.io/inject-nginx: "olares-instrumentation"
         instrumentation.opentelemetry.io/inject-nginx-container-names: "nginx"    

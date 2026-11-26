@@ -42,16 +42,18 @@ func trafficGroupNetworkPolicyRequests(_ context.Context, obj client.Object) []r
 func watchTrafficGroupNetworkPolicySources(c controller.Controller, sourceCache cache.Cache) error {
 	requestsFor := func(ctx context.Context, obj client.Object) []reconcile.Request {
 		requests := trafficGroupNetworkPolicyRequests(ctx, obj)
-		if client.ObjectKeyFromObject(obj) != kubernetesAPIKey {
+		key := client.ObjectKeyFromObject(obj)
+		if key != kubernetesAPIKey && key != security.BackupBackendService {
 			return requests
 		}
 		var namespaces corev1.NamespaceList
 		if err := sourceCache.List(ctx, &namespaces); err != nil {
-			klog.Errorf("list tenant namespaces for Kubernetes API policy refresh: %v", err)
+			klog.Errorf("list tenant namespaces for platform Service policy refresh: %v", err)
 			return requests
 		}
 		for _, ns := range namespaces.Items {
-			if tenant, _ := security.IsUserInternalNamespaces(ns.Name); tenant && ns.DeletionTimestamp.IsZero() {
+			if tenant, _ := security.IsUserInternalNamespaces(ns.Name); tenant && ns.DeletionTimestamp.IsZero() &&
+				(key != security.BackupBackendService || security.IsUserSpaceNamespaces(ns.Name)) {
 				requests = append(requests, reconcile.Request{NamespacedName: client.ObjectKey{Name: ns.Name}})
 			}
 		}

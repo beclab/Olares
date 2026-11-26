@@ -308,23 +308,25 @@ func TestSystemServerDesktopDependenciesRequireVerifiedServices(t *testing.T) {
 	marketKey := types.NamespacedName{Namespace: "os-framework", Name: "appstore-svc"}
 	monitorKey := types.NamespacedName{Namespace: "os-framework", Name: "monitoring-server"}
 	filesKey := types.NamespacedName{Namespace: "os-framework", Name: "files-service"}
+	backupKey := types.NamespacedName{Namespace: "os-framework", Name: "backup-server"}
 	for _, tc := range []struct {
 		key         types.NamespacedName
-		app         string
+		selector    map[string]string
 		servicePort int32
 		targetPort  int32
 		wantRules   int
 	}{
-		{lldapKey, "lldap", 17170, 17170, 2},
-		{marketKey, "appstore", 81, 8080, 1},
-		{monitorKey, "monitoring-server", 80, 8000, 2},
-		{filesKey, "files", 80, 80, 2},
+		{lldapKey, map[string]string{"app": "lldap"}, 17170, 17170, 2},
+		{marketKey, map[string]string{"app": "appstore"}, 81, 8080, 1},
+		{monitorKey, map[string]string{"app": "monitoring-server"}, 80, 8000, 2},
+		{filesKey, map[string]string{"app": "files"}, 80, 80, 3},
+		{backupKey, map[string]string{"tier": "backup"}, 8082, 8082, 3},
 	} {
 		t.Run(tc.key.Name, func(t *testing.T) {
 			service := &corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{Namespace: tc.key.Namespace, Name: tc.key.Name},
 				Spec: corev1.ServiceSpec{Type: corev1.ServiceTypeClusterIP, ClusterIP: "10.96.0.10",
-					Selector: map[string]string{"app": tc.app}, Ports: []corev1.ServicePort{{
+					Selector: tc.selector, Ports: []corev1.ServicePort{{
 						Port: tc.servicePort, TargetPort: intstr.FromInt32(tc.targetPort), Protocol: corev1.ProtocolTCP,
 					}},
 				},
@@ -333,8 +335,24 @@ func TestSystemServerDesktopDependenciesRequireVerifiedServices(t *testing.T) {
 				t.Fatal("route reconciliation cannot discover the dependency Service")
 			}
 			services := map[types.NamespacedName]*corev1.Service{tc.key: service}
-			if got := len(SystemServerDependencyEgressRules(services)); got != tc.wantRules {
-				t.Fatalf("verified Service yielded %d rules, want %d", got, tc.wantRules)
+			got := SystemServerDependencyEgressRules(services)
+			if len(got) != tc.wantRules {
+				t.Fatalf("verified Service yielded %d rules, want %d", len(got), tc.wantRules)
+			}
+			if tc.key == filesKey || tc.key == backupKey {
+				proxyRule := got[len(got)-1]
+				peer := proxyRule.To[0]
+				if len(proxyRule.To) != 1 || peer.IPBlock != nil ||
+					peer.NamespaceSelector.MatchLabels["kubernetes.io/metadata.name"] != "os-framework" ||
+					peer.PodSelector.MatchLabels[platformMeshControlPlaneLabel] != "os-mesh" ||
+					!reflect.DeepEqual(proxyRule.Ports, []netv1.NetworkPolicyPort{tcpPort(4143)}) {
+					t.Fatalf("proxy access must be confined to enrolled endpoints: %+v", proxyRule)
+				}
+				for key, value := range tc.selector {
+					if peer.PodSelector.MatchLabels[key] != value {
+						t.Fatalf("proxy access is missing target selector %s=%s", key, value)
+					}
+				}
 			}
 			service.Spec.Ports[0].TargetPort = intstr.FromInt32(tc.targetPort + 1)
 			if got := SystemServerDependencyEgressRules(services); len(got) != 0 {
@@ -354,10 +372,44 @@ func TestSystemServerDesktopDependenciesRequireVerifiedServices(t *testing.T) {
 		t.Fatal("LLDAP token verification is a readiness dependency of the active system-server")
 	}
 	for _, dep := range ActivePlatformTrafficServices(tenant, active) {
-		if dep == monitorKey || dep == filesKey {
+		if dep == monitorKey || dep == filesKey || dep == backupKey {
 			t.Fatalf("optional provider %s must not block tenant namespace isolation", dep)
 		}
 	}
+}
+
+func TestBFLBackupEgressDoesNotGateBootstrap(t *testing.T) {
+	namespace := "user-space-alice"
+	active := []corev1.Pod{{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Labels: map[string]string{
+		"tier": "bfl", platformMeshControlPlaneLabel: "os-mesh",
+	}}}}
+	if !slices.Contains(PlatformTrafficServices(namespace), BackupBackendService) ||
+		slices.Contains(ActivePlatformTrafficServices(namespace, active), BackupBackendService) {
+		t.Fatal("Backup must reconcile without gating BFL bootstrap")
+	}
+	service := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Namespace: BackupBackendService.Namespace, Name: BackupBackendService.Name},
+		Spec: corev1.ServiceSpec{
+			Type: corev1.ServiceTypeClusterIP, ClusterIP: "10.96.0.10",
+			Selector: map[string]string{"tier": "backup"},
+			Ports:    []corev1.ServicePort{{Port: 8082, TargetPort: intstr.FromInt32(8082), Protocol: corev1.ProtocolTCP}},
+		},
+	}
+	for _, policy := range BuildPlatformTrafficPolicies(namespace, map[types.NamespacedName]*corev1.Service{BackupBackendService: service}) {
+		if policy.Name != "olares-platform-bfl-backup-mesh-egress" {
+			continue
+		}
+		if !reflect.DeepEqual(policy.Spec.PodSelector.MatchLabels, active[0].Labels) ||
+			len(policy.Spec.Egress) != 2 ||
+			!reflect.DeepEqual(policy.Spec.Egress[0].Ports, []netv1.NetworkPolicyPort{tcpPort(8082), tcpPort(4143)}) ||
+			!reflect.DeepEqual(policy.Spec.Egress[0].To, []netv1.NetworkPolicyPeer{platformPeer("os-framework", map[string]string{
+				"tier": "backup", platformMeshControlPlaneLabel: "os-mesh",
+			})}) {
+			t.Fatalf("unexpected BFL Backup policy scope: %+v", policy.Spec)
+		}
+		return
+	}
+	t.Fatal("missing BFL Backup policy")
 }
 
 func TestL4HostIngressTracksOnlySelectedNodeAddresses(t *testing.T) {
