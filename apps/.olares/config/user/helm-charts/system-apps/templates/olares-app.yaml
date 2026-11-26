@@ -1,3 +1,4 @@
+{{- $share_nginx_config := .Files.Get "files/share.conf" | required "missing Share nginx configuration" -}}
 {{- $namespace := printf "%s%s" "user-system-" .Values.bfl.username -}}
 {{- $userspacenamespace := printf "%s%s" "user-space-" .Values.bfl.username -}}
 {{- $zinc_files_secret := (lookup "v1" "Secret" $namespace "zinc-files-secrets") -}}
@@ -258,6 +259,7 @@ spec:
         config.linkerd.io/proxy-enable-native-sidecar: "true"
         config.linkerd.io/default-inbound-policy: cluster-authenticated
         traffic.olares.io/mtls-mode: Required
+        checksum/share-nginx: {{ $share_nginx_config | sha256sum | quote }}
 {{ if .Values.telemetry }}
         instrumentation.opentelemetry.io/inject-nodejs: "olares-instrumentation"
         instrumentation.opentelemetry.io/nodejs-container-names: "user-service"    
@@ -306,9 +308,15 @@ spec:
             - /bin/sh
             - -c
             - |
-              rm /etc/nginx/conf.d/default.conf
-              cp -r /www/nginxs/* /etc/nginx/conf.d/
-              nginx -g 'daemon off;'
+              set -eu
+              rm -f /etc/nginx/conf.d/default.conf
+              for config in /www/nginxs/*; do
+                case "${config##*/}" in
+                  share.conf) continue ;;
+                esac
+                cp -r "$config" /etc/nginx/conf.d/
+              done
+              exec nginx -g 'daemon off;'
           volumeMounts:
             - name: www-dir
               mountPath: /www
@@ -320,6 +328,10 @@ spec:
             - name: olares-app-nginx-config
               mountPath: /etc/nginx/conf.d/headscale.conf
               subPath: headscale.conf
+            - name: olares-app-nginx-config
+              mountPath: /etc/nginx/conf.d/share.conf
+              subPath: share.conf
+              readOnly: true
           env:
             - name: POD_UID
               valueFrom:
@@ -490,6 +502,8 @@ spec:
                 path: nginx.conf
               - key: headscale.conf
                 path: headscale.conf
+              - key: share.conf
+                path: share.conf
 
 ---
 apiVersion: v1
@@ -714,6 +728,8 @@ data:
 
         include /etc/nginx/conf.d/*.conf;
     }
+  share.conf: |-
+{{ $share_nginx_config | indent 4 }}
   headscale.conf: |-
     server {
         listen 85;
