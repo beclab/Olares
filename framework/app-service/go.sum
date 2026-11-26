@@ -44,12 +44,12 @@ github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5/go.mod h1:wHh0iHkY
 github.com/asaskevich/govalidator v0.0.0-20200108200545-475eaeb16496/go.mod h1:oGkLhpf+kjZl6xBf758TQhh5XrAeiJv/7FRz/2spLIg=
 github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 h1:DklsrG3dyBCFEj5IhUbnKptjxatkF07cF2ak3yi77so=
 github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2/go.mod h1:WaHUgvxTVq04UNunO+XhnAqY/wQc+bxr74GqbsZ/Jqw=
-github.com/beclab/api v0.0.27-0.20261125100039-ff4078330ac7 h1:5S3fOHX3qjNq/Mfn5dpaO4jW0XhUslV9Unq0ZCizrQs=
-github.com/beclab/api v0.0.27-0.20261125100039-ff4078330ac7/go.mod h1:dkmA/71p/GxiHjFCV9nAxp3PdEegP6d2zzs/7hygj/A=
+github.com/beclab/api v0.0.27 h1:rkPDECyMsck48jyaNuvzJxt8JIWpqQBjV/RynzGMmP8=
+github.com/beclab/api v0.0.27/go.mod h1:dkmA/71p/GxiHjFCV9nAxp3PdEegP6d2zzs/7hygj/A=
 github.com/beclab/lldap-client v0.0.11 h1:/XWzEd2pAFS7nwOtapyr7ClQViyGIUsMiyQ2d8t8sEo=
 github.com/beclab/lldap-client v0.0.11/go.mod h1:Y74tcKzyNL73a9pFAvImwXgzqp7S7Jb8RY1mMY90e/4=
-github.com/beclab/oac v0.0.4 h1:zM/vjVVpBmTdDr5MpcMJvKTG0kUw3Q67hPj2n2vX38A=
-github.com/beclab/oac v0.0.4/go.mod h1:JttNxkqiJgv1VwXA8xmWwxsKH8Icc4Y2SS7owu2BmaI=
+github.com/beclab/oac v0.0.5 h1:GHomAro8PUvAUqrW6wccp9aGEk1Rgs7PcUMGM2M+pgQ=
+github.com/beclab/oac v0.0.5/go.mod h1:hAd8h68tiFykmaEUYbRcLefUH+NY5uuk0cnpdE5no4A=
 github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=
 github.com/beorn7/perks v1.0.1/go.mod h1:G2ZrVWU2WbWT9wwq4/hrbKbnv/1ERSJQ0ibhJ6rlkpw=
 github.com/blang/semver/v4 v4.0.0 h1:1PFHFE6yCCTv8C1TeyNNarDzntLi7wMI5i/pzqYIsAM=
