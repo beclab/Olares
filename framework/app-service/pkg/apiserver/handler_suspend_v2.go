@@ -360,6 +360,8 @@ func (h *Handler) deliverResumeV2(
 	if patched.Annotations == nil {
 		patched.Annotations = make(map[string]string)
 	}
+	// Retire the stop marker left on existing apps by older controllers.
+	delete(patched.Annotations, api.AppStopByControllerDuePendingPod)
 	patched.Annotations[api.AppResumeAllKey] = fmt.Sprintf("%t", includeSharedServer)
 	var opID string
 	patched.Annotations, opID = stampDurableOperationRequest(patched.Annotations)
