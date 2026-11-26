@@ -67,9 +67,7 @@ func (i *downloadWizard) Execute(ctx context.Context, p any) (res any, err error
 		"--version", version,
 		"--base-dir", commands.TERMINUS_BASE_DIR,
 	}
-	if commands.OLARES_CDN_SERVICE != "" {
-		params = append(params, "--cdn-service", commands.OLARES_CDN_SERVICE)
-	}
+	params = appendReleaseCDN(params, target.CDN)
 	if target.WizardURL != "" {
 		params = append(params, "--url-override", target.WizardURL)
 	}

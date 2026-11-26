@@ -107,6 +107,7 @@ func main() {
 	} else {
 		handlers.InstallUpgradeStageRunner(stageRunner)
 		deps.Upgrade = clusterop.NewUpgradeDeps(stageRunner)
+		deps.Upgrade.LocalVersions = upgradecmd.LocalVersions
 	}
 
 	if err := handlers.InitClusterOperations(commands.CLUSTER_OPERATIONS_DIR, deps); err != nil {
@@ -292,12 +293,11 @@ func main() {
 //
 // Both kinds of work arrive through the same route and are recorded the same
 // way, so they are dispatched here by stage name rather than by two endpoints
-// with two sets of state. The node prepare stage is the one that cannot go
-// through olares-cli's plan: it is what installs the olares-cli that has the
-// plan.
+// with two sets of state: the stages before notify-start are olaresd's own,
+// and the rest are resolved by olares-cli against its plan.
 func runUpgradeStage(ctx context.Context, req clusterop.UpgradeStageRequest) error {
-	if req.Stage == clusterop.StageNodePrepare {
-		return upgradecmd.PrepareNode(ctx, req.Version, req.CliURL, req.WizardURL)
+	if handled, err := upgradecmd.RunOlaresdStage(ctx, req); handled {
+		return err
 	}
 	return clusterop.RunUpgradeStage(ctx, req)
 }

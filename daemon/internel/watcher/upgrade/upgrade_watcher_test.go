@@ -46,3 +46,30 @@ func TestOldDownloadCannotMarkNewRequestDownloaded(t *testing.T) {
 		t.Fatalf("new request = %+v, error=%v", got, err)
 	}
 }
+
+// The control node only puts the target binaries in place and hands over; the
+// checks and the image import are orchestrated stages that every node runs.
+// Running them here as well would check and import twice on this machine and
+// never on the others.
+func TestControlNodeOnlyHandsTheUpgradeOver(t *testing.T) {
+	want := []commands.Operations{
+		commands.InstallCLI, commands.InstallOlaresd,
+		commands.Upgrade, commands.RemoveUpgradeTarget,
+	}
+	if len(upgradePhases) != len(want) {
+		t.Fatalf("%d upgrade phases, want %d", len(upgradePhases), len(want))
+	}
+	next := 0
+	for i, phase := range upgradePhases {
+		if got := phase.newCMD().OperationName(); got != want[i] {
+			t.Errorf("phase %d = %s, want %s", i, got, want[i])
+		}
+		if phase.progressOffset != next {
+			t.Errorf("phase %d starts at %d, want %d", i, phase.progressOffset, next)
+		}
+		next = phase.progressOffset + phase.progressSpan
+	}
+	if next != 100 {
+		t.Errorf("upgrade phases fill %d%%, want 100", next)
+	}
+}

@@ -64,9 +64,7 @@ func (i *downloadComponent) Execute(ctx context.Context, p any) (res any, err er
 		"--version", target.Version.Original(),
 		"--base-dir", commands.TERMINUS_BASE_DIR,
 	}
-	if commands.OLARES_CDN_SERVICE != "" {
-		params = append(params, "--cdn-service", commands.OLARES_CDN_SERVICE)
-	}
+	params = appendReleaseCDN(params, target.CDN)
 	completion, err := cmd.RunAsyncWithResult_(ctx, cli.TERMINUS_CLI, params...)
 	if err != nil {
 		return nil, err

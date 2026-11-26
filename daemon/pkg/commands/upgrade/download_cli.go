@@ -17,6 +17,8 @@ import (
 type downloadCLI struct {
 	commands.Operation
 	installedVersion func() (*semver.Version, error)
+	// cdn overrides this machine's release CDN when non-empty.
+	cdn string
 }
 
 var _ commands.Interface = &downloadCLI{}
@@ -57,7 +59,11 @@ func (i *downloadCLI) Execute(ctx context.Context, p any) (res any, err error) {
 
 	downloadURL := target.CliURL
 	if downloadURL == "" {
-		downloadURL = fmt.Sprintf("%s/olares-cli-v%s_linux_%s.tar.gz", commands.OLARES_CDN_SERVICE, target.Version.Original(), arch)
+		cdn := i.cdn
+		if cdn == "" {
+			cdn = commands.OLARES_CDN_SERVICE
+		}
+		downloadURL = CLIDownloadURL(cdn, target.Version.Original(), arch)
 	}
 	tarFile := filepath.Join(destDir, fmt.Sprintf("olares-cli-v%s.tar.gz", target.Version.Original()))
 

@@ -7,6 +7,26 @@ import (
 	"time"
 )
 
+func TestRetryRecoversWhenSuccessorWasNeverWritten(t *testing.T) {
+	h := newUpgradeHarness(t, samplePlan(), twoNodeCluster())
+	h.deps.Store = newTestStore(t)
+	old := Operation{ID: "first-attempt", RequestID: "upgrade-request", Type: TypeUpgrade,
+		Scope: ScopeCluster, Owner: "alice@olares.com", ClusterID: "cluster-1",
+		Status: StatusFailed, Committed: true, SupersededBy: "missing-successor",
+		Steps: []Step{{Name: "01-master", Status: StepSucceeded}}}
+	if err := h.deps.Store.Save(old); err != nil {
+		t.Fatal(err)
+	}
+	m, err := NewManager(h.deps)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, ok := m.GetByRequest(old.RequestID)
+	if !ok || got.ID != old.ID || !got.Committed || len(got.Steps) != 1 {
+		t.Fatalf("lost checkpoint after interrupted retry: %+v", got)
+	}
+}
+
 // An upgrade restarts olaresd on the node orchestrating it: installing the new
 // daemon is one of the stages. Treating that restart the way a power operation
 // treats one — settle it as failed, nothing observed how it ended — would fail

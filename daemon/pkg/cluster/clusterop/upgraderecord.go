@@ -33,7 +33,7 @@ func (m *Manager) stageSettled(id, stageName string) bool {
 
 func (m *Manager) settleFromState(id, stageName, nodeName string, state UpgradeStageState) bool {
 	if state.Phase == UpgradeStagePhaseSucceeded {
-		m.settleStageNode(id, stageName, nodeName, NodeSucceeded, "", "")
+		// The caller still has to verify installed versions or a pending reboot.
 		return true
 	}
 	code := state.Code
@@ -53,12 +53,29 @@ func (m *Manager) settleFromState(id, stageName, nodeName string, state UpgradeS
 // beginStage records a stage before it starts, with every node it will touch.
 // Written first so that a daemon that dies mid-stage leaves behind which nodes
 // were involved rather than an empty step.
-func (m *Manager) beginStage(id string, stage UpgradeStage, targets []inventory.Node) {
+func (m *Manager) beginStage(id string, stage UpgradeStage, targets []inventory.Node) []inventory.Node {
+	var pending []inventory.Node
 	m.update(id, func(op *Operation) {
 		at := m.deps.Now()
+		existing := lastStepNamed(op, stage.Name)
+		completed := make(map[string]NodeResult)
+		// Older daemons recorded success before confirming the boot ID or
+		// binary versions. Recheck such an interrupted stage on recovery.
+		if existing != nil && (existing.Status != StepRunning || (!stage.AwaitRestart && stage.Name != StageBootstrap)) {
+			for _, node := range existing.Nodes {
+				if node.Status == NodeSucceeded {
+					completed[node.NodeName] = node
+				}
+			}
+		}
 		nodes := make([]NodeResult, 0, len(targets))
 		for _, t := range targets {
+			if done, ok := completed[t.NodeName]; ok {
+				nodes = append(nodes, done)
+				continue
+			}
 			nodes = append(nodes, NodeResult{NodeName: t.NodeName, Role: t.Role, Status: NodePending})
+			pending = append(pending, t)
 		}
 		fresh := Step{
 			Name:        stage.Name,
@@ -70,12 +87,13 @@ func (m *Manager) beginStage(id string, stage UpgradeStage, targets []inventory.
 		}
 		// A stage a previous attempt left behind is overwritten rather than
 		// joined by a second one; see lastStepNamed.
-		if existing := lastStepNamed(op, stage.Name); existing != nil {
+		if existing != nil {
 			*existing = fresh
 			return
 		}
 		op.Steps = append(op.Steps, fresh)
 	})
+	return pending
 }
 
 func (m *Manager) recordSkippedStage(id string, stage UpgradeStage, why string) {
@@ -144,11 +162,9 @@ func (m *Manager) skipRemainingStageNodes(id, stageName string) {
 
 // failUpgradeAt ends an upgrade that broke in the middle.
 //
-// It is partially_failed only when a stage of the plan itself succeeded,
-// because those are the ones that changed the cluster. The steps around them —
-// the precheck, reading the plan, fetching binaries onto nodes, asking whether
-// nodes are ready — leave the cluster as they found it, and counting them
-// would report every early failure as a half-applied upgrade.
+// Before notify-start, a failure is reported as failed even if preparation
+// stages succeeded. After commit, a prior successful plan stage counts toward
+// a partially_failed upgrade.
 //
 // There is no rollback: Olares has no downgrade path, so the honest report is
 // which stages ran, and the repair is to fix the node and run the upgrade
@@ -158,7 +174,7 @@ func (m *Manager) failUpgradeAt(id string, up UpgradePlan, stage UpgradeStage) O
 	reason := reasonFor(CodeStageFailed)
 	if op, ok := m.Get(id); ok {
 		for _, s := range op.Steps {
-			if s.Name != stage.Name && s.Status == StepSucceeded && up.HasStage(s.Name) {
+			if op.Committed && s.Name != stage.Name && s.Status == StepSucceeded && up.HasStage(s.Name) {
 				status = StatusPartiallyFailed
 				break
 			}

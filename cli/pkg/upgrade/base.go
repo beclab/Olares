@@ -46,15 +46,6 @@ func (u upgraderBase) NeedRestart() bool {
 	return false
 }
 
-// ReplaceBinaries and ImportImages are empty in the base: swapping the
-// binaries and loading the images are carried out by olaresd before it hands
-// a stage to olares-cli, so no olares-cli task implements them today. They
-// exist as stages because the flow has those points, and a version that needs
-// to do something extra there now has somewhere to put it.
-func (u upgraderBase) ReplaceBinaries() []task.Interface { return nil }
-
-func (u upgraderBase) ImportImages() []task.Interface { return nil }
-
 // PreUpgradeNode is what every machine does to itself before the cluster is
 // upgraded. /etc/hosts is the machine's own file, and the entries it manages
 // are how this node resolves the others.

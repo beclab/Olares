@@ -394,6 +394,13 @@ func NewManagerWithRegistry(deps Deps, registry *ModuleRegistry) (*Manager, erro
 		}
 		m.byRequest[op.RequestID] = op.ID
 	}
+	// A crash between retiring a failed attempt and saving its replacement
+	// leaves the predecessor as the only durable checkpoint for this request.
+	for _, op := range stored {
+		if op.SupersededBy != "" && m.ops[op.SupersededBy] == nil && m.byRequest[op.RequestID] == "" {
+			m.byRequest[op.RequestID] = op.ID
+		}
+	}
 
 	// Every loaded record now has an entry in m.ops/m.order/m.byRequest, so
 	// a module's Recover — which mutates through the same checked Runtime
@@ -545,12 +552,8 @@ func (m *Manager) Create(_ context.Context, req CreateRequest) (Operation, error
 	at := m.deps.Now()
 	newID := m.deps.NewID()
 
-	// Written before the record that replaces it, and the order is what keeps
-	// the invariant true on disk as well as in memory. Marked first, then
-	// interrupted: the request id belongs to nobody, and the next request
-	// starts a fresh operation. Written second and interrupted: two records
-	// claim one request id, which is the state the loader refuses to start
-	// from — so the daemon would not come back at all.
+	// Until the replacement is durable, the old attempt is recoverable by
+	// its request ID even if its retirement already reached disk.
 	if supersededID != "" {
 		superseded := m.ops[supersededID]
 		superseded.SupersededBy = newID
@@ -577,6 +580,13 @@ func (m *Manager) Create(_ context.Context, req CreateRequest) (Operation, error
 		Steps:          []Step{},
 		Nodes:          []NodeResult{},
 	}
+	if supersededID != "" {
+		previous := m.ops[supersededID]
+		op.Committed = previous.Committed
+		if previous.Type == TypeUpgrade && previous.Committed {
+			op.Steps = previous.Clone().Steps
+		}
+	}
 	m.ops[op.ID] = op
 	m.order = append(m.order, op.ID)
 	m.byRequest[req.RequestID] = op.ID
@@ -584,11 +594,11 @@ func (m *Manager) Create(_ context.Context, req CreateRequest) (Operation, error
 	if err := m.deps.Store.Save(*op); err != nil {
 		delete(m.ops, op.ID)
 		m.order = m.order[:len(m.order)-1]
-		// The request id is left unclaimed rather than handed back to the
-		// superseded record: that one has been written to disk saying it no
-		// longer answers for it, and an in-memory map that disagreed with the
-		// disk would be undone by the next restart anyway.
-		delete(m.byRequest, req.RequestID)
+		if supersededID == "" {
+			delete(m.byRequest, req.RequestID)
+		} else {
+			m.byRequest[req.RequestID] = supersededID
+		}
 		m.activeID = ""
 		m.mu.Unlock()
 		return Operation{}, fmt.Errorf("record cluster operation: %w", err)
