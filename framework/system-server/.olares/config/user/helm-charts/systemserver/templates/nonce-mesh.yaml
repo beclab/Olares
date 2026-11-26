@@ -111,5 +111,8 @@ spec:
     matchLabels:
       app: systemserver
   port: {{ $port }}
+  {{- if eq $port 4222 }}
+  proxyProtocol: opaque
+  {{- end }}
   accessPolicy: cluster-authenticated
 {{- end }}

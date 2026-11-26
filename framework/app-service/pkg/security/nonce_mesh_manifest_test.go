@@ -150,6 +150,32 @@ func TestNonceMeshIdentityAndTenantBinding(t *testing.T) {
 	}
 }
 
+func TestTenantNATSMeshKeepsServerFirstTrafficIntercepted(t *testing.T) {
+	for _, tenant := range []string{"alice", "bob"} {
+		t.Run(tenant, func(t *testing.T) {
+			namespace := "user-system-" + tenant
+			docs := renderNonceManifests(t, namespace, tenant,
+				"../../../system-server/.olares/config/user/helm-charts/systemserver/templates/nonce-mesh.yaml",
+				"../../../system-server/.olares/config/user/helm-charts/systemserver/templates/systemserver_deploy.yaml",
+				"../../../../platform/tapr/.olares/config/user/helm-charts/nats/templates/deployment.yaml")
+			service := docs["Service/nats"]
+			ports := service["spec"].(map[string]any)["ports"].([]any)
+			want := []any{map[string]any{"name": "nats", "protocol": "TCP", "appProtocol": "linkerd.io/opaque", "port": 4222, "targetPort": 4222}}
+			if service["metadata"].(map[string]any)["namespace"] != namespace || !reflect.DeepEqual(ports, want) {
+				t.Fatalf("unexpected tenant NATS Service: %v", service)
+			}
+			server := docs["Server/systemserver-existing-4222"]["spec"].(map[string]any)
+			if server["proxyProtocol"] != "opaque" || server["port"] != 4222 || server["accessPolicy"] != "cluster-authenticated" {
+				t.Fatalf("NATS requires authenticated opaque TCP: %v", server)
+			}
+			nonce := docs["Server/systemserver-api"]["spec"].(map[string]any)
+			if nonce["proxyProtocol"] != "HTTP/1" || nonce["accessPolicy"] != "deny" {
+				t.Fatalf("NATS configuration changed strict nonce boundary: %v", nonce)
+			}
+		})
+	}
+}
+
 func TestAutheliaDedicatedLeastPrivilegeWithoutNonceToken(t *testing.T) {
 	docs := renderNonceManifests(t, "os-framework", "alice",
 		"../../../authelia/.olares/config/cluster/deploy/auth_backend_identity.yaml",
