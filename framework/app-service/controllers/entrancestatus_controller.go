@@ -343,11 +343,19 @@ func makeEntranceState(pod *corev1.Pod) (v1alpha1.EntranceState, string, string)
 	if pod.Status.Message != "" {
 		message = pod.Status.Message
 	}
+	initStatuses := make(map[string]corev1.ContainerStatus, len(pod.Status.InitContainerStatuses))
+	for _, status := range pod.Status.InitContainerStatuses {
+		initStatuses[status.Name] = status
+	}
 	initializing := false
-	for i := range pod.Status.InitContainerStatuses {
-		container := pod.Status.InitContainerStatuses[i]
+	for i, spec := range pod.Spec.InitContainers {
+		container := initStatuses[spec.Name]
+		sidecar := spec.RestartPolicy != nil && *spec.RestartPolicy == corev1.ContainerRestartPolicyAlways
 		switch {
-		case container.State.Terminated != nil && container.State.Terminated.ExitCode == 0:
+		case sidecar && container.State.Running != nil && container.Started != nil && *container.Started && container.Ready:
+			// A native sidecar runs for the lifetime of the Pod.
+			continue
+		case !sidecar && container.State.Terminated != nil && container.State.Terminated.ExitCode == 0:
 			continue
 		case container.State.Terminated != nil:
 			if len(container.State.Terminated.Reason) == 0 {
