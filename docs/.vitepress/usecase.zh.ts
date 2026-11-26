@@ -330,6 +330,10 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
               link: "/zh/use-cases/concat",
             },
             {
+              text: "FastH3",
+              link: "/zh/use-cases/fasth3",
+            },
+            {
               text: "Music Studio",
               link: "/zh/use-cases/music-studio",
             },
@@ -625,3 +629,4 @@ export const useCaseSidebar: DefaultTheme.Sidebar = {
         },
       ],
     };
+
