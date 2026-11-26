@@ -10,12 +10,12 @@ import (
 
 	accesslogv3 "github.com/envoyproxy/go-control-plane/envoy/config/accesslog/v3"
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
+	mutationrulesv3 "github.com/envoyproxy/go-control-plane/envoy/config/common/mutation_rules/v3"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	rbac_configv3 "github.com/envoyproxy/go-control-plane/envoy/config/rbac/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
-	mutationrulesv3 "github.com/envoyproxy/go-control-plane/envoy/config/common/mutation_rules/v3"
 	accesslogfilev3 "github.com/envoyproxy/go-control-plane/envoy/extensions/access_loggers/file/v3"
 	extauthzv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/ext_authz/v3"
 	headermutationv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/header_mutation/v3"
@@ -46,6 +46,9 @@ import (
 	"k8s.io/klog/v2"
 )
 
+// subFilterLuaScript buffers whole text/html bodies via response_handle:body(),
+// so HTML larger than Options.HTTPSBufferLimitBytes fails with 500
+// response_payload_too_large.
 const subFilterLuaScript = `
 local PUSH_STATE_SCRIPT = "<script>\n" ..
   "(function () {\n" ..
@@ -171,24 +174,108 @@ const xOriginalURLValue = "%REQ(x-forwarded-proto?:SCHEME)%://%REQ(:AUTHORITY)%%
 // Per-route overrides are only emitted when PathPrefix differs from this value.
 const autheliaVerifyPathPrefix = "/api/verify/"
 
-var (
-	tcpIdleTimeout        = time.Hour
-	httpStreamIdleTimeout = 30 * time.Minute
-	connectTimeout        = 5 * time.Second
-	routeTimeout          = 5 * time.Minute
-	// clusterIdleTimeout is the idle timeout applied to upstream HTTP connections
-	// via CommonHttpProtocolOptions. When a pooled connection is idle for longer
-	// than this duration Envoy closes it. Should be set shorter than the backend's
-	// own keep-alive limit to avoid "connection reset" errors on reuse.
-	clusterIdleTimeout = 10 * time.Second
+// Options controls the timeouts, keepalive and buffer limits emitted into the
+// Envoy config. Upstreams range from ordinary web apps to LLM servers whose
+// time-to-first-token and decode phases can each take many minutes, so the
+// defaults avoid any absolute per-request deadline and instead rely on
+// inactivity timeouts plus TCP keepalive to reclaim abandoned connections.
+type Options struct {
+	TCPIdleTimeout        time.Duration
+	HTTPStreamIdleTimeout time.Duration
+	ConnectTimeout        time.Duration
+	// RouteTimeout is the absolute per-request deadline; 0 disables it.
+	RouteTimeout time.Duration
+	// RouteIdleTimeout bounds the time a request may go without any bytes
+	// flowing in either direction (RouteAction.idle_timeout). 0 omits the
+	// field so routes inherit HTTPStreamIdleTimeout, which then is the safety
+	// net for hung upstreams once RouteTimeout is disabled; an explicit 0 in
+	// Envoy would disable the idle timeout entirely.
+	RouteIdleTimeout time.Duration
+	// ClusterIdleTimeout closes pooled upstream HTTP connections that carry no
+	// active stream. It never affects an in-flight request and must stay below
+	// the backend keep-alive limit to avoid resets on connection reuse.
+	ClusterIdleTimeout time.Duration
+	// TCP keepalive applied to downstream (listener) and upstream (cluster)
+	// sockets so peers that vanish without FIN/RST are detected after roughly
+	// Time + Interval*Probes.
+	TCPKeepaliveTime     time.Duration
+	TCPKeepaliveInterval time.Duration
+	TCPKeepaliveProbes   uint32
+	// HTTPSBufferLimitBytes is the HTTPS listener per-connection buffer limit.
+	// The Lua HTML filter buffers whole response bodies via body(); responses
+	// larger than this fail with 500 response_payload_too_large.
+	HTTPSBufferLimitBytes uint32
+}
+
+func DefaultOptions() Options {
+	return Options{
+		TCPIdleTimeout:        time.Hour,
+		HTTPStreamIdleTimeout: 30 * time.Minute,
+		ConnectTimeout:        5 * time.Second,
+		RouteTimeout:          0,
+		RouteIdleTimeout:      0,
+		ClusterIdleTimeout:    10 * time.Second,
+		TCPKeepaliveTime:      60 * time.Second,
+		TCPKeepaliveInterval:  15 * time.Second,
+		TCPKeepaliveProbes:    4,
+		HTTPSBufferLimitBytes: 1 << 20,
+	}
+}
+
+var opts = DefaultOptions()
+
+// SetOptions replaces the translator options. It is not safe to call
+// concurrently with Translate.
+func SetOptions(o Options) {
+	opts = o
+}
+
+// CurrentOptions returns the options currently used by the translator.
+func CurrentOptions() Options {
+	return opts
+}
+
+// Linux socket option constants. Envoy applies listener socket options to the
+// listen socket and Linux propagates them to accepted connections.
+const (
+	solSocket    = 1 // SOL_SOCKET
+	soKeepalive  = 9 // SO_KEEPALIVE
+	ipprotoTCP   = 6 // IPPROTO_TCP
+	tcpKeepIdle  = 4 // TCP_KEEPIDLE
+	tcpKeepIntvl = 5 // TCP_KEEPINTVL
+	tcpKeepCnt   = 6 // TCP_KEEPCNT
 )
 
-func SetTimeouts(tcpIdle, httpStream, connect, route, clusterIdle time.Duration) {
-	tcpIdleTimeout = tcpIdle
-	httpStreamIdleTimeout = httpStream
-	connectTimeout = connect
-	routeTimeout = route
-	clusterIdleTimeout = clusterIdle
+// downstreamKeepaliveSocketOptions enables TCP keepalive on accepted
+// downstream connections so clients that disappear without closing (laptop
+// sleep, network loss, NAT eviction) are reaped instead of pinning upstream
+// requests until the idle timeout.
+func downstreamKeepaliveSocketOptions() []*corev3.SocketOption {
+	opt := func(desc string, level, name, value int64) *corev3.SocketOption {
+		return &corev3.SocketOption{
+			Description: desc,
+			Level:       level,
+			Name:        name,
+			Value:       &corev3.SocketOption_IntValue{IntValue: value},
+			State:       corev3.SocketOption_STATE_PREBIND,
+		}
+	}
+	return []*corev3.SocketOption{
+		opt("SO_KEEPALIVE", solSocket, soKeepalive, 1),
+		opt("TCP_KEEPIDLE", ipprotoTCP, tcpKeepIdle, int64(opts.TCPKeepaliveTime/time.Second)),
+		opt("TCP_KEEPINTVL", ipprotoTCP, tcpKeepIntvl, int64(opts.TCPKeepaliveInterval/time.Second)),
+		opt("TCP_KEEPCNT", ipprotoTCP, tcpKeepCnt, int64(opts.TCPKeepaliveProbes)),
+	}
+}
+
+func upstreamConnectionOptions() *clusterv3.UpstreamConnectionOptions {
+	return &clusterv3.UpstreamConnectionOptions{
+		TcpKeepalive: &corev3.TcpKeepalive{
+			KeepaliveProbes:   wrapperspb.UInt32(opts.TCPKeepaliveProbes),
+			KeepaliveTime:     wrapperspb.UInt32(uint32(opts.TCPKeepaliveTime / time.Second)),
+			KeepaliveInterval: wrapperspb.UInt32(uint32(opts.TCPKeepaliveInterval / time.Second)),
+		},
+	}
 }
 
 // clientSpoofableIdentityHeaders are stripped at HCM early mutation (before
@@ -699,8 +786,8 @@ func buildMultiUserHTTPSListener(port uint32, proxyProtocol bool, httpListeners 
 					},
 				},
 			},
-			HttpFilters:                    httpFilters,
-			EarlyHeaderMutationExtensions:  buildEarlyClientIdentityStripExtensions(),
+			HttpFilters:                   httpFilters,
+			EarlyHeaderMutationExtensions: buildEarlyClientIdentityStripExtensions(),
 			UpgradeConfigs: []*hcmv3.HttpConnectionManager_UpgradeConfig{
 				{UpgradeType: "websocket"},
 				{UpgradeType: "tailscale-control-protocol"},
@@ -713,12 +800,12 @@ func buildMultiUserHTTPSListener(port uint32, proxyProtocol bool, httpListeners 
 			// would unconditionally overwrite x-forwarded-proto based on the
 			// downstream connection's TLS status.
 			XffNumTrustedHops: 1,
-			StreamIdleTimeout: durationpb.New(httpStreamIdleTimeout),
+			StreamIdleTimeout: durationpb.New(opts.HTTPStreamIdleTimeout),
 			StripPortMode: &hcmv3.HttpConnectionManager_StripAnyHostPort{
 				StripAnyHostPort: true,
 			},
 			CommonHttpProtocolOptions: &corev3.HttpProtocolOptions{
-				IdleTimeout: durationpb.New(httpStreamIdleTimeout),
+				IdleTimeout: durationpb.New(opts.HTTPStreamIdleTimeout),
 			},
 		}
 
@@ -814,7 +901,8 @@ func buildMultiUserHTTPSListener(port uint32, proxyProtocol bool, httpListeners 
 		},
 		FilterChains:                  filterChains,
 		ListenerFilters:               listenerFilters,
-		PerConnectionBufferLimitBytes: wrapperspb.UInt32(32768),
+		SocketOptions:                 downstreamKeepaliveSocketOptions(),
+		PerConnectionBufferLimitBytes: wrapperspb.UInt32(opts.HTTPSBufferLimitBytes),
 	}
 
 	return listener, routeConfigs, clusters
@@ -966,7 +1054,10 @@ func translateRoute(routeIR *ir.HTTPRouteIR, clusterMap map[string]*ir.ClusterIR
 
 	routeAction := &routev3.RouteAction{
 		ClusterSpecifier: &routev3.RouteAction_Cluster{Cluster: routeIR.Cluster},
-		Timeout:          durationpb.New(routeTimeout),
+		Timeout:          durationpb.New(opts.RouteTimeout),
+	}
+	if opts.RouteIdleTimeout > 0 {
+		routeAction.IdleTimeout = durationpb.New(opts.RouteIdleTimeout)
 	}
 
 	if routeIR.WebSocketUpgrade {
@@ -1239,7 +1330,7 @@ func buildHTTPRedirectListener(listenerIR *ir.ListenerIR) *listenerv3.Listener {
 		RouteSpecifier: &hcmv3.HttpConnectionManager_RouteConfig{
 			RouteConfig: routeConfig,
 		},
-		StreamIdleTimeout: durationpb.New(httpStreamIdleTimeout),
+		StreamIdleTimeout: durationpb.New(opts.HTTPStreamIdleTimeout),
 		HttpFilters: []*hcmv3.HttpFilter{{
 			Name:       wellknown.Router,
 			ConfigType: &hcmv3.HttpFilter_TypedConfig{TypedConfig: mustAny(&routerv3.Router{})},
@@ -1369,6 +1460,7 @@ func buildTLSListener(listenerIR *ir.ListenerIR, clusterSet map[string]bool) (*l
 		},
 		FilterChains:    filterChains,
 		ListenerFilters: listenerFilters,
+		SocketOptions:   downstreamKeepaliveSocketOptions(),
 	}
 
 	return listener, clusters
@@ -1383,7 +1475,7 @@ func buildFilterChain(route *ir.RouteIR, clusterName string) *listenerv3.FilterC
 	tcpProxy := &tcpproxyv3.TcpProxy{
 		StatPrefix:       route.Name,
 		ClusterSpecifier: &tcpproxyv3.TcpProxy_Cluster{Cluster: clusterName},
-		IdleTimeout:      durationpb.New(tcpIdleTimeout),
+		IdleTimeout:      durationpb.New(opts.TCPIdleTimeout),
 		AccessLog:        []*accesslogv3.AccessLog{buildTCPAccessLog()},
 	}
 
@@ -1435,7 +1527,7 @@ func buildTCPStreamListener(listenerIR *ir.StreamListenerIR, clusterMap map[stri
 	tcpProxy := &tcpproxyv3.TcpProxy{
 		StatPrefix:       listenerIR.Name,
 		ClusterSpecifier: &tcpproxyv3.TcpProxy_Cluster{Cluster: listenerIR.Cluster},
-		IdleTimeout:      durationpb.New(tcpIdleTimeout),
+		IdleTimeout:      durationpb.New(opts.TCPIdleTimeout),
 		AccessLog:        []*accesslogv3.AccessLog{buildTCPAccessLog()},
 	}
 
@@ -1455,6 +1547,7 @@ func buildTCPStreamListener(listenerIR *ir.StreamListenerIR, clusterMap map[stri
 				ConfigType: &listenerv3.Filter_TypedConfig{TypedConfig: mustAny(tcpProxy)},
 			}},
 		}},
+		SocketOptions: downstreamKeepaliveSocketOptions(),
 	}, clusters
 }
 
@@ -1520,7 +1613,7 @@ func buildL4TCPListener(listenerIR *ir.ListenerIR, clusterSet map[string]bool) (
 		tcpProxy := &tcpproxyv3.TcpProxy{
 			StatPrefix:       route.Name,
 			ClusterSpecifier: &tcpproxyv3.TcpProxy_Cluster{Cluster: clusterName},
-			IdleTimeout:      durationpb.New(tcpIdleTimeout),
+			IdleTimeout:      durationpb.New(opts.TCPIdleTimeout),
 			AccessLog:        []*accesslogv3.AccessLog{buildTCPAccessLog()},
 		}
 
@@ -1543,7 +1636,8 @@ func buildL4TCPListener(listenerIR *ir.ListenerIR, clusterSet map[string]bool) (
 				},
 			},
 		},
-		FilterChains: filterChains,
+		FilterChains:  filterChains,
+		SocketOptions: downstreamKeepaliveSocketOptions(),
 	}, clusters
 }
 
@@ -1599,10 +1693,11 @@ func buildL7Cluster(c *ir.ClusterIR) *clusterv3.Cluster {
 	return &clusterv3.Cluster{
 		Name:                 c.Name,
 		ClusterDiscoveryType: &clusterv3.Cluster_Type{Type: discoveryType},
-		ConnectTimeout:       durationpb.New(connectTimeout),
+		ConnectTimeout:       durationpb.New(opts.ConnectTimeout),
 		CommonHttpProtocolOptions: &corev3.HttpProtocolOptions{
-			IdleTimeout: durationpb.New(clusterIdleTimeout),
+			IdleTimeout: durationpb.New(opts.ClusterIdleTimeout),
 		},
+		UpstreamConnectionOptions: upstreamConnectionOptions(),
 		LoadAssignment: &endpointv3.ClusterLoadAssignment{
 			ClusterName: c.Name,
 			Endpoints: []*endpointv3.LocalityLbEndpoints{{
@@ -1627,9 +1722,10 @@ func buildL7Cluster(c *ir.ClusterIR) *clusterv3.Cluster {
 
 func buildL4Cluster(dest *ir.DestinationIR, proxyProtocolUpstream bool) *clusterv3.Cluster {
 	cluster := &clusterv3.Cluster{
-		Name:                 dest.Name,
-		ClusterDiscoveryType: &clusterv3.Cluster_Type{Type: clusterv3.Cluster_STRICT_DNS},
-		ConnectTimeout:       durationpb.New(connectTimeout),
+		Name:                      dest.Name,
+		ClusterDiscoveryType:      &clusterv3.Cluster_Type{Type: clusterv3.Cluster_STRICT_DNS},
+		ConnectTimeout:            durationpb.New(opts.ConnectTimeout),
+		UpstreamConnectionOptions: upstreamConnectionOptions(),
 		LoadAssignment: &endpointv3.ClusterLoadAssignment{
 			ClusterName: dest.Name,
 			Endpoints: []*endpointv3.LocalityLbEndpoints{{

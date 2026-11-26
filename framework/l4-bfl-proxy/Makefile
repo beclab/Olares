@@ -1,4 +1,4 @@
-.PHONY: l4-bfl-proxy fmt vet
+.PHONY: l4-bfl-proxy fmt vet test test-integration test-integration-docker
 
 all: l4-bfl-proxy
 
@@ -17,3 +17,14 @@ l4-bfl-proxy: fmt vet
 
 run: fmt vet; $(info $(M)...Run bfl.)
 	go run ./cmd/main.go
+
+test:
+	go test ./...
+
+# Requires an Envoy binary via ENVOY_BIN or on PATH (Linux for the keepalive check).
+test-integration:
+	go test -tags integration -count=1 -v ./internal/integration/
+
+test-integration-docker:
+	docker build -f internal/integration/Dockerfile -t l4-bfl-proxy-integration .
+	docker run --rm l4-bfl-proxy-integration -v
