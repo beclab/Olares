@@ -124,6 +124,8 @@ var systemServerAppStoreFlow = platformServiceFlow{
 // These HTTP providers still use native transport. Their absence must not
 // prevent the tenant system-server from starting or being isolated.
 var systemServerOptionalNativeFlows = []platformServiceFlow{
+	// The existing Headscale wrapper authenticates management requests forwarded by system-server.
+	{service: types.NamespacedName{Namespace: "os-network", Name: "headscale-server-svc"}, to: map[string]string{"app": "headscale"}, servicePort: 8000, targetPort: 8000, targetName: "management"},
 	{service: types.NamespacedName{Namespace: "os-framework", Name: "monitoring-server"}, to: map[string]string{"app": "monitoring-server"}, servicePort: 80, targetPort: 8000},
 	{service: types.NamespacedName{Namespace: "os-framework", Name: "files-service"}, to: map[string]string{"app": "files"}, servicePort: 80, targetPort: 80},
 }

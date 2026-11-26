@@ -355,7 +355,18 @@ func TestSystemLoginStartsBackendTransportBeforeFrontend(t *testing.T) {
 			Ports:    []corev1.ServicePort{{Port: 80, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt32(8000)}},
 		},
 	}
-	authBackends = append(authBackends, dns, infisical, bfl, appService, nats, redis, lldap, market, monitoring)
+	headscale := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "os-network", Name: "headscale-server-svc"},
+		Spec: corev1.ServiceSpec{
+			Type: corev1.ServiceTypeClusterIP, ClusterIP: "10.96.0.23",
+			Selector: map[string]string{"app": "headscale"},
+			Ports: []corev1.ServicePort{
+				{Port: 8000, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromString("management")},
+				{Port: 8001, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromString("policy")},
+			},
+		},
+	}
+	authBackends = append(authBackends, dns, infisical, bfl, appService, nats, redis, lldap, market, monitoring, headscale)
 	c := fake.NewClientBuilder().WithScheme(testSchemeWithSecurityPolicy(t)).WithObjects(authBackends...).Build()
 	if err := gateway.EnsureSystemPlaneRoutes(ctx, c, "alice", "alice.olares.com", "user-space-alice", false); err != nil {
 		t.Fatal(err)
@@ -470,6 +481,14 @@ func TestSystemLoginStartsBackendTransportBeforeFrontend(t *testing.T) {
 					Ports: []netv1.NetworkPolicyPort{meshTransportPort(8080), meshTransportPort(4143)},
 				},
 				{
+					To:    []netv1.NetworkPolicyPeer{(meshTransportPeer{"os-network", map[string]string{"app": "headscale"}}).networkPolicyPeer()},
+					Ports: []netv1.NetworkPolicyPort{meshTransportPort(8000)},
+				},
+				{
+					To:    []netv1.NetworkPolicyPeer{{IPBlock: &netv1.IPBlock{CIDR: "10.96.0.23/32"}}},
+					Ports: []netv1.NetworkPolicyPort{meshTransportPort(8000)},
+				},
+				{
 					To:    []netv1.NetworkPolicyPeer{(meshTransportPeer{"os-framework", map[string]string{"app": "monitoring-server"}}).networkPolicyPeer()},
 					Ports: []netv1.NetworkPolicyPort{meshTransportPort(8000)},
 				},
@@ -548,6 +567,10 @@ func TestSystemLoginStartsBackendTransportBeforeFrontend(t *testing.T) {
 	if err := c.Delete(ctx, monitoring); err != nil {
 		t.Fatal(err)
 	}
+	headscale.Spec.Ports[0].TargetPort = intstr.FromString("policy")
+	if err := c.Update(ctx, headscale); err != nil {
+		t.Fatal(err)
+	}
 	checkRoute(ReasonAwaitingDataPlane)
 	if err := c.Get(ctx, client.ObjectKeyFromObject(systemEgress), systemEgress); err != nil {
 		t.Fatal(err)
@@ -577,6 +600,10 @@ func TestSystemLoginStartsBackendTransportBeforeFrontend(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Namespace: monitoring.Namespace, Name: monitoring.Name},
 		Spec:       monitoring.Spec,
 	}); err != nil {
+		t.Fatal(err)
+	}
+	headscale.Spec.Ports[0].TargetPort = intstr.FromString("management")
+	if err := c.Update(ctx, headscale); err != nil {
 		t.Fatal(err)
 	}
 	checkRoute(ReasonAwaitingDataPlane)

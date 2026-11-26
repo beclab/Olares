@@ -267,6 +267,42 @@ func TestAutheliaLLDAPTokenTrafficRequiresMatchingService(t *testing.T) {
 	}
 }
 
+func TestSystemServerHeadscaleManagementEgress(t *testing.T) {
+	key := types.NamespacedName{Namespace: "os-network", Name: "headscale-server-svc"}
+	service := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Namespace: key.Namespace, Name: key.Name},
+		Spec: corev1.ServiceSpec{
+			Type: corev1.ServiceTypeClusterIP, ClusterIP: "10.96.0.23", Selector: map[string]string{"app": "headscale"},
+			Ports: []corev1.ServicePort{
+				{Port: 8000, TargetPort: intstr.FromString("management"), Protocol: corev1.ProtocolTCP},
+				{Port: 8001, TargetPort: intstr.FromString("policy"), Protocol: corev1.ProtocolTCP},
+				{Port: 8080, TargetPort: intstr.FromString("http"), Protocol: corev1.ProtocolTCP},
+			},
+		},
+	}
+	if !slices.Contains(SystemServerDependencyServices(), key) {
+		t.Fatal("Headscale Service is missing from the route dependency inventory")
+	}
+	want := []netv1.NetworkPolicyEgressRule{
+		{To: []netv1.NetworkPolicyPeer{platformPeer("os-network", map[string]string{"app": "headscale"})}, Ports: []netv1.NetworkPolicyPort{tcpPort(8000)}},
+		{To: []netv1.NetworkPolicyPeer{{IPBlock: &netv1.IPBlock{CIDR: "10.96.0.23/32"}}}, Ports: []netv1.NetworkPolicyPort{tcpPort(8000)}},
+	}
+	if got := SystemServerDependencyEgressRules(map[types.NamespacedName]*corev1.Service{key: service}); !reflect.DeepEqual(want, got) {
+		t.Fatalf("unexpected Headscale management egress: %+v", got)
+	}
+	for _, bad := range []func(*corev1.Service){
+		func(s *corev1.Service) { s.Spec.Ports[0].TargetPort = intstr.FromString("policy") },
+		func(s *corev1.Service) { s.Spec.Ports = s.Spec.Ports[1:] },
+		func(s *corev1.Service) { s.Spec.Selector["app"] = "unrelated" },
+	} {
+		mutated := service.DeepCopy()
+		bad(mutated)
+		if got := SystemServerDependencyEgressRules(map[types.NamespacedName]*corev1.Service{key: mutated}); len(got) != 0 {
+			t.Fatalf("unverified Service granted egress: %+v", got)
+		}
+	}
+}
+
 func TestSystemServerDesktopDependenciesRequireVerifiedServices(t *testing.T) {
 	lldapKey := types.NamespacedName{Namespace: "os-platform", Name: "lldap-service"}
 	marketKey := types.NamespacedName{Namespace: "os-framework", Name: "appstore-svc"}
