@@ -14,8 +14,8 @@ import (
 
 	"helm.sh/helm/v3/pkg/storage/driver"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/helm"
@@ -142,9 +142,13 @@ func (c *Creator) CreateUserApps(ctx context.Context) (int32, int32, error) {
 		return 0, 0, err
 	}
 
-	desktopPort, wizardPort, err := c.checkDesktopRunning(ctx, userspaceNs)
-
-	return desktopPort, wizardPort, err
+	err = wait.PollUntilContextTimeout(ctx, time.Second, 5*time.Minute, true, func(ctx context.Context) (bool, error) {
+		return c.wizardReady(ctx, userspaceNs)
+	})
+	if err != nil {
+		return 0, 0, fmt.Errorf("waiting for a ready wizard in %s: %w", userspaceNs, err)
+	}
+	return 0, 0, nil
 }
 
 func (c *Creator) createNamespace(ctx context.Context) error {
@@ -377,47 +381,22 @@ func (c *Creator) getUserSubnet(ctx context.Context) (string, string, error) {
 	return userIndex, userSubnet.String(), nil
 }
 
-func (c *Creator) checkDesktopRunning(ctx context.Context, userspace string) (int32, int32, error) {
-	ticker := time.NewTicker(1 * time.Second)
-	timeout := time.NewTimer(5 * time.Minute)
-
-	defer func() {
-		ticker.Stop()
-		timeout.Stop()
-	}()
-
-	for {
-		select {
-		case <-ticker.C:
-			var pods corev1.PodList
-			selector, _ := labels.Parse("app=wizard")
-			err := c.List(ctx, &pods, &client.ListOptions{LabelSelector: selector})
-
-			if err != nil {
-				return 0, 0, err
+func (c *Creator) wizardReady(ctx context.Context, namespace string) (bool, error) {
+	var pods corev1.PodList
+	if err := c.List(ctx, &pods, client.InNamespace(namespace), client.MatchingLabels{"app": "wizard"}); err != nil {
+		return false, err
+	}
+	for _, pod := range pods.Items {
+		if !pod.DeletionTimestamp.IsZero() || pod.Status.Phase != corev1.PodRunning {
+			continue
+		}
+		for _, condition := range pod.Status.Conditions {
+			if condition.Type == corev1.PodReady && condition.Status == corev1.ConditionTrue {
+				return true, nil
 			}
-
-			if len(pods.Items) == 0 {
-				klog.Warningf("Failed to find user's wizard userspace=%s", userspace)
-				continue
-			}
-
-			wizard := pods.Items[0] // a single bfl per user
-			if wizard.Status.Phase == "Running" {
-				// find desktop port
-				// desktop, err := c.clientSet.KubeClient.Kubernetes().CoreV1().Services(userspace).Get(ctx, "edge-desktop", metav1.GetOptions{})
-				// if err != nil {
-				// 	return 0, 0, err
-				// }
-
-				//wizardPort := wizard.Spec.Ports[0].NodePort
-
-				return 0, 0, nil
-			}
-		case <-timeout.C:
-			return 0, 0, fmt.Errorf("user's wizard checking timeout error. [%s]", userspace)
 		}
 	}
+	return false, nil
 }
 
 func (c *Creator) genAppkeyAndSecret(app string) (string, string) {

@@ -18,6 +18,7 @@ spec:
     metadata:
       labels:
         app: wizard
+        traffic.olares.io/platform-mesh: "true"
       annotations:
         linkerd.io/inject: enabled
         config.linkerd.io/proxy-enable-native-sidecar: "true"
@@ -37,6 +38,10 @@ spec:
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
         env:
           - name: apiServerURL
             value: http://bfl.{{ .Release.Namespace }}:80
