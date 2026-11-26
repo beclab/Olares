@@ -106,6 +106,16 @@ func addTerminalEntryFixture(t *testing.T, bootstrap map[string]any) string {
 	}
 	hosts, _, _ := unstructured.NestedStringSlice(route.Object, "spec", "hostnames")
 	hosts = append(hosts, "files.alice.olares.local")
+	controlHub := desktopEntrance()
+	controlHub.SetName("app-olares-app-control-hub")
+	controlHub.Spec.HostPatterns = []string{"control-hub.alice.example.org", "control-hub.alice.olares.local"}
+	controlHub.Spec.Upstream.ServiceName = "control-hub-service"
+	controlHubRoute, err := desiredL4AuthzRoute(GatewayRef{}, controlHub)
+	if err != nil {
+		t.Fatal(err)
+	}
+	controlHubHosts, _, _ := unstructured.NestedStringSlice(controlHubRoute.Object, "spec", "hostnames")
+	hosts = append(hosts, controlHubHosts...)
 	// Match Gateway API ReplaceFullPath: discard the appended business path.
 	rewrite := map[string]any{"pattern": map[string]any{"regex": "^.*$"}, "substitution": AutheliaVerifyPath}
 	authHCM := map[string]any{"@type": "type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager", "stat_prefix": "terminal-authorization", "route_config": map[string]any{"name": "terminal-authorization", "virtual_hosts": []any{map[string]any{"name": "bound-tenant", "domains": hosts, "routes": []any{map[string]any{"match": map[string]any{"prefix": AutheliaVerifyPath}, "route": map[string]any{"cluster": "tenant-auth", "regex_rewrite": rewrite}, "request_headers_to_add": additions}}}}}, "http_filters": []any{map[string]any{"name": "envoy.filters.http.router", "typed_config": map[string]any{"@type": "type.googleapis.com/envoy.extensions.filters.http.router.v3.Router"}}}}

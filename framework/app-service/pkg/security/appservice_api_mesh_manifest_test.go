@@ -28,6 +28,11 @@ func renderAppServiceMeshManifests(t *testing.T, values map[string]any) (map[str
 
 func renderMeshManifests(t *testing.T, values map[string]any, templates ...string) (map[string]map[string]any, error) {
 	t.Helper()
+	return renderMeshManifestsInNamespace(t, "os-framework", false, values, templates...)
+}
+
+func renderMeshManifestsInNamespace(t *testing.T, namespace string, onlyReleaseNamespace bool, values map[string]any, templates ...string) (map[string]map[string]any, error) {
+	t.Helper()
 	c := &chart.Chart{Metadata: &chart.Metadata{Name: "app-service-mesh-test"}}
 	for _, file := range templates {
 		data, err := os.ReadFile(file)
@@ -37,7 +42,7 @@ func renderMeshManifests(t *testing.T, values map[string]any, templates ...strin
 		c.Templates = append(c.Templates, &chart.File{Name: "templates/" + filepath.Base(file), Data: data})
 	}
 	values["rootPath"] = "/olares"
-	input, err := chartutil.ToRenderValues(c, values, chartutil.ReleaseOptions{Name: "mesh-test", Namespace: "os-framework"}, nil)
+	input, err := chartutil.ToRenderValues(c, values, chartutil.ReleaseOptions{Name: "mesh-test", Namespace: namespace}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -59,6 +64,9 @@ func renderMeshManifests(t *testing.T, values map[string]any, templates ...strin
 				continue
 			}
 			meta := item["metadata"].(map[string]any)
+			if onlyReleaseNamespace && meta["namespace"] != namespace {
+				continue
+			}
 			key := item["kind"].(string) + "/" + meta["name"].(string)
 			if _, ok := resources[key]; ok {
 				t.Fatalf("duplicate rendered resource: %s", key)
@@ -116,14 +124,27 @@ func TestAppServiceAPIMeshRolloutAndPortBoundaries(t *testing.T) {
 		withoutMarketStrict["AuthorizationPolicy/market-status-user"] == nil {
 		t.Fatal("Market without strict ingress may use the existing status aggregation routes only")
 	}
+	for _, name := range []string{"settings-user-create-alice", "settings-user-create-status-alice"} {
+		if withoutMarketStrict["HTTPRoute/"+name] != nil {
+			t.Fatalf("user provisioning must be opt-in: %s", name)
+		}
+	}
+	activeValues["appServiceAPIMesh"].(map[string]any)["userProvisioners"] = []string{"alice"}
 	activeValues["marketLinkerd"] = true
 	activeValues["marketBackendMTLS"] = map[string]any{"prepare": true, "activate": true, "tenants": []string{"alice", "bob"}}
 	rollout, err := renderAppServiceMeshManifests(t, activeValues)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if rollout["Server/market-backend"] == nil || rollout["HTTPRoute/market-install-alice"] != nil {
-		t.Fatal("Market rollout must prepare strict ingress without granting install to old replicas")
+	if rollout["Server/market-backend"] == nil || rollout["Server/market-chart-repository"] == nil {
+		t.Fatal("Market rollout needs strict ingress for both API and Chart")
+	}
+	for _, tenant := range []string{"alice", "bob"} {
+		for _, route := range []string{"market-install-", "market-app-progress-"} {
+			if rollout["HTTPRoute/"+route+tenant] != nil || rollout["AuthorizationPolicy/"+route+tenant] != nil {
+				t.Fatalf("Market rollout must not grant lifecycle access: %s%s", route, tenant)
+			}
+		}
 	}
 	activeValues["appServiceAPIMesh"].(map[string]any)["marketLifecycle"] = true
 	activeValues["marketBackendMTLS"] = map[string]any{"prepare": true, "activate": false, "tenants": []string{"alice", "bob"}}
@@ -162,6 +183,11 @@ func TestAppServiceAPIMeshRolloutAndPortBoundaries(t *testing.T) {
 	if active["ValidatingAdmissionPolicy/olares-app-service-api-mtls-pods"]["spec"].(map[string]any)["failurePolicy"] != "Fail" {
 		t.Fatal("enrolled Pods must fail closed")
 	}
+	for _, name := range []string{"settings-user-create-bob", "settings-user-create-status-bob"} {
+		if active["HTTPRoute/"+name] != nil || active["AuthorizationPolicy/"+name] != nil {
+			t.Fatalf("ordinary tenant received provisioning access: %s", name)
+		}
+	}
 	for _, tc := range []struct{ name, namespace, account, method, path, userHeader, pathType string }{
 		{"user-apps-alice", "user-system-alice", "bytetrade-sys-ops", "GET", "/app-service/v1/user-apps/alice", "", "Exact"},
 		{"user-apps-bob", "user-system-bob", "bytetrade-sys-ops", "GET", "/app-service/v1/user-apps/bob", "", "Exact"},
@@ -183,6 +209,10 @@ func TestAppServiceAPIMeshRolloutAndPortBoundaries(t *testing.T) {
 		{"settings-system-envs-bob", "user-system-bob", "bytetrade-sys-ops", "GET", "/app-service/v1/systemenvs", "bob", "Exact"},
 		{"settings-user-envs-bob", "user-system-bob", "bytetrade-sys-ops", "GET", "/app-service/v1/userenvs", "bob", "Exact"},
 		{"settings-user-bob", "user-system-bob", "bytetrade-sys-ops", "GET", "/app-service/v1/users/bob", "bob", "Exact"},
+		{"settings-user-create-alice", "user-system-alice", "bytetrade-sys-ops", "POST", "/app-service/v1/users", "alice", "Exact"},
+		{"settings-user-create-status-alice", "user-system-alice", "bytetrade-sys-ops", "GET", "^/app-service/v1/users/[a-z0-9]([a-z0-9-]*[a-z0-9])?/status$", "alice", "RegularExpression"},
+		{"settings-app-entrance-reads-alice", "user-system-alice", "bytetrade-sys-ops", "GET", "^/app-service/v1/applications/[a-z0-9]([a-z0-9-]*[a-z0-9])?/(entrances|setup)$", "alice", "RegularExpression"},
+		{"settings-app-entrance-reads-bob", "user-system-bob", "bytetrade-sys-ops", "GET", "^/app-service/v1/applications/[a-z0-9]([a-z0-9-]*[a-z0-9])?/(entrances|setup)$", "bob", "RegularExpression"},
 		{"settings-app-permissions-alice", "user-system-alice", "bytetrade-sys-ops", "GET", "^/app-service/v1/perms/[a-z0-9]([a-z0-9-]*[a-z0-9])?$", "alice", "RegularExpression"},
 		{"settings-app-permissions-bob", "user-system-bob", "bytetrade-sys-ops", "GET", "^/app-service/v1/perms/[a-z0-9]([a-z0-9-]*[a-z0-9])?$", "bob", "RegularExpression"},
 		{"settings-app-providers-alice", "user-system-alice", "bytetrade-sys-ops", "GET", "^/app-service/v1/apps/provider-registry/[a-z0-9]([a-z0-9-]*[a-z0-9])?$", "alice", "RegularExpression"},
@@ -203,6 +233,19 @@ func TestAppServiceAPIMeshRolloutAndPortBoundaries(t *testing.T) {
 			for _, path := range []string{"/app-service/v1/applications/a/setup", "/app-service/v1/applications/a/attachments/extra", "/app-service/v1/applications/a/../a/attachments", "/app-service/v1/applications/a%2fb/attachments", "/app-service/v1/applications/a/attachments/", "/v1/applications/a/attachments"} {
 				if pattern.MatchString(path) {
 					t.Fatalf("Settings route admits unrelated path %s", path)
+				}
+			}
+		}
+		if strings.HasPrefix(tc.name, "settings-app-entrance-reads-") {
+			pattern := regexp.MustCompile(tc.path)
+			for _, path := range []string{"/app-service/v1/applications/olares-app/entrances", "/app-service/v1/applications/a/setup"} {
+				if !pattern.MatchString(path) {
+					t.Fatalf("entrance policy misses %s", path)
+				}
+			}
+			for _, path := range []string{"/app-service/v1/applications/a/files/setup", "/app-service/v1/applications/a%2fb/setup", "/app-service/v1/applications/a/policy", "/app-service/v1/applications/a/setup/extra"} {
+				if pattern.MatchString(path) {
+					t.Fatalf("entrance policy admits %s", path)
 				}
 			}
 		}
@@ -267,6 +310,56 @@ func TestAppServiceMeshRequiresExplicitValidTenants(t *testing.T) {
 			t.Fatalf("accepted invalid tenant inventory %v", tenants)
 		}
 	}
+	for _, provisioners := range [][]string{{"outside"}, {"alice", "alice"}} {
+		_, err := renderAppServiceMeshManifests(t, map[string]any{"appServiceAPIMesh": map[string]any{
+			"prepare": true, "tenants": []string{"alice", "bob"}, "userProvisioners": provisioners,
+		}})
+		if err == nil {
+			t.Fatalf("accepted invalid user provisioners %v", provisioners)
+		}
+	}
+}
+
+func TestControlHubMeshProtectsServiceTargetPort(t *testing.T) {
+	const chart = "../../../../apps/.olares/config/user/helm-charts/system-apps/templates/"
+	values := map[string]any{
+		"bfl":       map[string]any{"username": "alice"},
+		"userspace": map[string]any{"appCache": "/cache", "appData": "/app", "userData": "/user"},
+	}
+	render := func() (map[string]map[string]any, error) {
+		return renderMeshManifestsInNamespace(t, "user-space-alice", true, values, chart+"olares-app.yaml", chart+"control-hub-frontend-mesh.yaml")
+	}
+	baseline, err := render()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if baseline["Server/control-hub-frontend"] != nil {
+		t.Fatal("Control Hub policy needs the verified gateway identity")
+	}
+	values["controlHubFrontendGatewayServiceAccount"] = "*"
+	if _, err := render(); err == nil {
+		t.Fatal("Control Hub accepted a wildcard gateway identity")
+	}
+	values["controlHubFrontendGatewayServiceAccount"] = "expected-entry"
+	secured, err := render()
+	if err != nil {
+		t.Fatal(err)
+	}
+	service := secured["Service/control-hub-service"]["spec"].(map[string]any)
+	port := service["ports"].([]any)[0].(map[string]any)
+	server := secured["Server/control-hub-frontend"]["spec"].(map[string]any)
+	if port["port"] != 80 || server["port"] != port["targetPort"] || server["port"] != 82 ||
+		server["accessPolicy"] != "deny" || server["proxyProtocol"] != "HTTP/1" ||
+		!reflect.DeepEqual(server["podSelector"], map[string]any{"matchLabels": service["selector"]}) {
+		t.Fatalf("Control Hub policy does not protect the existing service target: %v / %v", service, server)
+	}
+	authn := secured["MeshTLSAuthentication/control-hub-frontend-entry"]["spec"].(map[string]any)
+	authz := secured["AuthorizationPolicy/control-hub-frontend-entry"]["spec"].(map[string]any)
+	if !reflect.DeepEqual(authn["identityRefs"], []any{map[string]any{"kind": "ServiceAccount", "namespace": "os-gateway", "name": "expected-entry"}}) ||
+		!reflect.DeepEqual(authz["targetRef"], map[string]any{"group": "policy.linkerd.io", "kind": "Server", "name": "control-hub-frontend"}) ||
+		!reflect.DeepEqual(authz["requiredAuthenticationRefs"], []any{map[string]any{"group": "policy.linkerd.io", "kind": "MeshTLSAuthentication", "name": "control-hub-frontend-entry"}}) {
+		t.Fatalf("wrong Control Hub gateway authorization: %v / %v", authn, authz)
+	}
 }
 
 func TestMarketMeshRequiresEnrollmentAndMatchingTenant(t *testing.T) {
@@ -295,6 +388,7 @@ func TestMarketMeshRequiresEnrollmentAndMatchingTenant(t *testing.T) {
 			t.Fatalf("accepted incomplete or unsafe config %v", input)
 		}
 	}
+	var marketImage any
 	for _, activate := range []bool{false, true} {
 		resources, err := renderAppServiceMeshManifests(t, values(true, activate, true, "alice", "bob"))
 		if err != nil {
@@ -306,7 +400,23 @@ func TestMarketMeshRequiresEnrollmentAndMatchingTenant(t *testing.T) {
 			!reflect.DeepEqual(server["podSelector"], map[string]any{"matchLabels": map[string]any{"app": "appstore", enrollment: "required"}}) {
 			t.Fatalf("wrong backend policy: %v", server)
 		}
-		pod := resources["Deployment/market-deployment"]["spec"].(map[string]any)["template"].(map[string]any)["metadata"].(map[string]any)
+		template := resources["Deployment/market-deployment"]["spec"].(map[string]any)["template"].(map[string]any)
+		pod := template["metadata"].(map[string]any)
+		containers := template["spec"].(map[string]any)["containers"].([]any)
+		for _, entry := range containers {
+			container := entry.(map[string]any)
+			if container["name"] == "appstore-backend" {
+				if !activate {
+					marketImage = container["image"]
+				}
+				if marketImage == nil || container["image"] != marketImage {
+					t.Fatalf("Market mesh changed the backend image: %v", container["image"])
+				}
+			}
+		}
+		if marketImage == nil {
+			t.Fatal("Market backend image is missing")
+		}
 		if (pod["labels"].(map[string]any)[enrollment] == "required") != activate ||
 			(pod["annotations"].(map[string]any)["config.linkerd.io/default-inbound-policy"] == "deny") != activate {
 			t.Fatalf("incorrect workload activation: %v", pod)

@@ -1,0 +1,43 @@
+{{- with .Values.controlHubFrontendGatewayServiceAccount -}}
+{{- if or (gt (len .) 63) (not (regexMatch "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$" .)) -}}
+{{- fail "invalid Control Hub Entry gateway ServiceAccount" -}}
+{{- end }}
+apiVersion: policy.linkerd.io/v1beta3
+kind: Server
+metadata:
+  name: control-hub-frontend
+  namespace: {{ $.Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: olares-app
+  port: 82
+  proxyProtocol: HTTP/1
+  accessPolicy: deny
+---
+apiVersion: policy.linkerd.io/v1alpha1
+kind: MeshTLSAuthentication
+metadata:
+  name: control-hub-frontend-entry
+  namespace: {{ $.Release.Namespace }}
+spec:
+  identityRefs:
+    - kind: ServiceAccount
+      name: {{ . | quote }}
+      namespace: os-gateway
+---
+apiVersion: policy.linkerd.io/v1alpha1
+kind: AuthorizationPolicy
+metadata:
+  name: control-hub-frontend-entry
+  namespace: {{ $.Release.Namespace }}
+spec:
+  targetRef:
+    group: policy.linkerd.io
+    kind: Server
+    name: control-hub-frontend
+  requiredAuthenticationRefs:
+    - group: policy.linkerd.io
+      kind: MeshTLSAuthentication
+      name: control-hub-frontend-entry
+{{- end }}

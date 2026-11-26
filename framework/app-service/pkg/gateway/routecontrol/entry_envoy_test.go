@@ -138,7 +138,7 @@ func TestEntryIdentityRealEnvoy(t *testing.T) {
 		map[string]any{"match": match("session=bob", false), "direct_response": map[string]any{"status": 403}},
 		map[string]any{"match": match("session=expired", false), "direct_response": map[string]any{"status": 401}},
 		map[string]any{"match": match("policy=public", true), "direct_response": map[string]any{"status": 200}},
-		map[string]any{"match": map[string]any{"prefix": "/", "headers": []any{map[string]any{"name": ":authority", "string_match": map[string]any{"exact": "desktop.alice.olares.local"}}}}, "direct_response": map[string]any{"status": 302}, "response_headers_to_add": []any{add("Location", "http://auth.alice.olares.local/?rd=%REQ(x-original-url)%")}},
+		map[string]any{"match": map[string]any{"prefix": "/", "headers": []any{map[string]any{"name": ":authority", "string_match": map[string]any{"safe_regex": map[string]any{"regex": `^(desktop|control-hub)\.alice\.olares\.local$`}}}}}, "direct_response": map[string]any{"status": 302}, "response_headers_to_add": []any{add("Location", "http://auth.alice.olares.local/?rd=%REQ(x-original-url)%")}},
 		map[string]any{"match": map[string]any{"prefix": "/"}, "direct_response": map[string]any{"status": 302}, "response_headers_to_add": []any{add("Location", "https://auth.alice.example.org/?rd=%REQ(x-original-url)%")}},
 	}
 	echoScript := `function envoy_on_request(h)
@@ -264,18 +264,21 @@ end`
 			}
 		})
 	}
+	const desktopTarget = "/files%20and%20folders?tab=recent"
+	const controlHubTarget = "/root/pods/overview/node/user-space-alice/olares-app-example?tab=containers"
 	for _, tc := range []struct {
-		name, host, scheme string
-		client             *http.Client
+		name, host, scheme, target string
+		client                     *http.Client
 	}{
-		{"local-http", "desktop.alice.olares.local", "http", localBridgeClient},
-		{"local-direct-https", "desktop.alice.olares.local", "https", terminalClient},
-		{"remote-proxy-https", "desktop.alice.olares.local", "https", remoteProxyClient},
-		{"formal-host-on-local-proxy", "desktop.alice.example.org", "https", localBridgeClient},
+		{"local-http", "desktop.alice.olares.local", "http", desktopTarget, localBridgeClient},
+		{"local-direct-https", "desktop.alice.olares.local", "https", desktopTarget, terminalClient},
+		{"remote-proxy-https", "desktop.alice.olares.local", "https", desktopTarget, remoteProxyClient},
+		{"formal-host-on-local-proxy", "desktop.alice.example.org", "https", desktopTarget, localBridgeClient},
+		{"control-hub-formal-https", "control-hub.alice.example.org", "https", controlHubTarget, terminalClient},
+		{"control-hub-local-http", "control-hub.alice.olares.local", "http", controlHubTarget, localBridgeClient},
 	} {
 		t.Run("redirect-scheme/"+tc.name, func(t *testing.T) {
-			const target = "/files%20and%20folders?tab=recent"
-			req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://"+tc.host+target, nil)
+			req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://"+tc.host+tc.target, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -290,11 +293,30 @@ end`
 			if err != nil || resp.StatusCode != http.StatusFound {
 				t.Fatalf("expected redirect, got HTTP %d: %v", resp.StatusCode, err)
 			}
-			if got, want := location.Query().Get("rd"), tc.scheme+"://"+tc.host+target; got != want {
+			if got, want := location.Query().Get("rd"), tc.scheme+"://"+tc.host+tc.target; got != want {
 				// The stub's header formatter does not URL-encode rd, so read
 				// its raw value to check preservation of the escaped path too.
 				if location.RawQuery != "rd="+want {
 					t.Fatalf("rd = %q (%q), want %q", got, location.RawQuery, want)
+				}
+			}
+			if strings.HasPrefix(tc.name, "control-hub-") {
+				resume := req.Clone(ctx)
+				resume.Header.Set("Cookie", "session=alice")
+				authenticated, err := tc.client.Do(resume)
+				if err != nil {
+					t.Fatal(err)
+				}
+				defer authenticated.Body.Close()
+				if authenticated.StatusCode != http.StatusOK {
+					t.Fatalf("Control Hub return reached HTTP %d", authenticated.StatusCode)
+				}
+				var upstream map[string]string
+				if err := json.NewDecoder(io.LimitReader(authenticated.Body, 8192)).Decode(&upstream); err != nil {
+					t.Fatal(err)
+				}
+				if upstream["user"] != "alice" || upstream["authurl"] != tc.scheme+"://"+tc.host+tc.target {
+					t.Fatal("Control Hub return lost the authenticated subject or the original target")
 				}
 			}
 		})
