@@ -24,8 +24,9 @@
 {{- range $name, $path := dict "market-status-user" "/user-info" "market-status-user-resource" "/user/resource" "market-status-cluster-resource" "/cluster/resource" "market-status-version" "/terminus/version" -}}
 {{- $routes = append $routes (dict "name" $name "namespace" "os-framework" "account" "market-sa" "method" "GET" "path" (printf "/app-service/v1%s" $path)) -}}
 {{- end -}}
-{{- /* The existing Market status correction job reads the device inventory without a tenant header. */ -}}
 {{- if $mesh.marketLifecycle -}}
+{{- /* Chart upload and status correction read device-wide data without a tenant header. */ -}}
+{{- $routes = append $routes (dict "name" "market-chart-admins" "namespace" "os-framework" "account" "market-sa" "method" "GET" "path" "/app-service/v1/users/admins") -}}
 {{- $routes = append $routes (dict "name" "market-cluster-apps" "namespace" "os-framework" "account" "market-sa" "method" "GET" "path" "/app-service/v1/all/apps") -}}
 {{- end -}}
 {{- range $tenant := $mesh.tenants -}}
@@ -39,6 +40,10 @@
   (dict "method" "GET" "path" (printf "%s/status$" $marketAppPath) "pathType" "RegularExpression")
   (dict "method" "POST" "path" (printf "%s/cancel$" $marketAppPath) "pathType" "RegularExpression" "queryParams" (list (dict "type" "Exact" "name" "type" "value" "operate"))) -}}
 {{- $routes = append $routes (dict "name" (printf "market-lifecycle-%s" $tenant) "namespace" "os-framework" "account" "market-sa" "userHeader" $tenant "matches" $lifecycle) -}}
+{{- $runtime := list
+  (dict "method" "POST" "path" (printf "%s/suspend$" $marketAppPath) "pathType" "RegularExpression")
+  (dict "method" "POST" "path" (printf "%s/resume$" $marketAppPath) "pathType" "RegularExpression") -}}
+{{- $routes = append $routes (dict "name" (printf "market-runtime-%s" $tenant) "namespace" "os-framework" "account" "market-sa" "userHeader" $tenant "matches" $runtime) -}}
 {{- end -}}
 {{- $routes = append $routes (dict "name" (printf "user-apps-%s" $tenant) "namespace" (printf "user-system-%s" $tenant) "account" "bytetrade-sys-ops" "method" "GET" "path" (printf "/app-service/v1/user-apps/%s" $tenant)) -}}
 {{- $routes = append $routes (dict "name" (printf "users-%s" $tenant) "namespace" (printf "user-system-%s" $tenant) "account" "bytetrade-sys-ops" "method" "GET" "path" "/app-service/v1/users" "userHeader" $tenant) -}}

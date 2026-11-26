@@ -5,16 +5,23 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/applifecycle/domain"
+	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/testutil"
+	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	"github.com/emicklei/go-restful/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -161,6 +168,80 @@ func TestSuspendV2_StopAllAnnotationEncoding(t *testing.T) {
 			}
 			if got := f.currentAM().Annotations[api.AppStopAllKey]; got != c.want {
 				t.Errorf("AppStopAllKey = %q, want %q", got, c.want)
+			}
+		})
+	}
+}
+
+func TestSuspendV2DerivesStopScopeFromRole(t *testing.T) {
+	for _, tc := range []struct {
+		caller, role, wantScope string
+	}{
+		{caller: "alice", role: "owner", wantScope: "true"},
+		{caller: "bob", role: "normal", wantScope: "false"},
+	} {
+		t.Run(tc.role, func(t *testing.T) {
+			f := newSuspendResumeV2Fixture(t, appv1alpha1.Running)
+			f.am.Spec.AppOwner = tc.caller
+			f.am.Spec.AppNamespace = f.am.Spec.AppName + "-" + tc.caller
+			name, err := apputils.FmtAppMgrName(f.am.Spec.AppName, tc.caller, f.am.Spec.AppNamespace)
+			if err != nil {
+				t.Fatal(err)
+			}
+			f.am.Name = name
+			f.handler.ctrlClient = testutil.NewFakeClient(f.am)
+
+			kube := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+				const managers = "/apis/app.bytetrade.io/v1alpha1/applicationmanagers"
+				w.Header().Set("Content-Type", restful.MIME_JSON)
+				switch req.URL.Path {
+				case managers + "/" + apputils.SharedAppMgrName(f.am.Spec.AppName):
+					w.WriteHeader(http.StatusNotFound)
+					_, _ = w.Write([]byte(`{"apiVersion":"v1","kind":"Status","reason":"NotFound","code":404}`))
+				case managers:
+					list := appv1alpha1.ApplicationManagerList{
+						TypeMeta: metav1.TypeMeta{APIVersion: "app.bytetrade.io/v1alpha1", Kind: "ApplicationManagerList"},
+						Items:    []appv1alpha1.ApplicationManager{*f.am},
+					}
+					if err := json.NewEncoder(w).Encode(list); err != nil {
+						t.Error(err)
+					}
+				case "/apis/iam.kubesphere.io/v1alpha2/users":
+					_, _ = w.Write([]byte(`{"apiVersion":"iam.kubesphere.io/v1alpha2","kind":"UserList","items":[` +
+						`{"metadata":{"name":"` + tc.caller + `","annotations":{"bytetrade.io/owner-role":"` + tc.role + `"}}}]}`))
+				default:
+					t.Errorf("unexpected Kubernetes request %s", req.URL.Path)
+					w.WriteHeader(http.StatusNotFound)
+				}
+			}))
+			defer kube.Close()
+			f.handler.kubeConfig = &rest.Config{Host: kube.URL}
+			config := clientcmdapi.Config{
+				CurrentContext: "test",
+				Contexts:       map[string]*clientcmdapi.Context{"test": {Cluster: "test"}},
+				Clusters:       map[string]*clientcmdapi.Cluster{"test": {Server: kube.URL}},
+			}
+			configPath := filepath.Join(t.TempDir(), "kubeconfig")
+			if err := clientcmd.WriteToFile(config, configPath); err != nil {
+				t.Fatal(err)
+			}
+			t.Setenv("KUBECONFIG", configPath)
+
+			ws := new(restful.WebService).Consumes(restful.MIME_JSON).Produces(restful.MIME_JSON)
+			ws.Route(ws.POST("/apps/{" + ParamAppName + "}/suspend").To(func(req *restful.Request, resp *restful.Response) {
+				req.SetAttribute(constants.UserContextAttribute, tc.caller)
+				f.handler.suspendV2(req, resp)
+			}))
+			request := httptest.NewRequest(http.MethodPost, "/apps/nginx/suspend", strings.NewReader(`{"all":true}`))
+			request.Header.Set("Content-Type", restful.MIME_JSON)
+			request.Header.Set("Accept", restful.MIME_JSON)
+			restful.NewContainer().Add(ws).ServeHTTP(f.rec, request)
+			if f.rec.Code != http.StatusOK {
+				t.Fatalf("stop returned HTTP %d, want 200: %s", f.rec.Code, f.rec.Body.String())
+			}
+			got := f.currentAM()
+			if got.Spec.OpType != appv1alpha1.StopOp || got.Annotations[api.AppStopAllKey] != tc.wantScope {
+				t.Fatalf("unexpected stop operation or scope for %s", tc.role)
 			}
 		})
 	}

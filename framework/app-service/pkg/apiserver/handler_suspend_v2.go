@@ -42,20 +42,15 @@ import (
 //     this handler thins down to the shape of applyEnvV2. Tracked
 //     in ADAPTERS_TODO.md.
 //
-//   - There is one annotation: AppStopAllKey. Legacy computes
-//     stopAll = isAdmin || request.All; we preserve that in the
-//     outer shell and pass the resolved boolean into the deliver
-//     helper.
-//
-// Not wired into the router yet — same incremental-cutover story
-// as cancelV2.
+//   - Only an administrator may set AppStopAllKey. The stop operation
+//     can affect other owners' workloads and shared compute allocations.
 func (h *Handler) suspendV2(req *restful.Request, resp *restful.Response) {
 	app := req.PathParameter(ParamAppName)
 	owner := req.Attribute(constants.UserContextAttribute).(string)
 
-	request := &api.StopRequest{}
 	if req.Request.ContentLength > 0 {
-		if err := req.ReadEntity(request); err != nil {
+		var request api.StopRequest
+		if err := req.ReadEntity(&request); err != nil {
 			api.HandleBadRequest(resp, req, err)
 			return
 		}
@@ -75,9 +70,8 @@ func (h *Handler) suspendV2(req *restful.Request, resp *restful.Response) {
 		api.HandleError(resp, req, err)
 		return
 	}
-	stopAll := isAdmin || request.All
-
-	h.deliverSuspendV2(req.Request.Context(), req, resp, name, amPtr, app, stopAll)
+	// Older callers may send All. The live role determines the stop scope.
+	h.deliverSuspendV2(req.Request.Context(), req, resp, name, amPtr, app, isAdmin)
 }
 
 // deliverSuspendV2 is the pure translator + compute-pre-side-effect

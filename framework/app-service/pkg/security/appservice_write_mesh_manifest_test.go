@@ -26,14 +26,27 @@ func TestAppServiceMeshScopedWrites(t *testing.T) {
 	prepared, active := render(false, false), render(true, true)
 	lifecycleOnly := render(true, false)
 	envOnly := render(false, true)
+	for _, kind := range []string{"HTTPRoute", "AuthorizationPolicy", "MeshTLSAuthentication"} {
+		if name := kind + "/market-chart-admins"; prepared[name] != nil || envOnly[name] != nil {
+			t.Fatalf("owner/admin list authorization was generated before Market lifecycle activation: %s", name)
+		}
+	}
+	checkAppServiceCapability(t, active, "market-chart-admins", "os-framework", "market-sa", []any{map[string]any{
+		"method": "GET",
+		"path":   map[string]any{"type": "Exact", "value": "/app-service/v1/users/admins"},
+	}})
 	for _, tenant := range tenants {
 		t.Run(tenant, func(t *testing.T) {
 			lifecycle := "market-lifecycle-" + tenant
+			runtime := "market-runtime-" + tenant
 			for _, kind := range []string{"HTTPRoute", "AuthorizationPolicy", "MeshTLSAuthentication"} {
 				if prepared[kind+"/"+lifecycle] != nil || envOnly[kind+"/"+lifecycle] != nil {
 					t.Fatalf("lifecycle authorization was generated before lifecycle activation: %s", kind)
 				}
-				if active[kind+"/market-lifecycle-unregistered"] != nil {
+				if prepared[kind+"/"+runtime] != nil || envOnly[kind+"/"+runtime] != nil {
+					t.Fatalf("runtime authorization was generated before lifecycle activation: %s", kind)
+				}
+				if active[kind+"/market-lifecycle-unregistered"] != nil || active[kind+"/market-runtime-unregistered"] != nil {
 					t.Fatalf("lifecycle authorization was generated for an unregistered tenant: %s", kind)
 				}
 				name := kind + "/settings-system-envs-save-" + tenant
@@ -72,6 +85,10 @@ func TestAppServiceMeshScopedWrites(t *testing.T) {
 				matches = append(matches, match)
 			}
 			checkAppServiceCapability(t, active, lifecycle, "os-framework", "market-sa", matches)
+			checkAppServiceCapability(t, active, runtime, "os-framework", "market-sa", []any{
+				appServiceTenantMatch(tenant, "POST", "RegularExpression", appPath+"/suspend$"),
+				appServiceTenantMatch(tenant, "POST", "RegularExpression", appPath+"/resume$"),
+			})
 			checkAppServiceCapability(t, envOnly, "settings-system-envs-save-"+tenant, "user-system-"+tenant, "bytetrade-sys-ops",
 				[]any{appServiceTenantMatch(tenant, "PUT", "Exact", "/app-service/v1/systemenvs")})
 		})
