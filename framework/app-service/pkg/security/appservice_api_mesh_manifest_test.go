@@ -406,6 +406,13 @@ func TestMarketMeshRequiresEnrollmentAndMatchingTenant(t *testing.T) {
 		for _, entry := range containers {
 			container := entry.(map[string]any)
 			if container["name"] == "appstore-backend" {
+				wantPorts := []any{map[string]any{"containerPort": 8080}}
+				if activate {
+					wantPorts = append(wantPorts, map[string]any{"containerPort": 82})
+				}
+				if !reflect.DeepEqual(container["ports"], wantPorts) {
+					t.Fatalf("Market listeners must be declared for Linkerd Server selection: %v", container["ports"])
+				}
 				if !activate {
 					marketImage = container["image"]
 				}

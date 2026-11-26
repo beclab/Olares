@@ -177,6 +177,7 @@ spec:
         ports:
           - containerPort: 8080
         {{- if $marketMesh.activate }}
+          - containerPort: 82
         readinessProbe:
           exec:
             command: ["wget", "-q", "-T", "2", "-O", "/dev/null", "http://127.0.0.1:8080/readyz"]
