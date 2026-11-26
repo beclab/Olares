@@ -80,8 +80,8 @@ func (h *Handler) resolveUserspaceRoots(ctx context.Context, cfg *appcfg.Applica
 	return roots, nil
 }
 
-// injectUserspacePrepare prepends the olares-prepare-userspace init
-// container to pod, along with any hostPath volume it needs to reach a
+// injectUserspacePrepare adds the olares-prepare-userspace init container
+// ahead of chart init containers, along with any hostPath volume needed to reach a
 // conventional root the chart did not declare itself.
 //
 // Nothing is injected when the pod mounts no userspace directory, so
@@ -106,13 +106,7 @@ func (h *Handler) injectUserspacePrepare(ctx context.Context, pod *corev1.Pod, c
 		return nil
 	}
 
-	pod.Spec.Volumes = append(pod.Spec.Volumes, plan.ExtraVolumes...)
-	// Prepare runs before the chart's own init containers: those often
-	// seed config or unpack data into the very directories it owns.
-	pod.Spec.InitContainers = append(
-		[]corev1.Container{userspaceprep.InitContainer(plan)},
-		pod.Spec.InitContainers...,
-	)
+	userspaceprep.Inject(pod, plan)
 	klog.Infof("prepare-userspace: injected for app=%s targets=%d", cfg.AppName, len(plan.Targets))
 	return nil
 }

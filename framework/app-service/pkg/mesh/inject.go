@@ -29,6 +29,16 @@ const (
 	annotDecide                     = "gateway.olares.io/shared-caller-decide"
 )
 
+// LinkerdInitPrefixLength returns the leading Linkerd init and native proxy containers.
+func LinkerdInitPrefixLength(containers []corev1.Container) int {
+	for i, container := range containers {
+		if container.Name != "linkerd-init" && container.Name != LinkerdProxyContainer {
+			return i
+		}
+	}
+	return len(containers)
+}
+
 // ShouldInjectLinkerdProxy reports whether linkerd-proxy should be injected.
 // Same result as mesh-in (injectMeshIn).
 func ShouldInjectLinkerdProxy(injectMeshIn bool) bool {

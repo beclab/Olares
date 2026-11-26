@@ -10,6 +10,7 @@ import (
 
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/gateway/callerjwt"
+	"github.com/beclab/Olares/framework/app-service/pkg/mesh"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
@@ -340,14 +341,7 @@ func IsStubImage(image string) bool {
 // InsertNativeMeshIn starts mesh-in before application init containers. If
 // Linkerd has already injected, keep its init/proxy prefix ahead of mesh-in.
 func InsertNativeMeshIn(pod *corev1.Pod, gatewayIPs string) {
-	index := 0
-	for index < len(pod.Spec.InitContainers) {
-		name := pod.Spec.InitContainers[index].Name
-		if name != "linkerd-init" && name != "linkerd-proxy" {
-			break
-		}
-		index++
-	}
+	index := mesh.LinkerdInitPrefixLength(pod.Spec.InitContainers)
 	pod.Spec.InitContainers = slices.Insert(pod.Spec.InitContainers, index,
 		InitContainerSpecWithGatewayIPs(gatewayIPs), ContainerSpec())
 }

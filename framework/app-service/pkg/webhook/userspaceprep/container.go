@@ -2,11 +2,13 @@ package userspaceprep
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/mesh"
 )
 
 const userspacePrepareImage = "beclab/aboveos-busybox:1.37.0"
@@ -74,4 +76,12 @@ func InitContainer(p Plan) corev1.Container {
 		Command:      []string{"sh", "-c", Script(p)},
 		VolumeMounts: mounts,
 	}
+}
+
+// Inject places directory preparation before the chart's init containers and
+// preserves the Linkerd prefix when its mutating webhook has already run.
+func Inject(pod *corev1.Pod, plan Plan) {
+	pod.Spec.Volumes = append(pod.Spec.Volumes, plan.ExtraVolumes...)
+	index := mesh.LinkerdInitPrefixLength(pod.Spec.InitContainers)
+	pod.Spec.InitContainers = slices.Insert(pod.Spec.InitContainers, index, InitContainer(plan))
 }

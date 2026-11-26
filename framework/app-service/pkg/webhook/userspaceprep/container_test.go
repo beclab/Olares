@@ -149,3 +149,32 @@ func TestInitContainer_MountsSynthesizedVolumes(t *testing.T) {
 		}
 	}
 }
+
+func TestInjectKeepsLinkerdBeforeUserspaceAndChartInit(t *testing.T) {
+	always := corev1.ContainerRestartPolicyAlways
+	linkerdInit := corev1.Container{Name: "linkerd-init"}
+	linkerdProxy := corev1.Container{Name: "linkerd-proxy", RestartPolicy: &always, StartupProbe: &corev1.Probe{}}
+	chartInit := corev1.Container{Name: "fix-data-perms"}
+	for _, tc := range []struct {
+		name   string
+		prefix []corev1.Container
+	}{
+		{name: "platform webhook first"},
+		{name: "Linkerd native sidecar first", prefix: []corev1.Container{linkerdInit, linkerdProxy}},
+		{name: "Linkerd regular sidecar first", prefix: []corev1.Container{linkerdInit}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			pod := podWith([]corev1.Volume{hostPathVolume("data", userspaceHost+"/Data/lares")})
+			pod.Spec.InitContainers = append(append([]corev1.Container{}, tc.prefix...), chartInit)
+			plan, ok := BuildPlan(pod, testRoots())
+			if !ok {
+				t.Fatal("expected a directory preparation plan for the hostPath")
+			}
+			Inject(pod, plan)
+			want := append(append([]corev1.Container{}, tc.prefix...), InitContainer(plan), chartInit)
+			if !reflect.DeepEqual(pod.Spec.InitContainers, want) {
+				t.Fatalf("directory preparation moved a proxy or chart init container: %#v", pod.Spec.InitContainers)
+			}
+		})
+	}
+}
