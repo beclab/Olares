@@ -24,45 +24,69 @@ func TestAppServiceMeshScopedWrites(t *testing.T) {
 		return resources
 	}
 	prepared, active := render(false, false), render(true, true)
-	cancelOnly := render(true, false)
+	lifecycleOnly := render(true, false)
 	envOnly := render(false, true)
 	for _, tenant := range tenants {
 		t.Run(tenant, func(t *testing.T) {
-			cancel := "market-app-cancel-" + tenant
+			lifecycle := "market-lifecycle-" + tenant
 			for _, kind := range []string{"HTTPRoute", "AuthorizationPolicy", "MeshTLSAuthentication"} {
-				if prepared[kind+"/"+cancel] != nil || envOnly[kind+"/"+cancel] != nil {
-					t.Fatalf("cancel authorization was generated before lifecycle activation: %s", kind)
+				if prepared[kind+"/"+lifecycle] != nil || envOnly[kind+"/"+lifecycle] != nil {
+					t.Fatalf("lifecycle authorization was generated before lifecycle activation: %s", kind)
 				}
-				if active[kind+"/market-app-cancel-unregistered"] != nil {
-					t.Fatalf("cancel authorization was generated for an unregistered tenant: %s", kind)
+				if active[kind+"/market-lifecycle-unregistered"] != nil {
+					t.Fatalf("lifecycle authorization was generated for an unregistered tenant: %s", kind)
 				}
 				name := kind + "/settings-system-envs-save-" + tenant
-				if prepared[name] != nil || cancelOnly[name] != nil {
+				if prepared[name] != nil || lifecycleOnly[name] != nil {
 					t.Fatalf("environment writes must be independently enabled: %s", name)
 				}
 			}
 
-			const cancelPath = `^/app-service/v1/apps/[a-z0-9]([a-z0-9-]*[a-z0-9])?/cancel$`
-			path := regexp.MustCompile(cancelPath)
-			for _, name := range []string{"router", "a", "app-3"} {
-				if !path.MatchString("/app-service/v1/apps/" + name + "/cancel") {
-					t.Fatalf("cancel route does not match app %s", name)
-				}
+			const appPath = `^/app-service/v1/apps/[a-z0-9]([a-z0-9-]*[a-z0-9])?`
+			operations := []struct {
+				method, action string
+				query          []any
+			}{
+				{method: "POST", action: "install"},
+				{method: "GET", action: "status"},
+				{method: "POST", action: "cancel", query: []any{map[string]any{"type": "Exact", "name": "type", "value": "operate"}}},
 			}
-			for _, suffix := range []string{"a/uninstall", "a/install", "a-/cancel", "a%2fb/cancel", "a/cancel/extra", "a/../b/cancel"} {
-				if path.MatchString("/app-service/v1/apps/" + suffix) {
-					t.Fatalf("cancel route admits unrelated path %s", suffix)
+			var matches []any
+			for _, operation := range operations {
+				expected := appPath + "/" + operation.action + "$"
+				path := regexp.MustCompile(expected)
+				for _, name := range []string{"router", "a", "app-3"} {
+					if !path.MatchString("/app-service/v1/apps/" + name + "/" + operation.action) {
+						t.Fatalf("%s route misses app %s", operation.action, name)
+					}
 				}
+				for _, invalid := range []string{"a/uninstall", "a-/" + operation.action, "a%2fb/" + operation.action, "a/" + operation.action + "/extra", "a/../b/" + operation.action} {
+					if path.MatchString("/app-service/v1/apps/" + invalid) {
+						t.Fatalf("%s route admits unrelated path %s", operation.action, invalid)
+					}
+				}
+				match := appServiceTenantMatch(tenant, operation.method, "RegularExpression", expected)
+				if operation.query != nil {
+					match["queryParams"] = operation.query
+				}
+				matches = append(matches, match)
 			}
-			checkAppServiceWrite(t, active, cancel, "os-framework", "market-sa", tenant, "POST", "RegularExpression", cancelPath,
-				[]any{map[string]any{"type": "Exact", "name": "type", "value": "operate"}})
-			checkAppServiceWrite(t, envOnly, "settings-system-envs-save-"+tenant, "user-system-"+tenant,
-				"bytetrade-sys-ops", tenant, "PUT", "Exact", "/app-service/v1/systemenvs", nil)
+			checkAppServiceCapability(t, active, lifecycle, "os-framework", "market-sa", matches)
+			checkAppServiceCapability(t, envOnly, "settings-system-envs-save-"+tenant, "user-system-"+tenant, "bytetrade-sys-ops",
+				[]any{appServiceTenantMatch(tenant, "PUT", "Exact", "/app-service/v1/systemenvs")})
 		})
 	}
 }
 
-func checkAppServiceWrite(t *testing.T, resources map[string]map[string]any, name, namespace, account, tenant, method, pathType, path string, query []any) {
+func appServiceTenantMatch(tenant, method, pathType, path string) map[string]any {
+	return map[string]any{
+		"method":  method,
+		"path":    map[string]any{"type": pathType, "value": path},
+		"headers": []any{map[string]any{"type": "Exact", "name": "X-Bfl-User", "value": tenant}},
+	}
+}
+
+func checkAppServiceCapability(t *testing.T, resources map[string]map[string]any, name, namespace, account string, matches []any) {
 	t.Helper()
 	spec := func(kind string) map[string]any {
 		t.Helper()
@@ -73,15 +97,8 @@ func checkAppServiceWrite(t *testing.T, resources map[string]map[string]any, nam
 		return value
 	}
 	route := spec("HTTPRoute")
-	match := map[string]any{
-		"method":  method,
-		"path":    map[string]any{"type": pathType, "value": path},
-		"headers": []any{map[string]any{"type": "Exact", "name": "X-Bfl-User", "value": tenant}},
-	}
-	if query != nil {
-		match["queryParams"] = query
-	}
-	if !reflect.DeepEqual(route["rules"], []any{map[string]any{"matches": []any{match}}}) ||
+
+	if !reflect.DeepEqual(route["rules"], []any{map[string]any{"matches": matches}}) ||
 		!reflect.DeepEqual(route["parentRefs"], []any{map[string]any{"group": "policy.linkerd.io", "kind": "Server", "name": "app-service-api"}}) {
 		t.Fatalf("wrong HTTP scope for %s: %v", name, route)
 	}

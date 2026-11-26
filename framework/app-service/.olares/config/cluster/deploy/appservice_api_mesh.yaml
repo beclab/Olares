@@ -24,15 +24,21 @@
 {{- range $name, $path := dict "market-status-user" "/user-info" "market-status-user-resource" "/user/resource" "market-status-cluster-resource" "/cluster/resource" "market-status-version" "/terminus/version" -}}
 {{- $routes = append $routes (dict "name" $name "namespace" "os-framework" "account" "market-sa" "method" "GET" "path" (printf "/app-service/v1%s" $path)) -}}
 {{- end -}}
+{{- /* The existing Market status correction job reads the device inventory without a tenant header. */ -}}
+{{- if $mesh.marketLifecycle -}}
+{{- $routes = append $routes (dict "name" "market-cluster-apps" "namespace" "os-framework" "account" "market-sa" "method" "GET" "path" "/app-service/v1/all/apps") -}}
+{{- end -}}
 {{- range $tenant := $mesh.tenants -}}
 {{- if or (gt (len $tenant) 51) (not (regexMatch "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$" $tenant)) -}}
 {{- fail "invalid app-service API mTLS tenant" -}}
 {{- end -}}
 {{- if $mesh.marketLifecycle -}}
 {{- $marketAppPath := "^/app-service/v1/apps/[a-z0-9]([a-z0-9-]*[a-z0-9])?" -}}
-{{- $routes = append $routes (dict "name" (printf "market-install-%s" $tenant) "namespace" "os-framework" "account" "market-sa" "method" "POST" "path" (printf "%s/install$" $marketAppPath) "pathType" "RegularExpression" "userHeader" $tenant) -}}
-{{- $routes = append $routes (dict "name" (printf "market-app-progress-%s" $tenant) "namespace" "os-framework" "account" "market-sa" "method" "GET" "path" (printf "%s/status$" $marketAppPath) "pathType" "RegularExpression" "userHeader" $tenant) -}}
-{{- $routes = append $routes (dict "name" (printf "market-app-cancel-%s" $tenant) "namespace" "os-framework" "account" "market-sa" "method" "POST" "path" (printf "%s/cancel$" $marketAppPath) "pathType" "RegularExpression" "userHeader" $tenant "queryParams" (list (dict "type" "Exact" "name" "type" "value" "operate"))) -}}
+{{- $lifecycle := list
+  (dict "method" "POST" "path" (printf "%s/install$" $marketAppPath) "pathType" "RegularExpression")
+  (dict "method" "GET" "path" (printf "%s/status$" $marketAppPath) "pathType" "RegularExpression")
+  (dict "method" "POST" "path" (printf "%s/cancel$" $marketAppPath) "pathType" "RegularExpression" "queryParams" (list (dict "type" "Exact" "name" "type" "value" "operate"))) -}}
+{{- $routes = append $routes (dict "name" (printf "market-lifecycle-%s" $tenant) "namespace" "os-framework" "account" "market-sa" "userHeader" $tenant "matches" $lifecycle) -}}
 {{- end -}}
 {{- $routes = append $routes (dict "name" (printf "user-apps-%s" $tenant) "namespace" (printf "user-system-%s" $tenant) "account" "bytetrade-sys-ops" "method" "GET" "path" (printf "/app-service/v1/user-apps/%s" $tenant)) -}}
 {{- $routes = append $routes (dict "name" (printf "users-%s" $tenant) "namespace" (printf "user-system-%s" $tenant) "account" "bytetrade-sys-ops" "method" "GET" "path" "/app-service/v1/users" "userHeader" $tenant) -}}
@@ -86,20 +92,22 @@ spec:
       name: app-service-api
   rules:
     - matches:
+        {{- range $match := default (list $route) $route.matches }}
         - path:
-            type: {{ default "Exact" $route.pathType }}
-            value: {{ $route.path | quote }}
-          method: {{ $route.method }}
+            type: {{ default "Exact" $match.pathType }}
+            value: {{ $match.path | quote }}
+          method: {{ $match.method }}
           {{- with $route.userHeader }}
           headers:
             - name: X-Bfl-User
               type: Exact
               value: {{ . | quote }}
           {{- end }}
-          {{- with $route.queryParams }}
+          {{- with $match.queryParams }}
           queryParams:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+        {{- end }}
 ---
 apiVersion: policy.linkerd.io/v1alpha1
 kind: MeshTLSAuthentication

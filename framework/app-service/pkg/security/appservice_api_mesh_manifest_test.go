@@ -119,8 +119,8 @@ func TestAppServiceAPIMeshRolloutAndPortBoundaries(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if withoutMarketStrict["HTTPRoute/market-install-alice"] != nil ||
-		withoutMarketStrict["AuthorizationPolicy/market-app-progress-alice"] != nil ||
+	if withoutMarketStrict["HTTPRoute/market-lifecycle-alice"] != nil ||
+		withoutMarketStrict["AuthorizationPolicy/market-cluster-apps"] != nil ||
 		withoutMarketStrict["AuthorizationPolicy/market-status-user"] == nil {
 		t.Fatal("Market without strict ingress may use the existing status aggregation routes only")
 	}
@@ -140,10 +140,9 @@ func TestAppServiceAPIMeshRolloutAndPortBoundaries(t *testing.T) {
 		t.Fatal("Market rollout needs strict ingress for both API and Chart")
 	}
 	for _, tenant := range []string{"alice", "bob"} {
-		for _, route := range []string{"market-install-", "market-app-progress-"} {
-			if rollout["HTTPRoute/"+route+tenant] != nil || rollout["AuthorizationPolicy/"+route+tenant] != nil {
-				t.Fatalf("Market rollout must not grant lifecycle access: %s%s", route, tenant)
-			}
+		name := "market-lifecycle-" + tenant
+		if rollout["HTTPRoute/"+name] != nil || rollout["AuthorizationPolicy/"+name] != nil {
+			t.Fatalf("Market rollout must not grant lifecycle access: %s", name)
 		}
 	}
 	activeValues["appServiceAPIMesh"].(map[string]any)["marketLifecycle"] = true
@@ -197,11 +196,8 @@ func TestAppServiceAPIMeshRolloutAndPortBoundaries(t *testing.T) {
 		{"market-status-user", "os-framework", "market-sa", "GET", "/app-service/v1/user-info", "", "Exact"},
 		{"market-status-user-resource", "os-framework", "market-sa", "GET", "/app-service/v1/user/resource", "", "Exact"},
 		{"market-status-cluster-resource", "os-framework", "market-sa", "GET", "/app-service/v1/cluster/resource", "", "Exact"},
+		{"market-cluster-apps", "os-framework", "market-sa", "GET", "/app-service/v1/all/apps", "", "Exact"},
 		{"market-status-version", "os-framework", "market-sa", "GET", "/app-service/v1/terminus/version", "", "Exact"},
-		{"market-install-alice", "os-framework", "market-sa", "POST", "^/app-service/v1/apps/[a-z0-9]([a-z0-9-]*[a-z0-9])?/install$", "alice", "RegularExpression"},
-		{"market-install-bob", "os-framework", "market-sa", "POST", "^/app-service/v1/apps/[a-z0-9]([a-z0-9-]*[a-z0-9])?/install$", "bob", "RegularExpression"},
-		{"market-app-progress-alice", "os-framework", "market-sa", "GET", "^/app-service/v1/apps/[a-z0-9]([a-z0-9-]*[a-z0-9])?/status$", "alice", "RegularExpression"},
-		{"market-app-progress-bob", "os-framework", "market-sa", "GET", "^/app-service/v1/apps/[a-z0-9]([a-z0-9-]*[a-z0-9])?/status$", "bob", "RegularExpression"},
 		{"settings-apps-alice", "user-system-alice", "bytetrade-sys-ops", "GET", "/app-service/v1/apps", "alice", "Exact"},
 		{"settings-compute-alice", "user-system-alice", "bytetrade-sys-ops", "GET", "/app-service/v1/compute-resources", "alice", "Exact"},
 		{"settings-system-envs-alice", "user-system-alice", "bytetrade-sys-ops", "GET", "/app-service/v1/systemenvs", "alice", "Exact"},
@@ -263,19 +259,6 @@ func TestAppServiceAPIMeshRolloutAndPortBoundaries(t *testing.T) {
 			for _, suffix := range []string{"", "a/", "a-/b", "a%2fb", "../a", "provider-registry/type/group/version"} {
 				if pattern.MatchString(prefix + suffix) {
 					t.Fatalf("Settings route %s admits unrelated path %s", tc.name, prefix+suffix)
-				}
-			}
-		}
-		if strings.HasPrefix(tc.name, "market-install-") {
-			pattern := regexp.MustCompile(tc.path)
-			for _, path := range []string{"/app-service/v1/apps/openclaw/install", "/app-service/v1/apps/app-1/install"} {
-				if !pattern.MatchString(path) {
-					t.Fatalf("install route misses %s", path)
-				}
-			}
-			for _, path := range []string{"/app-service/v1/apps/a/uninstall", "/app-service/v1/apps/a/install/extra", "/app-service/v1/apps/a%2fb/install", "/app-service/v1/apps/a/../b/install", "/app-service/v1/apps/a-/install"} {
-				if pattern.MatchString(path) {
-					t.Fatalf("install route covers unrelated path %s", path)
 				}
 			}
 		}
