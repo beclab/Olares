@@ -40,6 +40,7 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
+	"github.com/beclab/Olares/framework/timeoutprofile"
 	"github.com/beclab/l4-bfl-proxy/internal/ir"
 	"github.com/beclab/l4-bfl-proxy/internal/message"
 	"github.com/telepresenceio/watchable"
@@ -207,18 +208,21 @@ type Options struct {
 	HTTPSBufferLimitBytes uint32
 }
 
+// DefaultOptions returns the platform edge defaults from the shared timeout
+// catalog.
 func DefaultOptions() Options {
+	e := timeoutprofile.Default().Edge
 	return Options{
-		TCPIdleTimeout:        time.Hour,
-		HTTPStreamIdleTimeout: 30 * time.Minute,
-		ConnectTimeout:        5 * time.Second,
-		RouteTimeout:          0,
-		RouteIdleTimeout:      0,
-		ClusterIdleTimeout:    10 * time.Second,
-		TCPKeepaliveTime:      60 * time.Second,
-		TCPKeepaliveInterval:  15 * time.Second,
-		TCPKeepaliveProbes:    4,
-		HTTPSBufferLimitBytes: 1 << 20,
+		TCPIdleTimeout:        e.TCPIdle,
+		HTTPStreamIdleTimeout: e.StreamIdle,
+		ConnectTimeout:        e.Connect,
+		RouteTimeout:          e.RouteTimeout,
+		RouteIdleTimeout:      e.RouteIdle,
+		ClusterIdleTimeout:    e.UpstreamPoolIdle,
+		TCPKeepaliveTime:      e.TCPKeepaliveTime,
+		TCPKeepaliveInterval:  e.TCPKeepaliveInterval,
+		TCPKeepaliveProbes:    e.TCPKeepaliveProbes,
+		HTTPSBufferLimitBytes: e.ConnectionBufferBytes,
 	}
 }
 
@@ -1231,7 +1235,7 @@ func buildAutheliaHttpService(clusterName, host, pathPrefix, userName string) *e
 		ServerUri: &corev3.HttpUri{
 			Uri:              fmt.Sprintf("http://%s", host),
 			HttpUpstreamType: &corev3.HttpUri_Cluster{Cluster: clusterName},
-			Timeout:          durationpb.New(15 * time.Second),
+			Timeout:          durationpb.New(timeoutprofile.Default().Edge.AuthTimeout),
 		},
 		PathPrefix:            pathPrefix,
 		AuthorizationRequest:  autheliaAuthorizationRequest(userName),

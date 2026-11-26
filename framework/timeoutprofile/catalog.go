@@ -14,7 +14,7 @@ import (
 // CatalogVersion identifies the set of defaults returned by Default. Bump it
 // whenever a value changes so components built from different commits can be
 // told apart.
-const CatalogVersion = "2026.10.1"
+const CatalogVersion = "2026.11.1"
 
 // Class groups traffic that needs the same idle behaviour.
 type Class string
@@ -52,10 +52,14 @@ type Edge struct {
 	// zero: total budgets belong to inner hops, and a total deadline at the
 	// edge cuts long downloads and streams regardless of progress.
 	RouteTimeout time.Duration
+	// RouteIdle is the per-route idle timeout. Zero leaves it unset so routes
+	// inherit StreamIdle.
+	RouteIdle time.Duration
 	// RequestHeaders bounds how long a client may take to send request headers.
 	RequestHeaders time.Duration
-	// StreamIdleFallback applies to streams that never select a route.
-	StreamIdleFallback time.Duration
+	// StreamIdle is the edge stream idle timeout inherited by every route
+	// without RouteIdle; it also closes idle downstream connections.
+	StreamIdle time.Duration
 	// MaxStreamDuration is the hard upper bound of a single stream.
 	MaxStreamDuration time.Duration
 	// Connect bounds upstream TCP connect, including the TLS handshake when
@@ -70,8 +74,22 @@ type Edge struct {
 	// times out, so outages are not reported to users as access denied.
 	AuthFailureStatus int
 	// ConnectionBufferBytes caps per-connection buffering (backpressure, not
-	// a body size limit).
+	// a body size limit). Filters that buffer a whole body, such as the edge
+	// Lua HTML rewrite, fail with 500 response_payload_too_large beyond it.
 	ConnectionBufferBytes uint32
+	// UpstreamPoolIdle closes pooled upstream connections that carry no
+	// request. It must stay below backend keep-alive limits to avoid resets
+	// on reuse, and never affects in-flight requests.
+	UpstreamPoolIdle time.Duration
+	// TCPIdle is the idle timeout of raw TCP ports apps expose through
+	// the edge. It does not apply to HTTPS traffic.
+	TCPIdle time.Duration
+	// TCP keepalive on edge downstream and upstream sockets, so peers that
+	// vanish without FIN/RST are detected after about
+	// TCPKeepaliveTime + TCPKeepaliveInterval*TCPKeepaliveProbes.
+	TCPKeepaliveTime     time.Duration
+	TCPKeepaliveInterval time.Duration
+	TCPKeepaliveProbes   uint32
 }
 
 // GoServer holds the timeouts of platform net/http servers.
@@ -125,14 +143,20 @@ func Default() Catalog {
 		Version: CatalogVersion,
 		Edge: Edge{
 			RouteTimeout:          0,
+			RouteIdle:             0,
 			RequestHeaders:        10 * time.Second,
-			StreamIdleFallback:    300 * time.Second,
+			StreamIdle:            1800 * time.Second,
 			MaxStreamDuration:     24 * time.Hour,
 			Connect:               5 * time.Second,
 			FilesIdle:             1800 * time.Second,
 			AuthTimeout:           15 * time.Second,
 			AuthFailureStatus:     503,
-			ConnectionBufferBytes: 32 * 1024,
+			ConnectionBufferBytes: 1 << 20,
+			UpstreamPoolIdle:      10 * time.Second,
+			TCPIdle:               time.Hour,
+			TCPKeepaliveTime:      60 * time.Second,
+			TCPKeepaliveInterval:  15 * time.Second,
+			TCPKeepaliveProbes:    4,
 		},
 		Classes: map[Class]ClassProfile{
 			Interactive: {EdgeIdle: 600 * time.Second, InnerIdleMax: 600 * time.Second},
@@ -186,8 +210,16 @@ func (c Catalog) Validate() error {
 	check(e.AuthFailureStatus >= 500 && e.AuthFailureStatus <= 599,
 		"edge auth failure status must be a 5xx, got %d", e.AuthFailureStatus)
 	check(e.ConnectionBufferBytes > 0, "edge connection buffer must be positive")
+	check(e.UpstreamPoolIdle > 0, "edge upstream pool idle must be positive, got %s", e.UpstreamPoolIdle)
+	check(e.TCPIdle > 0, "edge tcp idle must be positive, got %s", e.TCPIdle)
+	check(e.TCPKeepaliveTime > 0 && e.TCPKeepaliveInterval > 0 && e.TCPKeepaliveProbes > 0,
+		"edge tcp keepalive time, interval and probes must be positive")
 
 	b := c.Bounds
+	check(e.StreamIdle > 0 && e.StreamIdle <= b.IdleMax,
+		"edge stream idle %s must be positive and not exceed idle max %s", e.StreamIdle, b.IdleMax)
+	check(e.RouteIdle == 0 || (e.RouteIdle >= b.IdleMin && e.RouteIdle <= b.IdleMax),
+		"edge route idle %s must be 0 (inherit stream idle) or within [%s, %s]", e.RouteIdle, b.IdleMin, b.IdleMax)
 	check(b.IdleMin > 0 && b.IdleMin <= b.IdleMax, "idle bounds invalid: [%s, %s]", b.IdleMin, b.IdleMax)
 	check(b.TotalMin > 0 && b.TotalMin <= b.TotalMax, "total bounds invalid: [%s, %s]", b.TotalMin, b.TotalMax)
 	check(b.TotalMax <= e.MaxStreamDuration,
@@ -209,11 +241,6 @@ func (c Catalog) Validate() error {
 			"class %q edge idle %s must exceed auth timeout %s", class, p.EdgeIdle, e.AuthTimeout)
 	}
 
-	if interactive, ok := c.Classes[Interactive]; ok {
-		check(e.StreamIdleFallback > 0 && e.StreamIdleFallback <= interactive.EdgeIdle,
-			"edge stream idle fallback %s must be positive and not exceed interactive idle %s",
-			e.StreamIdleFallback, interactive.EdgeIdle)
-	}
 	if transfer, ok := c.Classes[Transfer]; ok {
 		check(e.FilesIdle >= transfer.EdgeIdle && e.FilesIdle <= b.IdleMax,
 			"edge files idle %s outside [%s, %s]", e.FilesIdle, transfer.EdgeIdle, b.IdleMax)

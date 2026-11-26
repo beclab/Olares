@@ -26,5 +26,5 @@ test-integration:
 	go test -tags integration -count=1 -v ./internal/integration/
 
 test-integration-docker:
-	docker build -f internal/integration/Dockerfile -t l4-bfl-proxy-integration .
+	docker build -f internal/integration/Dockerfile -t l4-bfl-proxy-integration ..
 	docker run --rm l4-bfl-proxy-integration -v

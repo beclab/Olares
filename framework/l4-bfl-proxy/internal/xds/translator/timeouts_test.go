@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/beclab/Olares/framework/timeoutprofile"
 	"github.com/beclab/l4-bfl-proxy/internal/ir"
 )
 
@@ -53,6 +54,21 @@ func requireClusterKeepalive(t *testing.T, c *clusterv3.Cluster, timeSec, intvlS
 
 func TestDefaultOptions(t *testing.T) {
 	o := DefaultOptions()
+
+	e := timeoutprofile.Default().Edge
+	assert.Equal(t, e.TCPIdle, o.TCPIdleTimeout)
+	assert.Equal(t, e.StreamIdle, o.HTTPStreamIdleTimeout)
+	assert.Equal(t, e.Connect, o.ConnectTimeout)
+	assert.Equal(t, e.RouteTimeout, o.RouteTimeout)
+	assert.Equal(t, e.RouteIdle, o.RouteIdleTimeout)
+	assert.Equal(t, e.UpstreamPoolIdle, o.ClusterIdleTimeout)
+	assert.Equal(t, e.TCPKeepaliveTime, o.TCPKeepaliveTime)
+	assert.Equal(t, e.TCPKeepaliveInterval, o.TCPKeepaliveInterval)
+	assert.Equal(t, e.TCPKeepaliveProbes, o.TCPKeepaliveProbes)
+	assert.Equal(t, e.ConnectionBufferBytes, o.HTTPSBufferLimitBytes)
+
+	assert.Equal(t, time.Hour, o.TCPIdleTimeout)
+	assert.Equal(t, 5*time.Second, o.ConnectTimeout)
 	assert.Zero(t, o.RouteTimeout, "absolute route timeout must be disabled for slow LLM upstreams")
 	assert.Zero(t, o.RouteIdleTimeout, "routes inherit the HCM stream idle timeout by default")
 	assert.Equal(t, 30*time.Minute, o.HTTPStreamIdleTimeout)
