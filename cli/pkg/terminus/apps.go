@@ -19,6 +19,7 @@ import (
 	"github.com/pkg/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -197,12 +198,16 @@ type CopyAppServiceHelmFiles struct {
 }
 
 func (c *CopyAppServiceHelmFiles) Execute(runtime connector.Runtime) error {
+	configDir := path.Join(runtime.GetInstallerDir(), "wizard", "config")
+	if err := validateUserChartSources(configDir); err != nil {
+		return err
+	}
 	client, err := clientset.NewKubeClient()
 	if err != nil {
 		return errors.Wrap(errors.WithStack(err), "kubeclient create error")
 	}
 
-	appServiceName, err := getAppServiceName(client, runtime)
+	appServiceName, err := getAppServiceName(client)
 	if err != nil {
 		return err
 	}
@@ -218,7 +223,7 @@ func (c *CopyAppServiceHelmFiles) Execute(runtime connector.Runtime) error {
 	return nil
 }
 
-func getAppServiceName(client clientset.Client, runtime connector.Runtime) (string, error) {
+func getAppServiceName(client clientset.Client) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
@@ -227,11 +232,17 @@ func getAppServiceName(client clientset.Client, runtime connector.Runtime) (stri
 		return "", errors.Wrap(errors.WithStack(err), "get app-service failed")
 	}
 
-	if len(pods.Items) == 0 {
-		return "", errors.New("app-service not found")
+	for _, pod := range pods.Items {
+		if pod.DeletionTimestamp != nil {
+			continue
+		}
+		for _, condition := range pod.Status.Conditions {
+			if condition.Type == corev1.PodReady && condition.Status == corev1.ConditionTrue {
+				return pod.Name, nil
+			}
+		}
 	}
-
-	return pods.Items[0].Name, nil
+	return "", errors.New("no ready app-service pod for updating user charts")
 }
 
 func getBflPod(ctx context.Context, ns string, client clientset.Client, runtime connector.Runtime) (string, error) {
