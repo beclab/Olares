@@ -32,6 +32,7 @@
 {{- $marketAppPath := "^/app-service/v1/apps/[a-z0-9]([a-z0-9-]*[a-z0-9])?" -}}
 {{- $routes = append $routes (dict "name" (printf "market-install-%s" $tenant) "namespace" "os-framework" "account" "market-sa" "method" "POST" "path" (printf "%s/install$" $marketAppPath) "pathType" "RegularExpression" "userHeader" $tenant) -}}
 {{- $routes = append $routes (dict "name" (printf "market-app-progress-%s" $tenant) "namespace" "os-framework" "account" "market-sa" "method" "GET" "path" (printf "%s/status$" $marketAppPath) "pathType" "RegularExpression" "userHeader" $tenant) -}}
+{{- $routes = append $routes (dict "name" (printf "market-app-cancel-%s" $tenant) "namespace" "os-framework" "account" "market-sa" "method" "POST" "path" (printf "%s/cancel$" $marketAppPath) "pathType" "RegularExpression" "userHeader" $tenant "queryParams" (list (dict "type" "Exact" "name" "type" "value" "operate"))) -}}
 {{- end -}}
 {{- $routes = append $routes (dict "name" (printf "user-apps-%s" $tenant) "namespace" (printf "user-system-%s" $tenant) "account" "bytetrade-sys-ops" "method" "GET" "path" (printf "/app-service/v1/user-apps/%s" $tenant)) -}}
 {{- $routes = append $routes (dict "name" (printf "users-%s" $tenant) "namespace" (printf "user-system-%s" $tenant) "account" "bytetrade-sys-ops" "method" "GET" "path" "/app-service/v1/users" "userHeader" $tenant) -}}
@@ -53,6 +54,10 @@
 {{- range $read := $settingsReads -}}
 {{- $routes = append $routes (dict "name" (printf "%s-%s" $read.name $tenant) "namespace" (printf "user-system-%s" $tenant) "account" "bytetrade-sys-ops" "method" "GET" "path" $read.path "pathType" (default "Exact" $read.pathType) "userHeader" $tenant) -}}
 {{- end -}}
+{{- /* Keep this write opt-in until the Settings and app-service logs redact environment values. The handler checks the caller's current administrator role. */ -}}
+{{- if $mesh.systemEnvWrites -}}
+{{- $routes = append $routes (dict "name" (printf "settings-system-envs-save-%s" $tenant) "namespace" (printf "user-system-%s" $tenant) "account" "bytetrade-sys-ops" "method" "PUT" "path" "/app-service/v1/systemenvs" "userHeader" $tenant) -}}
+{{- end }}
 {{- end }}
 apiVersion: policy.linkerd.io/v1beta3
 kind: Server
@@ -90,6 +95,10 @@ spec:
             - name: X-Bfl-User
               type: Exact
               value: {{ . | quote }}
+          {{- end }}
+          {{- with $route.queryParams }}
+          queryParams:
+            {{- toYaml . | nindent 12 }}
           {{- end }}
 ---
 apiVersion: policy.linkerd.io/v1alpha1

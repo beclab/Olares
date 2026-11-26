@@ -5,14 +5,19 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"reflect"
 	"testing"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/testutil"
+	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	"github.com/emicklei/go-restful/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/tools/clientcmd"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -104,7 +109,8 @@ func TestCancelV2_DeliversTriggerOp(t *testing.T) {
 	// legacy client contract keeps working.
 	var body struct {
 		Data struct {
-			UID string `json:"uid"`
+			UID  string `json:"uid"`
+			OpID string `json:"opID"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(f.rec.Body.Bytes(), &body); err != nil {
@@ -112,6 +118,66 @@ func TestCancelV2_DeliversTriggerOp(t *testing.T) {
 	}
 	if body.Data.UID != f.am.Spec.AppName {
 		t.Errorf("response uid = %q, want %q", body.Data.UID, f.am.Spec.AppName)
+	}
+	if body.Data.OpID == "" {
+		t.Fatal("cancel must return an operation ID for progress polling")
+	}
+}
+
+func TestCancelV2CrossTenantLeavesOtherApplicationUntouched(t *testing.T) {
+	f := newCancelV2Fixture(t, appv1alpha1.Installing)
+	name, err := apputils.FmtAppMgrName(f.am.Spec.AppName, f.am.Spec.AppOwner, f.am.Spec.AppNamespace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.am.Name = name
+	f.handler.ctrlClient = testutil.NewFakeClient(f.am)
+
+	sharedLookup := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		const base = "/apis/app.bytetrade.io/v1alpha1/applicationmanagers"
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == base+"/"+apputils.SharedAppMgrName(f.am.Spec.AppName):
+			w.WriteHeader(http.StatusNotFound)
+			_, _ = w.Write([]byte(`{"apiVersion":"v1","kind":"Status","status":"Failure","reason":"NotFound","code":404}`))
+		case r.Method == http.MethodGet && r.URL.Path == base:
+			list := appv1alpha1.ApplicationManagerList{
+				TypeMeta: metav1.TypeMeta{APIVersion: "app.bytetrade.io/v1alpha1", Kind: "ApplicationManagerList"},
+				Items:    []appv1alpha1.ApplicationManager{*f.am},
+			}
+			if err := json.NewEncoder(w).Encode(list); err != nil {
+				t.Error(err)
+			}
+		default:
+			t.Errorf("unexpected API lookup %s %s", r.Method, r.URL.Path)
+			w.WriteHeader(http.StatusBadRequest)
+		}
+	}))
+	defer sharedLookup.Close()
+	config := clientcmdapi.Config{
+		CurrentContext: "test",
+		Contexts:       map[string]*clientcmdapi.Context{"test": {Cluster: "test"}},
+		Clusters:       map[string]*clientcmdapi.Cluster{"test": {Server: sharedLookup.URL}},
+	}
+	configPath := filepath.Join(t.TempDir(), "kubeconfig")
+	if err := clientcmd.WriteToFile(config, configPath); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("KUBECONFIG", configPath)
+
+	ws := new(restful.WebService)
+	ws.Route(ws.POST("/apps/{" + ParamAppName + "}/cancel").To(func(req *restful.Request, resp *restful.Response) {
+		req.SetAttribute(constants.UserContextAttribute, "bob")
+		f.handler.cancelV2(req, resp)
+	}))
+	container := restful.NewContainer().Add(ws)
+	rec := httptest.NewRecorder()
+	container.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/apps/nginx/cancel?type=operate", nil))
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("other tenant's app returned HTTP %d, want 404", rec.Code)
+	}
+	if actual := f.currentAM(); !reflect.DeepEqual(actual.Spec, f.am.Spec) || !reflect.DeepEqual(actual.Status, f.am.Status) {
+		t.Fatal("cross-tenant cancellation changed the application manager")
 	}
 }
 
