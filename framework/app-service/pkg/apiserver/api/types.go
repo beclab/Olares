@@ -7,12 +7,12 @@ import (
 )
 
 const (
-	AppTokenKey                      = "bytetrade.io/token"
-	AppRepoURLKey                    = "bytetrade.io/repo-url"
+	AppTokenKey   = "bytetrade.io/token"
+	AppRepoURLKey = "bytetrade.io/repo-url"
 	// AppChartURLKey / AppChartDigestKey record the exact chart reference
 	// market sent with the last install or upgrade, when it sent one.
-	AppChartURLKey    = "bytetrade.io/chart-url"
-	AppChartDigestKey = "bytetrade.io/chart-digest"
+	AppChartURLKey                   = "bytetrade.io/chart-url"
+	AppChartDigestKey                = "bytetrade.io/chart-digest"
 	AppVersionKey                    = "bytetrade.io/chart-version"
 	AppTargetChartVersionKey         = "bytetrade.io/target-chart-version"
 	AppPreUpgradeConfigKey           = "bytetrade.io/pre-upgrade-config"
@@ -29,7 +29,7 @@ const (
 	// deletes them so a later user stop stays StopRequested.
 	AppStopReasonKey  = "bytetrade.io/stop-reason"
 	AppStopMessageKey = "bytetrade.io/stop-message"
-	AppImagesKey                     = "bytetrade.io/images"
+	AppImagesKey      = "bytetrade.io/images"
 	// AppPreUpgradeStateKey records the steady ApplicationManager intent
 	// (Running or Stopped) right before an UpgradeOp or ApplyEnvOp begins.
 	// upgrading_app/applying_env_app read it to decide whether to scale
@@ -166,7 +166,10 @@ type InstallRequest struct {
 	Title           string                  `json:"title"`
 	Entrances       []EntranceClone         `json:"entrances"`
 	SelectedGpuType string                  `json:"selectedGpuType"`
-	TemplateClone   bool                    `json:"templateClone"`
+	// SelectedGpuTypes chooses a mode per GPU consumer, keyed by workload,
+	// for apps declaring workload accelerators.
+	SelectedGpuTypes map[string]string `json:"selectedGpuTypes,omitempty"`
+	TemplateClone    bool              `json:"templateClone"`
 	// Version, ChartURL and ChartDigest name the exact package market
 	// rendered. They are honoured only together and only for non-clone
 	// installs; otherwise the chart is resolved from RepoURL's index.

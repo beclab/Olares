@@ -217,11 +217,15 @@ func (h *Handler) installV2(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	// Compute auto-mode selection preserved verbatim: empty
-	// SelectedGpuType triggers cluster+manifest derivation, with the
-	// AmbiguousComputeMode branch surfacing the full install plan
-	// via a dedicated failed-check code instead of failing outright.
-	if insReq.SelectedGpuType == "" {
+	if appCfg.HasGPUConsumers() {
+		if !h.selectConsumerModes(req, resp, appCfg, insReq.SelectedGpuTypes) {
+			return
+		}
+	} else if insReq.SelectedGpuType == "" {
+		// Compute auto-mode selection preserved verbatim: empty
+		// SelectedGpuType triggers cluster+manifest derivation, with the
+		// AmbiguousComputeMode branch surfacing the full install plan
+		// via a dedicated failed-check code instead of failing outright.
 		var chosen string
 		chosen, err = compute.AutoSelectMode(req.Request.Context(), h.ctrlClient, appCfg)
 		if errors.Is(err, compute.ErrAmbiguousComputeMode) {

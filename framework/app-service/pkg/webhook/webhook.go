@@ -707,8 +707,10 @@ type EnvKeyValue struct {
 // GPUResources is what the gpu-limit webhook injects for the app's compute
 // mode. An empty Resource injects nothing.
 type GPUResources struct {
-	// Resource is the per-container device count resource, set to 1.
+	// Resource is the per-container device count resource.
 	Resource string
+	// Count is how many devices each container asks for; empty means 1.
+	Count string
 	// MemoryResource carries Memory, the per-container memory limit in the
 	// form the device plugin expects. Either being empty skips it.
 	MemoryResource string
@@ -832,6 +834,10 @@ func addGpuResourceLimits(tpl *corev1.PodTemplateSpec, injectAll bool, injectCon
 		})
 	}
 	injectMemory := gpu.MemoryResource != "" && gpu.Memory != nil && *gpu.Memory != ""
+	count := gpu.Count
+	if count == "" {
+		count = "1"
+	}
 
 	for i := range tpl.Spec.Containers {
 		container := tpl.Spec.Containers[i]
@@ -841,7 +847,7 @@ func addGpuResourceLimits(tpl *corev1.PodTemplateSpec, injectAll bool, injectCon
 
 		if len(container.Resources.Limits) == 0 {
 			limitsValues := map[string]interface{}{
-				typeKey: "1",
+				typeKey: count,
 			}
 
 			if injectMemory {
@@ -863,7 +869,7 @@ func addGpuResourceLimits(tpl *corev1.PodTemplateSpec, injectAll bool, injectCon
 				}
 				t["limits"][k.String()] = v.String()
 			}
-			t["limits"][typeKey] = "1"
+			t["limits"][typeKey] = count
 			if injectMemory {
 				t["limits"][gpu.MemoryResource] = *gpu.Memory
 			}

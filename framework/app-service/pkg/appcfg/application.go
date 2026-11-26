@@ -109,7 +109,10 @@ type ApplicationConfig struct {
 	HardwareRequirement  Hardware
 	SharedEntrances      []Entrance
 	SelectedGpuType      string
-	Accelerator          []ResourceMode
+	// SelectedGpuTypes holds the mode chosen per GPU consumer, keyed by
+	// workload name. Only set for apps declaring workload accelerators.
+	SelectedGpuTypes map[string]string `json:",omitempty"`
+	Accelerator      []ResourceMode
 	// SupportArch mirrors spec.supportArch in OlaresManifest.yaml. When it
 	// declares exactly one architecture (amd64 or arm64) the pod-arch
 	// mutating webhook pins the app's pods to matching nodes via a

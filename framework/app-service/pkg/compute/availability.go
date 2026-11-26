@@ -369,6 +369,13 @@ func ApplyBindingSelection(ctx context.Context, c client.Client, appConfig *appc
 		return nil, err
 	}
 	appConfig = targetConfig
+	if appConfig.HasGPUConsumers() {
+		manual, err := consumerSelections(appConfig, selections)
+		if err != nil {
+			return nil, err
+		}
+		return ApplyConsumerBindings(ctx, c, appConfig, manual)
+	}
 	req, ok := SelectedRequirement(appConfig)
 	if !ok || req.Mode == utils.CPUType {
 		return &BindingApplyResult{Status: BindingApplyStatusNotRequired}, nil
@@ -491,6 +498,13 @@ func ValidateBindingForResume(ctx context.Context, c client.Client, appConfig *a
 		return nil, err
 	}
 	appConfig = targetConfig
+	if appConfig.HasGPUConsumers() {
+		manual, err := consumerSelections(appConfig, selections)
+		if err != nil {
+			return nil, err
+		}
+		return ValidateConsumerBindings(ctx, c, appConfig, manual)
+	}
 	req, ok := SelectedRequirement(appConfig)
 	if !ok || req.Mode == utils.CPUType {
 		return &BindingApplyResult{Status: BindingApplyStatusNotRequired}, nil
@@ -560,6 +574,11 @@ func ValidateBindingSelection(req Requirement, selections []BindingSelection, no
 }
 
 func validateResolvedBindingSelection(req Requirement, resolved []resolvedSelection, pressure PressureSnapshot) *BindingValidationResult {
+	if req.PerPod == appcfg.PerPodSplit {
+		if result := validateSplitSelection(req, resolved); result != nil {
+			return result
+		}
+	}
 	selectedNodes := map[string]struct{}{}
 	for _, item := range resolved {
 		selectedNodes[item.node.NodeName] = struct{}{}

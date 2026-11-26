@@ -115,6 +115,9 @@ type Allocation struct {
 	NodeName string `json:"nodeName"`
 	DeviceID string `json:"deviceId"`
 	Memory   int64  `json:"memory"`
+	// Consumer names the workload holding the card; empty for apps declaring
+	// spec.accelerator, whose rows predate per-workload consumers.
+	Consumer string `json:"consumer,omitempty"`
 	// Spec carries the bound app's currently-selected resource-mode
 	// requirement (require/limit GPU & memory, multi-card / multi-node
 	// support). It is resolved at read time for the compute-resources
@@ -133,6 +136,9 @@ type Requirement struct {
 	RequiredDisk      int64  `json:"requiredDisk"`
 	SupportMultiCards bool   `json:"supportMultiCards"`
 	SupportMultiNodes bool   `json:"supportMultiNodes"`
+	Consumer          string `json:"consumer,omitempty"`
+	PerPod            string `json:"perPod,omitempty"`
+	Replicas          int32  `json:"replicas,omitempty"`
 }
 
 type ModePlanResult struct {
@@ -198,9 +204,10 @@ type BindingSelection struct {
 }
 
 type BindingValidationResult struct {
-	OK     bool   `json:"ok"`
-	Code   string `json:"code,omitempty"`
-	Reason string `json:"reason,omitempty"`
+	OK       bool   `json:"ok"`
+	Code     string `json:"code,omitempty"`
+	Reason   string `json:"reason,omitempty"`
+	Consumer string `json:"consumer,omitempty"`
 	// NodePressure is populated only when the binding is rejected because
 	// a selected node would be pushed past its resource pressure
 	// threshold (Code "node-pressure:<node>"). It breaks the rejection
@@ -222,8 +229,11 @@ type BindingApplyResult struct {
 	Allocations  []Allocation             `json:"allocations,omitempty"`
 	Availability *AvailabilityResult      `json:"availability,omitempty"`
 	Validation   *BindingValidationResult `json:"validation,omitempty"`
-	TargetApp    string                   `json:"-"`
-	TargetOwner  string                   `json:"-"`
+	// Consumer names the GPU consumer the result is about, when the app
+	// declares workload accelerators.
+	Consumer    string `json:"consumer,omitempty"`
+	TargetApp   string `json:"-"`
+	TargetOwner string `json:"-"`
 }
 
 type PressureSnapshot struct {
@@ -253,6 +263,9 @@ func AddedResourcesFromAppConfig(appConfig *appcfg.ApplicationConfig) AddedResou
 	if appConfig == nil {
 		return AddedResources{}
 	}
+	if appConfig.HasGPUConsumers() {
+		return addedResourcesForConsumers(appConfig, legacyAddedResources(appConfig))
+	}
 	if req, ok := SelectedRequirement(appConfig); ok {
 		return AddedResources{
 			CPU:    req.RequiredCPU,
@@ -260,6 +273,10 @@ func AddedResourcesFromAppConfig(appConfig *appcfg.ApplicationConfig) AddedResou
 			Disk:   req.RequiredDisk,
 		}
 	}
+	return legacyAddedResources(appConfig)
+}
+
+func legacyAddedResources(appConfig *appcfg.ApplicationConfig) AddedResources {
 	var cpu, mem, disk int64
 	if r := appConfig.Requirement.CPU; r != nil {
 		cpu = r.MilliValue()

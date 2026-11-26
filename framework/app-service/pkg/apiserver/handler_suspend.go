@@ -10,4 +10,7 @@ import (
 // dedicated types file.
 type ResumeRequest struct {
 	ComputeBinding []compute.BindingSelection `json:"computeBinding,omitempty"`
+	// ComputeBindings picks cards per GPU consumer for apps declaring
+	// workload accelerators; consumers left out are placed automatically.
+	ComputeBindings map[string][]compute.BindingSelection `json:"computeBindings,omitempty"`
 }
