@@ -48,8 +48,8 @@ github.com/beclab/api v0.0.27-0.20261028064325-1e4c01f1dbee h1:7o5z7MDcS4uK9q0wN
 github.com/beclab/api v0.0.27-0.20261028064325-1e4c01f1dbee/go.mod h1:okd0RExsvSsuW5MsRh7v56Xex3vi5B26xHOGH3LT6yQ=
 github.com/beclab/lldap-client v0.0.11 h1:/XWzEd2pAFS7nwOtapyr7ClQViyGIUsMiyQ2d8t8sEo=
 github.com/beclab/lldap-client v0.0.11/go.mod h1:Y74tcKzyNL73a9pFAvImwXgzqp7S7Jb8RY1mMY90e/4=
-github.com/beclab/oac v0.0.3 h1:TQsOzIIi+xoT7+A9LfZiQDQxiIKQosrj55UIzx0PPk0=
-github.com/beclab/oac v0.0.3/go.mod h1:+fUhFSOgmMlU/wRrLQkadc/CwI9cm3ruZDdBA0fGapc=
+github.com/beclab/oac v0.0.4 h1:zM/vjVVpBmTdDr5MpcMJvKTG0kUw3Q67hPj2n2vX38A=
+github.com/beclab/oac v0.0.4/go.mod h1:JttNxkqiJgv1VwXA8xmWwxsKH8Icc4Y2SS7owu2BmaI=
 github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=
 github.com/beorn7/perks v1.0.1/go.mod h1:G2ZrVWU2WbWT9wwq4/hrbKbnv/1ERSJQ0ibhJ6rlkpw=
 github.com/blang/semver/v4 v4.0.0 h1:1PFHFE6yCCTv8C1TeyNNarDzntLi7wMI5i/pzqYIsAM=
