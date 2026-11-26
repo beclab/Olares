@@ -371,7 +371,7 @@ spec:
             - name: NATS_SUBJECT_VAULT
               value: os.vault.{{ .Values.bfl.username}}
         - name: user-service
-          image: beclab/user-service:v0.2.5
+          image: {{ default "beclab/user-service:v0.2.5" .Values.userServiceImage | quote }}
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000

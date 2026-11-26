@@ -25,6 +25,7 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const userAnnotationLimitsCpuKey = "bytetrade.io/user-cpu-limit"
@@ -192,16 +193,24 @@ func (h *Handler) createUser(req *restful.Request, resp *restful.Response) {
 }
 
 func (h *Handler) deleteUser(req *restful.Request, resp *restful.Response) {
-	owner := req.Attribute(constants.UserContextAttribute).(string)
-
+	caller, ok := h.activeCaller(req, resp)
+	if !ok {
+		return
+	}
 	username := req.PathParameter("user")
 	if username == "" {
 		api.HandleBadRequest(resp, req, errors.New("user delete: no username provided"))
 		return
 	}
+	role := caller.Annotations[users.UserAnnotationOwnerRole]
+	if username == caller.Name || (role != "owner" && role != "admin") {
+		api.HandleForbidden(resp, req, errors.New("caller cannot delete this user"))
+		return
+	}
 
 	var user iamv1alpha2.User
-	err := h.ctrlClient.Get(req.Request.Context(), types.NamespacedName{Name: username}, &user)
+	ctx := req.Request.Context()
+	err := h.ctrlClient.Get(ctx, types.NamespacedName{Name: username}, &user)
 	if err != nil && !apierrors.IsNotFound(err) {
 		api.HandleError(resp, req, err)
 		return
@@ -210,15 +219,9 @@ func (h *Handler) deleteUser(req *restful.Request, resp *restful.Response) {
 		api.HandleBadRequest(resp, req, fmt.Errorf("user %s not found", username))
 		return
 	}
-	if user.Annotations[users.UserAnnotationOwnerRole] == "owner" {
-		api.HandleForbidden(resp, req, fmt.Errorf("user %s with role[owner] can not be deleted", user.Name))
-		return
-	}
-
-	user.Annotations[users.AnnotationUserDeleter] = owner
-	err = h.ctrlClient.Update(req.Request.Context(), &user)
-	if err != nil {
-		api.HandleError(resp, req, err)
+	targetRole := user.Annotations[users.UserAnnotationOwnerRole]
+	if targetRole != "normal" && !(role == "owner" && targetRole == "admin") {
+		api.HandleForbidden(resp, req, errors.New("caller cannot delete this user"))
 		return
 	}
 
@@ -226,10 +229,18 @@ func (h *Handler) deleteUser(req *restful.Request, resp *restful.Response) {
 		api.HandleBadRequest(resp, req, fmt.Errorf("user %s is under creating", username))
 		return
 	}
-	err = h.ctrlClient.Delete(req.Request.Context(), &user)
-	if err != nil && !apierrors.IsNotFound(err) {
-		api.HandleError(resp, req, err)
-		return
+	if user.DeletionTimestamp.IsZero() {
+		original := user.DeepCopy()
+		user.Annotations[users.AnnotationUserDeleter] = caller.Name
+		if err := h.ctrlClient.Patch(ctx, &user, client.MergeFromWithOptions(original, client.MergeFromWithOptimisticLock{})); err != nil {
+			api.HandleError(resp, req, err)
+			return
+		}
+		// Fail if a concurrent update changed the checked target or its role.
+		if err := h.ctrlClient.Delete(ctx, &user, client.Preconditions{UID: &user.UID, ResourceVersion: &user.ResourceVersion}); err != nil && !apierrors.IsNotFound(err) {
+			api.HandleError(resp, req, err)
+			return
+		}
 	}
 	resp.WriteAsJson(map[string]interface{}{
 		"code": 200,
@@ -238,6 +249,28 @@ func (h *Handler) deleteUser(req *restful.Request, resp *restful.Response) {
 		},
 	})
 	return
+}
+
+func (h *Handler) activeCaller(req *restful.Request, resp *restful.Response) (*iamv1alpha2.User, bool) {
+	name, _ := req.Attribute(constants.UserContextAttribute).(string)
+	if name == "" {
+		api.HandleUnauthorized(resp, req, errors.New("missing user identity"))
+		return nil, false
+	}
+	var caller iamv1alpha2.User
+	if err := h.ctrlClient.Get(req.Request.Context(), types.NamespacedName{Name: name}, &caller); err != nil {
+		if apierrors.IsNotFound(err) {
+			api.HandleUnauthorized(resp, req, errors.New("unknown user identity"))
+		} else {
+			api.HandleError(resp, req, err)
+		}
+		return nil, false
+	}
+	if !caller.DeletionTimestamp.IsZero() {
+		api.HandleForbidden(resp, req, errors.New("user is being deleted"))
+		return nil, false
+	}
+	return &caller, true
 }
 
 func (h *Handler) userStatus(req *restful.Request, resp *restful.Response) {

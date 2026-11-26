@@ -46,9 +46,12 @@
 {{- if has $tenant $userProvisioners -}}
 {{- $routes = append $routes (dict "name" (printf "settings-user-create-%s" $tenant) "namespace" (printf "user-system-%s" $tenant) "account" "bytetrade-sys-ops" "method" "POST" "path" "/app-service/v1/users" "userHeader" $tenant) -}}
 {{- $routes = append $routes (dict "name" (printf "settings-user-create-status-%s" $tenant) "namespace" (printf "user-system-%s" $tenant) "account" "bytetrade-sys-ops" "method" "GET" "path" "^/app-service/v1/users/[a-z0-9]([a-z0-9-]*[a-z0-9])?/status$" "pathType" "RegularExpression" "userHeader" $tenant) -}}
+{{- $routes = append $routes (dict "name" (printf "settings-user-delete-%s" $tenant) "namespace" (printf "user-system-%s" $tenant) "account" "bytetrade-sys-ops" "method" "DELETE" "path" "^/app-service/v1/users/[a-z0-9]([a-z0-9-]*[a-z0-9])?$" "pathType" "RegularExpression" "userHeader" $tenant) -}}
 {{- end -}}
 {{- $settingsReads := list
   (dict "name" "settings-apps" "path" "/app-service/v1/apps")
+  (dict "name" "settings-app-env" "path" "^/app-service/v1/apps/[a-z0-9]([a-z0-9-]*[a-z0-9])?/env$" "pathType" "RegularExpression")
+  (dict "name" "control-hub-apps" "path" "/app-service/v1/control-hub/apps")
   (dict "name" "settings-compute" "path" "/app-service/v1/compute-resources")
   (dict "name" "settings-system-envs" "path" "/app-service/v1/systemenvs")
   (dict "name" "settings-user-envs" "path" "/app-service/v1/userenvs")

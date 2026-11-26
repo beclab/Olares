@@ -18,6 +18,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/images"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
+	"github.com/beclab/Olares/framework/app-service/pkg/users"
 	"github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
@@ -551,7 +552,25 @@ func (h *Handler) operateRecommendList(req *restful.Request, resp *restful.Respo
 }
 
 func (h *Handler) allUsersApps(req *restful.Request, resp *restful.Response) {
-	//owner := req.Attribute(constants.UserContextAttribute).(string)
+	h.listUsersApps(req, resp, "")
+}
+
+func (h *Handler) controlHubApps(req *restful.Request, resp *restful.Response) {
+	caller, ok := h.activeCaller(req, resp)
+	if !ok {
+		return
+	}
+	switch caller.Annotations[users.UserAnnotationOwnerRole] {
+	case "owner", "admin":
+		h.listUsersApps(req, resp, "")
+	case "normal":
+		h.listUsersApps(req, resp, caller.Name)
+	default:
+		api.HandleForbidden(resp, req, fmt.Errorf("caller cannot list applications"))
+	}
+}
+
+func (h *Handler) listUsersApps(req *restful.Request, resp *restful.Response, owner string) {
 	isSysApp := req.QueryParameter("issysapp")
 	state := req.QueryParameter("state")
 
@@ -583,7 +602,7 @@ func (h *Handler) allUsersApps(req *restful.Request, resp *restful.Response) {
 	}
 
 	for _, am := range ams {
-		if am.Spec.Type != v1alpha1.App {
+		if am.Spec.Type != v1alpha1.App || (owner != "" && am.Spec.AppOwner != owner) {
 			continue
 		}
 
@@ -674,15 +693,17 @@ func (h *Handler) allUsersApps(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	// filter by application's owner
 	for _, a := range allApps {
+		if owner != "" && a.Spec.Owner != owner {
+			continue
+		}
 		if len(isSysApp) > 0 && strconv.FormatBool(a.Spec.IsSysApp) != isSysApp {
 			continue
 		}
 		appsEntranceMap[a.Name] = a
 
 		if a.Spec.IsSysApp {
-			appsMap[a.Name] = a
+			appsMap[a.Name] = a.DeepCopy()
 			continue
 		}
 		if v, ok := appsMap[a.Name]; ok {
@@ -692,7 +713,7 @@ func (h *Handler) allUsersApps(req *restful.Request, resp *restful.Response) {
 			title := v.Spec.Settings["title"]
 			marketSource := v.Spec.Settings["market_source"]
 			version := v.Spec.Settings["version"]
-			v.Spec.Settings = a.Spec.Settings
+			v.Spec.Settings = maps.Clone(a.Spec.Settings)
 			if v.Spec.Settings == nil {
 				v.Spec.Settings = map[string]string{}
 			}

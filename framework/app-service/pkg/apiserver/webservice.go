@@ -538,6 +538,12 @@ func addServiceToContainer(c *restful.Container, handler *Handler) error {
 		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
 		Returns(http.StatusOK, "success to get list of app for all user", nil))
 
+	ws.Route(ws.GET("/control-hub/apps").
+		To(handler.controlHubApps).
+		Doc("list applications visible to the authenticated Control Hub user").
+		Metadata(restfulspec.KeyOpenAPITags, MODULE_TAGS).
+		Returns(http.StatusOK, "success to get visible applications", nil))
+
 	ws.Route(ws.GET("/all/appmanagers").
 		To(handler.allAppManagers).
 		Doc("get list of application managers for all user, exclude system apps").

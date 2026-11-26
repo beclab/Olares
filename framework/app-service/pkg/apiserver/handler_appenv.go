@@ -15,6 +15,7 @@ import (
 	apputils "github.com/beclab/Olares/framework/app-service/pkg/utils/app"
 	sysv1alpha1 "github.com/beclab/api/api/sys.bytetrade.io/v1alpha1"
 	"github.com/emicklei/go-restful/v3"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -38,17 +39,24 @@ func (h *Handler) getAppEnv(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	envs := make([]sysv1alpha1.AppEnvVar, 0)
 	var appEnv sysv1alpha1.AppEnv
-	if err := client.IgnoreNotFound(h.ctrlClient.Get(req.Request.Context(), types.NamespacedName{Namespace: appNamespace, Name: apputils.FormatAppEnvName(appName, owner)}, &appEnv)); err != nil {
-		api.HandleInternalError(resp, req, err)
+	err = h.ctrlClient.Get(req.Request.Context(), types.NamespacedName{Namespace: appNamespace, Name: apputils.FormatAppEnvName(appName, owner)}, &appEnv)
+	if apierrors.IsNotFound(err) {
+		resp.WriteAsJson([]sysv1alpha1.AppEnvVar{})
 		return
 	}
-	if len(appEnv.Envs) > 0 {
-		envs = appEnv.Envs
+	if err != nil {
+		api.HandleInternalError(resp, req, fmt.Errorf("failed to read application environment variables"))
+		return
 	}
-
-	resp.WriteAsJson(envs)
+	if appEnv.AppOwner != owner || appEnv.AppName != appName {
+		api.HandleForbidden(resp, req, fmt.Errorf("application environment ownership mismatch"))
+		return
+	}
+	if appEnv.Envs == nil {
+		appEnv.Envs = []sysv1alpha1.AppEnvVar{}
+	}
+	resp.WriteAsJson(appEnv.Envs)
 }
 
 func (h *Handler) updateAppEnv(req *restful.Request, resp *restful.Response) {

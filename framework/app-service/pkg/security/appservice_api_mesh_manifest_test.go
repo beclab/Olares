@@ -124,7 +124,7 @@ func TestAppServiceAPIMeshRolloutAndPortBoundaries(t *testing.T) {
 		withoutMarketStrict["AuthorizationPolicy/market-status-user"] == nil {
 		t.Fatal("Market without strict ingress may use the existing status aggregation routes only")
 	}
-	for _, name := range []string{"settings-user-create-alice", "settings-user-create-status-alice"} {
+	for _, name := range []string{"settings-user-create-alice", "settings-user-create-status-alice", "settings-user-delete-alice"} {
 		if withoutMarketStrict["HTTPRoute/"+name] != nil {
 			t.Fatalf("user provisioning must be opt-in: %s", name)
 		}
@@ -182,7 +182,7 @@ func TestAppServiceAPIMeshRolloutAndPortBoundaries(t *testing.T) {
 	if active["ValidatingAdmissionPolicy/olares-app-service-api-mtls-pods"]["spec"].(map[string]any)["failurePolicy"] != "Fail" {
 		t.Fatal("enrolled Pods must fail closed")
 	}
-	for _, name := range []string{"settings-user-create-bob", "settings-user-create-status-bob"} {
+	for _, name := range []string{"settings-user-create-bob", "settings-user-create-status-bob", "settings-user-delete-bob"} {
 		if active["HTTPRoute/"+name] != nil || active["AuthorizationPolicy/"+name] != nil {
 			t.Fatalf("ordinary tenant received provisioning access: %s", name)
 		}
@@ -205,6 +205,11 @@ func TestAppServiceAPIMeshRolloutAndPortBoundaries(t *testing.T) {
 		{"settings-system-envs-bob", "user-system-bob", "bytetrade-sys-ops", "GET", "/app-service/v1/systemenvs", "bob", "Exact"},
 		{"settings-user-envs-bob", "user-system-bob", "bytetrade-sys-ops", "GET", "/app-service/v1/userenvs", "bob", "Exact"},
 		{"settings-user-bob", "user-system-bob", "bytetrade-sys-ops", "GET", "/app-service/v1/users/bob", "bob", "Exact"},
+		{"settings-app-env-alice", "user-system-alice", "bytetrade-sys-ops", "GET", "^/app-service/v1/apps/[a-z0-9]([a-z0-9-]*[a-z0-9])?/env$", "alice", "RegularExpression"},
+		{"settings-app-env-bob", "user-system-bob", "bytetrade-sys-ops", "GET", "^/app-service/v1/apps/[a-z0-9]([a-z0-9-]*[a-z0-9])?/env$", "bob", "RegularExpression"},
+		{"control-hub-apps-alice", "user-system-alice", "bytetrade-sys-ops", "GET", "/app-service/v1/control-hub/apps", "alice", "Exact"},
+		{"control-hub-apps-bob", "user-system-bob", "bytetrade-sys-ops", "GET", "/app-service/v1/control-hub/apps", "bob", "Exact"},
+		{"settings-user-delete-alice", "user-system-alice", "bytetrade-sys-ops", "DELETE", "^/app-service/v1/users/[a-z0-9]([a-z0-9-]*[a-z0-9])?$", "alice", "RegularExpression"},
 		{"settings-user-create-alice", "user-system-alice", "bytetrade-sys-ops", "POST", "/app-service/v1/users", "alice", "Exact"},
 		{"settings-user-create-status-alice", "user-system-alice", "bytetrade-sys-ops", "GET", "^/app-service/v1/users/[a-z0-9]([a-z0-9-]*[a-z0-9])?/status$", "alice", "RegularExpression"},
 		{"settings-app-entrance-reads-alice", "user-system-alice", "bytetrade-sys-ops", "GET", "^/app-service/v1/applications/[a-z0-9]([a-z0-9-]*[a-z0-9])?/(entrances|setup)$", "alice", "RegularExpression"},

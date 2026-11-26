@@ -175,7 +175,7 @@ func (h *Handler) updateSystemEnv(req *restful.Request, resp *restful.Response) 
 			api.HandleBadRequest(resp, req, err)
 			return
 		}
-		klog.Infof("Updating SystemEnv %s value from '%s' to '%s'", resourceName, current.Value, body.Value)
+		klog.Infof("Updating SystemEnv %s", resourceName)
 		original := current.DeepCopy()
 		current.Value = body.Value
 		if err := h.ctrlClient.Patch(ctx, &current, client.MergeFrom(original)); err != nil {
@@ -315,14 +315,14 @@ func (h *Handler) getSystemEnvDetail(req *restful.Request, resp *restful.Respons
 }
 
 func (h *Handler) batchUpdateSystemEnvs(req *restful.Request, resp *restful.Response) {
-	_, ok := h.ensureAdmin(req, resp)
+	owner, ok := h.ensureAdmin(req, resp)
 	if !ok {
 		return
 	}
 
 	var items []sysv1alpha1.EnvVarSpec
 	if err := req.ReadEntity(&items); err != nil {
-		api.HandleBadRequest(resp, req, err)
+		api.HandleBadRequest(resp, req, fmt.Errorf("invalid system environment update payload"))
 		return
 	}
 	if len(items) == 0 {
@@ -363,16 +363,22 @@ func (h *Handler) batchUpdateSystemEnvs(req *restful.Request, resp *restful.Resp
 
 		if current.Value != it.Value {
 			if err := current.ValidateValue(it.Value); err != nil {
-				api.HandleBadRequest(resp, req, err)
+				api.HandleBadRequest(resp, req, fmt.Errorf("invalid value for system environment variable %s", resourceName))
 				return
 			}
-			klog.Infof("Updating SystemEnv %s value from '%s' to '%s'", resourceName, current.Value, it.Value)
 			original := current.DeepCopy()
 			current.Value = it.Value
-			if err := h.ctrlClient.Patch(ctx, &current, client.MergeFrom(original)); err != nil {
-				api.HandleError(resp, req, err)
+			if err := h.ctrlClient.Patch(ctx, &current, client.MergeFromWithOptions(original, client.MergeFromWithOptimisticLock{})); err != nil {
+				if apierrors.IsConflict(err) {
+					api.HandleConflict(resp, req, fmt.Errorf("system environment variable %s changed; reload and retry", resourceName))
+				} else if apierrors.IsInvalid(err) {
+					api.HandleBadRequest(resp, req, fmt.Errorf("update rejected for system environment variable %s", resourceName))
+				} else {
+					api.HandleInternalError(resp, req, fmt.Errorf("failed to save system environment variable %s", resourceName))
+				}
 				return
 			}
+			klog.Infof("Updated SystemEnv %s by %s", resourceName, owner)
 		}
 
 		results = append(results, current.EnvVarSpec)
