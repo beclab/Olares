@@ -53,10 +53,13 @@ func IsAppGatewayMeshManagedNP(np *netv1.NetworkPolicy) bool {
 		np.Labels[RouteControlComponentLabel] == AppGatewayMeshComponentValue
 }
 
-// IsAppServiceManagedExternalNP reports whether np is owned by an app-service
-// controller other than security-controller templates.
+// IsAppServiceManagedExternalNP reports whether a different controller or Helm
+// owns the policy and the security-controller namespace sweep must preserve it.
 func IsAppServiceManagedExternalNP(np *netv1.NetworkPolicy) bool {
 	return IsRouteControlManagedNP(np) || IsCallerJWTManagedNP(np) || IsAppGatewayMeshManagedNP(np) ||
+		(np != nil && np.Namespace == "os-framework" && np.Name == "market-backend-mtls-ingress" &&
+			np.Labels[RouteControlManagedByLabel] == "Helm" &&
+			np.Labels[RouteControlComponentLabel] == "market-backend-mtls") ||
 		(np != nil && np.Labels[RouteControlManagedByLabel] == "access-policy" &&
 			np.Labels[RouteControlComponentLabel] == AccessTransportComponentValue &&
 			np.Labels["access.olares.io/policy"] != "" && strings.HasPrefix(np.Name, "grant-") &&

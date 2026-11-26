@@ -1,5 +1,9 @@
 {{- $mesh := default dict .Values.marketBackendMTLS -}}
 {{- if $mesh.prepare -}}
+{{- $appService := default dict .Values.appServiceAPIMesh -}}
+{{- if and $mesh.activate (not (and $appService.prepare $appService.activate)) -}}
+{{- fail "strict Market requires the enrolled app-service Chart reader" -}}
+{{- end -}}
 {{- if ne .Release.Namespace "os-framework" -}}
 {{- fail "Market backend mesh policies belong in os-framework" -}}
 {{- end -}}
@@ -20,6 +24,115 @@ spec:
   port: 8080
   proxyProtocol: HTTP/1
   accessPolicy: deny
+---
+apiVersion: policy.linkerd.io/v1beta3
+kind: Server
+metadata:
+  name: market-chart-repository
+  namespace: os-framework
+spec:
+  podSelector:
+    matchLabels:
+      app: appstore
+      traffic.olares.io/market-backend-mtls: required
+  port: 82
+  proxyProtocol: HTTP/1
+  accessPolicy: deny
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: market-chart-read
+  namespace: os-framework
+spec:
+  parentRefs:
+    - group: policy.linkerd.io
+      kind: Server
+      name: market-chart-repository
+  rules:
+    - matches:
+        - path:
+            type: Exact
+            value: /static-index.yaml
+          method: GET
+        - path:
+            type: RegularExpression
+            value: '^/charts/[A-Za-z0-9][A-Za-z0-9._+-]*\.tgz$'
+          method: GET
+---
+apiVersion: policy.linkerd.io/v1alpha1
+kind: MeshTLSAuthentication
+metadata:
+  name: market-chart-read
+  namespace: os-framework
+spec:
+  identityRefs:
+    - kind: ServiceAccount
+      name: os-internal
+      namespace: os-framework
+---
+apiVersion: policy.linkerd.io/v1alpha1
+kind: AuthorizationPolicy
+metadata:
+  name: market-chart-read
+  namespace: os-framework
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: market-chart-read
+  requiredAuthenticationRefs:
+    - group: policy.linkerd.io
+      kind: MeshTLSAuthentication
+      name: market-chart-read
+---
+# The Chart reader shares os-internal with other system workloads. Only
+# enrolled app-service Pods may reach the Chart listener. The controller
+# excludes this Market selector from the additive os-system-np policy.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: market-backend-mtls-ingress
+  namespace: os-framework
+  labels:
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/component: market-backend-mtls
+spec:
+  podSelector:
+    matchLabels:
+      app: appstore
+      traffic.olares.io/market-backend-mtls: required
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: os-framework
+          podSelector:
+            matchLabels:
+              tier: app-service
+              traffic.olares.io/app-service-api-mtls: required
+              linkerd.io/control-plane-ns: os-mesh
+      ports:
+        - port: 82
+          protocol: TCP
+        - port: 4143
+          protocol: TCP
+{{- range $tenant := $tenants }}
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: user-system-{{ $tenant }}
+          podSelector:
+            matchLabels:
+              app: systemserver
+              linkerd.io/control-plane-ns: os-mesh
+      ports:
+        - port: 8080
+          protocol: TCP
+        - port: 4143
+          protocol: TCP
+{{- end }}
 {{- range $tenant := $tenants }}
 {{- if or (gt (len $tenant) 51) (not (regexMatch "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$" $tenant)) -}}
 {{- fail "invalid Market backend mTLS tenant" -}}

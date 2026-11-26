@@ -26,6 +26,14 @@ const (
 	UserSpace                     = "user-space"
 )
 
+// An additive namespace allow would let other os-internal Pods reach the
+// Chart repository with the same Linkerd identity as app-service.
+var excludeStrictMarket = metav1.LabelSelectorRequirement{
+	Key:      "traffic.olares.io/market-backend-mtls",
+	Operator: metav1.LabelSelectorOpNotIn,
+	Values:   []string{"required"},
+}
+
 var (
 	// NPDenyAll is a network policy template deny all ingress.
 	NPDenyAll = netv1.NetworkPolicy{
@@ -118,7 +126,7 @@ var (
 	NPOSSystem = netv1.NetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{},
 		Spec: netv1.NetworkPolicySpec{
-			PodSelector: metav1.LabelSelector{},
+			PodSelector: metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{excludeStrictMarket}},
 			Ingress: []netv1.NetworkPolicyIngressRule{
 				{
 					From: []netv1.NetworkPolicyPeer{

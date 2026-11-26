@@ -232,6 +232,13 @@ func BuildTrafficGroupIsolationBundle(namespace string) []netv1.NetworkPolicy {
 	case TrafficGroupApp, TrafficGroupUserSpace, TrafficGroupOSFramework, TrafficGroupOSSystem:
 		out = append(out, NPAllowFromGateway(namespace))
 	}
+	if namespace == "os-framework" {
+		for i := range out {
+			if len(out[i].Spec.Ingress) > 0 {
+				out[i].Spec.PodSelector.MatchExpressions = append(out[i].Spec.PodSelector.MatchExpressions, excludeStrictMarket)
+			}
+		}
+	}
 	return out
 }
 

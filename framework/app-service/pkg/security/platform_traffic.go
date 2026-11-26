@@ -124,6 +124,18 @@ var systemServerAppStoreFlow = platformServiceFlow{
 	targetPort:  8080,
 }
 
+var appServiceChartRepository = platformServiceFlow{
+	name: "app-service-chart-repository",
+	from: platformWorkload{"os-framework", map[string]string{
+		"tier": "app-service", "traffic.olares.io/app-service-api-mtls": "required",
+		platformMeshControlPlaneLabel: "os-mesh",
+	}},
+	service:     types.NamespacedName{Namespace: "os-framework", Name: "appstore-service"},
+	to:          map[string]string{"app": "appstore"},
+	servicePort: 82,
+	targetPort:  82,
+}
+
 // These HTTP providers still use native transport. Their absence must not
 // prevent the tenant system-server from starting or being isolated.
 var systemServerOptionalNativeFlows = []platformServiceFlow{
@@ -219,6 +231,9 @@ func (flow platformServiceFlow) destination() (map[string]string, []netv1.Networ
 
 func PlatformTrafficServices(namespace string) []types.NamespacedName {
 	var keys []types.NamespacedName
+	if namespace == appServiceChartRepository.from.namespace {
+		keys = append(keys, appServiceChartRepository.service)
+	}
 	for _, flow := range platformTrafficFlows(namespace) {
 		if (flow.from.namespace == namespace || flow.service.Namespace == namespace) && !slices.Contains(keys, flow.service) {
 			keys = append(keys, flow.service)
@@ -261,6 +276,9 @@ func ActivePlatformTrafficServices(namespace string, pods []corev1.Pod) []types.
 }
 
 func PlatformTrafficNamespaces(service types.NamespacedName) []string {
+	if service == appServiceChartRepository.service {
+		return []string{appServiceChartRepository.from.namespace}
+	}
 	var namespaces []string
 	for _, flow := range platformTrafficFlows(service.Namespace) {
 		if flow.service != service {
@@ -277,6 +295,11 @@ func PlatformTrafficNamespaces(service types.NamespacedName) []string {
 
 func BuildPlatformTrafficPolicies(namespace string, services map[types.NamespacedName]*corev1.Service) []netv1.NetworkPolicy {
 	var policies []netv1.NetworkPolicy
+	if namespace == appServiceChartRepository.from.namespace {
+		// The Market Helm chart owns ingress so this optional dependency
+		// doesn't isolate Market before its strict rollout.
+		policies = append(policies, appServiceChartRepository.egressPolicy(services[appServiceChartRepository.service]))
+	}
 	if namespace == platformAuthelia.namespace {
 		// Platform callers use BFL in multiple tenants. Rebuild the source
 		// policies from the Service inventory so stale grants are withdrawn.

@@ -251,11 +251,15 @@ func TestMarketMeshRequiresEnrollmentAndMatchingTenant(t *testing.T) {
 			"marketBackendMTLS": map[string]any{
 				"prepare": prepare, "activate": activate, "tenants": tenants,
 			},
+			"appServiceAPIMesh":                   map[string]any{"prepare": true, "activate": true, "tenants": []string{"alice", "bob"}},
 			"bfl":                                 map[string]any{"username": "alice"},
 			"marketFrontendGatewayServiceAccount": "expected-entry",
 		}
 	}
+	missingReader := values(true, true, true, "alice")
+	delete(missingReader, "appServiceAPIMesh")
 	for _, input := range []map[string]any{
+		missingReader,
 		values(false, true, true, "alice"),
 		values(true, true, false, "alice"),
 		values(true, false, true),
