@@ -273,7 +273,11 @@ func (h *Handler) handleTerminusInfo(req *restful.Request, resp *restful.Respons
 
 	tInfo.TerminusID = terminusId
 
-	var denyAllAnno string = userOp.GetDenyAllPolicy(user)
+	denyAllAnno, err := userOp.GetDenyAllPolicy()
+	if err != nil {
+		response.HandleError(resp, errors.Wrap(err, "get effective public domain access policy"))
+		return
+	}
 	if denyAllAnno == "" {
 		tInfo.TailScaleEnable = false
 	} else {
@@ -339,7 +343,11 @@ func (h *Handler) handleOlaresInfo(req *restful.Request, resp *restful.Response)
 
 	tInfo.ID = terminusId
 
-	var denyAllAnno string = userOp.GetDenyAllPolicy(user)
+	denyAllAnno, err := userOp.GetDenyAllPolicy()
+	if err != nil {
+		response.HandleError(resp, errors.Wrap(err, "get effective public domain access policy"))
+		return
+	}
 	if denyAllAnno == "" {
 		tInfo.TailScaleEnable = false
 	} else {
