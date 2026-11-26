@@ -113,8 +113,8 @@ func TestSuspendResolved_PatchesIntentAndTriggersStop(t *testing.T) {
 	if got.Annotations[api.AppStopAllKey] != "" {
 		t.Fatalf("stop-all = %q, want empty for a user namespace", got.Annotations[api.AppStopAllKey])
 	}
-	if got.Annotations[api.AppStopByControllerDuePendingPod] != "true" {
-		t.Fatalf("pending-pod = %q, want true", got.Annotations[api.AppStopByControllerDuePendingPod])
+	if _, ok := got.Annotations[api.AppStopByControllerDuePendingPod]; ok {
+		t.Fatal("scheduling failure left a legacy pending-pod annotation")
 	}
 	if got.Annotations[api.AppStopReasonKey] != constants.AppUnschedulable {
 		t.Fatalf("stop-reason = %q", got.Annotations[api.AppStopReasonKey])
