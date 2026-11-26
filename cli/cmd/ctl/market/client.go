@@ -400,43 +400,46 @@ func (c *MarketClient) DeleteLocalApp(ctx context.Context, appName, appVersion, 
 	})
 }
 
-// InstallApp issues POST /apps/{name}/install. selectedGpuType pins the
+// InstallApp issues POST /apps/{name}/install. sel.Mode pins the
 // compute mode on Olares 1.12.6+ (InstallRequest.SelectedGpuType, omitempty):
 // callers pass "" on 1.12.5 so the wire stays byte-identical to before the
 // field existed, and the 1.12.6 path passes either the --compute-mode value or
-// the mode resolved from a computeModeSelect 422 retry.
-func (c *MarketClient) InstallApp(ctx context.Context, appName, version, source, selectedGpuType string, envs []AppEnvVar) (*APIResponse, error) {
+// the mode resolved from a computeModeSelect 422 retry. sel.Consumers picks a
+// mode per GPU consumer instead, for apps declaring workload accelerators.
+func (c *MarketClient) InstallApp(ctx context.Context, appName, version, source string, sel computeSelection, envs []AppEnvVar) (*APIResponse, error) {
 	if source == "" {
 		source = c.source
 	}
 	return c.doRequest(ctx, http.MethodPost, "/apps/"+appName+"/install", InstallRequest{
-		Source:          source,
-		AppName:         appName,
-		Version:         version,
-		Sync:            true,
-		Envs:            envs,
-		SelectedGpuType: selectedGpuType,
+		Source:           source,
+		AppName:          appName,
+		Version:          version,
+		Sync:             true,
+		Envs:             envs,
+		SelectedGpuType:  sel.Mode,
+		SelectedGpuTypes: sel.Consumers,
 	})
 }
 
-// CloneApp issues POST /apps/{name}/clone. selectedGpuType pins the compute
+// CloneApp issues POST /apps/{name}/clone. sel.Mode pins the compute
 // mode on Olares 1.12.6+ (CloneRequest.SelectedGpuType, omitempty), mirroring
 // InstallApp: callers pass "" on 1.12.5 so the wire stays byte-identical, and
 // the 1.12.6 path passes either the --compute-mode value or the mode resolved
 // from a computeModeSelect 422 retry.
-func (c *MarketClient) CloneApp(ctx context.Context, appName, source, title, selectedGpuType string, envs []AppEnvVar, entrances []AppEntrance, templateClone bool) (*APIResponse, error) {
+func (c *MarketClient) CloneApp(ctx context.Context, appName, source, title string, sel computeSelection, envs []AppEnvVar, entrances []AppEntrance, templateClone bool) (*APIResponse, error) {
 	if source == "" {
 		source = c.source
 	}
 	return c.doRequest(ctx, http.MethodPost, "/apps/"+appName+"/clone", CloneRequest{
-		Source:          source,
-		AppName:         appName,
-		Title:           title,
-		Sync:            true,
-		Envs:            envs,
-		Entrances:       entrances,
-		SelectedGpuType: selectedGpuType,
-		TemplateClone:   templateClone,
+		Source:           source,
+		AppName:          appName,
+		Title:            title,
+		Sync:             true,
+		Envs:             envs,
+		Entrances:        entrances,
+		SelectedGpuType:  sel.Mode,
+		SelectedGpuTypes: sel.Consumers,
+		TemplateClone:    templateClone,
 	})
 }
 

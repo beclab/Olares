@@ -125,12 +125,16 @@ func runInstall(opts *MarketOptions, appName string) error {
 	if err := preflightComputeMode(ctx, opts, mc, appName, source, computeMode); err != nil {
 		return opts.failOp("install", appName, err)
 	}
+	consumerModes, err := parseConsumerModeFlags(opts.ConsumerModes)
+	if err != nil {
+		return opts.failOp("install", appName, err)
+	}
 
 	opts.info("Installing '%s' version '%s' from '%s' for user '%s'...", appName, version, source, mc.olaresID)
 
-	selected := ""
+	selected := computeSelection{Consumers: consumerModes}
 	if atLeast126 {
-		selected = computeMode
+		selected.Mode = computeMode
 	}
 	resp, err := mc.InstallApp(ctx, appName, version, source, selected, envs)
 	// Recover once from a computeModeSelect 422 by resolving the mode (from
@@ -143,12 +147,12 @@ func runInstall(opts *MarketOptions, appName string) error {
 	// confirm the version, leaving the user with a raw API error.
 	if err != nil {
 		if checkType, raw := parseFailedCheck(resp); isComputeModeSelect(checkType) {
-			mode, merr := resolveComputeMode(raw, appName, computeMode, opts.isInteractive())
+			next, merr := resolveComputeSelection(raw, appName, computeMode, consumerModes, opts.isInteractive())
 			if merr != nil {
 				return opts.failOp("install", appName, merr)
 			}
-			opts.info("Selected compute mode: %s", mode)
-			resp, err = mc.InstallApp(ctx, appName, version, source, mode, envs)
+			opts.info("Selected compute mode: %s", next)
+			resp, err = mc.InstallApp(ctx, appName, version, source, next, envs)
 		}
 	}
 	if err != nil {
