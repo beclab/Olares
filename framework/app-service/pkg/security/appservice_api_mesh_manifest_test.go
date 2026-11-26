@@ -178,6 +178,10 @@ func TestAppServiceAPIMeshRolloutAndPortBoundaries(t *testing.T) {
 		{"market-app-progress-bob", "os-framework", "market-sa", "GET", "^/app-service/v1/apps/[a-z0-9]([a-z0-9-]*[a-z0-9])?/status$", "bob", "RegularExpression"},
 		{"settings-apps-alice", "user-system-alice", "bytetrade-sys-ops", "GET", "/app-service/v1/apps", "alice", "Exact"},
 		{"settings-compute-alice", "user-system-alice", "bytetrade-sys-ops", "GET", "/app-service/v1/compute-resources", "alice", "Exact"},
+		{"settings-system-envs-alice", "user-system-alice", "bytetrade-sys-ops", "GET", "/app-service/v1/systemenvs", "alice", "Exact"},
+		{"settings-user-envs-alice", "user-system-alice", "bytetrade-sys-ops", "GET", "/app-service/v1/userenvs", "alice", "Exact"},
+		{"settings-system-envs-bob", "user-system-bob", "bytetrade-sys-ops", "GET", "/app-service/v1/systemenvs", "bob", "Exact"},
+		{"settings-user-envs-bob", "user-system-bob", "bytetrade-sys-ops", "GET", "/app-service/v1/userenvs", "bob", "Exact"},
 		{"settings-user-bob", "user-system-bob", "bytetrade-sys-ops", "GET", "/app-service/v1/users/bob", "bob", "Exact"},
 		{"settings-attachments-bob", "user-system-bob", "bytetrade-sys-ops", "GET", "^/app-service/v1/applications/[a-z0-9][a-z0-9-]*/(attachments|attachment-capabilities|device-inventory)$", "bob", "RegularExpression"},
 	} {

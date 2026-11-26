@@ -306,6 +306,7 @@ func TestSystemServerHeadscaleManagementEgress(t *testing.T) {
 func TestSystemServerDesktopDependenciesRequireVerifiedServices(t *testing.T) {
 	lldapKey := types.NamespacedName{Namespace: "os-platform", Name: "lldap-service"}
 	marketKey := types.NamespacedName{Namespace: "os-framework", Name: "appstore-svc"}
+	searchKey := types.NamespacedName{Namespace: "os-framework", Name: "search3"}
 	monitorKey := types.NamespacedName{Namespace: "os-framework", Name: "monitoring-server"}
 	filesKey := types.NamespacedName{Namespace: "os-framework", Name: "files-service"}
 	backupKey := types.NamespacedName{Namespace: "os-framework", Name: "backup-server"}
@@ -318,6 +319,7 @@ func TestSystemServerDesktopDependenciesRequireVerifiedServices(t *testing.T) {
 	}{
 		{lldapKey, map[string]string{"app": "lldap"}, 17170, 17170, 2},
 		{marketKey, map[string]string{"app": "appstore"}, 81, 8080, 1},
+		{searchKey, map[string]string{"app": "search3"}, 80, 8080, 1},
 		{monitorKey, map[string]string{"app": "monitoring-server"}, 80, 8000, 2},
 		{filesKey, map[string]string{"app": "files"}, 80, 80, 3},
 		{backupKey, map[string]string{"tier": "backup"}, 8082, 8082, 3},
@@ -338,6 +340,21 @@ func TestSystemServerDesktopDependenciesRequireVerifiedServices(t *testing.T) {
 			got := SystemServerDependencyEgressRules(services)
 			if len(got) != tc.wantRules {
 				t.Fatalf("verified Service yielded %d rules, want %d", len(got), tc.wantRules)
+			}
+			if tc.key == searchKey {
+				peer := platformPeer("os-framework", map[string]string{
+					"app": "search3", platformMeshControlPlaneLabel: "os-mesh", "traffic.olares.io/platform-mesh": "true",
+				})
+				if !reflect.DeepEqual(got, []netv1.NetworkPolicyEgressRule{{
+					To: []netv1.NetworkPolicyPeer{peer}, Ports: []netv1.NetworkPolicyPort{tcpPort(8080), tcpPort(4143)},
+				}}) {
+					t.Fatalf("Search3 egress must use enrolled endpoints only: %+v", got)
+				}
+				service.Spec.Selector = map[string]string{"app": "unrelated"}
+				if got := SystemServerDependencyEgressRules(services); len(got) != 0 {
+					t.Fatalf("mismatched Search3 selector retained egress: %+v", got)
+				}
+				service.Spec.Selector = tc.selector
 			}
 			if tc.key == filesKey || tc.key == backupKey {
 				proxyRule := got[len(got)-1]
@@ -372,7 +389,7 @@ func TestSystemServerDesktopDependenciesRequireVerifiedServices(t *testing.T) {
 		t.Fatal("LLDAP token verification is a readiness dependency of the active system-server")
 	}
 	for _, dep := range ActivePlatformTrafficServices(tenant, active) {
-		if dep == monitorKey || dep == filesKey || dep == backupKey {
+		if dep == monitorKey || dep == filesKey || dep == backupKey || dep == searchKey {
 			t.Fatalf("optional provider %s must not block tenant namespace isolation", dep)
 		}
 	}

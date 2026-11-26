@@ -196,6 +196,11 @@ spec:
     metadata:
       labels:
         app: search3
+        traffic.olares.io/platform-mesh: "true"
+      annotations:
+        linkerd.io/inject: enabled
+        config.linkerd.io/proxy-enable-native-sidecar: "true"
+        config.linkerd.io/default-inbound-policy: cluster-authenticated
     spec:
       serviceAccountName: os-internal
       priorityClassName: "system-cluster-critical"
@@ -314,6 +319,10 @@ spec:
     metadata:
       labels:
         app: search3monitor
+        traffic.olares.io/platform-mesh: "true"
+      annotations:
+        linkerd.io/inject: enabled
+        config.linkerd.io/proxy-enable-native-sidecar: "true"
     spec:
       serviceAccountName: os-internal
       priorityClassName: "system-cluster-critical"

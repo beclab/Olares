@@ -2,16 +2,19 @@ package security
 
 import "testing"
 
-func TestFirstWaveWorkloadsRenderNativeLinkerdWithoutTrafficExclusions(t *testing.T) {
+func TestSystemWorkloadsRenderNativeLinkerdWithoutTrafficExclusions(t *testing.T) {
 	for _, tc := range []struct {
 		template    string
 		workload    string
 		account     string
 		opaquePorts string
+		inbound     string
 	}{
-		{"../../../system-server/.olares/config/cluster/deploy/system_provider.yaml", "Deployment/system-provider", "provider-sa", ""},
-		{"../../../files/.olares/config/cluster/deploy/files_deploy.yaml", "DaemonSet/files", "os-internal", "445"},
-		{"../../../backup-server/.olares/config/cluster/deploy/backup_server.yaml", "Deployment/backup", "backup-cluster-view", ""},
+		{"../../../system-server/.olares/config/cluster/deploy/system_provider.yaml", "Deployment/system-provider", "provider-sa", "", ""},
+		{"../../../files/.olares/config/cluster/deploy/files_deploy.yaml", "DaemonSet/files", "os-internal", "445", ""},
+		{"../../../backup-server/.olares/config/cluster/deploy/backup_server.yaml", "Deployment/backup", "backup-cluster-view", "", ""},
+		{"../../../search3/.olares/config/cluster/deploy/search3_server_deploy.yaml", "Deployment/search3", "os-internal", "", "cluster-authenticated"},
+		{"../../../search3/.olares/config/cluster/deploy/search3_server_deploy.yaml", "DaemonSet/search3monitor", "os-internal", "", ""},
 	} {
 		t.Run(tc.workload, func(t *testing.T) {
 			docs, err := renderMeshManifests(t, map[string]any{
@@ -33,6 +36,9 @@ func TestFirstWaveWorkloadsRenderNativeLinkerdWithoutTrafficExclusions(t *testin
 			opaquePorts, _ := annotations["config.linkerd.io/opaque-ports"].(string)
 			if opaquePorts != tc.opaquePorts {
 				t.Fatalf("opaque ports = %q, want %q", opaquePorts, tc.opaquePorts)
+			}
+			if inbound, _ := annotations["config.linkerd.io/default-inbound-policy"].(string); inbound != tc.inbound {
+				t.Fatalf("inbound policy = %q, want %q", inbound, tc.inbound)
 			}
 			for _, key := range []string{"skip-inbound-ports", "skip-outbound-ports", "skip-subnets"} {
 				if _, exists := annotations["config.linkerd.io/"+key]; exists {

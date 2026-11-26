@@ -23,6 +23,8 @@ func TestAuthenticateRequiresSingleCanonicalTenantIdentity(t *testing.T) {
 	ws.Route(ws.GET("/compute-resources").To(tenant))
 	ws.Route(ws.GET("/applications/{name}/attachments").To(tenant))
 	ws.Route(ws.POST("/apps/{name}/install").To(tenant))
+	ws.Route(ws.GET("/systemenvs").To(tenant))
+	ws.Route(ws.GET("/userenvs").To(tenant))
 	ws.Route(ws.GET("/terminus/version").To(func(_ *restful.Request, resp *restful.Response) {
 		resp.WriteHeader(http.StatusNoContent)
 	}))
@@ -33,6 +35,8 @@ func TestAuthenticateRequiresSingleCanonicalTenantIdentity(t *testing.T) {
 		{http.MethodGet, "/compute-resources"},
 		{http.MethodGet, "/applications/example/attachments"},
 		{http.MethodPost, "/apps/example/install"},
+		{http.MethodGet, "/systemenvs"},
+		{http.MethodGet, "/userenvs"},
 	} {
 		for _, tc := range []struct {
 			name   string

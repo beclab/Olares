@@ -117,11 +117,9 @@ var systemServerNativeFlows = []platformServiceFlow{
 	{service: types.NamespacedName{Namespace: "os-platform", Name: "lldap-service"}, to: map[string]string{"app": "lldap"}, servicePort: 17170, targetPort: 17170},
 }
 
-var systemServerAppStoreFlow = platformServiceFlow{
-	service:     types.NamespacedName{Namespace: "os-framework", Name: "appstore-svc"},
-	to:          map[string]string{"app": "appstore"},
-	servicePort: 81,
-	targetPort:  8080,
+var systemServerMeshedProviderFlows = []platformServiceFlow{
+	{service: types.NamespacedName{Namespace: "os-framework", Name: "appstore-svc"}, to: map[string]string{"app": "appstore"}, servicePort: 81, targetPort: 8080},
+	{service: types.NamespacedName{Namespace: "os-framework", Name: "search3"}, to: map[string]string{"app": "search3"}, servicePort: 80, targetPort: 8080},
 }
 
 var appServiceChartRepository = platformServiceFlow{
@@ -402,11 +400,13 @@ func SystemServerCitusEgressRule() netv1.NetworkPolicyEgressRule {
 
 // SystemServerDependencyServices lists the Services read when generating route egress.
 func SystemServerDependencyServices() []types.NamespacedName {
-	keys := make([]types.NamespacedName, 0, len(systemServerNativeFlows)+len(systemServerOptionalNativeFlows)+len(systemServerEnrollingFlows)+1)
+	keys := make([]types.NamespacedName, 0, len(systemServerNativeFlows)+len(systemServerMeshedProviderFlows)+len(systemServerOptionalNativeFlows)+len(systemServerEnrollingFlows))
 	for _, flow := range systemServerNativeFlows {
 		keys = append(keys, flow.service)
 	}
-	keys = append(keys, systemServerAppStoreFlow.service)
+	for _, flow := range systemServerMeshedProviderFlows {
+		keys = append(keys, flow.service)
+	}
 	for _, flow := range systemServerOptionalNativeFlows {
 		keys = append(keys, flow.service)
 	}
@@ -417,15 +417,17 @@ func SystemServerDependencyServices() []types.NamespacedName {
 }
 
 // SystemServerDependencyEgressRules scopes the verified native dependencies and
-// the enrolled AppStore endpoints used by the system-server provider proxy.
+// the enrolled endpoints used by the system-server provider proxy.
 func SystemServerDependencyEgressRules(services map[types.NamespacedName]*corev1.Service) []netv1.NetworkPolicyEgressRule {
 	var rules []netv1.NetworkPolicyEgressRule
 	for _, flow := range systemServerNativeFlows {
 		rules = append(rules, flow.egressRules(services[flow.service])...)
 	}
-	flow := systemServerAppStoreFlow
-	if flow.matchesService(services[flow.service]) {
-		// The VIP can select unenrolled Market Pods during a rollout. Allow
+	for _, flow := range systemServerMeshedProviderFlows {
+		if !flow.matchesService(services[flow.service]) {
+			continue
+		}
+		// The VIP can select unenrolled Pods during a rollout. Allow
 		// only Linkerd-discovered endpoints of the enrolled workload.
 		destination := maps.Clone(flow.to)
 		destination[platformMeshControlPlaneLabel] = "os-mesh"
