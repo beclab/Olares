@@ -210,6 +210,20 @@ func (t *InstallNvidiaContainerToolkit) Execute(runtime connector.Runtime) error
 			return fmt.Errorf("unexpected NVIDIA Container Toolkit DEB metadata %q, expected %q", strings.TrimSpace(metadata), want)
 		}
 	}
+	if runtime.GetSystemInfo().IsGB10Chip() {
+		status, err := runtime.GetRunner().Cmd("dpkg-query -W -f='${db:Status-Status}' nvidia-system-utils 2>/dev/null || test $? -eq 1", false, false)
+		if err != nil {
+			return errors.Wrap(err, "failed to check nvidia-system-utils")
+		}
+		if status != "" && status != "not-installed" && status != "config-files" {
+			cmd := "apt-mark manual nv-persistence-mode nvidia-logrotate nvidia-motd && " +
+				"dpkg --remove nvidia-system-utils"
+			if _, err := runtime.GetRunner().SudoCmd(cmd, false, true); err != nil {
+				return errors.Wrap(err, "failed to remove nvidia-system-utils and retain its dependencies")
+			}
+		}
+	}
+
 	var remove []string
 	for _, name := range legacyNvidiaContainerToolkitPackages {
 		if state := states[name]; len(state) == 2 && state[1] != "not-installed" {
