@@ -12,7 +12,6 @@ import (
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	extauthzv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/ext_authz/v3"
 	headermutationv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/header_mutation/v3"
-	rbacfilterv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/rbac/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	earlyheadermutationv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/early_header_mutation/header_mutation/v3"
 	ppupstreamv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/proxy_protocol/v3"
@@ -574,6 +573,89 @@ func TestBuildMultiUserHTTPSListener_EarliestCreatedWins(t *testing.T) {
 	require.NotNil(t, listener)
 	require.Len(t, listener.FilterChains, 1)
 	assert.Equal(t, "chain_old", listener.FilterChains[0].Name)
+}
+
+// A custom-domain chain only carries its own virtual host, so a request on a
+// connection with SNI=custom domain but :authority=desktop.<zone> must match
+// only the catch-all default virtual host (421), while the zone chain still
+// routes desktop.<zone>.
+func TestBuildMultiUserHTTPSListener_CustomDomainChainIsolated(t *testing.T) {
+	desktopVH := &ir.VirtualHostIR{
+		Name:    "nonapp_desktop_alice",
+		Domains: []string{"desktop.alice.example.com"},
+		Routes:  []*ir.HTTPRouteIR{{Name: "desktop", PathPrefix: "/", Cluster: "nonapp_desktop_alice"}},
+	}
+	customVH := &ir.VirtualHostIR{
+		Name:    "custom_alice_myapp_web",
+		Domains: []string{"aaa.com"},
+		Routes:  []*ir.HTTPRouteIR{{Name: "custom", PathPrefix: "/", Cluster: "custom_alice_myapp_web"}},
+	}
+	defaultResp := &ir.DirectResponseIR{Status: 421, Body: "olares", ContentType: "text/html"}
+
+	httpListeners := []*ir.HTTPListenerIR{
+		{
+			Name:            "https_443_alice_alice_example_com",
+			Port:            443,
+			TLS:             true,
+			SNIMatches:      []string{"*.alice.example.com", "alice.example.com"},
+			TLSCert:         &ir.SecretIR{Name: "main-tls-alice", CertData: "cert", KeyData: "key"},
+			UserName:        "alice",
+			VirtualHosts:    []*ir.VirtualHostIR{desktopVH, customVH},
+			DefaultResponse: defaultResp,
+			PingRoute:       true,
+		},
+		{
+			Name:            "https_443_alice_custom_aaa_com",
+			Port:            443,
+			TLS:             true,
+			SNIMatches:      []string{"aaa.com"},
+			TLSCert:         &ir.SecretIR{Name: "custom-tls-alice-aaa.com", CertData: "cert", KeyData: "key"},
+			UserName:        "alice",
+			VirtualHosts:    []*ir.VirtualHostIR{customVH},
+			DefaultResponse: defaultResp,
+			PingRoute:       true,
+		},
+	}
+	clusterMap := map[string]*ir.ClusterIR{
+		"nonapp_desktop_alice":   {Name: "nonapp_desktop_alice", Host: "desktop.svc", Port: 80, UseDNS: true},
+		"custom_alice_myapp_web": {Name: "custom_alice_myapp_web", Host: "myapp.svc", Port: 8080, UseDNS: true},
+	}
+
+	listener, routeConfigs, _ := buildMultiUserHTTPSListener(443, false, httpListeners, clusterMap, make(map[string]bool))
+	require.NotNil(t, listener)
+	require.Len(t, listener.FilterChains, 2)
+	require.Len(t, routeConfigs, 2)
+
+	vhostFor := func(rc *routev3.RouteConfiguration, host string) *routev3.VirtualHost {
+		var wildcard *routev3.VirtualHost
+		for _, vh := range rc.VirtualHosts {
+			for _, d := range vh.Domains {
+				if d == host {
+					return vh
+				}
+				if d == "*" {
+					wildcard = vh
+				}
+			}
+		}
+		return wildcard
+	}
+
+	zoneRC := asRouteConfig(t, routeConfigs[0])
+	customRC := asRouteConfig(t, routeConfigs[1])
+	require.Equal(t, "https_443_alice_alice_example_com_routes", zoneRC.Name)
+	require.Equal(t, "https_443_alice_custom_aaa_com_routes", customRC.Name)
+
+	assert.Equal(t, "nonapp_desktop_alice", vhostFor(zoneRC, "desktop.alice.example.com").Name)
+
+	forged := vhostFor(customRC, "desktop.alice.example.com")
+	require.NotNil(t, forged)
+	assert.Equal(t, "default_https_443_alice_custom_aaa_com", forged.Name)
+	last := forged.Routes[len(forged.Routes)-1]
+	require.NotNil(t, last.GetDirectResponse())
+	assert.Equal(t, uint32(421), last.GetDirectResponse().Status)
+
+	assert.Equal(t, "custom_alice_myapp_web", vhostFor(customRC, "aaa.com").Name)
 }
 
 // Chains for distinct SNIs must all be preserved.
@@ -1236,57 +1318,6 @@ func TestTranslateRoute_NonDefaultPathKeepsFullOverride(t *testing.T) {
 	require.Len(t, headers, 7)
 	assert.Equal(t, "X-BFL-USER", headers[6].GetKey())
 	assert.Equal(t, "alice", headers[6].GetValue())
-}
-
-func TestTranslateRoute_ProbeBypassHeaderMatch(t *testing.T) {
-	route := translateRoute(&ir.HTTPRouteIR{
-		Name:      "probe",
-		PathExact: "/healthz",
-		Cluster:   "app",
-		HeaderMatches: []ir.HeaderMatchIR{{
-			Name:      "user-agent",
-			SafeRegex: `^[0-9a-fA-F-]+/[0-9a-fA-F]+$`,
-		}},
-	}, nil)
-	require.NotNil(t, route.GetMatch())
-	assert.Equal(t, "/healthz", route.GetMatch().GetPath())
-	require.Len(t, route.GetMatch().GetHeaders(), 1)
-	assert.Equal(t, "user-agent", route.GetMatch().GetHeaders()[0].GetName())
-	assert.Nil(t, route.TypedPerFilterConfig, "probe bypass keeps VH-level ExtAuth disabled")
-}
-
-func TestTranslateRoute_BypassSourceCIDR(t *testing.T) {
-	route := translateRoute(&ir.HTTPRouteIR{
-		Name:      "headscale_key",
-		PathExact: "/key",
-		Cluster:   "headscale",
-		ExtAuth: &ir.ExtAuthConfigIR{
-			Cluster:    "authelia_backend_alice",
-			PathPrefix: "/api/verify/",
-		},
-		BypassSourceCIDR: true,
-	}, nil)
-
-	assert.NotNil(t, route.TypedPerFilterConfig["envoy.filters.http.ext_authz"])
-	anyCfg := route.TypedPerFilterConfig["envoy.filters.http.rbac"]
-	require.NotNil(t, anyCfg)
-	var perRoute rbacfilterv3.RBACPerRoute
-	require.NoError(t, anyCfg.UnmarshalTo(&perRoute))
-	policy := perRoute.GetRbac().GetRules().GetPolicies()["allow_all"]
-	require.NotNil(t, policy)
-	assert.True(t, policy.GetPermissions()[0].GetAny())
-	assert.True(t, policy.GetPrincipals()[0].GetAny())
-
-	route = translateRoute(&ir.HTTPRouteIR{
-		Name:      "default",
-		PathExact: "/key",
-		Cluster:   "headscale",
-		ExtAuth: &ir.ExtAuthConfigIR{
-			Cluster:    "authelia_backend_alice",
-			PathPrefix: "/api/verify/",
-		},
-	}, nil)
-	assert.NotContains(t, route.TypedPerFilterConfig, "envoy.filters.http.rbac")
 }
 
 // ---------------------------------------------------------------------------

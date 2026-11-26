@@ -89,6 +89,37 @@ func TestBuildUserFilterChains_NoDeny_WithCustomDomainCert(t *testing.T) {
 
 	custom := listeners[1]
 	assert.Equal(t, []string{"myapp.custom.io"}, custom.SNIMatches)
+
+	// The zone chain keeps every virtual host, including the custom-domain one.
+	assert.Len(t, main.VirtualHosts, len(vhosts))
+
+	// The custom chain only routes its own domain, so a forged
+	// :authority such as desktop.alice.example.com falls to the default 421.
+	require.Len(t, custom.VirtualHosts, 1)
+	assert.Equal(t, "custom_alice_myapp_web", custom.VirtualHosts[0].Name)
+	assert.Equal(t, []string{"myapp.custom.io"}, custom.VirtualHosts[0].Domains)
+	for _, vh := range custom.VirtualHosts {
+		for _, d := range vh.Domains {
+			assert.False(t, strings.HasSuffix(d, "alice.example.com"),
+				"custom chain must not route zone domain %q (vhost %s)", d, vh.Name)
+		}
+	}
+	require.NotNil(t, custom.DefaultResponse)
+	assert.Equal(t, uint32(421), custom.DefaultResponse.Status)
+}
+
+func TestVhostsForDomain(t *testing.T) {
+	a := &ir.VirtualHostIR{Name: "a", Domains: []string{"a.example.com", "a.olares.local"}}
+	b := &ir.VirtualHostIR{Name: "b", Domains: []string{"b.example.com"}}
+	c := &ir.VirtualHostIR{Name: "c", Domains: []string{"a.example.com"}}
+
+	got := vhostsForDomain([]*ir.VirtualHostIR{a, b, c}, "a.example.com")
+	require.Len(t, got, 2)
+	assert.Same(t, a, got[0])
+	assert.Same(t, c, got[1])
+
+	assert.Empty(t, vhostsForDomain([]*ir.VirtualHostIR{a, b}, "example.com"))
+	assert.Empty(t, vhostsForDomain(nil, "a.example.com"))
 }
 
 func TestBuildUserFilterChains_NoDeny(t *testing.T) {
@@ -747,21 +778,7 @@ func TestBuildAppVirtualHosts_PublicKeepsExtAuthOmitsOutboundXBFLUser(t *testing
 	assert.Nil(t, r.RequestHeaders, "outbound zone-owner X-BFL-USER stamp must be omitted")
 }
 
-func TestBuildProbeBypassRoutes_ExactPathAndUA(t *testing.T) {
-	routes := buildProbeBypassRoutes("alice_app_web", "cluster", []string{"/healthz", "/ready", "/", "healthz", "/healthz"})
-	require.Len(t, routes, 2, "dedupe and drop root path")
-	assert.Equal(t, "/healthz", routes[0].PathExact)
-	assert.Equal(t, "/ready", routes[1].PathExact)
-	for _, r := range routes {
-		assert.Nil(t, r.ExtAuth, "probe bypass must not re-enable ExtAuth")
-		assert.Nil(t, r.RequestHeaders, "probe must not stamp outbound X-BFL-USER")
-		require.Len(t, r.HeaderMatches, 1)
-		assert.Equal(t, "user-agent", r.HeaderMatches[0].Name)
-		assert.Equal(t, probeUARegex, r.HeaderMatches[0].SafeRegex)
-	}
-}
-
-func TestBuildAppVirtualHosts_ProbeBypassBeforeDefault(t *testing.T) {
+func TestBuildAppVirtualHosts_NoUnauthenticatedExactRoute(t *testing.T) {
 	tr := &Translator{cfg: &Config{}}
 	user := &message.UserInfo{Name: "alice", Language: "en"}
 	clusterSet := make(map[string]*ir.ClusterIR)
@@ -770,22 +787,19 @@ func TestBuildAppVirtualHosts_ProbeBypassBeforeDefault(t *testing.T) {
 		Appid:     "v1app",
 		Namespace: "v1app-alice",
 		Owner:     "alice",
-		EntranceProbePaths: map[string][]string{
-			"web": {"/healthz"},
-		},
 		Entrances: []*message.EntranceInfo{
 			{Name: "web", Host: "v1app-svc", Port: 8080},
 		},
 	}
 	vhosts := tr.buildAppVirtualHosts(user, app, "alice.example.com", false, clusterSet)
 	require.Len(t, vhosts, 1)
-	require.GreaterOrEqual(t, len(vhosts[0].Routes), 2)
-	assert.Equal(t, "/healthz", vhosts[0].Routes[0].PathExact)
-	assert.Nil(t, vhosts[0].Routes[0].ExtAuth)
-	last := vhosts[0].Routes[len(vhosts[0].Routes)-1]
-	assert.Equal(t, "/", last.PathPrefix)
-	require.NotNil(t, last.ExtAuth)
-	assert.Equal(t, autheliaVerifyPathPrefix, last.ExtAuth.PathPrefix)
+	require.Len(t, vhosts[0].Routes, 1)
+	r := vhosts[0].Routes[0]
+	assert.Equal(t, "/", r.PathPrefix)
+	assert.Empty(t, r.PathExact)
+	assert.Empty(t, r.HeaderMatches)
+	require.NotNil(t, r.ExtAuth)
+	assert.Equal(t, autheliaVerifyPathPrefix, r.ExtAuth.PathPrefix)
 }
 
 // A "dev" entrance answers on both its normal hostname and a
