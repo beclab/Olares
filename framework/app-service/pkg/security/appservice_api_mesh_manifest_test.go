@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -127,20 +128,37 @@ func TestAppServiceAPIMeshRolloutAndPortBoundaries(t *testing.T) {
 	if active["ValidatingAdmissionPolicy/olares-app-service-api-mtls-pods"]["spec"].(map[string]any)["failurePolicy"] != "Fail" {
 		t.Fatal("enrolled Pods must fail closed")
 	}
-	for _, tc := range []struct{ name, namespace, account, method, path, userHeader string }{
-		{"user-apps-alice", "user-system-alice", "bytetrade-sys-ops", "GET", "/app-service/v1/user-apps/alice", ""},
-		{"user-apps-bob", "user-system-bob", "bytetrade-sys-ops", "GET", "/app-service/v1/user-apps/bob", ""},
-		{"users-alice", "user-system-alice", "bytetrade-sys-ops", "GET", "/app-service/v1/users", "alice"},
-		{"users-bob", "user-system-bob", "bytetrade-sys-ops", "GET", "/app-service/v1/users", "bob"},
-		{"market-image-info", "os-framework", "market-sa", "POST", "/app-service/v1/apps/image-info", ""},
-		{"market-status-user", "os-framework", "market-sa", "GET", "/app-service/v1/user-info", ""},
-		{"market-status-user-resource", "os-framework", "market-sa", "GET", "/app-service/v1/user/resource", ""},
-		{"market-status-cluster-resource", "os-framework", "market-sa", "GET", "/app-service/v1/cluster/resource", ""},
-		{"market-status-version", "os-framework", "market-sa", "GET", "/app-service/v1/terminus/version", ""},
+	for _, tc := range []struct{ name, namespace, account, method, path, userHeader, pathType string }{
+		{"user-apps-alice", "user-system-alice", "bytetrade-sys-ops", "GET", "/app-service/v1/user-apps/alice", "", "Exact"},
+		{"user-apps-bob", "user-system-bob", "bytetrade-sys-ops", "GET", "/app-service/v1/user-apps/bob", "", "Exact"},
+		{"users-alice", "user-system-alice", "bytetrade-sys-ops", "GET", "/app-service/v1/users", "alice", "Exact"},
+		{"users-bob", "user-system-bob", "bytetrade-sys-ops", "GET", "/app-service/v1/users", "bob", "Exact"},
+		{"market-image-info", "os-framework", "market-sa", "POST", "/app-service/v1/apps/image-info", "", "Exact"},
+		{"market-status-user", "os-framework", "market-sa", "GET", "/app-service/v1/user-info", "", "Exact"},
+		{"market-status-user-resource", "os-framework", "market-sa", "GET", "/app-service/v1/user/resource", "", "Exact"},
+		{"market-status-cluster-resource", "os-framework", "market-sa", "GET", "/app-service/v1/cluster/resource", "", "Exact"},
+		{"market-status-version", "os-framework", "market-sa", "GET", "/app-service/v1/terminus/version", "", "Exact"},
+		{"settings-apps-alice", "user-system-alice", "bytetrade-sys-ops", "GET", "/app-service/v1/apps", "alice", "Exact"},
+		{"settings-compute-alice", "user-system-alice", "bytetrade-sys-ops", "GET", "/app-service/v1/compute-resources", "alice", "Exact"},
+		{"settings-user-bob", "user-system-bob", "bytetrade-sys-ops", "GET", "/app-service/v1/users/bob", "bob", "Exact"},
+		{"settings-attachments-bob", "user-system-bob", "bytetrade-sys-ops", "GET", "^/app-service/v1/applications/[a-z0-9][a-z0-9-]*/(attachments|attachment-capabilities|device-inventory)$", "bob", "RegularExpression"},
 	} {
 		route := active["HTTPRoute/"+tc.name]["spec"].(map[string]any)
 		match := map[string]any{
-			"path": map[string]any{"type": "Exact", "value": tc.path}, "method": tc.method,
+			"path": map[string]any{"type": tc.pathType, "value": tc.path}, "method": tc.method,
+		}
+		if tc.pathType == "RegularExpression" {
+			pattern := regexp.MustCompile(tc.path)
+			for _, path := range []string{"/app-service/v1/applications/olares-app/attachments", "/app-service/v1/applications/app-3/device-inventory", "/app-service/v1/applications/a/attachment-capabilities"} {
+				if !pattern.MatchString(path) {
+					t.Fatalf("Settings route misses supported path %s", path)
+				}
+			}
+			for _, path := range []string{"/app-service/v1/applications/a/setup", "/app-service/v1/applications/a/attachments/extra", "/app-service/v1/applications/a/../a/attachments", "/app-service/v1/applications/a%2fb/attachments", "/app-service/v1/applications/a/attachments/", "/v1/applications/a/attachments"} {
+				if pattern.MatchString(path) {
+					t.Fatalf("Settings route admits unrelated path %s", path)
+				}
+			}
 		}
 		if tc.userHeader != "" {
 			match["headers"] = []any{map[string]any{"name": "X-Bfl-User", "type": "Exact", "value": tc.userHeader}}

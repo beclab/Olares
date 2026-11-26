@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
@@ -130,13 +131,14 @@ func (h *Handler) authenticate(req *restful.Request, resp *restful.Response, cha
 	}()
 
 	if needAuth {
-		username := req.Request.Header.Get(constants.BflUserKey)
-		if username == "" {
-			api.HandleUnauthorized(resp, req, errors.New("no authentication info error"))
+		identities := req.Request.Header.Values(constants.BflUserKey)
+		if len(identities) != 1 || identities[0] == "" ||
+			strings.TrimSpace(identities[0]) != identities[0] || strings.Contains(identities[0], ",") {
+			api.HandleUnauthorized(resp, req, errors.New("missing or ambiguous user identity"))
 			return
 		}
 
-		req.SetAttribute(constants.UserContextAttribute, username)
+		req.SetAttribute(constants.UserContextAttribute, identities[0])
 	}
 
 	chain.ProcessFilter(req, resp)

@@ -16,6 +16,14 @@
 {{- end -}}
 {{- $routes = append $routes (dict "name" (printf "user-apps-%s" $tenant) "namespace" (printf "user-system-%s" $tenant) "account" "bytetrade-sys-ops" "method" "GET" "path" (printf "/app-service/v1/user-apps/%s" $tenant)) -}}
 {{- $routes = append $routes (dict "name" (printf "users-%s" $tenant) "namespace" (printf "user-system-%s" $tenant) "account" "bytetrade-sys-ops" "method" "GET" "path" "/app-service/v1/users" "userHeader" $tenant) -}}
+{{- $settingsReads := list
+  (dict "name" "settings-apps" "path" "/app-service/v1/apps")
+  (dict "name" "settings-compute" "path" "/app-service/v1/compute-resources")
+  (dict "name" "settings-user" "path" (printf "/app-service/v1/users/%s" $tenant))
+  (dict "name" "settings-attachments" "path" "^/app-service/v1/applications/[a-z0-9][a-z0-9-]*/(attachments|attachment-capabilities|device-inventory)$" "pathType" "RegularExpression") -}}
+{{- range $read := $settingsReads -}}
+{{- $routes = append $routes (dict "name" (printf "%s-%s" $read.name $tenant) "namespace" (printf "user-system-%s" $tenant) "account" "bytetrade-sys-ops" "method" "GET" "path" $read.path "pathType" (default "Exact" $read.pathType) "userHeader" $tenant) -}}
+{{- end -}}
 {{- end }}
 apiVersion: policy.linkerd.io/v1beta3
 kind: Server
@@ -45,7 +53,7 @@ spec:
   rules:
     - matches:
         - path:
-            type: Exact
+            type: {{ default "Exact" $route.pathType }}
             value: {{ $route.path | quote }}
           method: {{ $route.method }}
           {{- with $route.userHeader }}
