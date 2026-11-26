@@ -46,25 +46,3 @@ func NewWebService(gv schema.GroupVersion) *restful.WebService {
 
 	return &webservice
 }
-
-func (cb *ContainerBuilder) AddToContainer(c *restful.Container) error {
-	for _, f := range *cb {
-		if err := f(c); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (cb *ContainerBuilder) Register(funcs ...func(*restful.Container) error) {
-	for _, f := range funcs {
-		*cb = append(*cb, f)
-	}
-}
-
-func NewContainerBuilder(funcs ...func(*restful.Container) error) ContainerBuilder {
-	var cb ContainerBuilder
-	cb.Register(funcs...)
-
-	return cb
-}

@@ -203,13 +203,3 @@ func (h *Handler) handleGetComponents(request *restful.Request, response *restfu
 
 	response.WriteEntity(result)
 }
-
-func canonicalizeRegistryError(request *restful.Request, response *restful.Response, err error) {
-	if strings.Contains(err.Error(), "Unauthorized") {
-		api.HandleUnauthorized(response, request, err)
-	} else if strings.Contains(err.Error(), "MANIFEST_UNKNOWN") {
-		api.HandleNotFound(response, request, err)
-	} else {
-		api.HandleBadRequest(response, request, err)
-	}
-}

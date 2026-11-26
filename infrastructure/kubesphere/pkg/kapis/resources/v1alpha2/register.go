@@ -80,21 +80,6 @@ func AddToContainer(c *restful.Container, k8sClient kubernetes.Interface, factor
 		Param(webservice.QueryParameter(params.ReverseParam, "sort parameters, e.g. reverse=true")).
 		Param(webservice.QueryParameter(params.OrderByParam, "sort parameters, e.g. orderBy=createTime")))
 
-	webservice.Route(webservice.GET("/users/{user}/kubectl").
-		To(handler.GetKubectlPod).
-		Doc("get user's kubectl pod").
-		Param(webservice.PathParameter("user", "username")).
-		Metadata(restfulspec.KeyOpenAPITags, []string{constants.ToolboxTag}).
-		Returns(http.StatusOK, api.StatusOK, models.PodInfo{}))
-
-	webservice.Route(webservice.GET("/users/{user}/kubeconfig").
-		Produces("text/plain", restful.MIME_JSON).
-		To(handler.GetKubeconfig).
-		Doc("get users' kubeconfig").
-		Param(webservice.PathParameter("user", "username")).
-		Returns(http.StatusOK, api.StatusOK, "").
-		Metadata(restfulspec.KeyOpenAPITags, []string{constants.ToolboxTag}))
-
 	webservice.Route(webservice.GET("/components").
 		To(handler.handleGetComponents).
 		Metadata(restfulspec.KeyOpenAPITags, []string{constants.ComponentStatusTag}).
@@ -112,12 +97,6 @@ func AddToContainer(c *restful.Container, k8sClient kubernetes.Interface, factor
 		Metadata(restfulspec.KeyOpenAPITags, []string{constants.ComponentStatusTag}).
 		Doc("Get the health status of system components.").
 		Returns(http.StatusOK, api.StatusOK, v1alpha2.HealthStatus{}))
-
-	webservice.Route(webservice.GET("/quotas").
-		To(handler.handleGetClusterQuotas).
-		Doc("get whole cluster's resource usage").
-		Returns(http.StatusOK, api.StatusOK, api.ResourceQuota{}).
-		Metadata(restfulspec.KeyOpenAPITags, []string{constants.ClusterResourcesTag}))
 
 	webservice.Route(webservice.GET("/namespaces/{namespace}/quotas").
 		Doc("get specified namespace's resource quota and usage").

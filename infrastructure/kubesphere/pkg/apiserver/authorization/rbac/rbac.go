@@ -22,6 +22,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 	iamv1alpha2 "kubesphere.io/api/iam/v1alpha2"
 	"kubesphere.io/kubesphere/pkg/utils/sliceutil"
@@ -76,16 +77,6 @@ func (v *authorizingVisitor) visit(source fmt.Stringer, regoPolicy string, rule 
 type ruleAccumulator struct {
 	rules  []rbacv1.PolicyRule
 	errors []error
-}
-
-func (r *ruleAccumulator) visit(_ fmt.Stringer, _ string, rule *rbacv1.PolicyRule, err error) bool {
-	if rule != nil {
-		r.rules = append(r.rules, *rule)
-	}
-	if err != nil {
-		r.errors = append(r.errors, err)
-	}
-	return true
 }
 
 func (r *RBACAuthorizer) Authorize(requestAttributes authorizer.Attributes) (authorizer.Decision, string, error) {
@@ -193,12 +184,6 @@ func regoPolicyAllows(requestAttributes authorizer.Attributes, regoPolicy string
 	return false
 }
 
-func (r *RBACAuthorizer) rulesFor(requestAttributes authorizer.Attributes) ([]rbacv1.PolicyRule, error) {
-	visitor := &ruleAccumulator{}
-	r.visitRulesFor(requestAttributes, visitor.visit)
-	return visitor.rules, utilerrors.NewAggregate(visitor.errors)
-}
-
 func (r *RBACAuthorizer) visitRulesFor(requestAttributes authorizer.Attributes, visitor func(source fmt.Stringer, regoPolicy string, rule *rbacv1.PolicyRule, err error) bool) {
 
 	if globalRoleBindings, err := r.am.ListGlobalRoleBindings(""); err != nil {
@@ -276,27 +261,9 @@ type clusterRoleBindingDescriber struct {
 	subject *rbacv1.Subject
 }
 
-func (d *clusterRoleBindingDescriber) String() string {
-	return fmt.Sprintf("ClusterRoleBinding %q of %s %q to %s",
-		d.binding.Name,
-		d.binding.RoleRef.Kind,
-		d.binding.RoleRef.Name,
-		describeSubject(d.subject, ""),
-	)
-}
-
 type roleBindingDescriber struct {
 	binding *rbacv1.RoleBinding
 	subject *rbacv1.Subject
-}
-
-func (d *roleBindingDescriber) String() string {
-	return fmt.Sprintf("RoleBinding %q of %s %q to %s",
-		d.binding.Name+"/"+d.binding.Namespace,
-		d.binding.RoleRef.Kind,
-		d.binding.RoleRef.Name,
-		describeSubject(d.subject, d.binding.Namespace),
-	)
 }
 
 func describeSubject(s *rbacv1.Subject, bindingNamespace string) string {

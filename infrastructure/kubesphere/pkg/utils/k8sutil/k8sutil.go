@@ -18,8 +18,6 @@ package k8sutil
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 )
 
 // IsControlledBy returns whether the ownerReferences contains the specified resource kind
@@ -30,19 +28,4 @@ func IsControlledBy(ownerReferences []metav1.OwnerReference, kind string, name s
 		}
 	}
 	return false
-}
-
-// LoadKubeConfigFromBytes parses the kubeconfig yaml data to the rest.Config struct.
-func LoadKubeConfigFromBytes(kubeconfig []byte) (*rest.Config, error) {
-	clientConfig, err := clientcmd.NewClientConfigFromBytes(kubeconfig)
-	if err != nil {
-		return nil, err
-	}
-
-	config, err := clientConfig.ClientConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	return config, nil
 }

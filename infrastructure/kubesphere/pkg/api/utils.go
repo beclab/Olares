@@ -46,18 +46,6 @@ func HandleForbidden(response *restful.Response, req *restful.Request, err error
 	handle(http.StatusForbidden, response, req, err)
 }
 
-func HandleUnauthorized(response *restful.Response, req *restful.Request, err error) {
-	handle(http.StatusUnauthorized, response, req, err)
-}
-
-func HandleTooManyRequests(response *restful.Response, req *restful.Request, err error) {
-	handle(http.StatusTooManyRequests, response, req, err)
-}
-
-func HandleConflict(response *restful.Response, req *restful.Request, err error) {
-	handle(http.StatusConflict, response, req, err)
-}
-
 func HandleError(response *restful.Response, req *restful.Request, err error) {
 	var statusCode int
 	switch t := err.(type) {
