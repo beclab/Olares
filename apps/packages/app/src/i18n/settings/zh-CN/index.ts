@@ -45,6 +45,8 @@ export default {
 	modify_limits: '修改限制',
 	delete_user: '删除用户',
 	delete_user_message: '您确定要删除账户“{account}”吗？',
+	account_delete_request_failed: '删除请求失败（HTTP {status}）。请先刷新用户列表，再决定是否重试。',
+	account_delete_status_pending: '暂时无法确认删除结果。删除可能仍在进行，请刷新用户列表查看。',
 	reset_password_successfully: '密码重置成功',
 	new_password_is: '新密码是“{password}”',
 	resource_usage: '资源使用',

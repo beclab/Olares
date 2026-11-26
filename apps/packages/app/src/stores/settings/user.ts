@@ -107,9 +107,11 @@ export const useUserStore = defineStore('settingsUser', {
 			this.update_account(data);
 		},
 
-		async delete_account(username: string) {
+		async delete_account(username: string, signal?: AbortSignal) {
 			const tokenStore = useTokenStore();
-			return await axios.delete(tokenStore.url + '/api/users/' + username, {});
+			return await axios.delete(tokenStore.url + '/api/users/' + username, {
+				signal
+			});
 		},
 
 		async removeLocalAccount(username: string) {
@@ -130,10 +132,14 @@ export const useUserStore = defineStore('settingsUser', {
 			return data;
 		},
 
-		async get_account_status(username: string): Promise<AccountModifyStatus> {
+		async get_account_status(
+			username: string,
+			signal?: AbortSignal
+		): Promise<AccountModifyStatus> {
 			const tokenStore = useTokenStore();
 			const data: any = await axios.get(
-				tokenStore.url + '/api/users/' + username + '/status'
+				tokenStore.url + '/api/users/' + username + '/status',
+				{ signal }
 			);
 			return data;
 		},

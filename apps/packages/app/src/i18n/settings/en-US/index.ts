@@ -49,6 +49,8 @@ export default {
 	modify_limits: 'Modify limits',
 	delete_user: 'Delete user',
 	delete_user_message: "Are you sure to delete account '{account}'?",
+	account_delete_request_failed: 'The delete request failed (HTTP {status}). Refresh the user list before trying again.',
+	account_delete_status_pending: 'Deletion could not be confirmed. It may still be running. Refresh the user list to check the result.',
 	reset_password_successfully: 'Password reset successfully',
 	new_password_is: "The new password is '{password}'",
 	resource_usage: 'Resource usage',

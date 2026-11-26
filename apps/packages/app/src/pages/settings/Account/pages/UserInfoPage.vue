@@ -234,7 +234,12 @@ import BtList from 'src/components/settings/base/BtList.vue';
 import { useUserStore } from 'src/stores/settings/user';
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { copyToClipboard, Loading, useQuasar } from 'quasar';
-import { notifySuccess } from 'src/utils/settings/btNotify';
+import {
+	notifyFailed,
+	notifySuccess,
+	notifyWarning
+} from 'src/utils/settings/btNotify';
+import { isAxiosError } from 'axios';
 import { useDeviceStore } from 'src/stores/settings/device';
 import { useAdminStore } from 'src/stores/settings/admin';
 import { useTokenStore } from 'src/stores/settings/token';
@@ -244,11 +249,7 @@ import { passwordAddSort } from 'src/utils/account';
 import { useRoute, useRouter } from 'vue-router';
 import { generatePasword } from '../utils';
 import { useI18n } from 'vue-i18n';
-import {
-	AccountInfo,
-	AccountModifyStatus,
-	AccountStatus
-} from 'src/constant/global';
+import { AccountInfo, AccountStatus } from 'src/constant/global';
 import {
 	get_cluster_resource,
 	get_user_resource,
@@ -330,74 +331,110 @@ const isDemo = computed(() => {
 	return !!process.env.DEMO;
 });
 
-let checkAccountDeleteProgress: any = null;
+let deletion: AbortController | undefined;
+
+const stopAccountDeletion = () => {
+	if (!deletion) {
+		return;
+	}
+	const request = deletion;
+	deletion = undefined;
+	request.abort();
+	Loading.hide();
+};
 
 const deleteUser = () => {
-	if (!userInfo.value) {
+	if (!userInfo.value || !managerPermission.value || deletion) {
 		return;
 	}
 
+	const userName = userInfo.value.name;
 	quasar
 		.dialog({
 			component: ReminderDialogComponent,
 			componentProps: {
 				title: t('delete_item', {
-					item: userInfo.value.name
+					item: userName
 				}),
 				message: t('delete_user_message', {
-					account: userInfo.value.name
+					account: userName
 				}),
 				useCancel: true
 			}
 		})
 		.onOk(() => {
-			deleteUserSureAction();
+			void deleteUserSureAction(userName);
 		});
 };
 
-const deleteUserSureAction = async () => {
-	if (!userInfo.value) {
+const deleteUserSureAction = async (userName: string) => {
+	if (deletion || Route.params.name !== userName || !managerPermission.value) {
 		return;
 	}
-	const userName = userInfo.value.name;
+	const request = new AbortController();
+	deletion = request;
+	const timeout = setTimeout(() => request.abort(), 120_000);
+	let submitted = false;
+	let pollTimer: ReturnType<typeof setTimeout> | undefined;
+	const pause = () =>
+		new Promise<void>((resolve) => {
+			const done = () => {
+				clearTimeout(pollTimer);
+				request.signal.removeEventListener('abort', done);
+				resolve();
+			};
+			request.signal.addEventListener('abort', done, { once: true });
+			pollTimer = setTimeout(done, 4000);
+		});
+
 	Loading.show();
 	try {
-		await userStore.delete_account(userName);
-		checkAccountDeleteProgress = setInterval(async () => {
-			checkAccountDelete(userName);
-		}, 4 * 1000);
-	} catch (error: any) {
-		console.log(error);
-		Loading.hide();
+		await userStore.delete_account(userName, request.signal);
+		submitted = true;
+		while (deletion === request && !request.signal.aborted) {
+			const result = await userStore.get_account_status(
+				userName,
+				request.signal
+			);
+			if (deletion !== request || request.signal.aborted) {
+				break;
+			}
+			if (result?.name !== userName || !result.status) {
+				throw new Error('Invalid account deletion status');
+			}
+			if (result.status === AccountStatus.Deleted) {
+				userStore.removeLocalAccount(userName);
+				useWebsocketManager2Store().apply('usersUpdate', {
+					type: 'delete',
+					username: userName
+				});
+				await router.replace('/user');
+				return;
+			}
+			await pause();
+		}
+		if (deletion === request) {
+			notifyWarning(t('account_delete_status_pending'));
+		}
+	} catch (error) {
+		if (deletion !== request) {
+			return;
+		}
+		const status = isAxiosError(error) ? error.response?.status : undefined;
+		if (submitted || request.signal.aborted || !status) {
+			notifyWarning(t('account_delete_status_pending'));
+		} else {
+			notifyFailed(t('account_delete_request_failed', { status }));
+		}
+	} finally {
+		clearTimeout(timeout);
+		clearTimeout(pollTimer);
+		if (deletion === request) {
+			deletion = undefined;
+			Loading.hide();
+		}
 	}
 };
-
-async function checkAccountDelete(username: string) {
-	try {
-		const data: AccountModifyStatus = await userStore.get_account_status(
-			username
-		);
-		if (data.status == AccountStatus.Deleted) {
-			if (checkAccountDeleteProgress) {
-				clearInterval(checkAccountDeleteProgress);
-			}
-			userStore.removeLocalAccount(username);
-
-			const socketStore = useWebsocketManager2Store();
-			socketStore.apply('usersUpdate', {
-				type: 'delete',
-				username: username
-			});
-
-			setTimeout(() => {
-				Loading.hide();
-				router.replace('/user');
-			}, 4 * 1000);
-		}
-	} catch (e) {
-		/* empty */
-	}
-}
 
 const updatePassword = () => {
 	quasar.dialog({
@@ -507,6 +544,7 @@ watch(
 	() => Route.params.name,
 	async (val) => {
 		const username = val as string;
+		stopAccountDeletion();
 		stopUserInfoPolling();
 		await updateUserInfo(username);
 	}
@@ -518,10 +556,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-	if (checkAccountDeleteProgress) {
-		clearInterval(checkAccountDeleteProgress);
-		checkAccountDeleteProgress = null;
-	}
+	stopAccountDeletion();
 	stopUserInfoPolling();
 });
 

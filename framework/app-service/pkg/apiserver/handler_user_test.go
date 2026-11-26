@@ -186,3 +186,38 @@ func TestDeleteUserAuthorizesCurrentActorBeforeMutation(t *testing.T) {
 		})
 	}
 }
+
+func TestUserStatusReportsDeletionWithoutActivationMetadata(t *testing.T) {
+	scheme := runtime.NewScheme()
+	if err := iamv1alpha2.AddToScheme(scheme); err != nil {
+		t.Fatal(err)
+	}
+	now := metav1.Now()
+	target := &iamv1alpha2.User{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "bob", DeletionTimestamp: &now, Finalizers: []string{"fixture.example/cleanup"},
+		},
+		Status: iamv1alpha2.UserStatus{State: "Failed"},
+	}
+	h := &Handler{ctrlClient: fake.NewClientBuilder().WithScheme(scheme).WithObjects(target).Build()}
+	ws := new(restful.WebService).Path("/app-service/v1").Produces(restful.MIME_JSON)
+	ws.Filter(h.authenticate)
+	ws.Route(ws.GET("/users/{user}/status").To(h.userStatus))
+	container := restful.NewContainer().Add(ws)
+
+	for user, want := range map[string]string{"bob": "Deleting", "already-removed": "Deleted"} {
+		t.Run(want, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "/app-service/v1/users/"+user+"/status", nil)
+			req.Header.Set(constants.BflUserKey, "alice")
+			resp := httptest.NewRecorder()
+			container.ServeHTTP(resp, req)
+			var body struct {
+				Data struct{ Name, Status string }
+			}
+			if resp.Code != http.StatusOK || json.Unmarshal(resp.Body.Bytes(), &body) != nil ||
+				body.Data.Name != user || body.Data.Status != want {
+				t.Fatalf("deletion status returned %d: %s, want %s", resp.Code, resp.Body, want)
+			}
+		})
+	}
+}

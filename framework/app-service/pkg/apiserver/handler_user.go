@@ -298,6 +298,17 @@ func (h *Handler) userStatus(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
+	if !user.DeletionTimestamp.IsZero() {
+		resp.WriteAsJson(map[string]interface{}{
+			"code": 200,
+			"data": map[string]string{
+				"name":   username,
+				"status": "Deleting",
+			},
+		})
+		return
+	}
+
 	isEphemeral, zone, err := h.getUserDomainType(&user)
 	if err != nil {
 		api.HandleError(resp, req, err)
