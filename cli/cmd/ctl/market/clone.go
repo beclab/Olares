@@ -131,9 +131,13 @@ func runClone(opts *MarketOptions, appName string) error {
 	if err := checkDeclaredComputeMode(appInfo, appName, computeMode); err != nil {
 		return opts.failOp("clone", appName, err)
 	}
-	selected := ""
+	consumerModes, err := parseConsumerModeFlags(opts.ConsumerModes)
+	if err != nil {
+		return opts.failOp("clone", appName, err)
+	}
+	selected := computeSelection{Consumers: consumerModes}
 	if atLeast126 {
-		selected = computeMode
+		selected.Mode = computeMode
 	}
 
 	// Template bodies (templateOnly) are cloned to create instances even
@@ -153,12 +157,12 @@ func runClone(opts *MarketOptions, appName string) error {
 	// branch even when the probe was skipped or failed (atLeast126 false).
 	if err != nil {
 		if checkType, raw := parseFailedCheck(resp); isComputeModeSelect(checkType) {
-			mode, merr := resolveComputeMode(raw, appName, computeMode, opts.isInteractive())
+			next, merr := resolveComputeSelection(raw, appName, computeMode, consumerModes, opts.isInteractive())
 			if merr != nil {
 				return opts.failOp("clone", appName, merr)
 			}
-			opts.info("Selected compute mode: %s", mode)
-			resp, err = mc.CloneApp(ctx, appName, source, title, mode, envs, entrances, templateClone)
+			opts.info("Selected compute mode: %s", next)
+			resp, err = mc.CloneApp(ctx, appName, source, title, next, envs, entrances, templateClone)
 		}
 	}
 	if err != nil {
