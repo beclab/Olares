@@ -17,14 +17,19 @@ import (
 
 func renderAppServiceMeshManifests(t *testing.T, values map[string]any) (map[string]map[string]any, error) {
 	t.Helper()
-	c := &chart.Chart{Metadata: &chart.Metadata{Name: "app-service-mesh-test"}}
-	for _, file := range []string{
+	return renderMeshManifests(t, values,
 		"../../.olares/config/cluster/deploy/appservice_deploy.yaml",
 		"../../.olares/config/cluster/deploy/appservice_api_mesh.yaml",
 		"../../../market/.olares/config/cluster/deploy/market_deploy.yaml",
 		"../../../market/.olares/config/cluster/deploy/market_backend_mesh.yaml",
 		"../../../../apps/.olares/config/user/helm-charts/system-apps/templates/market-frontend-mesh.yaml",
-	} {
+	)
+}
+
+func renderMeshManifests(t *testing.T, values map[string]any, templates ...string) (map[string]map[string]any, error) {
+	t.Helper()
+	c := &chart.Chart{Metadata: &chart.Metadata{Name: "app-service-mesh-test"}}
+	for _, file := range templates {
 		data, err := os.ReadFile(file)
 		if err != nil {
 			t.Fatal(err)
@@ -101,7 +106,36 @@ func TestAppServiceAPIMeshRolloutAndPortBoundaries(t *testing.T) {
 		t.Fatal("Market needs its proxy before its existing init checks")
 	}
 
-	active, err := renderAppServiceMeshManifests(t, meshValues(true, true))
+	activeValues := meshValues(true, true)
+	withoutMarketStrict, err := renderAppServiceMeshManifests(t, activeValues)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if withoutMarketStrict["HTTPRoute/market-install-alice"] != nil ||
+		withoutMarketStrict["AuthorizationPolicy/market-app-progress-alice"] != nil ||
+		withoutMarketStrict["AuthorizationPolicy/market-status-user"] == nil {
+		t.Fatal("Market without strict ingress may use the existing status aggregation routes only")
+	}
+	activeValues["marketLinkerd"] = true
+	activeValues["marketBackendMTLS"] = map[string]any{"prepare": true, "activate": true, "tenants": []string{"alice", "bob"}}
+	rollout, err := renderAppServiceMeshManifests(t, activeValues)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rollout["Server/market-backend"] == nil || rollout["HTTPRoute/market-install-alice"] != nil {
+		t.Fatal("Market rollout must prepare strict ingress without granting install to old replicas")
+	}
+	activeValues["appServiceAPIMesh"].(map[string]any)["marketLifecycle"] = true
+	activeValues["marketBackendMTLS"] = map[string]any{"prepare": true, "activate": false, "tenants": []string{"alice", "bob"}}
+	if _, err := renderAppServiceMeshManifests(t, activeValues); err == nil {
+		t.Fatal("Market lifecycle routes accepted unactivated Market ingress")
+	}
+	activeValues["marketBackendMTLS"] = map[string]any{"prepare": true, "activate": true, "tenants": []string{"alice"}}
+	if _, err := renderAppServiceMeshManifests(t, activeValues); err == nil {
+		t.Fatal("Market lifecycle routes accepted different ingress and API tenant inventories")
+	}
+	activeValues["marketBackendMTLS"] = map[string]any{"prepare": true, "activate": true, "tenants": []string{"bob", "alice"}}
+	active, err := renderAppServiceMeshManifests(t, activeValues)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -138,6 +172,10 @@ func TestAppServiceAPIMeshRolloutAndPortBoundaries(t *testing.T) {
 		{"market-status-user-resource", "os-framework", "market-sa", "GET", "/app-service/v1/user/resource", "", "Exact"},
 		{"market-status-cluster-resource", "os-framework", "market-sa", "GET", "/app-service/v1/cluster/resource", "", "Exact"},
 		{"market-status-version", "os-framework", "market-sa", "GET", "/app-service/v1/terminus/version", "", "Exact"},
+		{"market-install-alice", "os-framework", "market-sa", "POST", "^/app-service/v1/apps/[a-z0-9]([a-z0-9-]*[a-z0-9])?/install$", "alice", "RegularExpression"},
+		{"market-install-bob", "os-framework", "market-sa", "POST", "^/app-service/v1/apps/[a-z0-9]([a-z0-9-]*[a-z0-9])?/install$", "bob", "RegularExpression"},
+		{"market-app-progress-alice", "os-framework", "market-sa", "GET", "^/app-service/v1/apps/[a-z0-9]([a-z0-9-]*[a-z0-9])?/status$", "alice", "RegularExpression"},
+		{"market-app-progress-bob", "os-framework", "market-sa", "GET", "^/app-service/v1/apps/[a-z0-9]([a-z0-9-]*[a-z0-9])?/status$", "bob", "RegularExpression"},
 		{"settings-apps-alice", "user-system-alice", "bytetrade-sys-ops", "GET", "/app-service/v1/apps", "alice", "Exact"},
 		{"settings-compute-alice", "user-system-alice", "bytetrade-sys-ops", "GET", "/app-service/v1/compute-resources", "alice", "Exact"},
 		{"settings-user-bob", "user-system-bob", "bytetrade-sys-ops", "GET", "/app-service/v1/users/bob", "bob", "Exact"},
@@ -147,7 +185,7 @@ func TestAppServiceAPIMeshRolloutAndPortBoundaries(t *testing.T) {
 		match := map[string]any{
 			"path": map[string]any{"type": tc.pathType, "value": tc.path}, "method": tc.method,
 		}
-		if tc.pathType == "RegularExpression" {
+		if strings.HasPrefix(tc.name, "settings-attachments-") {
 			pattern := regexp.MustCompile(tc.path)
 			for _, path := range []string{"/app-service/v1/applications/olares-app/attachments", "/app-service/v1/applications/app-3/device-inventory", "/app-service/v1/applications/a/attachment-capabilities"} {
 				if !pattern.MatchString(path) {
@@ -157,6 +195,19 @@ func TestAppServiceAPIMeshRolloutAndPortBoundaries(t *testing.T) {
 			for _, path := range []string{"/app-service/v1/applications/a/setup", "/app-service/v1/applications/a/attachments/extra", "/app-service/v1/applications/a/../a/attachments", "/app-service/v1/applications/a%2fb/attachments", "/app-service/v1/applications/a/attachments/", "/v1/applications/a/attachments"} {
 				if pattern.MatchString(path) {
 					t.Fatalf("Settings route admits unrelated path %s", path)
+				}
+			}
+		}
+		if strings.HasPrefix(tc.name, "market-install-") {
+			pattern := regexp.MustCompile(tc.path)
+			for _, path := range []string{"/app-service/v1/apps/openclaw/install", "/app-service/v1/apps/app-1/install"} {
+				if !pattern.MatchString(path) {
+					t.Fatalf("install route misses %s", path)
+				}
+			}
+			for _, path := range []string{"/app-service/v1/apps/a/uninstall", "/app-service/v1/apps/a/install/extra", "/app-service/v1/apps/a%2fb/install", "/app-service/v1/apps/a/../b/install", "/app-service/v1/apps/a-/install"} {
+				if pattern.MatchString(path) {
+					t.Fatalf("install route covers unrelated path %s", path)
 				}
 			}
 		}

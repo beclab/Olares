@@ -22,12 +22,18 @@ func TestAuthenticateRequiresSingleCanonicalTenantIdentity(t *testing.T) {
 	ws.Route(ws.GET("/apps").To(tenant))
 	ws.Route(ws.GET("/compute-resources").To(tenant))
 	ws.Route(ws.GET("/applications/{name}/attachments").To(tenant))
+	ws.Route(ws.POST("/apps/{name}/install").To(tenant))
 	ws.Route(ws.GET("/terminus/version").To(func(_ *restful.Request, resp *restful.Response) {
 		resp.WriteHeader(http.StatusNoContent)
 	}))
 	c.Add(ws)
 
-	for _, path := range []string{"/apps", "/compute-resources", "/applications/example/attachments"} {
+	for _, route := range []struct{ method, path string }{
+		{http.MethodGet, "/apps"},
+		{http.MethodGet, "/compute-resources"},
+		{http.MethodGet, "/applications/example/attachments"},
+		{http.MethodPost, "/apps/example/install"},
+	} {
 		for _, tc := range []struct {
 			name   string
 			values []string
@@ -40,8 +46,8 @@ func TestAuthenticateRequiresSingleCanonicalTenantIdentity(t *testing.T) {
 			{"merged tenants", []string{"alice,bob"}, http.StatusUnauthorized},
 			{"noncanonical identity", []string{" alice"}, http.StatusUnauthorized},
 		} {
-			t.Run(path+"/"+tc.name, func(t *testing.T) {
-				req := httptest.NewRequest(http.MethodGet, "/app-service/v1"+path, nil)
+			t.Run(route.path+"/"+tc.name, func(t *testing.T) {
+				req := httptest.NewRequest(route.method, "/app-service/v1"+route.path, nil)
 				for _, value := range tc.values {
 					req.Header.Add(constants.BflUserKey, value)
 				}

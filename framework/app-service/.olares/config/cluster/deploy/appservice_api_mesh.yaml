@@ -1,10 +1,15 @@
 {{- $mesh := default dict .Values.appServiceAPIMesh -}}
+{{- $marketMesh := default dict .Values.marketBackendMTLS -}}
 {{- if $mesh.prepare -}}
 {{- if ne .Release.Namespace "os-framework" -}}
 {{- fail "app-service API mesh policies belong in os-framework" -}}
 {{- end -}}
 {{- if or (not $mesh.tenants) (ne (len (default (list) $mesh.tenants)) (len (uniq (default (list) $mesh.tenants)))) -}}
 {{- fail "app-service API mTLS requires an explicit tenant inventory" -}}
+{{- end -}}
+{{- /* Enable only after the strict Market replicas are serving. The old replicas share market-sa. */ -}}
+{{- if and $mesh.marketLifecycle (or (not $marketMesh.activate) (not $marketMesh.prepare) (not .Values.marketLinkerd) (not (deepEqual (sortAlpha $mesh.tenants) (sortAlpha $marketMesh.tenants)))) -}}
+{{- fail "Market lifecycle routes require prepared Market mTLS and proxy injection for the same tenants" -}}
 {{- end -}}
 {{- $routes := list (dict "name" "market-image-info" "namespace" "os-framework" "account" "market-sa" "method" "POST" "path" "/app-service/v1/apps/image-info") -}}
 {{- range $name, $path := dict "market-status-user" "/user-info" "market-status-user-resource" "/user/resource" "market-status-cluster-resource" "/cluster/resource" "market-status-version" "/terminus/version" -}}
@@ -13,6 +18,11 @@
 {{- range $tenant := $mesh.tenants -}}
 {{- if or (gt (len $tenant) 51) (not (regexMatch "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$" $tenant)) -}}
 {{- fail "invalid app-service API mTLS tenant" -}}
+{{- end -}}
+{{- if $mesh.marketLifecycle -}}
+{{- $marketAppPath := "^/app-service/v1/apps/[a-z0-9]([a-z0-9-]*[a-z0-9])?" -}}
+{{- $routes = append $routes (dict "name" (printf "market-install-%s" $tenant) "namespace" "os-framework" "account" "market-sa" "method" "POST" "path" (printf "%s/install$" $marketAppPath) "pathType" "RegularExpression" "userHeader" $tenant) -}}
+{{- $routes = append $routes (dict "name" (printf "market-app-progress-%s" $tenant) "namespace" "os-framework" "account" "market-sa" "method" "GET" "path" (printf "%s/status$" $marketAppPath) "pathType" "RegularExpression" "userHeader" $tenant) -}}
 {{- end -}}
 {{- $routes = append $routes (dict "name" (printf "user-apps-%s" $tenant) "namespace" (printf "user-system-%s" $tenant) "account" "bytetrade-sys-ops" "method" "GET" "path" (printf "/app-service/v1/user-apps/%s" $tenant)) -}}
 {{- $routes = append $routes (dict "name" (printf "users-%s" $tenant) "namespace" (printf "user-system-%s" $tenant) "account" "bytetrade-sys-ops" "method" "GET" "path" "/app-service/v1/users" "userHeader" $tenant) -}}
