@@ -71,7 +71,12 @@ func (h *Handler) getAttachmentCapabilities(req *restful.Request, resp *restful.
 	if err != nil {
 		return
 	}
-	_, cfg, _, _, err := h.sidecarWebhook.GetAppConfig(app.Spec.Namespace)
+	manager, cfg, _, _, err := h.sidecarWebhook.GetAppConfig(app.Spec.Namespace)
+	if isUnconfiguredBuiltinApp(app, manager) {
+		// The built-in Olares App has no chart-declared attachment capabilities.
+		resp.WriteAsJson(attachmentCapabilitiesResponse(&appcfg.ApplicationConfig{}))
+		return
+	}
 	if err != nil {
 		api.HandleError(resp, req, err)
 		return
@@ -84,6 +89,13 @@ func (h *Handler) getAttachmentCapabilities(req *restful.Request, resp *restful.
 	if err := resp.WriteAsJson(&result); err != nil {
 		api.HandleInternalError(resp, req, err)
 	}
+}
+
+func isUnconfiguredBuiltinApp(app *appv1alpha1.Application, manager *appv1alpha1.ApplicationManager) bool {
+	return manager != nil && app.Spec.IsSysApp && app.Spec.Name == "olares-app" && app.Spec.Owner != "" &&
+		app.Spec.Namespace == "user-space-"+app.Spec.Owner &&
+		manager.Spec.AppName == app.Spec.Name && manager.Spec.AppOwner == app.Spec.Owner &&
+		manager.Spec.AppNamespace == app.Spec.Namespace && strings.TrimSpace(manager.Spec.Config) == ""
 }
 
 func attachmentCapabilitiesResponse(cfg *appcfg.ApplicationConfig) AttachmentCapabilitiesResponse {

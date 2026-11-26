@@ -100,7 +100,8 @@ func (wh *Webhook) GetAppConfig(namespace string) (appMgr *v1alpha1.ApplicationM
 
 // GetAppConfigForNamespace resolves the application that owns namespace,
 // returning api.ErrApplicationManagerNotFound when the namespace belongs
-// to no application.
+// to no application. If a matched manager has invalid config, it is returned
+// along with the decoding error so callers can distinguish that case.
 //
 // Both reads go straight to the API server rather than through an
 // informer cache. Admission decides what a pod becomes at the moment it
@@ -150,7 +151,7 @@ func getAppConfigForNamespace(ctx context.Context, appClient versioned.Interface
 			includeSubcharts && meshinagent.InstalledAppOwnsNamespace(ns, &a):
 			err = json.Unmarshal([]byte(a.Spec.Config), &appconfig)
 			if err != nil {
-				return nil, nil, false, false, err
+				return &a, nil, false, false, err
 			}
 			// isShared keeps the legacy heuristic (ws/upload/oes/mesh-out/appkey).
 			// isSharedApp is the union source for mesh-in only (v2 heuristic + v3 labels).

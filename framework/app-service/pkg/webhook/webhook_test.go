@@ -1,15 +1,35 @@
 package webhook
 
 import (
+	"context"
 	"encoding/json"
 	"testing"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
+	appfake "github.com/beclab/api/pkg/generated/clientset/versioned/fake"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8sfake "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/utils/ptr"
 )
+
+func TestGetAppConfigPreservesManagerOnConfigError(t *testing.T) {
+	const namespace = "user-space-alice"
+	manager := &appv1alpha1.ApplicationManager{ObjectMeta: metav1.ObjectMeta{Name: "user-space-alice-olares-app"}}
+	manager.Spec.Type = appv1alpha1.App
+	manager.Spec.AppName = "olares-app"
+	manager.Spec.AppNamespace = namespace
+	manager.Spec.AppOwner = "alice"
+	appClient := appfake.NewSimpleClientset(manager)
+	kubeClient := k8sfake.NewSimpleClientset(&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}})
+	got, config, _, _, err := GetAppConfigForNamespace(context.Background(), appClient, kubeClient, namespace)
+	if err == nil || config != nil || got == nil || got.Name != manager.Name || got.Spec.AppOwner != "alice" {
+		t.Fatalf("wanted the matching manager and a decoding error, got manager=%v config=%v err=%v", got, config, err)
+	}
+}
 
 // makeContainer is a small helper that builds a corev1.Container with the
 // given limits/requests resource lists, parsing each value as a Quantity.

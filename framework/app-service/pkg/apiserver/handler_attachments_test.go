@@ -50,6 +50,48 @@ func TestAttachmentCapabilitiesResponse(t *testing.T) {
 	}
 }
 
+func TestUnconfiguredBuiltinAppAttachmentCapabilities(t *testing.T) {
+	app := &appv1alpha1.Application{}
+	app.Spec.Name = "olares-app"
+	app.Spec.IsSysApp = true
+	app.Spec.Owner = "alice"
+	app.Spec.Namespace = "user-space-alice"
+	manager := &appv1alpha1.ApplicationManager{}
+	manager.Spec.AppName = app.Spec.Name
+	manager.Spec.AppOwner = app.Spec.Owner
+	manager.Spec.AppNamespace = app.Spec.Namespace
+	if !isUnconfiguredBuiltinApp(app, manager) {
+		t.Fatal("platform ApplicationManager with an empty config should have no attachment capabilities")
+	}
+	payload, err := json.Marshal(attachmentCapabilitiesResponse(&appcfg.ApplicationConfig{}))
+	if err != nil || string(payload) != `{"workloads":[]}` {
+		t.Fatalf("empty capabilities response = %q, %v", payload, err)
+	}
+	for _, tc := range []struct {
+		name   string
+		mutate func(*appv1alpha1.Application, *appv1alpha1.ApplicationManager)
+	}{
+		{"third-party app using built-in name", func(app *appv1alpha1.Application, _ *appv1alpha1.ApplicationManager) { app.Spec.IsSysApp = false }},
+		{"cross-tenant manager", func(_ *appv1alpha1.Application, mgr *appv1alpha1.ApplicationManager) { mgr.Spec.AppOwner = "bob" }},
+		{"cross-tenant namespace", func(app *appv1alpha1.Application, mgr *appv1alpha1.ApplicationManager) {
+			app.Spec.Namespace, mgr.Spec.AppNamespace = "user-space-bob", "user-space-bob"
+		}},
+		{"different application", func(_ *appv1alpha1.Application, mgr *appv1alpha1.ApplicationManager) {
+			mgr.Spec.AppName = "another-app"
+		}},
+		{"malformed nonempty manifest", func(_ *appv1alpha1.Application, mgr *appv1alpha1.ApplicationManager) { mgr.Spec.Config = "{" }},
+		{"configured built-in", func(_ *appv1alpha1.Application, mgr *appv1alpha1.ApplicationManager) { mgr.Spec.Config = "{}" }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			app, manager := app.DeepCopy(), manager.DeepCopy()
+			tc.mutate(app, manager)
+			if isUnconfiguredBuiltinApp(app, manager) {
+				t.Fatal("incorrectly hid an unavailable or configured manifest")
+			}
+		})
+	}
+}
+
 func TestValidateBluetoothAttachment(t *testing.T) {
 	cfg := attachmentTestConfig()
 	inventory := []DeviceInventoryItem{{
