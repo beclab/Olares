@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"slices"
+	"sort"
 	"strings"
 	"sync"
 	"testing"
@@ -63,9 +65,9 @@ type upgradeHarness struct {
 	onStart func(node, stage string)
 }
 
-// readyOn is what a node running this version's olaresd answers.
+// readyOn is what a node running this version's olaresd and olares-cli answers.
 func readyOn(version string) UpgradeReadiness {
-	return UpgradeReadiness{Supported: true, CLIVersion: version}
+	return UpgradeReadiness{Supported: true, CLIVersion: version, DaemonVersion: version, Bootstrap: true}
 }
 
 func stageKey(node, stage string) string { return node + "/" + stage }
@@ -178,9 +180,10 @@ func newUpgradeHarness(t *testing.T, plan UpgradePlan, nodes []inventory.Node) *
 		},
 
 		Upgrade: &UpgradeDeps{
-			Plan:  func(context.Context) (UpgradePlan, error) { return h.plan, nil },
-			Auth:  func(context.Context, string) (string, error) { return "test-token", nil },
-			Local: &harnessRunner{h: h, node: selfNameOf(nodes), start: start},
+			CheckSource: func(context.Context) error { return nil },
+			Plan:        func(context.Context) (UpgradePlan, error) { return h.plan, nil },
+			Auth:        func(context.Context, string) (string, error) { return "test-token", nil },
+			Local:       &harnessRunner{h: h, node: selfNameOf(nodes), start: start},
 			Start: func(_ context.Context, n inventory.Node, req UpgradeStageRequest, token string) (UpgradeStageState, error) {
 				if token != "test-token" {
 					return UpgradeStageState{}, fmt.Errorf("worker got token %q", token)
@@ -279,11 +282,17 @@ func samplePlan() UpgradePlan {
 	return UpgradePlan{
 		Version: "1.12.8",
 		Stages: []UpgradeStage{
+			bootstrapStage(),
 			{Name: "01-master", Placement: PlacementAdmin, Tasks: []string{"PublishMarketEnsureApps"}},
 			{Name: "02-all-nodes", Placement: PlacementAllNodes, MaxParallel: 1, Tasks: []string{"MigrateContainerdConfigV3"}},
 			{Name: "03-master", Placement: PlacementAdmin, Tasks: []string{"UpgradeSystemComponents"}},
 		},
 	}
+}
+
+func bootstrapStage() UpgradeStage {
+	return UpgradeStage{Name: StageBootstrap, Placement: PlacementAllNodes, Runner: RunnerOlaresd,
+		Tasks: []string{"InstallOlaresCLI", "BootstrapNode"}}
 }
 
 // newTestStore is an operation store in a directory this test owns.
@@ -337,6 +346,15 @@ func TestUpgradeRejectsPlanForAnotherVersion(t *testing.T) {
 	}
 }
 
+func TestUpgradeRejectsUnsupportedSourceBeforeBootstrap(t *testing.T) {
+	h := newUpgradeHarness(t, samplePlan(), twoNodeCluster())
+	h.deps.Upgrade.CheckSource = func(context.Context) error { return errors.New("incompatible source release") }
+	op := runUpgradeOperation(t, h)
+	if op.Code != CodeUpgradeUnsupported || len(h.order()) != 0 {
+		t.Fatalf("code = %s, stages dispatched = %v", op.Code, h.order())
+	}
+}
+
 func waitForTerminal(t *testing.T, m *Manager, id string) Operation {
 	t.Helper()
 	deadline := time.Now().Add(5 * time.Second)
@@ -361,10 +379,9 @@ func TestUpgradeRunsStagesInOrderWorkersBeforeAdmin(t *testing.T) {
 		t.Fatalf("status = %s (%s: %s)", op.Status, op.Code, op.Error)
 	}
 	want := []string{
-		// Every compute node fetches the release before any of the plan runs.
-		// The control node is absent: the upgrade watcher installed its
-		// binaries before this orchestrator existed to run.
-		"worker-1/" + StageNodePrepare,
+		// Every node is bootstrapped before anything else runs, all at once.
+		"master-1/" + StageBootstrap,
+		"worker-1/" + StageBootstrap,
 		"master-1/01-master",
 		// The all-nodes stage puts the compute node first: the control node
 		// is running the orchestrator and may restart olaresd.
@@ -376,6 +393,7 @@ func TestUpgradeRunsStagesInOrderWorkersBeforeAdmin(t *testing.T) {
 	if len(got) != len(want) {
 		t.Fatalf("dispatched %v, want %v", got, want)
 	}
+	sort.Strings(got[:2])
 	for i := range want {
 		if got[i] != want[i] {
 			t.Fatalf("dispatched %v, want %v", got, want)
@@ -450,10 +468,30 @@ func TestUpgradeFailureIncludesNodeStageAndRedactedCLIDetail(t *testing.T) {
 	}
 }
 
+func TestWorkerDownloadFailureBeforeNotifyStart(t *testing.T) {
+	plan := UpgradePlan{Version: "1.12.9", Stages: []UpgradeStage{
+		bootstrapStage(),
+		{Name: StageDownload, Placement: PlacementAllNodes, Runner: RunnerOlaresd, Tasks: []string{"DownloadWizard"}},
+		{Name: StageNotifyStart, Placement: PlacementAdmin},
+	}}
+	h := newUpgradeHarness(t, plan, twoNodeCluster())
+	h.failAt[stageKey("worker-1", StageDownload)] = true
+
+	op := runUpgradeOperation(t, h)
+	if got := stepNamed(t, op, StageBootstrap).Status; got != StepSucceeded {
+		t.Fatalf("bootstrap = %s, want succeeded", got)
+	}
+	if op.Status != StatusFailed || op.Committed || !strings.Contains(op.Error, "stage download on node worker-1") {
+		t.Fatalf("status = %s, committed = %t, error = %q", op.Status, op.Committed, op.Error)
+	}
+}
+
 // A failed stage stops the upgrade there. Nothing later runs, and the record
 // says partially_failed because earlier stages really did change the cluster.
 func TestUpgradeStopsAtAFailedStage(t *testing.T) {
-	h := newUpgradeHarness(t, samplePlan(), twoNodeCluster())
+	plan := samplePlan()
+	plan.Stages = slices.Insert(plan.Stages, 1, UpgradeStage{Name: StageNotifyStart, Placement: PlacementAdmin})
+	h := newUpgradeHarness(t, plan, twoNodeCluster())
 	h.failAt[stageKey("worker-1", "02-all-nodes")] = true
 
 	op := runUpgradeOperation(t, h)
@@ -487,6 +525,7 @@ func TestBoundedStageRunsAtMostMaxParallelNodes(t *testing.T) {
 	plan := UpgradePlan{
 		Version: "1.12.8",
 		Stages: []UpgradeStage{
+			bootstrapStage(),
 			{Name: "01-all-nodes", Placement: PlacementAllNodes, MaxParallel: 2,
 				Tasks: []string{"MigrateContainerdConfigV3"}},
 		},
@@ -515,7 +554,9 @@ func TestBoundedStageRunsAtMostMaxParallelNodes(t *testing.T) {
 		deadline := time.Now().Add(2 * time.Second)
 		for time.Now().Before(deadline) {
 			mu.Lock()
-			joined := inFlight >= 2
+			// The peak, not the count: the first of a pair to leave would
+			// otherwise strand the other until the deadline.
+			joined := peak >= 2
 			mu.Unlock()
 			if joined {
 				break
@@ -550,7 +591,9 @@ func TestBoundedStageRunsAtMostMaxParallelNodes(t *testing.T) {
 // be handed back for ever and the only way out would be deleting the record
 // off disk.
 func TestFailedUpgradeIsRetriedUnderTheSameRequestID(t *testing.T) {
-	h := newUpgradeHarness(t, samplePlan(), twoNodeCluster())
+	plan := samplePlan()
+	plan.Stages = slices.Insert(plan.Stages, 1, UpgradeStage{Name: StageNotifyStart, Placement: PlacementAdmin})
+	h := newUpgradeHarness(t, plan, twoNodeCluster())
 	h.failAt[stageKey("worker-1", "02-all-nodes")] = true
 	h.deps.Store = newTestStore(t)
 
@@ -1050,16 +1093,14 @@ func TestUpgradeGivesUpWhenDispatchNeverAnswers(t *testing.T) {
 	}
 }
 
-// An olaresd from before staged upgrades existed serves no stage route and
-// serves no readiness route at all. The upgrade has to be refused on that,
-// before any stage runs — dialling it later would 404 in the middle, with
-// earlier stages already applied.
-func TestUpgradeRefusesANodeThatCannotRunStages(t *testing.T) {
+// A node whose olaresd does not answer at all is refused before any stage
+// runs. Only a 404 — an olaresd too old to serve the route — is a node the
+// legacy bootstrap can still reach.
+func TestUpgradeRefusesANodeThatDoesNotAnswer(t *testing.T) {
 	h := newUpgradeHarness(t, samplePlan(), twoNodeCluster())
-	// An older olaresd: no readiness route, so the probe fails at the wire.
 	h.deps.Upgrade.Readiness = func(_ context.Context, n inventory.Node, _, _ string) (UpgradeReadiness, error) {
 		if n.NodeName == "worker-1" {
-			return UpgradeReadiness{}, errors.New("node answered 404 Not Found")
+			return UpgradeReadiness{}, errors.New("connection refused")
 		}
 		return readyOn(h.plan.Version), nil
 	}
@@ -1074,67 +1115,72 @@ func TestUpgradeRefusesANodeThatCannotRunStages(t *testing.T) {
 	}
 }
 
-// A node that still reports the previous olares-cli after it was prepared is
-// refused before any stage of the plan runs. It would otherwise resolve every
-// stage name against the previous version's plan, and nothing downstream
-// compares the two.
-func TestUpgradeRefusesANodeHoldingAnotherVersionAfterPrepare(t *testing.T) {
-	h := newUpgradeHarness(t, samplePlan(), twoNodeCluster())
-	h.readiness["worker-1"] = readyOn("1.12.7")
-
-	op := runUpgradeOperation(t, h)
-
-	if op.Status != StatusFailed || op.Code != CodeVersionMismatch {
-		t.Fatalf("status = %s code = %s, want failed/%s", op.Status, op.Code, CodeVersionMismatch)
+// bootstrapNodeResult is what the bootstrap stage recorded for one node.
+func bootstrapNodeResult(t *testing.T, op Operation, node string) NodeResult {
+	t.Helper()
+	for _, s := range op.Steps {
+		if s.Name != StageBootstrap {
+			continue
+		}
+		for _, n := range s.Nodes {
+			if n.NodeName == node {
+				return n
+			}
+		}
 	}
-	// Preparing it is expected and is what the check is checking; running any
-	// of the plan on it is not.
+	t.Fatalf("no bootstrap record for %s in %+v", node, op.Steps)
+	return NodeResult{}
+}
+
+func assertOnlyBootstrapRan(t *testing.T, h *upgradeHarness) {
+	t.Helper()
 	for _, key := range h.order() {
-		if !strings.HasSuffix(key, StageNodePrepare) {
-			t.Errorf("dispatched plan work %q to a node that is not on the target version", key)
+		if !strings.HasSuffix(key, "/"+StageBootstrap) {
+			t.Errorf("dispatched %q after a node failed its bootstrap", key)
 		}
 	}
 }
 
-// A node that could not be brought to the target release stops the upgrade
-// before any of the plan runs anywhere.
-func TestUpgradeThatFailsPreparingANodeIsNotPartiallyApplied(t *testing.T) {
+// A bootstrap that says it finished is not taken at its word. The node is let
+// through only when it reports the target olaresd and the target olares-cli,
+// because every later stage name is resolved by that olares-cli on that
+// olaresd.
+func TestUpgradeRefusesANodeThatDoesNotReachTheTargetVersions(t *testing.T) {
+	for name, answer := range map[string]UpgradeReadiness{
+		"old olares-cli": {Supported: true, Bootstrap: true, CLIVersion: "1.12.7", DaemonVersion: "1.12.8"},
+		"old olaresd":    {Supported: true, Bootstrap: true, CLIVersion: "1.12.8", DaemonVersion: "1.12.7"},
+		"no versions":    {Supported: true, Bootstrap: true},
+	} {
+		t.Run(name, func(t *testing.T) {
+			h := newUpgradeHarness(t, samplePlan(), twoNodeCluster())
+			h.deps.Timeouts.Stage = 20 * time.Millisecond
+			h.readiness["worker-1"] = answer
+
+			op := runUpgradeOperation(t, h)
+
+			if op.Status.Terminal() && op.Status == StatusSucceeded {
+				t.Fatal("the upgrade went on past a node that did not reach the target")
+			}
+			if got := bootstrapNodeResult(t, op, "worker-1"); got.Status != NodeFailed || got.Code != CodeVersionMismatch {
+				t.Errorf("worker-1 bootstrap = %s/%s, want failed/%s", got.Status, got.Code, CodeVersionMismatch)
+			}
+			assertOnlyBootstrapRan(t, h)
+		})
+	}
+}
+
+// A node that could not be bootstrapped stops the upgrade before any later
+// stage runs anywhere.
+func TestUpgradeThatFailsBootstrappingANodeIsNotPartiallyApplied(t *testing.T) {
 	h := newUpgradeHarness(t, samplePlan(), twoNodeCluster())
-	h.failAt[stageKey("worker-1", StageNodePrepare)] = true
+	h.failAt[stageKey("worker-1", StageBootstrap)] = true
 
 	op := runUpgradeOperation(t, h)
 
-	if op.Status != StatusFailed {
+	if op.Status != StatusFailed && op.Status != StatusPartiallyFailed {
 		t.Fatalf("status = %s, want failed (%s: %s)", op.Status, op.Code, op.Error)
 	}
-	for _, key := range h.order() {
-		if !strings.HasSuffix(key, StageNodePrepare) {
-			t.Errorf("dispatched plan work %q after failing to prepare a node", key)
-		}
-	}
-}
-
-// A node that declares stages but will not say which olares-cli it holds is
-// refused.
-//
-// It used to be allowed through, on the grounds that it had made no claim to
-// contradict and that the plan digest would catch it at the stage. There is no
-// digest now: comparing versions is the only thing establishing that a stage
-// name means the same work on two machines, so a node that does not answer
-// has not passed the only check there is.
-func TestUpgradeRefusesANodeThatDoesNotReportItsCLIVersion(t *testing.T) {
-	h := newUpgradeHarness(t, samplePlan(), twoNodeCluster())
-	h.readiness["worker-1"] = UpgradeReadiness{Supported: true}
-
-	op := runUpgradeOperation(t, h)
-	if op.Status != StatusFailed || op.Code != CodeVersionMismatch {
-		t.Fatalf("status = %s code = %s, want failed/%s", op.Status, op.Code, CodeVersionMismatch)
-	}
-	for _, key := range h.order() {
-		if !strings.HasSuffix(key, StageNodePrepare) {
-			t.Errorf("dispatched plan work %q to a node that would not state its version", key)
-		}
-	}
+	assertOnlyBootstrapRan(t, h)
 }
 
 // A single-node cluster has no hop to check, so none of the above applies: the
@@ -1681,13 +1727,17 @@ func TestARebootStageWaitsForTheNodeThatSaysItIsGoingDown(t *testing.T) {
 // downloads from the CDN, which on an air-gapped or mirrored install is a
 // machine that cannot be reached — the upgrade works on the control node and
 // fails on every other one.
-func TestTheReleaseLocationsReachTheNodesBeingPrepared(t *testing.T) {
-	h := newUpgradeHarness(t, samplePlan(), twoNodeCluster())
+func TestTheReleaseLocationsReachTheNodesFetchingIt(t *testing.T) {
+	plan := samplePlan()
+	plan.Stages = append(plan.Stages[:1], append([]UpgradeStage{{Name: StageDownload, Placement: PlacementAllNodes,
+		Runner: RunnerOlaresd, Tasks: []string{"DownloadWizard"}}}, plan.Stages[1:]...)...)
+	h := newUpgradeHarness(t, plan, twoNodeCluster())
 	h.deps.Store = newTestStore(t)
 	h.deps.Upgrade.Locations = func() UpgradeLocations {
 		return UpgradeLocations{
 			CliURL:    "https://mirror.internal/olares-cli.tar.gz",
 			WizardURL: "https://mirror.internal/wizard.tar.gz",
+			CDN:       "https://cdn.olares.cn",
 		}
 	}
 
@@ -1719,20 +1769,25 @@ func TestTheReleaseLocationsReachTheNodesBeingPrepared(t *testing.T) {
 
 	mu.Lock()
 	defer mu.Unlock()
-	prepare, ok := seen[StageNodePrepare]
-	if !ok {
-		t.Fatal("no node was asked to prepare itself")
-	}
-	if prepare.CliURL != "https://mirror.internal/olares-cli.tar.gz" {
-		t.Errorf("prepare carried cliURL %q, want the operator's mirror", prepare.CliURL)
-	}
-	if prepare.WizardURL != "https://mirror.internal/wizard.tar.gz" {
-		t.Errorf("prepare carried wizardURL %q, want the operator's mirror", prepare.WizardURL)
+	for _, stage := range []string{StageBootstrap, StageDownload} {
+		req, ok := seen[stage]
+		if !ok {
+			t.Fatalf("no node was given stage %s", stage)
+		}
+		if req.CliURL != "https://mirror.internal/olares-cli.tar.gz" {
+			t.Errorf("%s carried cliURL %q, want the operator's mirror", stage, req.CliURL)
+		}
+		if req.WizardURL != "https://mirror.internal/wizard.tar.gz" {
+			t.Errorf("%s carried wizardURL %q, want the operator's mirror", stage, req.WizardURL)
+		}
+		if req.CDN != "https://cdn.olares.cn" {
+			t.Errorf("%s carried CDN %q, want the control node's", stage, req.CDN)
+		}
 	}
 
 	// Nothing else downloads a release, so nothing else is told where one is.
 	for stage, req := range seen {
-		if stage == StageNodePrepare {
+		if stage == StageBootstrap || stage == StageDownload {
 			continue
 		}
 		if req.CliURL != "" || req.WizardURL != "" {
@@ -1982,5 +2037,199 @@ func TestATransientlyNotReadyWorkerDoesNotFailTheUpgrade(t *testing.T) {
 	if got := waitForTerminal(t, m, op.ID); got.Status != StatusSucceeded {
 		t.Fatalf("status = %s (%s: %s), want the worker's return to have been waited for",
 			got.Status, got.Code, got.Error)
+	}
+}
+
+// Past notify-start the upgrade has changed the system, and stopping between
+// two of the stages after it leaves the cluster half one version and half the
+// other. A stop request that arrives there is not refused — the watcher uses
+// the same call to tidy up — but the run finishes anyway.
+func TestAStopAfterNotifyStartDoesNotStopTheUpgrade(t *testing.T) {
+	plan := samplePlan()
+	plan.Stages = append(plan.Stages[:1], append([]UpgradeStage{{Name: StageNotifyStart, Placement: PlacementAdmin,
+		Tasks: []string{"NotifyUpgradeStart"}}}, plan.Stages[1:]...)...)
+	h := newUpgradeHarness(t, plan, twoNodeCluster())
+	h.deps.Store = newTestStore(t)
+	m, err := NewManager(h.deps)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var stopOnce sync.Once
+	h.onStart = func(_, stage string) {
+		if stage != StageNotifyStart {
+			return
+		}
+		stopOnce.Do(func() {
+			op, _ := m.ActiveOfType(TypeUpgrade)
+			if !m.RequestStop(op.ID) {
+				t.Error("the stop request was refused")
+			}
+		})
+	}
+	op, err := m.Create(context.Background(), CreateRequest{
+		Type: TypeUpgrade, RequestID: "req-1", Scope: ScopeCluster,
+		ClusterID: "cluster-1", Owner: "alice@olares.com",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := waitForTerminal(t, m, op.ID)
+	if got.Status != StatusSucceeded || !got.Committed {
+		t.Fatalf("status = %s committed = %t (%s: %s)", got.Status, got.Committed, got.Code, got.Error)
+	}
+	if last := h.order(); last[len(last)-1] != "master-1/03-master" {
+		t.Errorf("the last stage did not run: %v", last)
+	}
+}
+
+// A stop requested before notify-start still stops the upgrade there, before
+// anything has changed the system.
+func TestAStopBeforeNotifyStartStopsBeforeIt(t *testing.T) {
+	plan := samplePlan()
+	plan.Stages = append(plan.Stages[:1], append([]UpgradeStage{{Name: StageNotifyStart, Placement: PlacementAdmin,
+		Tasks: []string{"NotifyUpgradeStart"}}}, plan.Stages[1:]...)...)
+	h := newUpgradeHarness(t, plan, twoNodeCluster())
+	h.deps.Store = newTestStore(t)
+	m, err := NewManager(h.deps)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var stopOnce sync.Once
+	h.onStart = func(_, stage string) {
+		if stage != StageBootstrap {
+			return
+		}
+		stopOnce.Do(func() {
+			op, _ := m.ActiveOfType(TypeUpgrade)
+			m.RequestStop(op.ID)
+		})
+	}
+	op, err := m.Create(context.Background(), CreateRequest{
+		Type: TypeUpgrade, RequestID: "req-1", Scope: ScopeCluster,
+		ClusterID: "cluster-1", Owner: "alice@olares.com",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := waitForTerminal(t, m, op.ID)
+	if got.Code != CodeUpgradeCancelled || got.Committed {
+		t.Fatalf("outcome = %s/%s committed = %t, want cancelled before notify-start", got.Status, got.Code, got.Committed)
+	}
+	for _, key := range h.order() {
+		if !strings.HasSuffix(key, "/"+StageBootstrap) {
+			t.Errorf("dispatched %q after the stop", key)
+		}
+	}
+}
+
+// Bootstrap replaces olaresd on the node running it, so the daemon that
+// accepted the stage is not the one that finishes it. The new one reports the
+// restart, and the stage is asked again rather than failed.
+func TestBootstrapThatRestartsOlaresdIsAskedAgain(t *testing.T) {
+	h := newUpgradeHarness(t, samplePlan(), twoNodeCluster())
+	h.restartOnce[stageKey("worker-1", StageBootstrap)] = true
+
+	op := runUpgradeOperation(t, h)
+	if op.Status != StatusSucceeded {
+		t.Fatalf("status = %s (%s: %s)", op.Status, op.Code, op.Error)
+	}
+	var asked int
+	for _, key := range h.order() {
+		if key == stageKey("worker-1", StageBootstrap) {
+			asked++
+		}
+	}
+	if asked != 2 {
+		t.Errorf("bootstrap was dispatched to worker-1 %d times, want 2", asked)
+	}
+}
+
+// On a single node there is no readiness call to ask; the control node reads
+// its own binaries. Bootstrap that left either one behind is a failure, not a
+// stage to move past.
+func TestSingleNodeBootstrapChecksItsOwnBinaries(t *testing.T) {
+	single := []inventory.Node{
+		{NodeName: "master-1", Role: inventory.RoleMaster, IP: "10.0.0.11", Ready: true, IsSelf: true},
+	}
+	for _, tc := range []struct {
+		name, daemon, cli string
+		want              Status
+	}{
+		{"both on the target", "1.12.8", "1.12.8", StatusSucceeded},
+		{"release daemon version", "v1.12.8", "1.12.8", StatusSucceeded},
+		{"olaresd left behind", "1.12.7", "1.12.8", StatusFailed},
+		{"olares-cli left behind", "1.12.8", "1.12.7", StatusFailed},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			h := newUpgradeHarness(t, samplePlan(), single)
+			h.deps.Timeouts.Stage = 50 * time.Millisecond
+			h.deps.Upgrade.LocalVersions = func(context.Context) (string, string, error) {
+				return tc.daemon, tc.cli, nil
+			}
+			op := runUpgradeOperation(t, h)
+			if op.Status != tc.want {
+				t.Fatalf("status = %s (%s: %s), want %s", op.Status, op.Code, op.Error, tc.want)
+			}
+			if tc.want == StatusFailed {
+				if got := bootstrapNodeResult(t, op, "master-1"); got.Code != CodeVersionMismatch {
+					t.Errorf("master-1 bootstrap = %s/%s, want failed/%s", got.Status, got.Code, CodeVersionMismatch)
+				}
+				for _, key := range h.order() {
+					if !strings.HasSuffix(key, "/"+StageBootstrap) {
+						t.Errorf("dispatched %q after bootstrap failed", key)
+					}
+				}
+			}
+		})
+	}
+}
+
+// A retry of an upgrade that failed after notify-start resumes a system that
+// has already changed. It is committed from the start, so nobody can cancel
+// it before it reaches the point the first attempt was past.
+func TestARetryAfterNotifyStartIsCommittedFromTheStart(t *testing.T) {
+	plan := samplePlan()
+	plan.Stages = append(plan.Stages[:1], append([]UpgradeStage{{Name: StageNotifyStart, Placement: PlacementAdmin,
+		Tasks: []string{"NotifyUpgradeStart"}}}, plan.Stages[1:]...)...)
+	h := newUpgradeHarness(t, plan, twoNodeCluster())
+	h.failAt[stageKey("master-1", "03-master")] = true
+	h.deps.Store = newTestStore(t)
+	m, err := NewManager(h.deps)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req := CreateRequest{
+		Type: TypeUpgrade, RequestID: "req-1", Scope: ScopeCluster,
+		ClusterID: "cluster-1", Owner: "alice@olares.com",
+	}
+	first, err := m.Create(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := waitForTerminal(t, m, first.ID); got.Status == StatusSucceeded || !got.Committed {
+		t.Fatalf("first attempt = %s committed = %t, want failed after notify-start", got.Status, got.Committed)
+	}
+
+	h.mu.Lock()
+	delete(h.failAt, stageKey("master-1", "03-master"))
+	h.started = nil
+	// The production runner keys these records by operation ID.
+	h.stageStates = map[string]*UpgradeStageState{}
+	h.mu.Unlock()
+	retry, err := m.Create(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if retry.ID == first.ID {
+		t.Fatal("the failed attempt was returned instead of retried")
+	}
+	if !retry.Committed {
+		t.Error("the retry was cancellable before it had run a stage")
+	}
+	if got := waitForTerminal(t, m, retry.ID); got.Status != StatusSucceeded {
+		t.Fatalf("retry = %s (%s: %s)", got.Status, got.Code, got.Error)
+	}
+	if got := h.order(); len(got) != 1 || got[0] != stageKey("master-1", "03-master") {
+		t.Fatalf("retry ran %v, want only the failed stage", got)
 	}
 }

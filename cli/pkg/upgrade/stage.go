@@ -29,21 +29,51 @@ func (f Placement) Valid() bool {
 // RunsOnWorkers reports whether compute nodes take part in this stage.
 func (f Placement) RunsOnWorkers() bool { return f == PlacementWorkers || f == PlacementAllNodes }
 
+// Runner is the program on a node that carries a stage out.
+type Runner string
+
+const (
+	// RunnerOlaresd stages are implemented by olaresd itself. They come before
+	// notify-start and only fetch, check and load: the binaries, the release,
+	// the images. olares-cli has no tasks for them, and a node that is told to
+	// run one through olares-cli refuses.
+	RunnerOlaresd Runner = "olaresd"
+
+	// RunnerOlaresCLI stages are resolved by the node's olares-cli against the
+	// plan it derives, and run as `olares-cli upgrade --stage <name>`.
+	RunnerOlaresCLI Runner = "olares-cli"
+)
+
+func (r Runner) Valid() bool { return r == RunnerOlaresd || r == RunnerOlaresCLI }
+
 // Stage names. These are the points in the upgrade flow that tasks can be
 // placed into, and there are only these: adding a task means choosing one of
 // them, not inventing a place in a list.
 const (
-	// StageNotifyStart tells the components that need to know an upgrade is
-	// beginning..
-	StageNotifyStart = "notify-start"
+	// StageBootstrap brings olares-cli and olaresd on every machine to the
+	// target version. Every later stage runs on the target olaresd, so this is
+	// the only stage the source version's olaresd ever executes, and its
+	// request and the CLI command it calls are frozen across versions.
+	StageBootstrap = "bootstrap"
 
-	// StageReplaceBinaries is the nesting-doll replacement of olaresd and
-	// olares-cli on every machine..
-	StageReplaceBinaries = "replace-binaries"
+	// StageDownload fetches the target release onto every machine.
+	StageDownload = "download"
+
+	// StagePrecheckNode checks each machine can take the release it fetched.
+	StagePrecheckNode = "precheck-node"
+
+	// StagePrecheckCluster checks the cluster can be upgraded at all.
+	StagePrecheckCluster = "precheck-cluster"
 
 	// StageImportImages loads the images this upgrade needs onto every
 	// machine..
 	StageImportImages = "import-images"
+
+	// StageNotifyStart tells the components that need to know an upgrade is
+	// beginning. It is the point of no return: nothing before it touches what
+	// the system is running, and after it an upgrade can only be finished, not
+	// cancelled.
+	StageNotifyStart = "notify-start"
 
 	// StagePreUpgradeNode is the pre-upgrade script on every node..
 	StagePreUpgradeNode = "pre-upgrade-node"
@@ -88,6 +118,11 @@ const (
 type Stage struct {
 	Name      string    `json:"name"`
 	Placement Placement `json:"placement"`
+	Runner    Runner    `json:"runner"`
+
+	// Steps names what an olaresd stage does, in order. olares-cli stages
+	// take their task list from the version instead.
+	Steps []string `json:"-"`
 
 	// MaxParallel is how many nodes may be inside this stage at once. Zero
 	// means no limit.
@@ -152,32 +187,52 @@ type Stage struct {
 // cut off a stage that was working.
 var UpgradeFlow = []Stage{
 	{
-		Name: StageNotifyStart, Placement: PlacementAdmin,
+		Name: StageBootstrap, Placement: PlacementAllNodes, Runner: RunnerOlaresd,
+		Steps:          []string{"InstallOlaresCLI", "BootstrapNode"},
+		TimeoutSeconds: 30 * 60,
+		Desc:           "bring olares-cli and olaresd on each machine to the target version",
+	},
+	{
+		Name: StageDownload, Placement: PlacementAllNodes, Runner: RunnerOlaresd,
+		Steps:          []string{"DownloadWizard", "DownloadSpaceCheck", "DownloadComponent"},
+		TimeoutSeconds: 90 * 60,
+		Desc:           "fetch the target release on each machine",
+	},
+	{
+		Name: StagePrecheckNode, Placement: PlacementAllNodes, Runner: RunnerOlaresd,
+		Steps:          []string{"ImageImportSpaceCheck"},
+		TimeoutSeconds: 10 * 60,
+		Desc:           "check each machine has room for the release",
+	},
+	{
+		Name: StagePrecheckCluster, Placement: PlacementAdmin, Runner: RunnerOlaresd,
+		Steps:          []string{"ClusterPreCheck"},
+		TimeoutSeconds: 10 * 60,
+		Desc:           "check the cluster can be upgraded",
+	},
+	{
+		Name: StageImportImages, Placement: PlacementAllNodes, Runner: RunnerOlaresd,
+		Steps:          []string{"ImportImages"},
+		TimeoutSeconds: 60 * 60,
+		Desc:           "import the images this upgrade needs on each machine",
+	},
+	{
+		Name: StageNotifyStart, Placement: PlacementAdmin, Runner: RunnerOlaresCLI,
 		TimeoutSeconds: 5 * 60,
 		Desc:           "tell user-service and l4-gateway an upgrade is starting",
 	},
 	{
-		Name: StageReplaceBinaries, Placement: PlacementAllNodes, MaxParallel: 1,
-		TimeoutSeconds: 30 * 60,
-		Desc:           "replace olaresd and olares-cli on each machine",
-	},
-	{
-		Name: StageImportImages, Placement: PlacementAllNodes,
-		TimeoutSeconds: 30 * 60,
-		Desc:           "import the images this upgrade needs on each machine",
-	},
-	{
-		Name: StagePreUpgradeNode, Placement: PlacementAllNodes, MaxParallel: 1,
+		Name: StagePreUpgradeNode, Placement: PlacementAllNodes, Runner: RunnerOlaresCLI, MaxParallel: 1,
 		TimeoutSeconds: 20 * 60,
 		Desc:           "pre-upgrade work each machine does to itself",
 	},
 	{
-		Name: StagePreUpgradeAdmin, Placement: PlacementAdmin,
+		Name: StagePreUpgradeAdmin, Placement: PlacementAdmin, Runner: RunnerOlaresCLI,
 		TimeoutSeconds: 30 * 60,
 		Desc:           "pre-upgrade work the control node does to the cluster",
 	},
 	{
-		Name: StageUpgradeCluster, Placement: PlacementAdmin,
+		Name: StageUpgradeCluster, Placement: PlacementAdmin, Runner: RunnerOlaresCLI,
 		TimeoutSeconds: 90 * 60,
 		Desc:           "upgrade the Olares cluster",
 	},
@@ -189,29 +244,29 @@ var UpgradeFlow = []Stage{
 		// outage it caused nothing of. Serialised, the workers go first
 		// against a cluster that is up, and the control node — scheduled last
 		// — waits only for itself.
-		Name: StagePostUpgradeNode, Placement: PlacementAllNodes, MaxParallel: 1,
+		Name: StagePostUpgradeNode, Placement: PlacementAllNodes, Runner: RunnerOlaresCLI, MaxParallel: 1,
 		// Generous because this is where the GPU driver install lands, and a
 		// DKMS build against the running kernel does not fit in ten minutes.
 		TimeoutSeconds: 45 * 60,
 		Desc:           "post-upgrade work each machine does to itself",
 	},
 	{
-		Name: StagePostUpgradeAdmin, Placement: PlacementAdmin,
+		Name: StagePostUpgradeAdmin, Placement: PlacementAdmin, Runner: RunnerOlaresCLI,
 		TimeoutSeconds: 45 * 60,
 		Desc:           "post-upgrade work the control node does to the cluster",
 	},
 	{
-		Name: StageRebootNodes, Placement: PlacementAllNodes, MaxParallel: 1,
+		Name: StageRebootNodes, Placement: PlacementAllNodes, Runner: RunnerOlaresCLI, MaxParallel: 1,
 		TimeoutSeconds: 20 * 60, AwaitRestart: true,
 		Desc: "restart the machines whose upgrade requires it",
 	},
 	{
-		Name: StageVerifyCluster, Placement: PlacementAdmin,
+		Name: StageVerifyCluster, Placement: PlacementAdmin, Runner: RunnerOlaresCLI,
 		TimeoutSeconds: 30 * 60,
 		Desc:           "wait for the system components to be up again",
 	},
 	{
-		Name: StageNotifyDone, Placement: PlacementAdmin,
+		Name: StageNotifyDone, Placement: PlacementAdmin, Runner: RunnerOlaresCLI,
 		TimeoutSeconds: 5 * 60,
 		Desc:           "tell l4-gateway the upgrade is over",
 	},

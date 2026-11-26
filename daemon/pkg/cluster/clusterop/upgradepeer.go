@@ -67,6 +67,10 @@ const (
 // the power orchestrator: it passes nil here and everything else works.
 func NewUpgradeDeps(local UpgradeStageRunner) *UpgradeDeps {
 	return &UpgradeDeps{
+		CheckSource: func(ctx context.Context) error {
+			_, err := runCLI(ctx, "upgrade", "viable")
+			return err
+		},
 		Plan:            ReadUpgradePlan,
 		Local:           local,
 		Auth:            EnsureUpgradeToken,
@@ -80,17 +84,19 @@ func NewUpgradeDeps(local UpgradeStageRunner) *UpgradeDeps {
 }
 
 // upgradeLocations reads the release locations out of this machine's upgrade
-// target. Only the control node has one, which is the whole reason the nodes
-// it prepares have to be told.
+// target. Only the control node has one, which is the whole reason the other
+// nodes have to be told.
 //
 // An unreadable or absent target is not an error worth stopping for: it means
 // no override, and the CDN is the answer.
 func upgradeLocations() UpgradeLocations {
+	where := UpgradeLocations{CDN: commands.OLARES_CDN_SERVICE}
 	target, err := state.GetOlaresUpgradeTarget()
 	if err != nil || target == nil {
-		return UpgradeLocations{}
+		return where
 	}
-	return UpgradeLocations{CliURL: target.CliURL, WizardURL: target.WizardURL}
+	where.CliURL, where.WizardURL = target.CliURL, target.WizardURL
+	return where
 }
 
 // ReadUpgradePlan asks this node's olares-cli what an upgrade to the version

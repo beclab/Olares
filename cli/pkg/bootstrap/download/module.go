@@ -10,6 +10,7 @@ type PackageDownloadModule struct {
 	Manifest   string
 	BaseDir    string
 	CDNService string
+	Only       []string
 }
 
 func (i *PackageDownloadModule) Init() {
@@ -18,7 +19,7 @@ func (i *PackageDownloadModule) Init() {
 	download := &task.LocalTask{
 		Name:   i.Name,
 		Desc:   i.Desc,
-		Action: &PackageDownload{Manifest: i.Manifest, BaseDir: i.BaseDir, CDNService: i.CDNService},
+		Action: &PackageDownload{Manifest: i.Manifest, BaseDir: i.BaseDir, CDNService: i.CDNService, Only: i.Only},
 	}
 
 	i.Tasks = []task.Interface{

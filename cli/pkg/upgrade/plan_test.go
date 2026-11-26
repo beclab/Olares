@@ -53,6 +53,8 @@ func TestPlacementIsAPropertyOfTheStage(t *testing.T) {
 		flowStage, ok := StageByName(h.Name)
 		require.True(t, ok, "stage %s is not in the flow", h.Name)
 		assert.Equal(t, flowStage.Placement, h.Placement)
+		assert.Equal(t, flowStage.Runner, h.Runner)
+		assert.True(t, h.Runner.Valid(), "stage %s has runner %q", h.Name, h.Runner)
 		assert.Equal(t, flowStage.MaxParallel, h.MaxParallel)
 		assert.Equal(t, flowStage.TimeoutSeconds, h.TimeoutSeconds)
 		assert.True(t, h.Placement.Valid(), "stage %s has placement %q", h.Name, h.Placement)
@@ -63,7 +65,7 @@ func TestPlacementIsAPropertyOfTheStage(t *testing.T) {
 // cluster belongs to a control-node stage. This is the placement the weekly
 // was about, so it is asserted rather than left to reading.
 func TestPerMachineWorkIsPlacedOnNodeStages(t *testing.T) {
-	plan, err := BuildPlan(semver.MustParse("1.12.7"))
+	plan, err := BuildPlan(semver.MustParse("1.12.8"))
 	require.NoError(t, err)
 
 	stageOf := map[string]string{}
@@ -130,7 +132,9 @@ func TestAllTasksFollowsFlowOrder(t *testing.T) {
 
 	var expected []string
 	for _, h := range plan.Stages {
-		expected = append(expected, h.Tasks...)
+		if h.Runner == RunnerOlaresCLI {
+			expected = append(expected, h.Tasks...)
+		}
 	}
 	got := make([]string, 0, len(all))
 	for _, t := range all {
@@ -157,12 +161,73 @@ func TestTasksForStageRefusesAnUnknownStage(t *testing.T) {
 	assert.Contains(t, err.Error(), StageUpgradeCluster)
 }
 
-// Every stage a version can contribute to is a stage of the flow. The mapping
-// lives in one place, so this is what stops it drifting from UpgradeFlow.
+// Every stage a version can contribute to is an olares-cli stage of the flow.
+// The mapping lives in one place, so this is what stops it drifting from
+// UpgradeFlow, and what stops tasks landing in a stage olares-cli never runs.
 func TestEveryContributedStageIsInTheFlow(t *testing.T) {
 	for name := range stageTasks(upgraderBase{}) {
-		_, ok := StageByName(name)
+		stage, ok := StageByName(name)
 		assert.True(t, ok, "stageTasks contributes to %q, which is not in UpgradeFlow", name)
+		assert.Equal(t, RunnerOlaresCLI, stage.Runner, "stageTasks contributes to olaresd stage %q", name)
+	}
+}
+
+// Everything that fetches, checks or loads comes before notify-start, run by
+// olaresd, starting with the bootstrap; everything that changes the system
+// comes after it, run by olares-cli.
+func TestOlaresdStagesComeBeforeNotifyStart(t *testing.T) {
+	want := []string{StageBootstrap, StageDownload, StagePrecheckNode, StagePrecheckCluster, StageImportImages, StageNotifyStart}
+	var got []string
+	for _, s := range UpgradeFlow[:len(want)] {
+		got = append(got, s.Name)
+	}
+	require.Equal(t, want, got)
+
+	seenNotify := false
+	for _, s := range UpgradeFlow {
+		if s.Name == StageNotifyStart {
+			seenNotify = true
+		}
+		if seenNotify {
+			assert.Equal(t, RunnerOlaresCLI, s.Runner, "stage %s after notify-start", s.Name)
+			assert.Empty(t, s.Steps, "olares-cli stage %s lists olaresd steps", s.Name)
+		} else {
+			assert.Equal(t, RunnerOlaresd, s.Runner, "stage %s before notify-start", s.Name)
+		}
+	}
+
+	bootstrap, _ := StageByName(StageBootstrap)
+	assert.Equal(t, PlacementAllNodes, bootstrap.Placement)
+	assert.Zero(t, bootstrap.MaxParallel)
+	cluster, _ := StageByName(StagePrecheckCluster)
+	assert.Equal(t, PlacementAdmin, cluster.Placement)
+}
+
+// An olaresd stage lists its steps so the orchestrator does not skip it as
+// empty, and olares-cli refuses to run it.
+func TestOlaresdStagesAreNeverEmptyAndNotRunByTheCLI(t *testing.T) {
+	target := semver.MustParse("1.12.9")
+	plan, err := BuildPlan(target)
+	require.NoError(t, err)
+	for _, s := range plan.Stages {
+		if s.Runner != RunnerOlaresd {
+			continue
+		}
+		assert.False(t, s.Empty(), "olaresd stage %s would be skipped as empty", s.Name)
+		_, _, err := TasksForStage(target, s.Name)
+		assert.Error(t, err, "olares-cli resolved olaresd stage %s", s.Name)
+	}
+}
+
+func TestAllTasksLeavesOutOlaresdStages(t *testing.T) {
+	names := map[string]bool{}
+	for _, t := range AllTasks(getUpgraderByVersion(semver.MustParse("1.12.9"))) {
+		names[t.GetName()] = true
+	}
+	for _, s := range UpgradeFlow {
+		for _, step := range s.Steps {
+			assert.False(t, names[step], "AllTasks runs olaresd step %s", step)
+		}
 	}
 }
 

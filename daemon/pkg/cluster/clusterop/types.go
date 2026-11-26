@@ -286,6 +286,13 @@ type Operation struct {
 	// Manager.RequestStop.
 	StopRequested bool `json:"stopRequested,omitempty"`
 
+	// Committed says an upgrade reached notify-start, after which nothing may
+	// stop it: the stages from there on change the system, and stopping
+	// between two of them leaves it half one version and half the other. A
+	// retry inherits it from the attempt it supersedes, because that attempt
+	// already left the system changed.
+	Committed bool `json:"committed,omitempty"`
+
 	// SupersededBy names the operation that took this one's request id over,
 	// and is empty on every operation still answering for its own.
 	//

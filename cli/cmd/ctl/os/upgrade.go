@@ -8,6 +8,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/beclab/Olares/cli/cmd/config"
+	"github.com/beclab/Olares/cli/pkg/common"
 	"github.com/beclab/Olares/cli/pkg/phase"
 	"github.com/beclab/Olares/cli/pkg/pipelines"
 	"github.com/beclab/Olares/cli/pkg/upgrade"
@@ -67,6 +68,32 @@ skills on disk. Run ` + "`olares-cli skills install`" + ` afterwards.`,
 	cmd.AddCommand(NewCmdUpgradeViable())
 	cmd.AddCommand(NewCmdUpgradePrecheck())
 	cmd.AddCommand(NewCmdUpgradePlan())
+	cmd.AddCommand(NewCmdUpgradeBootstrapNode())
+	return cmd
+}
+
+// NewCmdUpgradeBootstrapNode replaces this machine's olaresd with the one from
+// this olares-cli's release.
+//
+// It is called by an older olaresd, or by the Job that stands in for one that
+// cannot, right after it installed this binary. Its name and the flags
+// --version, --base-dir, --cdn-service and --url-override are therefore a
+// contract with versions already released: they may gain flags, never lose or
+// change these.
+func NewCmdUpgradeBootstrapNode() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "bootstrap-node",
+		Short: "Replace olaresd on this machine with the one from this olares-cli's release, ahead of an upgrade",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return pipelines.UpgradeBootstrapNodePipeline(cmd.Context())
+		},
+	}
+	flagSetter := config.NewFlagSetterFor(cmd)
+	config.AddVersionFlagBy(flagSetter)
+	config.AddBaseDirFlagBy(flagSetter)
+	config.AddCDNServiceFlagBy(flagSetter)
+	flagSetter.Add(common.FlagURLOverride, "", "", "Set another URL for the release wizard download explicitly")
 	return cmd
 }
 

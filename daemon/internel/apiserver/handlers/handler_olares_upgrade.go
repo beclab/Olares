@@ -1,10 +1,12 @@
 package handlers
 
 import (
-	"github.com/beclab/Olares/daemon/pkg/cluster/state"
+	"errors"
 	"net/http"
 
+	"github.com/beclab/Olares/daemon/pkg/cluster/state"
 	"github.com/beclab/Olares/daemon/pkg/commands"
+	"github.com/beclab/Olares/daemon/pkg/commands/upgrade"
 	"github.com/gofiber/fiber/v2"
 	"k8s.io/klog/v2"
 )
@@ -27,7 +29,10 @@ func (h *Handlers) RequestOlaresUpgrade(ctx *fiber.Ctx, cmd commands.Interface) 
 }
 
 func (h *Handlers) CancelOlaresUpgrade(ctx *fiber.Ctx, cmd commands.Interface) error {
-	if _, err := cmd.Execute(ctx.Context(), nil); err != nil {
+	if _, err := cmd.Execute(ctx.Context(), upgrade.OperatorCancel{}); err != nil {
+		if errors.Is(err, upgrade.ErrUpgradeCommitted) {
+			return h.ErrJSON(ctx, http.StatusConflict, err.Error())
+		}
 		return h.ErrJSON(ctx, http.StatusBadRequest, err.Error())
 	}
 
