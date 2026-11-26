@@ -283,9 +283,13 @@ func (o *UserOperator) GetLauncherAuthPolicy(user *iamV1alpha2.User) string {
 	return policy
 }
 
-func (o *UserOperator) GetDenyAllPolicy(user *iamV1alpha2.User) string {
-	policy := o.GetUserAnnotation(user, constants.UserDenyAllPolicy)
-	return policy
+// GetDenyAllPolicy uses the owner's setting as the single cluster-wide switch.
+func (o *UserOperator) GetDenyAllPolicy() (string, error) {
+	owner, err := o.GetOwnerUser()
+	if err != nil {
+		return "", err
+	}
+	return o.GetUserAnnotation(owner, constants.UserDenyAllPolicy), nil
 }
 
 func (o *UserOperator) GetDomain() (string, error) {
