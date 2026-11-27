@@ -5,7 +5,7 @@
 				height:
 					userStore.isMobile && route.path === '/preview'
 						? 'calc(100% - 64px)'
-						: '100vh'
+						: ['100vh', '100dvh']
 			}"
 			:font-size="16"
 			:user="userStore.user"
@@ -49,7 +49,7 @@ console.log(!!platform.is.desktop);
 <style lang="scss" scoped>
 .preview-layout {
 	width: 100vw;
-	height: 100vh;
+	height: 100dvh;
 
 	.close-icon {
 		z-index: 1;

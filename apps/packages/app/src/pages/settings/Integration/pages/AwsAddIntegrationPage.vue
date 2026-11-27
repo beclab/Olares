@@ -156,7 +156,7 @@ const onConfirm = async () => {
 			// notifyFailed(error.message);
 		}
 	} else {
-		router.go(-2);
+		router.replace({ name: 'integrationAccountList' });
 	}
 };
 

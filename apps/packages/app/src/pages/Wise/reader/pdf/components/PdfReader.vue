@@ -279,7 +279,7 @@ async function updatePdfData() {
 		destroyPdfDocument();
 
 		const t3 = performance.now();
-		// Mitigates Dependabot advisory #142 (GHSA on pdfjs-dist <= 4.1.392 reachable
+		// Mitigates CVE-2024-4367 (GHSA-wgrm-67xf-hhpq, pdfjs-dist <= 4.1.392, reachable
 		// via pdfvuer@2.0.1's hard-pin of pdfjs-dist@2.5.207). Disables eval-based
 		// PostScript function compilation in pdf.js so a malicious PDF cannot execute
 		// attacker-controlled JavaScript in the host origin. pdfvuer's

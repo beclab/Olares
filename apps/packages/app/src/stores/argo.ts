@@ -308,11 +308,7 @@ export const useArgoStore = defineStore('argo', {
 			// metadata: null,
 		} as ArgoState;
 	},
-	getters: {
-		// namespace(): string {
-		// return 'user-space-' + this.terminus_info.terminusName.split('@')[0];
-		// },
-	},
+	getters: {},
 	actions: {
 		setUrl(new_url: string) {
 			this.url = new_url;
@@ -323,7 +319,6 @@ export const useArgoStore = defineStore('argo', {
 			const data: GetCronWorkflowResponse = await axios.get(
 				this.url + '/api/v1/cron-workflows/'
 			);
-			// this.url + '/api/v1/cron-workflows/' + this.namespace
 
 			console.log(data.items);
 			this.cron_workflows = data.items;

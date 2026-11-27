@@ -31,7 +31,7 @@
 											itemMenu === '/' ? 'text-blue-default' : 'text-ink-1'
 										"
 									>
-										{{ adminStore.user.name }}
+										{{ meStore.user.name }}
 									</div>
 									<div
 										class="text-body3 person-text"
@@ -39,7 +39,7 @@
 											itemMenu === '/' ? 'text-blue-default' : 'text-ink-2'
 										"
 									>
-										{{ '@' + adminStore.olaresId.split('@')[1] }}
+										{{ '@' + terminusStore.olaresId.split('@')[1] }}
 									</div>
 								</div>
 							</q-item>
@@ -59,7 +59,9 @@
 <script lang="ts" setup>
 import SettingAvatar from 'src/components/settings/base/SettingAvatar.vue';
 import { useBackgroundStore } from 'src/stores/settings/background';
-import { useAdminStore } from 'src/stores/settings/admin';
+import { useMeStore } from 'src/stores/settings/me';
+import { useTerminusStore } from 'src/stores/terminus';
+import { useSettingsMenus } from 'src/composables/useSettingsMenus';
 import { onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter, isNavigationFailure } from 'vue-router';
 import { MENU_TYPE } from 'src/constant';
@@ -68,7 +70,9 @@ import { useQuasar } from 'quasar';
 const router = useRouter();
 const route = useRoute();
 const $q = useQuasar();
-const adminStore = useAdminStore();
+const meStore = useMeStore();
+const terminusStore = useTerminusStore();
+const menus = useSettingsMenus();
 const backgroundStore = useBackgroundStore();
 
 const itemsRef = ref();
@@ -122,7 +126,7 @@ const configMenus = () => {
 		{
 			label: '',
 			key: 'Settings',
-			children: adminStore.menus.flat()
+			children: menus.value.flat()
 		}
 	];
 
@@ -146,7 +150,7 @@ watch(
 	width: 848px;
 	// max-width: 848px;
 	// min-width: 848px;
-	height: 100vh;
+	height: 100dvh;
 	display: flex;
 	align-content: center;
 	justify-content: center;

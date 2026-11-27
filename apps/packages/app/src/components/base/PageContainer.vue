@@ -12,7 +12,7 @@
 		"
 		:style="{
 			'--titleHeight': `${titleHeight}px`,
-			'--maxWidth': `${deviceStore.isMobile ? '100dvw' : '1920px - 208px'}`
+			'--maxWidth': `${deviceStore.isMobile ? '100dvw' : '1600px'}`
 		}"
 	>
 		<div class="page-container-title row justify-start">
@@ -31,25 +31,25 @@
 			<div
 				class="page-container-scroll-area column justify-center items-center"
 			>
-				<div
-					v-if="
-						!isAppDetails &&
-						globalConfig.isOfficial &&
-						!deviceStore.isMobile &&
-						!hideGradient
-					"
-					class="fill1"
-				/>
-				<div
-					v-if="
-						!isAppDetails &&
-						globalConfig.isOfficial &&
-						!deviceStore.isMobile &&
-						!hideGradient
-					"
-					class="fill2"
-				/>
 				<div class="page-container-content">
+					<div
+						v-if="
+							!isAppDetails &&
+							globalConfig.isOfficial &&
+							!deviceStore.isMobile &&
+							!hideGradient
+						"
+						class="fill1"
+					/>
+					<div
+						v-if="
+							!isAppDetails &&
+							globalConfig.isOfficial &&
+							!deviceStore.isMobile &&
+							!hideGradient
+						"
+						class="fill2"
+					/>
 					<slot name="page" />
 				</div>
 			</div>
@@ -149,6 +149,13 @@ const onScroll = async (info: any) => {
 		.page-container-scroll-area {
 			height: 100%;
 			position: relative;
+		}
+
+		.page-container-content {
+			height: 100%;
+			width: 100%;
+			max-width: var(--maxWidth);
+			position: relative;
 
 			.fill1 {
 				position: absolute;
@@ -175,12 +182,6 @@ const onScroll = async (info: any) => {
 				filter: blur(80px);
 				pointer-events: none;
 			}
-		}
-
-		.page-container-content {
-			height: 100%;
-			width: 100%;
-			max-width: var(--maxWidth);
 		}
 	}
 }

@@ -48,6 +48,8 @@
 						:origin_id="origin_id"
 						v-bind:viewMode="store.user.viewMode"
 						@open-sync-page="openSyncPage"
+						@enter-select-mode="enterSelectMode"
+						@select-changed="emitSelectIds"
 					>
 					</ListingItem>
 				</template>
@@ -65,9 +67,12 @@
 <script lang="ts" setup>
 import { ref, onMounted, onUnmounted, watch, nextTick, PropType } from 'vue';
 import throttle from 'lodash.throttle';
-import { stringToBase64 } from '@didvault/sdk/src/core';
+import { stringToBase64 } from 'src/utils/encode';
 import { useDataStore } from '../../../stores/data';
 import { useFilesStore, FilesIdType, PickType } from '../../../stores/files';
+import { useDeviceStore } from '../../../stores/device';
+import { useOperateinStore } from '../../../stores/operation';
+import { busOff, busOn } from '../../../utils/bus';
 
 import ListingItem from './ListingItem.vue';
 import FilesUploader from '../../Files/common-files/FilesUploader.vue';
@@ -76,6 +81,8 @@ import TerminusSelectAll from './../../../components/common/TerminusSelectAll.vu
 import FileTransferNoData from './../../../components/common/FileTransferNoData.vue';
 
 const store = useDataStore();
+const deviceStore = useDeviceStore();
+const operateinStore = useOperateinStore();
 
 const itemWeight = ref<number>(0);
 const listing = ref<any>(null);
@@ -120,26 +127,92 @@ const showSelectMode = (value) => {
 	emits('showSelectMode', value);
 };
 
+// In list view the multi-select state lives inside TerminusSelectAll; mosaic
+// view has no such wrapper, so its selection is driven here through
+// `filesStore.selected` (keyed by `item.index`) and surfaced to the parent via
+// the same `showSelectMode` id format (`<item.index>_<name>`).
+const isMosaic = () => store.user.viewMode === 'mosaic';
+
+const currentItems = () =>
+	filesStore.currentFileList[props.origin_id]?.items || [];
+
+const emitSelectIds = () => {
+	const selectedIndexes = filesStore.selected[props.origin_id] || [];
+	const ids = currentItems()
+		.filter((item) => selectedIndexes.includes(item.index))
+		.map((item) => `${item.index}_${item.name}`);
+	emits('showSelectMode', ids);
+};
+
+const enterSelectMode = (index: number) => {
+	deviceStore.isInEditor = true;
+	filesStore.addSelected(index, props.origin_id);
+	emitSelectIds();
+};
+
+// List view already exits select mode via TerminusSelectAll's own bus listener;
+// only handle the bus here for mosaic to avoid closing twice.
+const onExitEditMode = () => {
+	if (isMosaic()) {
+		handleClose();
+	}
+};
+
 const handleClose = () => {
+	if (isMosaic()) {
+		deviceStore.isInEditor = false;
+		filesStore.resetSelected(props.origin_id);
+		emits('showSelectMode', null);
+		return;
+	}
 	if (terminusSelect.value) {
 		terminusSelect.value.handleClose();
 	}
 };
 
 const handleSelectAll = () => {
+	if (isMosaic()) {
+		const listingPath = filesStore.currentFileList[props.origin_id]?.path || '';
+		const items = currentItems().filter(
+			(item) => !operateinStore.isDisableMenuItem(item.name, listingPath)
+		);
+		const selectedIndexes = filesStore.selected[props.origin_id] || [];
+		const allSelected =
+			items.length > 0 &&
+			items.every((item) => selectedIndexes.includes(item.index));
+		if (allSelected) {
+			filesStore.resetSelected(props.origin_id);
+		} else {
+			filesStore.setSelected(
+				items.map((item) => item.index),
+				props.origin_id
+			);
+		}
+		emitSelectIds();
+		return;
+	}
 	if (terminusSelect.value) {
 		terminusSelect.value.toggleSelectAll();
 	}
 };
 
 const intoCheckedMode = () => {
+	if (isMosaic()) {
+		deviceStore.isInEditor = true;
+		emits('showSelectMode', []);
+		return;
+	}
 	if (terminusSelect.value) {
 		terminusSelect.value.intoCheckedMode();
 	}
 };
 
 const handleRemove = () => {
-	console.log('handleRemove', selectedIds.value);
+	if (isMosaic()) {
+		filesStore.resetSelected(props.origin_id);
+		emits('showSelectMode', []);
+		return;
+	}
 	if (terminusSelect.value) {
 		terminusSelect.value.handleRemove();
 	}
@@ -175,6 +248,7 @@ onMounted(() => {
 
 	// Add the needed event listeners to the window and document.
 	window.addEventListener('scroll', scrollEvent);
+	busOn('exitEditMode', onExitEditMode);
 
 	if (!store.user?.perm?.create) return;
 	document.addEventListener('dragover', preventDefault);
@@ -183,6 +257,10 @@ onMounted(() => {
 onUnmounted(() => {
 	// Remove event listeners before destroying this page.
 	window.removeEventListener('scroll', scrollEvent);
+	busOff('exitEditMode', onExitEditMode);
+	if (isMosaic()) {
+		deviceStore.isInEditor = false;
+	}
 
 	if (store.user && !store.user?.perm?.create) return;
 	document.removeEventListener('dragover', preventDefault);
@@ -255,6 +333,11 @@ const fillWindow = (fit = false) => {
 };
 
 const leftClick = () => {
+	// While picking files in mosaic view, tapping empty space must not silently
+	// drop the selection (the select header would then show a stale count).
+	if (isMosaic() && deviceStore.isInEditor) {
+		return;
+	}
 	filesStore.resetSelected();
 };
 </script>

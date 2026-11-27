@@ -35,7 +35,7 @@
 
 <script lang="ts" setup>
 import { onMounted, PropType, ref } from 'vue';
-import ExpendTextView from '@apps/market/src/components/appintro/ExpendTextView.vue';
+import ExpendTextView from './ExpendTextView.vue';
 
 const props = defineProps({
 	title: {
@@ -94,6 +94,7 @@ const openUrl = (url: string) => {
 		text-overflow: ellipsis;
 		display: -webkit-box;
 		-webkit-line-clamp: 2;
+		line-clamp: 2;
 		-webkit-box-orient: vertical;
 	}
 
@@ -103,6 +104,7 @@ const openUrl = (url: string) => {
 		text-overflow: ellipsis;
 		display: -webkit-box;
 		-webkit-line-clamp: 2;
+		line-clamp: 2;
 		-webkit-box-orient: vertical;
 	}
 

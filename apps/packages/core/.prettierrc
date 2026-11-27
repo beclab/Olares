@@ -5,6 +5,7 @@
   "singleQuote": true,
   "bracketSpacing": true,
   "trailingComma": "none",
+  "endOfLine": "lf",
   "overrides": [
     {
       "files": "*.md",

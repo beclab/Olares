@@ -10,6 +10,7 @@ export enum MenuItem {
 	MYLIBRARIES = 'My Libraries',
 	SHAREDWITH = 'Shared Libraries',
 	DATA = 'Data',
+	COMMON = 'Common',
 	CACHE = 'Cache',
 	CODE = 'Code',
 	MUSIC = 'Music',
@@ -74,7 +75,10 @@ export enum OPERATE_ACTION {
 	SHARE_IN_PUBLIC,
 	EDIT_PERMISSIONS,
 	RESET_PASSWORD,
-	REVOKE_SHARING
+	REVOKE_SHARING,
+	COMPRESS,
+	EXTRACT,
+	PREVIEW_CONTENTS
 }
 
 type PopupItem = {
@@ -122,10 +126,28 @@ export const popupMenu: PopupItem[] = [
 		action: OPERATE_ACTION.EXIT_SHARING
 	},
 	{
+		name: 'files_popup_menu.preview_contents',
+		icon: 'sym_r_visibility',
+		requiredSync: undefined,
+		action: OPERATE_ACTION.PREVIEW_CONTENTS
+	},
+	{
+		name: 'files_popup_menu.extract_to',
+		icon: 'sym_r_folder_open',
+		requiredSync: undefined,
+		action: OPERATE_ACTION.EXTRACT
+	},
+	{
 		name: 'files_popup_menu.rename',
 		icon: 'sym_r_edit_square',
 		requiredSync: undefined,
 		action: OPERATE_ACTION.RENAME
+	},
+	{
+		name: 'files_popup_menu.compress_to',
+		icon: 'sym_r_archive',
+		requiredSync: undefined,
+		action: OPERATE_ACTION.COMPRESS
 	},
 	{
 		name: 'files_popup_menu.delete',
@@ -138,6 +160,24 @@ export const popupMenu: PopupItem[] = [
 		icon: 'sym_r_ballot',
 		requiredSync: undefined,
 		action: OPERATE_ACTION.ATTRIBUTES
+	}
+];
+
+export const shareMenuOptions = [
+	{
+		label: 'files_popup_menu.share_internal',
+		value: OPERATE_ACTION.SHARE_IN_INTERNAL,
+		icon: 'sym_r_folder_supervised'
+	},
+	{
+		label: 'files_popup_menu.share_smb',
+		value: OPERATE_ACTION.SHARE_IN_SMB,
+		icon: 'sym_r_smb_share'
+	},
+	{
+		label: 'files_popup_menu.share_public',
+		value: OPERATE_ACTION.SHARE_IN_PUBLIC,
+		icon: 'sym_r_link'
 	}
 ];
 

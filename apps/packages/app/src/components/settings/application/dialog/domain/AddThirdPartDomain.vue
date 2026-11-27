@@ -1,7 +1,7 @@
 <template>
 	<bt-custom-dialog
 		ref="CustomRef"
-		:title="t('third_party_domain')"
+		:title="t('setup_custom_domain')"
 		:skip="false"
 		size="medium"
 		:ok="t('confirm')"
@@ -12,7 +12,7 @@
 	>
 		<div>
 			<terminus-edit
-				:label="t('third_party_domain')"
+				:label="t('domain_label')"
 				v-model="data"
 				:is-error="data.length > 0 && !isValidDomain(data)"
 				:error-message="t('Invalid Domain')"
@@ -25,7 +25,7 @@
 					reverseProxyMode == ReverseProxyMode.SelfBuiltFrp ||
 					reverseProxyMode == ReverseProxyMode.NoNeed
 				"
-				:label="t('Upload HTTPS Certificate')"
+				:label="t('https_certificate')"
 				v-model="cert"
 			/>
 
@@ -36,7 +36,7 @@
 					reverseProxyMode == ReverseProxyMode.SelfBuiltFrp ||
 					reverseProxyMode == ReverseProxyMode.NoNeed
 				"
-				:label="t('Upload HTTPS Private Key')"
+				:label="t('https_private_key')"
 				v-model="key"
 			/>
 		</div>

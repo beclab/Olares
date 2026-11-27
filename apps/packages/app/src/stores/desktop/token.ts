@@ -7,6 +7,7 @@ import { Encoder, DeviceType } from '@bytetrade/core';
 import { AccountInfo } from 'src/constant/global';
 import { OLARES_ROLE } from 'src/constant';
 import { useWidgetPreferencesStore } from 'src/stores/settings/widgetPreferences';
+import { InitLayout } from 'src/types/desktop-layout';
 
 export interface DesktopConfig {
 	bg: string;
@@ -25,6 +26,16 @@ export type RootState = {
 		isVerticalScreen: boolean;
 	};
 	users: AccountInfo[];
+	// Desktop boot payload folded into /server/init: the raw myApps list the
+	// client resolves layout keys against, and the bundled launch/dock layout
+	// envelopes. Consumed once by the boot path so it skips the separate
+	// /server/myApps + launch-layout + dock-layout requests.
+	initMyApps: any[];
+	initLayout: InitLayout | null;
+	// In-flight (or resolved) loadData promise, so the boot path can await the
+	// same /server/init round-trip appLoadPrepare already kicked off instead of
+	// racing it.
+	loadDataPromise: Promise<void> | null;
 };
 
 export const useTokenStore = defineStore('token', {
@@ -38,7 +49,10 @@ export const useTokenStore = defineStore('token', {
 				device: DeviceType.DESKTOP,
 				isVerticalScreen: false
 			},
-			users: [] as AccountInfo[]
+			users: [] as AccountInfo[],
+			initMyApps: [] as any[],
+			initLayout: null,
+			loadDataPromise: null
 		} as RootState;
 	},
 	getters: {
@@ -78,9 +92,21 @@ export const useTokenStore = defineStore('token', {
 			this.terminus = data.terminus;
 			this.config = data.config;
 			this.users = data.users || [];
+			// Stash the folded desktop boot payload for the boot path to consume.
+			this.initMyApps = Array.isArray(data.apps) ? data.apps : [];
+			this.initLayout = data.layout || null;
 			const widgetStore = useWidgetPreferencesStore();
 			widgetStore.save(data.config.widget);
 			// this.loadUsers();
+		},
+
+		// Memoized loadData so appLoadPrepare and the boot initializeApp share a
+		// single /server/init round-trip instead of racing two of them.
+		async ensureLoaded(): Promise<void> {
+			if (!this.loadDataPromise) {
+				this.loadDataPromise = this.loadData();
+			}
+			return this.loadDataPromise;
 		},
 
 		async loadUsers() {
@@ -101,6 +127,14 @@ export const useTokenStore = defineStore('token', {
 			try {
 				await axios.post(this.url + '/api/logout');
 				Cookies.remove('auth_token');
+				// Drop the shared desktop-layout caches so the next account
+				// doesn't inherit this one's launchpad/dock order.
+				try {
+					localStorage.removeItem('launch_layout_cache');
+					localStorage.removeItem('dock_layout_cache');
+				} catch (_e) {
+					/* ignore quota / private mode */
+				}
 			} catch (e) {
 				return e;
 			}

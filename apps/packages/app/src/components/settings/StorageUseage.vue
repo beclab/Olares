@@ -42,7 +42,7 @@
 				<div class="legend-item bg-orange-default"></div>
 				<div class="text-body3 text-ink-3 q-ml-xs">
 					{{
-						t('Within plan Storage', {
+						t('Overage Storage', {
 							Storage: calculateSize(overage || 0)
 						})
 					}}

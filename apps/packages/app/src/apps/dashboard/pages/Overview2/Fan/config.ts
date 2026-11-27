@@ -54,36 +54,36 @@ export const tableData = [
 		uuid: '1',
 		cpu: 0,
 		gpu: 0,
-		cpuDn: '0 - 54',
-		gpuDn: '0 - 48'
+		cpuDn: '0–54',
+		gpuDn: '0–48'
 	},
 	{
 		uuid: '2',
 		cpu: 1100,
 		gpu: 1300,
-		cpuDn: '47 - 64',
-		gpuDn: '39 - 58'
+		cpuDn: '47–64',
+		gpuDn: '39–58'
 	},
 	{
 		uuid: '3',
 		cpu: 1300,
 		gpu: 1500,
-		cpuDn: '54 - 71',
-		gpuDn: '48 - 65'
+		cpuDn: '54–71',
+		gpuDn: '48–65'
 	},
 	{
 		uuid: '4',
 		cpu: 1500,
 		gpu: 1700,
-		cpuDn: '64 - 74',
-		gpuDn: '58 - 68'
+		cpuDn: '64–74',
+		gpuDn: '58–68'
 	},
 	{
 		uuid: '5',
 		cpu: 1800,
 		gpu: 2000,
-		cpuDn: '71 - 77',
-		gpuDn: '65 - 71'
+		cpuDn: '71–77',
+		gpuDn: '65–71'
 	},
 	{
 		uuid: '6',
@@ -96,28 +96,28 @@ export const tableData = [
 		uuid: '7',
 		cpu: 2300,
 		gpu: 2500,
-		cpuDn: '77 - 83',
-		gpuDn: '71 - 77'
+		cpuDn: '77–83',
+		gpuDn: '71–77'
 	},
 	{
 		uuid: '8',
 		cpu: gpuStop1,
 		gpu: gpuStop2,
-		cpuDn: '80 - 86',
-		gpuDn: '75 - 80'
+		cpuDn: '80–86',
+		gpuDn: '75–80'
 	},
 	{
 		uuid: '9',
 		cpu: 2700,
 		gpu: 2900,
-		cpuDn: '83 - 88',
-		gpuDn: '77 - 83'
+		cpuDn: '83–88',
+		gpuDn: '77–83'
 	},
 	{
 		uuid: '10',
 		cpu: 2900,
 		gpu: 3100,
-		cpuDn: '86 - 96',
-		gpuDn: '80 - 86'
+		cpuDn: '86–96',
+		gpuDn: '80–86'
 	}
 ];

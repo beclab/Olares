@@ -15,7 +15,11 @@
 				>
 					<bt-app-select v-model="backupApp" :options="backupAppOptions" />
 				</bt-form-item>
-				<bt-form-item :title="t('backup_location')" :margin-top="false">
+				<bt-form-item
+					:title="t('backup_location')"
+					:description="t('backup_location_tooltip')"
+					:margin-top="false"
+				>
 					<div class="row justify-end items-center full-width">
 						<div
 							v-if="
@@ -145,6 +149,7 @@
 				<bt-form-item
 					v-if="backupType === BackupResourcesType.files"
 					:title="t('backup_path')"
+					:description="t('backup_path_tooltip')"
 				>
 					<transfet-select-to
 						class="q-mt-xs"
@@ -331,6 +336,8 @@ import {
 	weekOption,
 	MENU_TYPE
 } from 'src/constant';
+import { base64ToString } from 'src/utils/encode';
+import { isFileBackupNewOpenEnable } from 'src/api';
 
 const $q = useQuasar();
 const { t } = useI18n();
@@ -367,7 +374,11 @@ onMounted(() => {
 	const path = route.params.backup_path as string;
 	backupType.value = route.params.backup_type as string;
 	if (path) {
-		backupPathRef.value = decodeURIComponent(path);
+		// Must mirror how openSetting encoded the path: new clients send base64,
+		// legacy clients send a URI-encoded path.
+		backupPathRef.value = isFileBackupNewOpenEnable()
+			? base64ToString(path)
+			: decodeURIComponent(path);
 	}
 	if (backupType.value === BackupResourcesType.app) {
 		backupAppOptions.value = backupStore.getSupportApplicationOptions();
@@ -533,7 +544,7 @@ async function onSubmit() {
 	let region: OlaresSpaceRegion;
 	if (locationData.value.type === BackupLocationType.space) {
 		if (!spaceRegion.value) {
-			notifyFailed('Please select a space region');
+			notifyFailed(t('please_select_a_space_region'));
 			return;
 		}
 		const regionArray = spaceRegion.value.split('_');

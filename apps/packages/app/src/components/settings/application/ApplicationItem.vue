@@ -12,7 +12,7 @@
 						/>
 
 						<img
-							v-if="csApp"
+							v-if="sharedApp"
 							class="application_cs_icon"
 							:style="{ '--csSize': '12px' }"
 							:src="getRequireImage('share_app.svg')"
@@ -31,10 +31,10 @@
 							</span>
 
 							<span
-								v-if="rawAppName && rawAppName !== appName"
+								v-if="cloneLabel"
 								class="text-info bg-blue-alpha text-caption q-ml-sm clone-label"
 							>
-								{{ t('Clone') }}
+								{{ cloneLabel }}
 							</span>
 						</div>
 
@@ -63,9 +63,10 @@ import BtSeparator from '../base/BtSeparator.vue';
 import ApplicationStatus from './ApplicationStatus.vue';
 import { useDeviceStore } from 'src/stores/settings/device';
 import { getRequireImage } from 'src/utils/imageUtils';
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 
-defineProps({
+const props = defineProps({
 	icon: {
 		type: String,
 		require: true
@@ -74,9 +75,13 @@ defineProps({
 		type: String,
 		require: true
 	},
-	csApp: {
+	sharedApp: {
 		type: Boolean,
 		require: true
+	},
+	clonedFrom: {
+		type: String,
+		require: ''
 	},
 	appName: {
 		type: String,
@@ -110,6 +115,19 @@ defineProps({
 
 const deviceStore = useDeviceStore();
 const { t } = useI18n();
+
+const cloneLabel = computed(() => {
+	if (!props.rawAppName || props.rawAppName === props.appName) {
+		return '';
+	}
+	if (props.clonedFrom === 'template') {
+		return t('From Template');
+	}
+	if (props.clonedFrom === 'app') {
+		return t('From App');
+	}
+	return '';
+});
 </script>
 
 <style scoped lang="scss">

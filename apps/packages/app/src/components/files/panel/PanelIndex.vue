@@ -2,7 +2,7 @@
 	<div class="uploadModal bg-background-2">
 		<panel-header
 			:processingCount="processingCount"
-			:totalCount="uploadData.length"
+			:totalCount="panelItemCount"
 			:showUpload="showUpload"
 			@closePanel="closeUploadModal"
 			@togglePanel="toggle"
@@ -14,12 +14,16 @@
 				showUpload ? 'uploadContent heightFull' : 'uploadContent heightZero'
 			"
 		>
-			<panel-item
+			<template
 				v-for="(file, index) in uploadData"
-				:key="index"
-				:file="file"
-				class="q-mt-sm"
-			/>
+				:key="`transfer-${file.id || index}`"
+			>
+				<archive-task-item
+					v-if="archiveFrontFilter.includes(file.front)"
+					:task="file"
+				/>
+				<panel-item :file="file" v-else />
+			</template>
 		</q-scroll-area>
 	</div>
 </template>
@@ -28,10 +32,10 @@
 import { ref, onUnmounted, computed } from 'vue';
 import { useTransfer2Store } from '../../../stores/transfer2';
 import { scrollBarStyle } from '../../../utils/contact';
-import { useI18n } from 'vue-i18n';
 
 import PanelHeader from './PanelHeader.vue';
 import PanelItem from './PanelItem.vue';
+import ArchiveTaskItem from './ArchiveTaskItem.vue';
 
 import {
 	TransferFront,
@@ -42,31 +46,27 @@ import {
 const emits = defineEmits(['onCloseUploadDialog']);
 
 const transfer2Store = useTransfer2Store();
-
-const { t } = useI18n();
 const showUpload = ref(true);
 
 const frontFilter = ref([
 	TransferFront.upload,
 	TransferFront.copy,
-	TransferFront.move
+	TransferFront.move,
+	TransferFront.compress,
+	TransferFront.extract
 ]);
+const archiveFrontFilter = ref([TransferFront.compress, TransferFront.extract]);
 
 onUnmounted(() => {
 	showUpload.value = false;
 });
 
 const processingCount = computed(() => {
-	const res = transfer2Store.filesInDialog
-		.map((id) => ({ id, ...transfer2Store.filesInDialogMap[id] }))
-		.filter(
-			(item) =>
-				frontFilter.value.includes(item.front) &&
-				(item.status === TransferStatus.Running ||
-					item.status === TransferStatus.Pending)
-		);
-
-	return res.length;
+	return uploadData.value.filter(
+		(item) =>
+			item.status === TransferStatus.Running ||
+			item.status === TransferStatus.Pending
+	).length;
 });
 
 const uploadData = computed(() => {
@@ -84,16 +84,8 @@ const uploadData = computed(() => {
 		)
 	];
 });
-
-const uploadCompleteData = computed(() => {
-	const res = transfer2Store.filesInDialog
-		.map((id) => ({ id, ...transfer2Store.filesInDialogMap[id] }))
-		.filter(
-			(item) =>
-				frontFilter.value.includes(item.front) &&
-				item.status === TransferStatus.Completed
-		);
-	return res;
+const panelItemCount = computed(() => {
+	return uploadData.value.length;
 });
 
 const toggle = () => {

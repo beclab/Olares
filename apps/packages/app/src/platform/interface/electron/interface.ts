@@ -9,8 +9,43 @@ export type IPCVpnEventName =
 	| 'currentNodeId'
 	| 'peersState'
 	| 'electronVpnStatusUpdate'
+	| 'electronVpnNotify'
 	| 'resendCache'
-	| 'getVpnAbility';
+	| 'resendPreauthKey'
+	| 'getVpnAbility'
+	| 'getExitNodeState'
+	| 'enableExitNode'
+	| 'disableExitNode'
+	| 'setExitNodeAllowLanAccess'
+	| 'tailscalePing';
+
+export interface ITailscalePingInterface {
+	ip: string;
+	timeout?: number;
+}
+
+export interface IExitNodeOption {
+	id: string;
+	/** Tailscale IP for SetExitNode. */
+	arg: string;
+	label: string;
+}
+
+export interface IExitNodeState {
+	nodes: IExitNodeOption[];
+	enabled: boolean;
+	/** Current exit node IP from prefs; only set when enabled. */
+	selected?: string;
+	exitNodeAllowLanAccess?: boolean;
+}
+
+export interface IEnableExitNodeInterface {
+	exitNode?: string;
+}
+
+export interface ISetExitNodeAllowLanInterface {
+	allow: boolean;
+}
 
 export type IPCFilesEventName =
 	| 'loginAccount'
@@ -275,11 +310,24 @@ declare global {
 					listenerVpnStatusUpdate: (
 						callback: (_event: any, list: any) => void
 					) => void;
+					listenerVpnNotify: (
+						callback: (_event: any, payload: [{ notify?: string }]) => void
+					) => void;
 					resendCache: (data: {
 						server: string;
 						authToken: string;
 					}) => Promise<void>;
+					resendPreauthKey: (data: { authKey: string }) => Promise<void>;
 					getVpnAbility: () => Promise<boolean>;
+					getExitNodeState: () => Promise<IExitNodeState>;
+					enableExitNode: (
+						data: IEnableExitNodeInterface
+					) => Promise<IExitNodeState>;
+					disableExitNode: () => Promise<IExitNodeState>;
+					setExitNodeAllowLanAccess: (
+						data: ISetExitNodeAllowLanInterface
+					) => Promise<IExitNodeState>;
+					tailscalePing: (data: ITailscalePingInterface) => Promise<string>;
 				};
 				files: {
 					/** seafile **/

@@ -1,6 +1,6 @@
 <template>
 	<bt-scroll-area class="full-height">
-		<MyCard title="Realtime" flat class="q-ma-sm">
+		<MyCard :title="$t('REALTIME')" flat class="q-ma-sm">
 			<template #extra>
 				<QSectionStyle>
 					<q-select

@@ -21,7 +21,7 @@ export async function remove(url: string) {
 }
 
 export async function saveFile(url: string, content = '') {
-	CommonFetch.put(formatResourcesUrl(url), content, {
+	return await CommonFetch.put(formatResourcesUrl(url), content, {
 		headers: {
 			'Content-Type': 'text/plain'
 		}

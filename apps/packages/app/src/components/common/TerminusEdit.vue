@@ -1,6 +1,6 @@
 <template>
 	<div class="terminus-edit">
-		<div class="login-label" v-show="label">
+		<div class="login-label" v-show="label" :class="titleClass">
 			{{ label }}
 		</div>
 		<div
@@ -12,7 +12,9 @@
 					? 'terminus_background_edt_read_only'
 					: 'terminus_background_edt'
 			"
-			:style="transaction ? 'background : transparent;' : ''"
+			:style="`${
+				transaction ? 'background : transparent;' : ''
+			}margin-top: ${inputMarginTop}px; --input-margin-top: ${inputMarginTop}px;`"
 		>
 			<img
 				:src="inputImageRef"
@@ -38,7 +40,9 @@
 					fontSize: `${
 						inputTypeRef === 'password' && $q.platform.is.ios
 							? '7px'
-							: inputTypeRef === 'password' && !isMobile
+							: inputTypeRef === 'password' &&
+							  (modelValue?.length || 0) > 0 &&
+							  !isMobile
 							? '22px'
 							: '12px'
 					}`,
@@ -139,6 +143,15 @@ const props = defineProps({
 		type: Number,
 		required: false,
 		default: 32
+	},
+	titleClass: {
+		type: String,
+		required: false
+	},
+	inputMarginTop: {
+		type: Number,
+		required: false,
+		default: 4
 	}
 });
 
@@ -214,16 +227,15 @@ function changeInputType() {
 }
 
 ::v-deep(.q-field--dense .q-field__marginal) {
-	height: 32px;
+	height: var(--input-default-height);
 }
 
 .terminus-edit {
 	width: auto;
 
 	&__bg {
-		// height: 32px;
 		width: 100%;
-		margin-top: 4px;
+		margin-top: var(--input-margin-top, 4px);
 		position: relative;
 		overflow: hidden;
 

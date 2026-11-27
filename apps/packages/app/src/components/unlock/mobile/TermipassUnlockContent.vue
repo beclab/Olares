@@ -44,8 +44,11 @@
 					<span class="terminus-unlock-page__desc login-sub-title">{{
 						t(
 							'Password entered incorrectly multiple times. Account locked for {minutes} minutes. Please try again later.',
+							temLockedInfo.leftTimes,
 							{
-								minutes: temLockedInfo.leftTimes
+								named: {
+									minutes: temLockedInfo.leftTimes
+								}
 							}
 						)
 					}}</span>
@@ -252,8 +255,11 @@ const unlockResult = {
 			notifyFailed(
 				t(
 					'Password entered incorrectly multiple times. Account locked for {minutes} minutes. Please try again later.',
+					temLockedInfo.value.leftTimes,
 					{
-						minutes: temLockedInfo.value.leftTimes
+						named: {
+							minutes: temLockedInfo.value.leftTimes
+						}
 					}
 				)
 			);

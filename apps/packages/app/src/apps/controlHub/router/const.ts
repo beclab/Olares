@@ -10,7 +10,3 @@ export const componentName = {
 	JOB_DETAILS: 'JOB_DETAILS',
 	TERMINAL_APP: 'TERMINAL_APP'
 };
-
-export const componentMeta = {
-	STUDIO: 'STUDIO'
-};

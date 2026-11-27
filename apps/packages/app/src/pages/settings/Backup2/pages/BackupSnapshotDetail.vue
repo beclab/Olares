@@ -90,7 +90,7 @@
 import { useI18n } from 'vue-i18n';
 import { bus } from 'src/utils/bus';
 import { useRoute } from 'vue-router';
-import { format } from 'quasar';
+import { format } from 'src/utils/format';
 import { BtNotify, NotifyDefinedType } from '@bytetrade/ui';
 import { useBackupStore } from 'src/stores/settings/backup';
 import BtList from 'src/components/settings/base/BtList.vue';

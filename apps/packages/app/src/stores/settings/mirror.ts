@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import axios from 'axios';
-import { useAdminStore } from './admin';
+import { useTerminusStore } from '../terminus';
 import { useTokenStore } from './token';
 
 export interface RegistryMirror {
@@ -29,13 +29,13 @@ export const useMirrorStore = defineStore('mirror', {
 
 	actions: {
 		async getRegistryMirrors() {
-			const admin = useAdminStore();
+			const terminus = useTerminusStore();
 			const tokenStore = useTokenStore();
 			const data: any = await axios.get(
 				`${tokenStore.url}/api/containerd/registries`,
 				{
 					headers: {
-						'X-Signature': admin.olares_device_id
+						'X-Signature': terminus.olares_device_id
 					}
 				}
 			);
@@ -47,13 +47,13 @@ export const useMirrorStore = defineStore('mirror', {
 			return data;
 		},
 		async getRegistryEndpoint(registry: string) {
-			const admin = useAdminStore();
+			const terminus = useTerminusStore();
 			const tokenStore = useTokenStore();
 			const data: any = await axios.get(
 				`${tokenStore.url}/api/containerd/registry/mirrors/${registry}`,
 				{
 					headers: {
-						'X-Signature': admin.olares_device_id
+						'X-Signature': terminus.olares_device_id
 					}
 				}
 			);
@@ -61,7 +61,7 @@ export const useMirrorStore = defineStore('mirror', {
 			return data.endpoint;
 		},
 		async putRegistryEndpoint(registry: string, endpoint: string[]) {
-			const admin = useAdminStore();
+			const terminus = useTerminusStore();
 			const tokenStore = useTokenStore();
 			if (endpoint.length == 0) {
 				return await this.deleteRegistryEndpoint(registry);
@@ -73,33 +73,33 @@ export const useMirrorStore = defineStore('mirror', {
 				},
 				{
 					headers: {
-						'X-Signature': admin.olares_device_id
+						'X-Signature': terminus.olares_device_id
 					}
 				}
 			);
 			return data.endpoint;
 		},
 		async deleteRegistryEndpoint(registry: string) {
-			const admin = useAdminStore();
+			const terminus = useTerminusStore();
 			const tokenStore = useTokenStore();
 			await axios.delete(
 				`${tokenStore.url}/api/containerd/registry/mirrors/${registry}`,
 				{
 					headers: {
-						'X-Signature': admin.olares_device_id
+						'X-Signature': terminus.olares_device_id
 					}
 				}
 			);
 			return [];
 		},
 		async getRegistryImages(registry?: string) {
-			const admin = useAdminStore();
+			const terminus = useTerminusStore();
 			const tokenStore = useTokenStore();
 			let data: any = await axios.get(
 				`${tokenStore.url}/api/containerd/images`,
 				{
 					headers: {
-						'X-Signature': admin.olares_device_id
+						'X-Signature': terminus.olares_device_id
 					},
 					params: {
 						registry
@@ -134,26 +134,26 @@ export const useMirrorStore = defineStore('mirror', {
 			return data;
 		},
 		async deleteRegistryImage(id: string) {
-			const admin = useAdminStore();
+			const terminus = useTerminusStore();
 			const tokenStore = useTokenStore();
 			const data: any = await axios.delete(
 				`${tokenStore.url}/api/containerd/images/${id}`,
 				{
 					headers: {
-						'X-Signature': admin.olares_device_id
+						'X-Signature': terminus.olares_device_id
 					}
 				}
 			);
 			return data;
 		},
 		async deleteImagesPrune() {
-			const admin = useAdminStore();
+			const terminus = useTerminusStore();
 			const tokenStore = useTokenStore();
 			const data: any = await axios.post(
 				`${tokenStore.url}/api/containerd/images/prune`,
 				{
 					headers: {
-						'X-Signature': admin.olares_device_id
+						'X-Signature': terminus.olares_device_id
 					}
 				}
 			);

@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { User, Route } from 'src/headscale/classes';
+import { User } from 'src/headscale/classes';
 import { HeadScaleDevice } from '@bytetrade/core';
 import { sortDevices } from 'src/headscale/sort';
 import axios from 'axios';
@@ -37,7 +37,7 @@ export const useHeadScaleStore = defineStore('headScale', {
 			const data: any = await axios.get(
 				tokenStore.url + '/api/launcher-public-domain-access-policy'
 			);
-			this.headScaleStatus = data.deny_all == 1 ? true : false;
+			this.headScaleStatus = data.deny_all == 1;
 		},
 
 		async toggleHeadScaleStatus() {
@@ -54,7 +54,7 @@ export const useHeadScaleStore = defineStore('headScale', {
 
 		async getDevices(): Promise<any> {
 			// endpoint url for getting users
-			const endpointURL = '/machine';
+			const endpointURL = '/node';
 
 			//returning variables
 			let headscaleDevices = [new HeadScaleDevice()];
@@ -63,17 +63,17 @@ export const useHeadScaleStore = defineStore('headScale', {
 			try {
 				const data: any = await axios.get(this.headscaleURL + endpointURL);
 
-				headscaleDevices = sortDevices(data.machines);
+				headscaleDevices = sortDevices(data.nodes);
 
 				this.status = 'succeeded';
 
-				for (let i = 0; i < headscaleDevices.length; i++) {
-					for (let j = 0; j < headscaleDevices[i].forcedTags.length; ++j) {
-						headscaleDevices[i].forcedTags[j] = headscaleDevices[i].forcedTags[
-							j
-						].replace('tag:', '');
-					}
-				}
+				// for (let i = 0; i < headscaleDevices.length; i++) {
+				// for (let j = 0; j < headscaleDevices[i].forcedTags.length; ++j) {
+				// 	headscaleDevices[i].forcedTags[j] = headscaleDevices[i].forcedTags[
+				// 		j
+				// 	].replace('tag:', '');
+				// }
+				// }
 
 				this.devices = headscaleDevices;
 			} catch (e) {
@@ -84,10 +84,14 @@ export const useHeadScaleStore = defineStore('headScale', {
 
 		async renameDevice(deviceID: string, name: string): Promise<any> {
 			// endpoint url for editing users
-			const endpointURL = '/machine/' + deviceID + '/rename/' + name;
+			const endpointURL = '/node/' + deviceID + '/rename/' + name;
 			try {
 				const data: any = await axios.post(this.headscaleURL + endpointURL);
-				await this.getDevices();
+				if (data && data.node) {
+					this.devices = this.devices.map((item) =>
+						item.id === data.node.id ? data.node : item
+					);
+				}
 				return data;
 			} catch (e) {
 				console.log(e);
@@ -97,7 +101,7 @@ export const useHeadScaleStore = defineStore('headScale', {
 
 		async removeDevice(deviceID: string): Promise<any> {
 			// endpoint url for removing devices
-			const endpointURL = '/machine/' + deviceID;
+			const endpointURL = '/node/' + deviceID;
 			try {
 				const data: any = await axios.delete(this.headscaleURL + endpointURL);
 
@@ -109,37 +113,20 @@ export const useHeadScaleStore = defineStore('headScale', {
 			}
 		},
 
-		async getDeviceRoutes(deviceID: string): Promise<Route[]> {
-			const endpointURL = '/machine/' + deviceID + '/routes';
-
+		async approveRoutes(nodeId: string, routeList: string[]): Promise<any> {
 			try {
-				const data: any = await axios.get(this.headscaleURL + endpointURL);
-
-				return data.routes;
-			} catch (e) {
-				console.log(e);
-				return [];
-			}
-		},
-
-		async modifyDeviceRoutes(
-			routeList: Route[],
-			routeID: number
-		): Promise<any> {
-			let endpointURL = '';
-
-			routeList.forEach((route) => {
-				if (route.id == routeID) {
-					endpointURL = `/routes/${routeID}/`;
-					if (route.enabled) {
-						endpointURL += 'disable';
-					} else {
-						endpointURL += 'enable';
+				const data: any = await axios.post(
+					this.headscaleURL + '/node/approve_routes',
+					{
+						id: nodeId,
+						routes: routeList
 					}
+				);
+				if (data && data.node) {
+					this.devices = this.devices.map((item) =>
+						item.id === data.node.id ? data.node : item
+					);
 				}
-			});
-			try {
-				await axios.post(this.headscaleURL + endpointURL, {});
 			} catch (e) {
 				console.log(e);
 			}
@@ -147,7 +134,7 @@ export const useHeadScaleStore = defineStore('headScale', {
 
 		async updateTags(deviceID: string, tags: string[]): Promise<any> {
 			// endpoint url for editing users
-			const endpointURL = '/machine/' + deviceID + '/tags';
+			const endpointURL = '/node/' + deviceID + '/tags';
 			const array: string[] = [];
 			for (const t of tags) {
 				array.push('tag:' + t);

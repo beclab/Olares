@@ -1,3 +1,4 @@
+import { uid } from 'quasar';
 import {
 	CredentialApplicationWrapper,
 	CredentialManifest,
@@ -10,7 +11,6 @@ import {
 	createVerifiableCredential,
 	createVerifiablePresentation
 } from '@bytetrade/core';
-import { VaultItem, VaultType, uuid } from '@didvault/sdk/src/core';
 import { i18n } from 'src/boot/i18n';
 import { GeneralJwsSigner } from 'src/jose/jws/general/signer';
 import { TermipassConfig } from './config';
@@ -19,22 +19,6 @@ export interface VCCardInfo {
 	type: string;
 	manifest: string;
 	verifiable_credential: string;
-}
-
-export interface VCCardItem extends VCCardInfo {
-	id: string;
-}
-
-export function convertVault2CardItem(item: VaultItem): VCCardItem | undefined {
-	if (item.type != VaultType.VC) {
-		return undefined;
-	}
-	return {
-		id: item.id,
-		type: item.fields[0].value,
-		manifest: item.fields[1].value,
-		verifiable_credential: item.fields[2].value
-	};
 }
 
 export function getFullyQualifiedVerificationMethodID(did: string): string {
@@ -105,7 +89,7 @@ export async function getSubmitApplicationJWS(
 		credentialSubject
 	);
 	const vc_jwt = await signVerifiableCredentialJWT(vc, holderPrivateKey);
-	const application_id = await uuid();
+	const application_id = uid();
 	const descriptor_map: any[] = [];
 	for (const input of manifest.presentation_definition.input_descriptors) {
 		descriptor_map.push({
@@ -187,7 +171,7 @@ export async function signVerifiablePresentationJWT(
 	t.sub = pres.holder;
 	t.iss = getFullyQualifiedVerificationMethodID(pres.holder!);
 	t.vp = pres;
-	t.nonce = await uuid();
+	t.nonce = uid();
 
 	return await signJwtPayload(t, privateKey);
 }

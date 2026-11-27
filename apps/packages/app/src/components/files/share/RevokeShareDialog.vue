@@ -2,7 +2,7 @@
 	<bt-custom-dialog
 		ref="CustomRef"
 		:title="t('files_popup_menu.Revoke sharing')"
-		:ok="t('confirm')"
+		:ok="t('files_popup_menu.revoke')"
 		:cancel="t('cancel')"
 		:okLoading="loading ? t('loading') : false"
 		size="small"
@@ -11,10 +11,7 @@
 		@onHide="onCancel"
 		@onCancel="onCancel"
 	>
-		<div
-			class="dialog-desc"
-			:style="{ textAlign: isMobile ? 'center' : 'left' }"
-		>
+		<div class="dialog-desc" :style="{ textAlign: 'left' }">
 			{{ t('files.Revoke Olares sharing?') }}
 		</div>
 	</bt-custom-dialog>

@@ -12,8 +12,6 @@
 
 			<p class="account_please_text please_text">
 				{{ t('vault_content_1') }}
-				<span @click="openTip">{{ t('err_learn_more') }}</span
-				><br />
 			</p>
 
 			<div
@@ -71,8 +69,6 @@ export default defineComponent({
 			'active_vault://' +
 				Encoder.stringToBase64Url(JSON.stringify(tokenStore.wizard))
 		);
-		console.log(tokenStore.wizard);
-		console.log('url.value', url.value);
 
 		const openTip = () => {
 			$q.dialog({

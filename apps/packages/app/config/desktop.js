@@ -38,7 +38,11 @@ const getConfig = (ctx) => {
 		},
 		pwa: {
 			workboxPluginMode: 'InjectManifest', // 'GenerateSW' or 'InjectManifest'
-			workboxOptions: {}, // only for GenerateSW
+			workboxOptions: {
+				// The launcher bootstrap and shared JS chunks currently reach 6.6 MB.
+				// Precache them as well, with a finite budget for future bundle growth.
+				maximumFileSizeToCacheInBytes: 8 * 1024 * 1024
+			},
 
 			manifest: {
 				name: 'Olares',

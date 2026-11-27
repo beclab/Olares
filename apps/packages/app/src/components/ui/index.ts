@@ -9,7 +9,6 @@ import BtUploader from './uploader';
 import BtLogoLoading from './logoLoading';
 import TerminusAvatar from './TerminusAvatar';
 import VueDragResize from './VueDragResize';
-import UploadFromFiles from './UploadFromFiles';
 import BtMenu from './Menu';
 import BtScrollArea from './ScrollArea';
 import BtNotify from './notify';
@@ -29,7 +28,6 @@ const components = [
 	BtLogoLoading,
 	TerminusAvatar,
 	VueDragResize,
-	UploadFromFiles,
 	BtMenu,
 	BtScrollArea,
 	BtTheme,
@@ -79,7 +77,6 @@ export default {
 	BtLogoLoading,
 	TerminusAvatar,
 	VueDragResize,
-	UploadFromFiles,
 	BtMenu,
 	BtScrollArea,
 	BtTheme,
@@ -96,7 +93,6 @@ export {
 	BtLogoLoading,
 	TerminusAvatar,
 	VueDragResize,
-	UploadFromFiles,
 	BtMenu,
 	BtScrollArea,
 	BtNotify,

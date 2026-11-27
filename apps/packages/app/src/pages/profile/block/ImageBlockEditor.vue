@@ -38,14 +38,14 @@
 			</template>
 		</div>
 		<div class="edit-label full-width q-mt-lg">
-			{{ t('blocks.add_image') }}
+			{{ t('blocks.image') }}
 		</div>
 		<div class="image-border column q-pa-lg q-mt-md">
 			<q-input
 				dense
 				borderless
 				v-model="blockRef.link"
-				:placeholder="t('blocks.image_link') + '(' + t('base.optional') + ')'"
+				:placeholder="t('blocks.image_link_optional')"
 			/>
 			<upload-component
 				class="q-mt-md"

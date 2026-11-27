@@ -5,10 +5,11 @@ import { encryptService } from './encryptService';
 import { WEB3_CONFIG } from '../config';
 import { PaymentOrderData } from 'src/constant/constants';
 import BigNumber from 'bignumber.js';
+import { i18n } from 'src/boot/i18n';
 
 export async function paymentWithProduct(paymentInfo: PaymentOrderData) {
 	if (!paymentInfo) {
-		throw new Error('Payment info cannot be empty');
+		throw new Error(i18n.global.t('Payment info cannot be empty'));
 	}
 
 	try {
@@ -24,7 +25,9 @@ export async function paymentWithProduct(paymentInfo: PaymentOrderData) {
 
 		const priceConfig = paymentInfo.price_config.paid;
 		if (!priceConfig || !priceConfig.price?.length) {
-			throw new Error('Invalid price config: missing paid price information');
+			throw new Error(
+				i18n.global.t('Invalid price config: missing paid price information')
+			);
 		}
 		//TODO first price
 		const targetPrice = priceConfig.price[0];
@@ -38,7 +41,13 @@ export async function paymentWithProduct(paymentInfo: PaymentOrderData) {
 		);
 		if (!tokenInfo) {
 			throw new Error(
-				`No supported token found for [symbol: ${targetPrice.token_symbol}, chain: ${targetPrice.chain}]`
+				i18n.global.t(
+					'No supported token found for [symbol: {symbol}, chain: {chain}]',
+					{
+						symbol: targetPrice.token_symbol,
+						chain: targetPrice.chain
+					}
+				)
 			);
 		}
 		console.debug('Matched token info:', {
@@ -68,7 +77,9 @@ export async function paymentWithProduct(paymentInfo: PaymentOrderData) {
 		await web3Service.connectWallet(tokenInfo.token_contract, supportChain);
 		const userAccount = web3Service.getUserAccount();
 		if (!userAccount.value) {
-			throw new Error('Failed to get user account: wallet not connected');
+			throw new Error(
+				i18n.global.t('Failed to get user account: wallet not connected')
+			);
 		}
 		console.info(
 			`✅ Wallet connected successfully. User account: ${userAccount.value}`
@@ -80,7 +91,11 @@ export async function paymentWithProduct(paymentInfo: PaymentOrderData) {
 
 		const balanceBN = new BigNumber(balance);
 		if (balanceBN.isLessThanOrEqualTo(0)) {
-			throw new Error(`User has no balance for ${tokenInfo.token_symbol}`);
+			throw new Error(
+				i18n.global.t('User has no balance for {symbol}', {
+					symbol: tokenInfo.token_symbol
+				})
+			);
 		}
 
 		// tokenInfo.token_amount should be in the smallest unit (e.g., wei)
@@ -107,7 +122,7 @@ export async function paymentWithProduct(paymentInfo: PaymentOrderData) {
 		console.info('✅ Order signed successfully');
 
 		if (!paymentInfo.rsa_public_key) {
-			throw new Error('rsa public key is missing');
+			throw new Error(i18n.global.t('RSA public key is missing'));
 		}
 
 		console.info('Encrypting order data...');
@@ -117,7 +132,7 @@ export async function paymentWithProduct(paymentInfo: PaymentOrderData) {
 		);
 		const encryptedData = encryptService.getEncryptedData();
 		if (!encryptedData.value) {
-			throw new Error('Failed to get encrypted order data');
+			throw new Error(i18n.global.t('Failed to get encrypted order data'));
 		}
 		console.debug(
 			`✅ Order data encrypted. Length: ${encryptedData.value.length}`
@@ -131,7 +146,9 @@ export async function paymentWithProduct(paymentInfo: PaymentOrderData) {
 			encryptedData.value
 		);
 		if (!txHash) {
-			throw new Error('Failed to get transaction hash after transfer');
+			throw new Error(
+				i18n.global.t('Failed to get transaction hash after transfer')
+			);
 		}
 		const explorerUrl = `${supportChain?.blockExplorerUrls[0]}/tx/${txHash}`;
 		console.info(`✅ Transfer initiated. Transaction hash: ${txHash}`);
@@ -147,6 +164,6 @@ export async function paymentWithProduct(paymentInfo: PaymentOrderData) {
 		console.error(`❌ Product payment failed: ${error.message}`, error.stack);
 		throw error instanceof Error
 			? error
-			: new Error('paymentWithProduct error');
+			: new Error(i18n.global.t('paymentWithProduct error'));
 	}
 }

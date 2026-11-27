@@ -43,12 +43,15 @@
 			class="column items-center"
 			style="width: 300px"
 		>
-			<qrcode-vue
-				class="bio-share-qrcode"
-				id="share-qrcode"
-				:value="url"
-				size="136"
-			/>
+			<!--
+				The id must live on a real DOM node. qrcode.vue declares `id` as a
+				component prop, so passing it to <qrcode-vue> never reaches the
+				rendered <canvas> and getElementById() would return null, breaking
+				the PNG download. Wrap the canvas in a div that carries the id.
+			-->
+			<div id="share-qrcode" class="bio-share-qrcode">
+				<qrcode-vue :value="url" size="136" />
+			</div>
 			<png-download
 				element-id="share-qrcode"
 				:png-name="`${name}_qrcode.png`"
@@ -125,12 +128,14 @@ const shareToFacebook = () => {
 
 // Only Twitter supports free text.
 const shareToTwitter = () => {
-	const content = 'Welcome to my profile to learn more about me';
-	const url = encodeURIComponent(props.url);
+	const content = t('share_profile_message');
 	// Shows "via @<account>" in shared content.
-	const via = 'Terminus';
-	const text = `${content} ${url}&via=${via}`;
-	const twitter = `https://twitter.com/intent/tweet?text=${text}`;
+	const via = 'Olares';
+	const params = new URLSearchParams({
+		text: `${content} ${props.url}`,
+		via
+	});
+	const twitter = `https://twitter.com/intent/tweet?${params.toString()}`;
 	window.open(twitter, '_blank');
 };
 
@@ -149,6 +154,10 @@ const shareToLinkedin = () => {
 	border-radius: 8px;
 	background-color: white;
 	border: 1px solid $separator;
+	// The wrapped <canvas> is inline; drop the baseline gap so the white box
+	// hugs the QR code (and the downloaded PNG has no stray whitespace).
+	font-size: 0;
+	line-height: 0;
 }
 
 .bio-share-picture {

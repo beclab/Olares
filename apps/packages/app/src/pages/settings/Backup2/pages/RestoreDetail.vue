@@ -185,7 +185,7 @@ onBeforeUnmount(() => {
 
 const onOpen = async () => {
 	if (restore.value && restore.value.restorePath) {
-		let url = backupStore.getModuleSever('files', 'https:');
+		let url = backupStore.getModuleSever('files', window.location.protocol);
 		url = url + restore.value.restorePath;
 		window.open(url);
 	}
@@ -200,7 +200,10 @@ const onOpenApp = async () => {
 		if (app) {
 			const entrance = app.entrances?.find((item) => !item.invisible);
 			if (entrance) {
-				let url = backupStore.getModuleSever(entrance.id, 'https:');
+				const url = backupStore.getModuleSever(
+					entrance.id,
+					window.location.protocol
+				);
 				window.open(url);
 			}
 		}

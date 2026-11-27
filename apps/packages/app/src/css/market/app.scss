@@ -1,0 +1,26 @@
+@import '../app.scss';
+
+.market-global-ok-button {
+	background: $primary !important;
+	color: white !important;
+}
+
+body.body--dark {
+	background: $theme-background-dark !important;
+}
+
+body.body--light {
+	background: $theme-background-light !important;
+}
+
+.q-separator--dark {
+	background: $separator !important;
+}
+
+.q-dark {
+	background: $theme-background-dark !important;
+}
+
+// .q-drawer {
+// 	background-color: transparent !important;
+// }

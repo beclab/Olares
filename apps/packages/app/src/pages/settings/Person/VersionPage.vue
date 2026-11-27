@@ -8,7 +8,7 @@
 				:chevron-right="false"
 				:widthSeparator="false"
 			>
-				{{ adminStore.terminus.osVersion }}
+				{{ terminusStore.terminusInfo.osVersion }}
 			</bt-form-item>
 		</bt-list>
 	</bt-scroll-area>
@@ -19,8 +19,8 @@ import PageTitleComponent from 'src/components/settings/PageTitleComponent.vue';
 import BtFormItem from 'src/components/settings/base/BtFormItem.vue';
 import BtList from 'src/components/settings/base/BtList.vue';
 import { useI18n } from 'vue-i18n';
-import { useAdminStore } from 'src/stores/settings/admin';
-const adminStore = useAdminStore();
+import { useTerminusStore } from 'src/stores/terminus';
+const terminusStore = useTerminusStore();
 const { t } = useI18n();
 </script>
 

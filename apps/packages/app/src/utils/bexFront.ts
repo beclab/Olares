@@ -1,4 +1,4 @@
-import { stringToBase64 } from '@didvault/sdk/src/core';
+import { stringToBase64 } from './encode';
 import { useBexStore } from '../stores/bex';
 import { useUserStore } from '../stores/user';
 import { busEmit } from './bus';

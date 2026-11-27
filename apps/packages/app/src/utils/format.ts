@@ -12,14 +12,14 @@ const formatFileSize = (
 	isUnit = isUnit ?? true;
 
 	if (bytes === 0) {
-		return isUnit ? '0B' : '0';
+		return isUnit ? `0${space}B` : '0';
 	}
 
 	// console.log('bytes ===>', bytes);
 
 	const i = Math.floor(Math.log(bytes) / Math.log(1024));
 	if (i === 0) {
-		return bytes.toFixed(0) + (isUnit ? sizes[i] : '');
+		return bytes.toFixed(0) + (isUnit ? space + sizes[i] : '');
 	}
 	return (bytes / 1024 ** i).toFixed(fixed) + space + (isUnit ? sizes[i] : '');
 };

@@ -1,4 +1,5 @@
 import { RouteRecordRaw } from 'vue-router';
+import { useApplicationStore } from 'src/stores/desktop/app';
 
 function redirectLaunchpadIfColdStart(
 	to: { path: string },
@@ -9,6 +10,17 @@ function redirectLaunchpadIfColdStart(
 	}
 }
 
+function gateHomeFromLaunchpadShake(
+	_to: unknown,
+	from: { path: string }
+): boolean | undefined {
+	if (from.path !== '/launchpad') return;
+	const appStore = useApplicationStore();
+	if (!appStore.launchpadShakeMode) return;
+	appStore.launchpadShakeMode = false;
+	return false;
+}
+
 const routes: RouteRecordRaw[] = [
 	{
 		path: '/',
@@ -17,12 +29,13 @@ const routes: RouteRecordRaw[] = [
 			{
 				path: '',
 				component: () => import('@apps/desktop/IndexRouter.vue'),
-				meta: { requiresAuth: true }
+				meta: { requiresAuth: true },
+				beforeEnter: gateHomeFromLaunchpadShake
 			},
 			{
 				path: 'launchpad',
 				component: () => import('@apps/desktop/IndexRouter.vue'),
-				meta: { requiresAuth: true },
+				meta: { requiresAuth: true, exit: true },
 				beforeEnter: redirectLaunchpadIfColdStart
 			}
 		]

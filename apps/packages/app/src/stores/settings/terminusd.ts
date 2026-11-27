@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import axios from 'axios';
-import { useAdminStore } from './admin';
+import { useTerminusStore } from '../terminus';
 import { useTokenStore } from './token';
 import { HostItem } from '../../constant';
 import { TerminusStatus } from 'src/services/abstractions/mdns/service';
@@ -19,11 +19,11 @@ export const useTerminusDStore = defineStore('terminusd', {
 
 	actions: {
 		async system_status() {
-			const admin = useAdminStore();
+			const terminus = useTerminusStore();
 			const tokenStore = useTokenStore();
 			const data: any = await axios.get(`${tokenStore.url}/api/system/status`, {
 				headers: {
-					'X-Signature': admin.olares_device_id
+					'X-Signature': terminus.olares_device_id
 				}
 			});
 
@@ -33,41 +33,59 @@ export const useTerminusDStore = defineStore('terminusd', {
 			return data;
 		},
 		async collect_logs() {
-			const admin = useAdminStore();
+			const terminus = useTerminusStore();
 			const tokenStore = useTokenStore();
 			const data: any = await axios.post(
 				`${tokenStore.url}/api/command/collectLogs`,
-				null,
 				{
-					headers: {
-						'X-Signature': admin.olares_device_id
+					systemd: {
+						components: ['*'],
+						since: '',
+						maxLines: 0
+					},
+					host: {
+						dmesg: true,
+						network: true
+					},
+					cluster: {
+						info: true
+					},
+					namespaces: {
+						names: ['*']
 					}
 				}
 			);
 			return data;
 		},
+		async collectLogsByRunId(runID: string) {
+			const tokenStore = useTokenStore();
+			const data: any = await axios.get(
+				`${tokenStore.url}/api/command/collectLogs/${runID}`
+			);
+			return data;
+		},
 		async getHostsList(): Promise<HostItem[]> {
-			const admin = useAdminStore();
+			const terminus = useTerminusStore();
 			const tokenStore = useTokenStore();
 			const data: any = await axios.get(
 				`${tokenStore.url}/api/system/hosts-file`,
 				{
 					headers: {
-						'X-Signature': admin.olares_device_id
+						'X-Signature': terminus.olares_device_id
 					}
 				}
 			);
 			return data;
 		},
 		async updateHostsList(items: HostItem[]) {
-			const admin = useAdminStore();
+			const terminus = useTerminusStore();
 			const tokenStore = useTokenStore();
 			const data: any = await axios.post(
 				`${tokenStore.url}/api/system/hosts-file`,
 				{ items: items },
 				{
 					headers: {
-						'X-Signature': admin.olares_device_id
+						'X-Signature': terminus.olares_device_id
 					}
 				}
 			);
@@ -75,13 +93,13 @@ export const useTerminusDStore = defineStore('terminusd', {
 			return data;
 		},
 		async getRegistryMirrors() {
-			const admin = useAdminStore();
+			const terminus = useTerminusStore();
 			const tokenStore = useTokenStore();
 			const data: any = await axios.get(
 				`${tokenStore.url}/api/system/hosts-file`,
 				{
 					headers: {
-						'X-Signature': admin.olares_device_id
+						'X-Signature': terminus.olares_device_id
 					}
 				}
 			);

@@ -3,6 +3,7 @@
 		<slot>
 			<div
 				class="transfer-to-select q-px-md row items-center justify-between text-ink-2"
+				:style="{ '--select-height': selectHeight + 'px' }"
 			>
 				<div class="text-body3">
 					{{ pathComputed }}
@@ -31,6 +32,7 @@ const props = defineProps({
 				DriveType.External,
 				DriveType.Cache,
 				DriveType.Data,
+				DriveType.Common,
 				DriveType.GoogleDrive
 			];
 		}
@@ -39,6 +41,16 @@ const props = defineProps({
 		required: false,
 		default: false,
 		type: Boolean
+	},
+	selectHeight: {
+		type: Number,
+		required: false,
+		default: 32
+	},
+	defaultPathNumber: {
+		type: Number,
+		required: false,
+		default: 1
 	}
 });
 
@@ -56,7 +68,6 @@ const selectFolder = () => {
 		}
 	})
 		.onOk(async (value: FilePath) => {
-			console.log(value);
 			filePath.value = value;
 			emits('setSelectPath', value);
 		})
@@ -65,11 +76,13 @@ const selectFolder = () => {
 		});
 };
 
-const filePath = ref<FilePath | undefined>(filesStore.currentPath[1]);
+const filePath = ref<FilePath | undefined>(
+	filesStore.currentPath[props.defaultPathNumber]
+);
 
 const pathComputed = computed(() => {
 	if (filePath.value) {
-		return filePath.value.decodePath;
+		return (filePath.value as any).decodePath || filePath.value.path;
 	}
 	return '';
 });
@@ -83,7 +96,7 @@ const emits = defineEmits(['setSelectPath', 'setSelectCancel']);
 
 <style scoped lang="scss">
 .transfer-to-select {
-	height: 32px;
+	height: var(--select-height);
 	border: 1px solid $separator;
 	border-radius: 8px;
 }

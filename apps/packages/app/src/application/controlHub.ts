@@ -47,7 +47,8 @@ export class ControlHubApplication extends NormalApplication {
 					.trim();
 				BtNotify.show({
 					type: NotifyDefinedType.FAILED,
-					message: msg || 'Request failed'
+					message:
+						msg || i18n.global.t('errors.network_error_please_try_again_later')
 				});
 			}
 			throw error;

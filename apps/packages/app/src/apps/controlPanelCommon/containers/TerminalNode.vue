@@ -1,5 +1,8 @@
 <template>
-	<div class="relative-position terminal-content">
+	<div
+		class="relative-position terminal-content"
+		:class="{ 'terminal-content--window-browser': isWindowsBrowser }"
+	>
 		<div class="terminal-content-wrapper">
 			<div style="height: calc(100%)" ref="terminalRef"></div>
 		</div>
@@ -7,7 +10,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
+import { Platform } from 'quasar';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
@@ -35,6 +39,9 @@ const termA = ref<any>(null);
 const ws = ref();
 const initTimer = ref();
 const first = ref(true);
+const isWindowsBrowser = computed(
+	() => Platform.is.win && !Platform.is.electron
+);
 
 const terminalRef = ref<any>();
 let locker: NodeJS.Timeout | undefined = undefined;
@@ -279,9 +286,26 @@ defineExpose({ focus: focus });
 	background: #181d28;
 	.terminal-content-wrapper {
 		position: absolute;
-		inset: 20px;
-		top: 12px;
-		bottom: 12px;
+		inset: 6px;
+		right: 0px;
+		bottom: 0px;
+	}
+}
+</style>
+<style lang="scss">
+.terminal-content.terminal-content--window-browser .terminal-content-wrapper {
+	::-webkit-scrollbar {
+		width: 6px;
+		height: 8px;
+		background-color: rgba(255, 255, 255, 0);
+	}
+
+	::-webkit-scrollbar-thumb {
+		background: rgba(255, 255, 255, 0.5);
+		border-radius: 999px;
+	}
+	::-webkit-scrollbar-track {
+		background: rgba(255, 255, 255, 0);
 	}
 }
 </style>

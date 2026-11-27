@@ -16,6 +16,7 @@
 				:larger="true"
 				:image-size="false"
 				@on-error="onHandleErrorGroup"
+				:show-template="true"
 			/>
 		</app-title-bar>
 		<page-container
@@ -139,19 +140,14 @@
 						<div
 							class="app-detail-install-configuration row justify-start items-center"
 							:style="{
-								'--showSize':
-									appEntry &&
-									appEntry.options &&
-									appEntry.options.appScope &&
-									appEntry.options.appScope.clusterScoped
-										? '7'
-										: '6'
+								'--showSize': installConfigColumnCount
 							}"
 						>
 							<app-install-config
 								:app-entry="appEntry"
 								:app-name="appName"
 								:source-id="sourceId"
+								:is-shared-app="isSharedApp"
 							/>
 						</div>
 					</div>
@@ -201,11 +197,20 @@
 									}"
 								>
 									<div class="column" style="width: calc(70% - 10px)">
+										<app-resource-card
+											v-if="appEntry"
+											class="q-mb-lg"
+											:app-entry="appEntry"
+										/>
+
 										<app-intro-card
 											v-if="appEntry.fullDescription"
 											:title="
 												t('detail.about_this_type', {
-													type: cfgType?.toUpperCase()
+													type:
+														cfgType == CFG_TYPE.APPLICATION
+															? t('base.app').toLowerCase()
+															: cfgType?.toUpperCase()
 												})
 											"
 											:description="
@@ -250,7 +255,26 @@
 										class="column justify-start items-start"
 										style="width: calc(30% - 10px)"
 									>
+										<app-intro-card
+											v-if="cloneApps.length > 0"
+											id="app-instances-section"
+											class="full-width"
+											:title="t('Instances')"
+										>
+											<template v-slot:content>
+												<recommend-app-card
+													:key="app"
+													v-for="app in cloneApps"
+													:app-name="app"
+													:source-id="sourceId"
+													:is-last-line="true"
+													:manager="true"
+												/>
+											</template>
+										</app-intro-card>
+
 										<app-information
+											:class="cloneApps.length > 0 ? 'q-mt-lg' : ''"
 											:app-entry="appEntry"
 											:app-name="appName"
 											:source-id="sourceId"
@@ -278,23 +302,6 @@
 												/>
 											</template>
 										</app-intro-card>
-
-										<app-intro-card
-											v-if="cloneApps.length > 0"
-											class="q-mt-lg"
-											:title="t('Clone')"
-										>
-											<template v-slot:content>
-												<recommend-app-card
-													:key="app"
-													v-for="app in cloneApps"
-													:app-name="app"
-													:source-id="sourceId"
-													:is-last-line="true"
-													:image-size="false"
-												/>
-											</template>
-										</app-intro-card>
 									</div>
 								</div>
 							</template>
@@ -308,11 +315,20 @@
 										paddingRight: paddingX + 'px'
 									}"
 								>
+									<app-resource-card
+										v-if="appEntry"
+										class="q-mb-lg"
+										:app-entry="appEntry"
+									/>
+
 									<app-intro-card
 										v-if="appEntry.fullDescription"
 										:title="
 											t('detail.about_this_type', {
-												type: cfgType?.toUpperCase()
+												type:
+													cfgType == CFG_TYPE.APPLICATION
+														? t('base.app').toLowerCase()
+														: cfgType?.toUpperCase()
 											})
 										"
 										:description="
@@ -330,6 +346,24 @@
 										"
 										:markdown="supportMarkdown"
 									/>
+
+									<app-intro-card
+										v-if="cloneApps.length > 0"
+										id="app-instances-section"
+										class="q-mt-lg full-width"
+										:title="t('Instances')"
+									>
+										<template v-slot:content>
+											<recommend-app-card
+												:key="app"
+												v-for="app in cloneApps"
+												:app-name="app"
+												:source-id="sourceId"
+												:is-last-line="true"
+												:manager="true"
+											/>
+										</template>
+									</app-intro-card>
 
 									<app-information
 										class="q-mt-lg"
@@ -383,23 +417,6 @@
 											/>
 										</template>
 									</app-intro-card>
-
-									<app-intro-card
-										v-if="cloneApps.length > 0"
-										class="q-mt-lg"
-										:title="t('Clone')"
-									>
-										<template v-slot:content>
-											<recommend-app-card
-												:key="app"
-												v-for="app in cloneApps"
-												:app-name="app"
-												:source-id="sourceId"
-												:is-last-line="true"
-												:image-size="false"
-											/>
-										</template>
-									</app-intro-card>
 								</div>
 							</template>
 						</adaptive-layout>
@@ -421,6 +438,7 @@ import AppTitleBar from '../../../../components/appintro/AppTitleBar.vue';
 import PageContainer from '../../../../components/base/PageContainer.vue';
 import TitleBar from '../../../../components/base/TitleBar.vue';
 import AppInstallConfig from './AppInstallConfig.vue';
+import AppResourceCard from './AppResourceCard.vue';
 import AppInformation from './AppInformation.vue';
 import AppPermission from './AppPermission.vue';
 import AppClient from './AppClient.vue';
@@ -438,9 +456,12 @@ import {
 	AppEntry,
 	DEPENDENCIES_TYPE,
 	getI18nValue,
+	isCsOrSharedApp,
 	TRANSACTION_PAGE
 } from '../../../../constant/constants';
-import { handleMarketBack } from '../../../../utils/marketBack';
+import { handleMarketBack, pushWithParent } from '../../../../utils/marketBack';
+import { usePreCheckStore } from '../../../../stores/market/preCheck';
+import { hasAcceleratorRequirements } from '../../../../utils/market/appResource';
 
 const $q = useQuasar();
 const route = useRoute();
@@ -458,23 +479,24 @@ const onHandleErrorGroup = (value: any) => {
 
 const showHeaderBar = ref(false);
 const dependencies = ref<string[]>([]);
-const cloneApps = ref<string[]>([]);
 
 const cfgType = ref<string>(CFG_TYPE.APPLICATION);
 const { t, locale } = useI18n();
 const appStore = useAppStore();
+const preCheckStore = usePreCheckStore();
 const sourceId = route.params.sourceId as string;
 const appName = route.params.appName as string;
 const taskHandler = new TaskHandler();
 const errorGroup = ref<any[]>([]);
+
+const cloneApps = computed(() => appStore.getCloneApp(appName, sourceId));
 
 const appAggregation = computed(() => {
 	return appStore.getAppAggregationInfo(appName, sourceId);
 });
 
 onActivated(() => {
-	taskHandler.addTask(dependenciesTask).addTask(appScopeTask, true);
-	// .addTask(markdownTask);
+	taskHandler.addTask(dependenciesTask, true);
 });
 
 onDeactivated(() => {
@@ -503,6 +525,32 @@ const simpleInfo = computed(
 const appEntry = computed(
 	() => appAggregation.value?.app_full_info?.app_info?.app_entry
 );
+const isSharedApp = computed(() =>
+	isCsOrSharedApp(appAggregation.value?.app_simple_latest)
+);
+const installConfigColumnCount = computed(() => {
+	let count = isSharedApp.value ? 5 : 4;
+	if (hasAcceleratorRequirements(appEntry.value)) count += 1;
+	return String(count);
+});
+
+watch(
+	() => appEntry.value,
+	async (entry) => {
+		if (!entry) return;
+		try {
+			const tasks = [preCheckStore.refreshSystemStatus(true)];
+			if (hasAcceleratorRequirements(entry)) {
+				tasks.push(preCheckStore.refreshComputeResources());
+			}
+			await Promise.all(tasks);
+		} catch (e) {
+			console.error('refresh resources failed', e);
+		}
+	},
+	{ immediate: true }
+);
+
 const appStatus = computed(() => appAggregation.value?.app_status_latest);
 
 const appIcon = computed(() => simpleInfo.value?.app_icon ?? '');
@@ -537,17 +585,8 @@ const dependenciesTask: OnUpdateUITask = {
 	}
 };
 
-const appScopeTask: OnUpdateUITask = {
-	onInit() {
-		cloneApps.value = [];
-	},
-	onUpdate(_app: AppEntry) {
-		cloneApps.value = appStore.getCloneApp(appName, sourceId);
-	}
-};
-
 const goImagePreview = (index: number) => {
-	router.push({
+	pushWithParent(router, {
 		name: TRANSACTION_PAGE.Preview,
 		params: {
 			appName: appName,
@@ -561,10 +600,7 @@ const goImagePreview = (index: number) => {
 };
 
 const clickReturn = () => {
-	if (handleMarketBack(router, route)) {
-		return;
-	}
-	router.back();
+	handleMarketBack(router, route);
 };
 </script>
 <style lang="scss" scoped>

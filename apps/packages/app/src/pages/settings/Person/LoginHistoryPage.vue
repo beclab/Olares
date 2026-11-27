@@ -122,7 +122,7 @@ import BtGridItem from 'src/components/settings/base/BtGridItem.vue';
 import BtGrid from 'src/components/settings/base/BtGrid.vue';
 import { AccountInfo, UsersParam } from 'src/constant/global';
 import { getLocalTime } from 'src/utils/settings/utils';
-import { useUserStore } from 'src/stores/settings/user';
+import { useUsersStore } from 'src/stores/settings/users';
 import { useDeviceStore } from 'src/stores/settings/device';
 import { computed, onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
@@ -198,7 +198,7 @@ const fetchLoginRecords = async (name: string) => {
 	await fetchHistory(params);
 };
 
-const accountStore = useUserStore();
+const accountStore = useUsersStore();
 const Route = useRoute();
 const deviceStore = useDeviceStore();
 

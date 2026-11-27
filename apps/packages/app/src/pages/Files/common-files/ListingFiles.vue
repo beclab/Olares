@@ -3,6 +3,7 @@
 		ref="pageRef"
 		tabindex="0"
 		@contextmenu.prevent="rightClick($event, undefined)"
+		@mousedown="marqueeSelection.onMouseDown"
 		@click.stop="leftClick"
 		class="files-body"
 	>
@@ -92,6 +93,17 @@
 			:menuList="menuList"
 			@changeVisible="changeVisible"
 		/>
+
+		<div
+			v-if="marqueeSelection.marquee.value.visible"
+			class="marquee-selection"
+			:style="{
+				left: `${marqueeSelection.marquee.value.left}px`,
+				top: `${marqueeSelection.marquee.value.top}px`,
+				width: `${marqueeSelection.marquee.value.width}px`,
+				height: `${marqueeSelection.marquee.value.height}px`
+			}"
+		/>
 	</div>
 
 	<files-uploader
@@ -136,7 +148,7 @@ import { DriveType } from '../../../utils/interface/files';
 import { useTransfer2Store } from '../../../stores/transfer2';
 
 import { common } from './../../../api';
-import { stringToBase64 } from '@didvault/sdk/src/core';
+import { stringToBase64 } from 'src/utils/encode';
 
 import FilesTableHeader from '../../../components/files/FilesTableHeader.vue';
 import FilesShareTableHeader from '../../../components/files/header/FilesShareTableHeader.vue';
@@ -150,6 +162,7 @@ import {
 	useColumnResize,
 	COL_RESIZE_KEY
 } from 'src/composables/useColumnResize';
+import { useMarqueeSelection } from 'src/composables/useMarqueeSelection';
 
 const props = defineProps({
 	origin_id: {
@@ -193,6 +206,28 @@ const isExternal = ref(common().displayConnectServer(route.fullPath));
 const isSharePageRoot = ref(false);
 
 const currentDriveType = ref(DriveType.Drive);
+
+// macOS-style rubber-band selection: drag a rectangle over empty space in the
+// mosaic (grid) view to select the files it covers. Disabled on pad (touch
+// selection) and on the share root page (table layout).
+const marqueeSelection = useMarqueeSelection({
+	container: pageRef,
+	isEnabled: () =>
+		store.user.viewMode === 'mosaic' &&
+		!isPad.value &&
+		!isSharePageRoot.value &&
+		disabledClick(route.path),
+	resolveIndex: (el) => {
+		const value = el.getAttribute('data-index');
+		if (value === null) {
+			return null;
+		}
+		const index = Number(value);
+		return Number.isNaN(index) ? null : index;
+	},
+	applySelection: (indices) => filesStore.setSelected(indices, props.origin_id),
+	getBaseSelection: () => filesStore.selected[props.origin_id] || []
+});
 
 watch(
 	() => route.fullPath,
@@ -586,6 +621,11 @@ const rightClick = (e: any, item?: any) => {
 };
 
 const leftClick = (e: any) => {
+	// A marquee drag ends with a synthetic click; ignore it so we keep the
+	// selection that was just made by dragging.
+	if (marqueeSelection.consumeClickSuppression()) {
+		return;
+	}
 	if (menuVisible.value) {
 		menuVisible.value = false;
 		startScrollMove(e);
@@ -652,8 +692,8 @@ const filterFiles = (event) => {
 }
 
 .files-body {
+	position: relative;
 	width: 100%;
-	// height: calc(100vh - 40px);
 	height: 100%;
 
 	.connect-server-btn {
@@ -661,6 +701,17 @@ const filterFiles = (event) => {
 		padding: 8px 12px;
 		margin-right: 20px;
 	}
+}
+
+.marquee-selection {
+	position: absolute;
+	z-index: 10;
+	pointer-events: none;
+	border: 1px solid $light-blue-default;
+	// Brand light-blue (#51aeff) at low opacity; a CSS var color can't be fed
+	// into rgba(), so the channel values are inlined here.
+	background: rgba(81, 174, 255, 0.16);
+	border-radius: 2px;
 }
 
 .iconClockwise {

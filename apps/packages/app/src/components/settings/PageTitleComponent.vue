@@ -49,7 +49,8 @@
 
 <script setup lang="ts">
 import AdaptiveLayout from './AdaptiveLayout.vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
+import type { RouteLocationRaw } from 'vue-router';
 import { useDeviceStore } from 'src/stores/settings/device';
 
 const props = defineProps({
@@ -72,21 +73,48 @@ const props = defineProps({
 
 const emit = defineEmits(['onBackClick']);
 const router = useRouter();
+const route = useRoute();
 const deviceStore = useDeviceStore();
+
+const buildParentTarget = (parentRouteName: string): RouteLocationRaw => {
+	const target: RouteLocationRaw = { name: parentRouteName };
+
+	const inheritParams = route.meta.inheritParams as string[] | undefined;
+	if (inheritParams && inheritParams.length > 0) {
+		const params: Record<string, string> = {};
+		inheritParams.forEach((key) => {
+			const raw = route.params[key];
+			const value = Array.isArray(raw) ? raw[0] : raw;
+			if (typeof value === 'string' && value !== '') {
+				params[key] = value;
+			}
+		});
+		target.params = params;
+	}
+
+	if (route.meta.inheritQuery) {
+		target.query = { ...route.query };
+	}
+
+	return target;
+};
 
 const backToPrePage = () => {
 	if (props.customBack) {
 		emit('onBackClick');
-	} else {
-		// router.back();
-		// window.history.length
-		console.log('window.history.length ===>', window.history.length);
+		return;
+	}
 
-		if (deviceStore.isMobile && window.history.length <= 1) {
-			router.replace('/');
-		} else {
-			router.back();
-		}
+	const parentRouteName = route.meta.parentRouteName as string | undefined;
+	if (parentRouteName) {
+		router.replace(buildParentTarget(parentRouteName));
+		return;
+	}
+
+	if (deviceStore.isMobile && window.history.length <= 1) {
+		router.replace('/');
+	} else {
+		router.back();
 	}
 };
 </script>

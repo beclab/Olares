@@ -1,19 +1,24 @@
-import { AppPlatform } from '../interface/platform';
-import {
-	setPlatform as defaultSetPlatform,
-	getPlatform as defaultGetPlatform
-} from '@didvault/sdk/src/core';
+import { TermiPassDeviceInfo } from '@bytetrade/core';
+import type { AppPlatform } from '../interface/platform';
+import type { NativeAppPlatform } from '../interface/extends/platform';
 
-import { NativeAppPlatform } from '../interface/extends/platform';
+const browserPlatform = {
+	isClient: false,
+	vpnAbility: false,
+	getDeviceInfo: async () => new TermiPassDeviceInfo({ description: '' }),
+	getQuasar: () => undefined
+};
 
-export const setAppPlatform = (p: AppPlatform) => {
-	defaultSetPlatform(p);
+let registeredPlatform: AppPlatform | undefined;
+
+export const setAppPlatform = (platform: AppPlatform) => {
+	registeredPlatform = platform;
 };
 
 export const getAppPlatform = () => {
-	return defaultGetPlatform() as AppPlatform;
+	return registeredPlatform ?? (browserPlatform as AppPlatform);
 };
 
 export const getNativeAppPlatform = () => {
-	return defaultGetPlatform() as NativeAppPlatform;
+	return getAppPlatform() as NativeAppPlatform;
 };

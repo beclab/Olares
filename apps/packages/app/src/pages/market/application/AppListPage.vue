@@ -12,7 +12,7 @@
 				:title="categoryTitle"
 				:show-title="showShadow"
 				:shadow="showShadow"
-				@onReturn="router.back()"
+				@onReturn="handleMarketBack(router, route)"
 			/>
 		</template>
 		<template v-slot:page>
@@ -62,6 +62,7 @@ import { CONTENT_TYPE } from '../../../constant/constants';
 import { useRouter, useRoute } from 'vue-router';
 import { ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { handleMarketBack } from '../../../utils/marketBack';
 
 const centerStore = useCenterStore();
 const deviceStore = useDeviceStore();

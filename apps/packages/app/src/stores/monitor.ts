@@ -53,7 +53,7 @@ export const useMonitorStore = defineStore('monitor', {
 			const kb = bytes / 1024;
 
 			if (kb < 1024) {
-				return kb.toFixed(2) + ' KB/s';
+				return kb.toFixed(2) + ' KB/s'; // i18n-ignore: unit symbol
 			}
 
 			const m = kb / 1024;
@@ -71,7 +71,7 @@ export const useMonitorStore = defineStore('monitor', {
 			const kb = bytes / 1024;
 
 			if (kb < 1024) {
-				return kb.toFixed(2) + ' KB/s';
+				return kb.toFixed(2) + ' KB/s'; // i18n-ignore: unit symbol
 			}
 
 			const m = kb / 1024;
@@ -152,7 +152,9 @@ export const useMonitorStore = defineStore('monitor', {
 					!response.data
 				) {
 					this.error();
-					throw Error('Network error, please try again later');
+					throw Error(
+						i18n.global.t('errors.network_error_please_try_again_later')
+					);
 				}
 
 				if (response.data.code != 0) {

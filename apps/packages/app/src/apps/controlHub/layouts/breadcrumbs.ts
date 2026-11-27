@@ -5,7 +5,10 @@ import { useAppDetailStore } from '@apps/control-hub/src/stores/AppDetail';
 import { useTerminalStore } from '@apps/control-hub/src/stores/TerminalStore';
 import { capitalize } from 'lodash';
 import { useSplitMenu } from '@apps/control-panel-common/src/stores/menu';
-import { MIDDLEWARE_ICONS } from '@apps/control-panel-common/src/network/middleware';
+import {
+	MIDDLEWARE_ICONS,
+	MIDDLEWARE_NAMES
+} from '@apps/control-panel-common/src/network/middleware';
 
 export interface Breadcrumb {
 	title: string;
@@ -76,7 +79,7 @@ export const options3 = computed(() => {
 	if (appDetail.isAdmin) {
 		return useMiddleware.list.map((item) => ({
 			key: item.type,
-			label: t(capitalize(item.type)),
+			label: MIDDLEWARE_NAMES[item.type] || capitalize(item.type),
 			icon: MIDDLEWARE_ICONS[item.type] || 'sym_r_dns',
 			link: `/site-middleware/db/${item.type}`
 		}));

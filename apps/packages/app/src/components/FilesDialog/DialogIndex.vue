@@ -10,9 +10,8 @@
 
 <script setup lang="ts">
 import { onMounted, ref, PropType } from 'vue';
-import { useQuasar } from 'quasar';
-import { isPad } from '../../utils/platform';
 import { PickType, useFilesStore } from '../../stores/files';
+import { useDeviceStore } from '../../stores/settings/device';
 import { DriveType } from '../../utils/interface/files';
 import DialogForder from './DialogForder.vue';
 import DialogFolderMobile from './DialogFolderMobile.vue';
@@ -39,6 +38,7 @@ const props = defineProps({
 				DriveType.External,
 				DriveType.Cache,
 				DriveType.Data,
+				DriveType.Common,
 				DriveType.GoogleDrive
 			];
 		}
@@ -50,7 +50,7 @@ console.log('propsorigins', props.origins);
 const emits = defineEmits(['onSubmit']);
 
 const filesStore = useFilesStore();
-const $q = useQuasar();
+const deviceStore = useDeviceStore();
 const currentView = ref();
 const origin_id = ref(Date.now());
 
@@ -61,9 +61,7 @@ const onSubmit = (value) => {
 	emits('onSubmit', value);
 };
 
-const isMobile = ref(
-	(process.env.PLATFORM == 'MOBILE' || $q.platform.is.mobile) && !isPad()
-);
+const isMobile = ref(process.env.PLATFORM == 'MOBILE' || deviceStore.isMobile);
 
 onMounted(() => {
 	if (isMobile.value) {

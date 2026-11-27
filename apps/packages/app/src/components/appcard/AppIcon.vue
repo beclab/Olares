@@ -28,8 +28,13 @@
 			</template>
 		</q-img>
 		<q-img
-			v-if="csApp"
-			class="application_cs_icon"
+			v-if="templateApp"
+			class="application_small_badge"
+			:src="getRequireImage('template_app.svg')"
+		/>
+		<q-img
+			v-else-if="csApp"
+			class="application_small_badge"
 			:src="getRequireImage('share_app.svg')"
 		/>
 	</div>
@@ -44,6 +49,10 @@ defineProps({
 		require: true
 	},
 	csApp: {
+		type: Boolean,
+		default: false
+	},
+	templateApp: {
 		type: Boolean,
 		default: false
 	},
@@ -82,7 +91,7 @@ defineProps({
 		overflow: hidden;
 	}
 
-	.application_cs_icon {
+	.application_small_badge {
 		background: transparent;
 		width: var(--csSize);
 		height: var(--csSize);

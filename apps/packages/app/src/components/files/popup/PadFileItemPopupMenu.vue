@@ -31,6 +31,11 @@ import { useFilesStore, FilesIdType } from '../../../stores/files';
 import { EventType } from '../../../stores/operation';
 import { useDataStore } from '../../../stores/data';
 import { DriveType } from '../../../utils/interface/files';
+import {
+	isArchiveFile,
+	isArchivePreviewSupported
+} from '../../../utils/interface/archive';
+import { isArchiveEnable } from '../../../api';
 // import FileOperationItem from '../files/FileOperationItem.vue';
 
 const props = defineProps({
@@ -74,7 +79,10 @@ const eventType = reactive<EventType>({
 	hasCopied: false,
 	showRename: true,
 	isHomePage: false,
-	selectCount: 0
+	selectCount: 0,
+	isArchiveAbility: isArchiveEnable(),
+	isArchive: false,
+	isArchivePreviewable: false
 });
 
 const filteredContextmenuMenu = computed(() => {
@@ -82,6 +90,9 @@ const filteredContextmenuMenu = computed(() => {
 });
 
 const filterItem = (item: any) => {
+	eventType.isArchive = isArchiveFile(item);
+	eventType.isArchivePreviewable = isArchivePreviewSupported(item);
+
 	if (props.menuList && props.menuList) {
 		eventType.showRename = true;
 	} else {

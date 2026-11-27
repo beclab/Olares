@@ -21,6 +21,18 @@ export const MIDDLEWARE_ICONS: Record<MiddlewareType, string> = {
 	elasticsearch: 'sym_r_manage_search'
 };
 
+export const MIDDLEWARE_NAMES: Record<MiddlewareType, string> = {
+	mongodb: 'MongoDB',
+	postgres: 'PostgreSQL',
+	redis: 'Redis',
+	rabbitmq: 'RabbitMQ',
+	minio: 'MinIO',
+	nats: 'NATS',
+	mysql: 'MySQL',
+	mariadb: 'MariaDB',
+	elasticsearch: 'Elasticsearch'
+};
+
 export interface MiddlewareItem {
 	name: string;
 	namespace: string;

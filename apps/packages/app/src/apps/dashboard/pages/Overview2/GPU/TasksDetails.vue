@@ -52,19 +52,13 @@
 								}"
 							></MyGaugeChart>
 							<div class="text-body3 text-ink-1 q-mt-sm">
-								<span class="">{{
-									item.title.includes('使用')
-										? $t('GPU_OP.USE')
-										: $t('GPU_OP.ALLOCATION')
-								}}</span>
-								<span v-if="!item.title.includes('算力')"
-									>({{ item.unit }})</span
-								>
-								:
-								<span class="text-subtitle3"
-									>{{ roundToDecimal(item.used) }}/{{
-										roundToDecimal(item.total)
-									}}</span
+								<span
+									>{{ $t('GPU_OP.USE') }} ({{ item.unit }}):
+									<span class="text-subtitle3"
+										>{{ roundToDecimal(item.used) }}/{{
+											roundToDecimal(item.total)
+										}}</span
+									></span
 								>
 							</div>
 						</div>
@@ -200,7 +194,7 @@ const gaugeConfig = useInstantVector(
 				'(avg(sum(hami_container_memory_used{container_name="$container",pod_name=~"$pod",namespace_name="$namespace"})/ 1024)/(avg(sum(hami_container_vmemory_allocated{container_name="$container",pod_name=~"$pod",namespace_name="$namespace"}) by (instance))/1024) *100)',
 			total: 0,
 			used: 0,
-			unit: 'GiB',
+			unit: 'Gi',
 			data: []
 		}
 	],

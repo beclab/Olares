@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { app } from '../globals';
+import { useUserStore } from './user';
 import { shareToUser, dataAPIs, SyncDataAPI } from '../api';
 import { SYNC_STATE } from '../utils/contact';
 import { busOn } from 'src/utils/bus';
@@ -117,9 +117,7 @@ export const useMenuStore = defineStore('filesMenu', {
 		},
 
 		async getUserList() {
-			// const userStore = useUserStore();
-
-			let account = app.account?.name;
+			let account = useUserStore().user_name;
 
 			if (!account) {
 				const h = window.location.hostname;

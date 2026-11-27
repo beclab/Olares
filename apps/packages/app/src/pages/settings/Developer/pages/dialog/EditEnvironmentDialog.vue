@@ -35,6 +35,7 @@ import { useDeviceStore } from 'src/stores/settings/device';
 import { ref, onMounted, computed, PropType } from 'vue';
 import { BaseEnv } from 'src/constant';
 import { useI18n } from 'vue-i18n';
+import { useEnvValidation } from 'src/composables/env/useEnvValidation';
 
 const props = defineProps({
 	data: {
@@ -49,6 +50,7 @@ const props = defineProps({
 
 const deviceStore = useDeviceStore();
 const { t } = useI18n();
+const { validateEnvValue } = useEnvValidation();
 const CustomRef = ref();
 const key = ref('');
 const envRef = ref();
@@ -108,17 +110,8 @@ const isUpdateEnable = computed(() => {
 		return false;
 	}
 
-	const { regex } = cur;
-	if (regex && typeof regex === 'string' && regex.trim()) {
-		try {
-			const reg = new RegExp(regex);
-			if (!reg.test(inputValue)) {
-				return false;
-			}
-		} catch (e) {
-			console.error('Invalid regex pattern:', regex, e);
-			return false;
-		}
+	if (!validateEnvValue(cur, inputValue).right) {
+		return false;
 	}
 
 	return true;

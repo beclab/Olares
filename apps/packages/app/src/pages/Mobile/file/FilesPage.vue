@@ -38,7 +38,11 @@
 						icon="sym_r_more_horiz"
 						text-color="ink-2"
 					>
-						<PopupMenu :origin_id="origin_id" @handleEvent="handleEvent" />
+						<PopupMenu
+							:origin_id="origin_id"
+							:show-paste="showPasteButton"
+							@handleEvent="handleEvent"
+						/>
 					</q-btn>
 				</div>
 			</template>
@@ -49,7 +53,17 @@
 			@handle-close="handleClose"
 			@handle-select-all="handleSelectAll"
 			@handle-remove="removeFiles"
-		/>
+		>
+			<template #right-actions="{ disabled }">
+				<q-btn
+					class="text-ink-1 btn-size-sm btn-no-text btn-no-border"
+					icon="sym_r_more_horiz"
+					text-color="ink-2"
+					:disable="disabled"
+					@click="showSelectionActions"
+				/>
+			</template>
+		</terminus-select-header>
 
 		<div class="content" :class="filesStore.isShard ? 'shard' : ''">
 			<div
@@ -92,15 +106,31 @@ import ListingFilesFooter from './ListingFilesFooter.vue';
 import { useQuasar } from 'quasar';
 import { useFilesStore, FilesIdType, PickType } from '../../../stores/files';
 import { useDataStore } from '../../../stores/data';
-import { common } from '../../../api';
+import { common, isArchiveEnable } from '../../../api';
 import { FilesSortType, OPERATE_ACTION } from '../../../utils/contact';
 import { hideHeaderOpt } from '../../../utils/file';
+import { notifySuccess } from '../../../utils/notifyRedefinedUtil';
 import { useOperateinStore } from '../../../stores/operation';
 import PopupMenu from './PopupMenu.vue';
 import AddFiles from './AddFiles.vue';
 import { useI18n } from 'vue-i18n';
 import FilterMobileView from '../../../components/files/share/FilterMobileView.vue';
-import { DriveType } from 'src/utils/interface/files';
+import { DriveType, FileViewMode } from 'src/utils/interface/files';
+import ArchiveCompressDialog from '../../../components/files/archive/ArchiveCompressDialog.vue';
+import SelectionActionsDialog from './SelectionActionsDialog.vue';
+import {
+	isArchiveDriveTypeSupported,
+	isArchiveFile,
+	isUnsupportedArchiveExtract
+} from '../../../utils/interface/archive';
+
+interface SelectionActionItem {
+	key: string;
+	icon: string;
+	label: string;
+	disabled?: boolean;
+	handler: () => void | Promise<void>;
+}
 
 const props = defineProps({
 	origin_id: {
@@ -125,12 +155,47 @@ const error = ref<any>(null);
 const origin_id = ref(props.origin_id || FilesIdType.PAGEID);
 
 const $q = useQuasar();
+const { t } = useI18n();
 const isDark = ref(false);
 
-const selectIds = ref(null);
+const selectIds = ref<string[] | null>(null);
 const FilesListRef = ref();
 
 const isLarePass = process.env.APPLICATION === 'LAREPASS';
+
+const activeDriveType = computed(
+	() => filesStore.activeMenu(origin_id.value).driveType
+);
+
+const selectedItems = computed(() =>
+	(selectIds.value || [])
+		.map((index) =>
+			filesStore.getTargetFileItem(Number(index), origin_id.value)
+		)
+		.filter(Boolean)
+);
+
+const canCompressSelection = computed(
+	() =>
+		(selectIds.value?.length || 0) > 1 &&
+		isArchiveEnable() &&
+		isArchiveDriveTypeSupported(activeDriveType.value) &&
+		!selectedItems.value.some((item) => isArchiveFile(item))
+);
+
+const canExtractSelection = computed(() => {
+	if ((selectIds.value?.length || 0) !== 1) {
+		return false;
+	}
+	const item = selectedItems.value[0];
+	return (
+		isArchiveEnable() &&
+		!!item &&
+		isArchiveDriveTypeSupported(activeDriveType.value) &&
+		isArchiveFile(item) &&
+		!isUnsupportedArchiveExtract(item)
+	);
+});
 
 const closeDialog = () => {
 	emits('close');
@@ -170,12 +235,70 @@ const showFloatingButton = computed(() => {
 	return true;
 });
 
+const showPasteButton = computed(() => {
+	if (selectIds.value) {
+		return false;
+	}
+
+	if (props.selectType) {
+		return false;
+	}
+
+	if (isShareRoot.value) {
+		return false;
+	}
+
+	if (!hideHeaderOpt(route.path)) {
+		return false;
+	}
+
+	if (isExternalNodeListOrRoot.value) {
+		return false;
+	}
+
+	return operateinStore.copyFiles.length > 0;
+});
+
 const isShareRoot = computed(() => {
 	return common().isShareRootPage(route.path);
 });
 
+const isExternalNodeListOrRoot = computed(() => {
+	const normalizedPath = route.path.replace(/\/+$/, '');
+	if (
+		normalizedPath !== '/Files/External' &&
+		!normalizedPath.startsWith('/Files/External/')
+	) {
+		return false;
+	}
+
+	const pathParts = normalizedPath.split('/').filter(Boolean);
+	return pathParts.length <= 3;
+});
+
+// Copy / cut are available when something is selected on an operable location
+// (not share root, not the external connection list/root).
+const canClipboardSelection = computed(() => {
+	if (!selectIds.value?.length) {
+		return false;
+	}
+	if (!hideHeaderOpt(route.path)) {
+		return false;
+	}
+	return !isShareRoot.value && !isExternalNodeListOrRoot.value;
+});
+
 const showSelectMode = (value) => {
 	selectIds.value = value;
+};
+
+const selectedFileIndexes = () => {
+	const selectedIds = Array.isArray(selectIds.value) ? selectIds.value : [];
+	return selectedIds.map((id) => Number(id.slice(0, id.indexOf('_'))));
+};
+
+const syncSelectedFiles = () => {
+	filesStore.selected[origin_id.value] = selectedFileIndexes();
 };
 
 const handleClose = () => {
@@ -270,10 +393,153 @@ const createFolder = () => {
 	);
 };
 
+const pasteFiles = () => {
+	operateinStore.handleFileOperate(
+		origin_id.value,
+		null,
+		route,
+		OPERATE_ACTION.PASTE,
+		filesStore.activeMenu(origin_id.value).driveType,
+		async () => {}
+	);
+};
+
+const cancelPaste = () => {
+	operateinStore.handleFileOperate(
+		origin_id.value,
+		null,
+		route,
+		OPERATE_ACTION.CANCEL,
+		filesStore.activeMenu(origin_id.value).driveType,
+		async () => {}
+	);
+};
+
+const showSelectionActions = () => {
+	if (!selectIds.value?.length) {
+		return;
+	}
+	const actions = selectionActions.value
+		.filter((item) => !item.disabled)
+		.map(({ handler, ...action }) => action);
+	$q.dialog({
+		component: SelectionActionsDialog,
+		componentProps: {
+			actions
+		}
+	}).onOk((key: string) => {
+		const action = selectionActions.value.find((item) => item.key === key);
+		if (!action || action.disabled) {
+			return;
+		}
+		action.handler();
+	});
+};
+
+const compressFiles = () => {
+	if (!canCompressSelection.value) {
+		return;
+	}
+
+	syncSelectedFiles();
+	$q.dialog({
+		component: ArchiveCompressDialog,
+		componentProps: {
+			origin_id: origin_id.value,
+			driveType: activeDriveType.value
+		}
+	}).onOk(() => {
+		if (FilesListRef.value) {
+			FilesListRef.value.handleRemove();
+		}
+	});
+};
+
+const extractFiles = () => {
+	if (!canExtractSelection.value) {
+		return;
+	}
+
+	syncSelectedFiles();
+	operateinStore.handleFileOperate(
+		origin_id.value,
+		null,
+		route,
+		OPERATE_ACTION.EXTRACT,
+		filesStore.activeMenu(origin_id.value).driveType,
+		async () => {}
+	);
+};
+
+const clipboardSelection = (action: OPERATE_ACTION, successText: string) => {
+	if (!canClipboardSelection.value) {
+		return;
+	}
+
+	syncSelectedFiles();
+	operateinStore.handleFileOperate(
+		origin_id.value,
+		null,
+		route,
+		action,
+		filesStore.activeMenu(origin_id.value).driveType,
+		async () => {
+			notifySuccess(t(successText));
+			if (FilesListRef.value) {
+				FilesListRef.value.handleClose();
+			}
+		}
+	);
+};
+
+const copyFiles = () => {
+	clipboardSelection(OPERATE_ACTION.COPY, 'files.copied_to_clipboard');
+};
+
+const cutFiles = () => {
+	clipboardSelection(OPERATE_ACTION.CUT, 'files.cut_to_clipboard');
+};
+
+const selectionActions = computed<SelectionActionItem[]>(() => [
+	{
+		key: 'delete',
+		icon: 'sym_r_delete',
+		label: t('delete'),
+		disabled: !selectIds.value?.length,
+		handler: removeFiles
+	},
+	{
+		key: 'copy',
+		icon: 'sym_r_content_copy',
+		label: t('copy'),
+		disabled: !canClipboardSelection.value,
+		handler: copyFiles
+	},
+	{
+		key: 'cut',
+		icon: 'sym_r_move_up',
+		label: t('files.cut'),
+		disabled: !canClipboardSelection.value,
+		handler: cutFiles
+	},
+	{
+		key: 'compress',
+		icon: 'sym_r_archive',
+		label: t('files_popup_menu.compress_to'),
+		disabled: !canCompressSelection.value,
+		handler: compressFiles
+	},
+	{
+		key: 'extract',
+		icon: 'sym_r_folder_open',
+		label: t('files_popup_menu.extract_to'),
+		disabled: !canExtractSelection.value,
+		handler: extractFiles
+	}
+]);
+
 const removeFiles = async () => {
-	const ids = selectIds.value.map((id) => Number(id.slice(0, id.indexOf('_'))));
-	console.log('ids', ids);
-	filesStore.selected[origin_id.value] = ids;
+	syncSelectedFiles();
 	await operateinStore.handleFileOperate(
 		origin_id.value,
 		null,
@@ -290,6 +556,14 @@ const removeFiles = async () => {
 
 const handleEvent = (value: string) => {
 	switch (value) {
+		case 'paste':
+			pasteFiles();
+			break;
+
+		case 'cancel':
+			cancelPaste();
+			break;
+
 		case 'mosaic':
 			switchView(value);
 			break;
@@ -319,7 +593,7 @@ const handleEvent = (value: string) => {
 	}
 };
 
-const switchView = async (type: string) => {
+const switchView = async (type: FileViewMode) => {
 	if (type === store.user.viewMode) {
 		return false;
 	}

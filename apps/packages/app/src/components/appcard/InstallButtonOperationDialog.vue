@@ -15,6 +15,17 @@
 			<template v-slot:content>
 				<q-list style="margin: 8px">
 					<operation-item
+						v-if="showUpdateInStop"
+						icon="sym_r_upgrade"
+						:label="t('app.update')"
+						@on-item-click="
+							() => {
+								onUpdate();
+								onDialogOK();
+							}
+						"
+					/>
+					<operation-item
 						v-if="showRetry"
 						icon="sym_r_replay"
 						:label="t('app.retry')"
@@ -144,6 +155,8 @@ const {
 	onUninstall,
 	showOpenInUpgrade,
 	onUpdateOpen,
+	showUpdateInStop,
+	onUpdate,
 	showRetry,
 	onRetry,
 	showStop,

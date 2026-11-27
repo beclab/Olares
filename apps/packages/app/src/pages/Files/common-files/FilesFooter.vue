@@ -19,7 +19,7 @@
 		}}
 
 		{{ totalFileCount }}
-		{{ totalFileCount > 1 ? t('files.items') : t('files.item') }}
+		{{ totalFileCount === 1 ? t('files.item') : t('files.items') }}
 	</div>
 </template>
 

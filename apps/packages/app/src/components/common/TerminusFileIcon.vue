@@ -17,6 +17,7 @@
 				"
 			/>
 		</template>
+
 		<img
 			v-else
 			:src="fileIcon(name)"
@@ -38,6 +39,7 @@ import { FileItem, useFilesStore } from '../../stores/files';
 import { useOperateinStore } from './../../stores/operation';
 import { DriveType } from '../../utils/interface/files';
 import { useUserStore } from 'src/stores/user';
+import { getArchiveFileIcon } from '../../utils/interface/archive';
 
 const props = defineProps({
 	name: {
@@ -103,16 +105,16 @@ const folderIcon = (name: any) => {
 };
 
 const fileIcon = (name: any) => {
-	let src = '/img/file-';
-	let folderSrc = '/img/file-blob.svg';
+	let src = '/img/files/file-';
+	let folderSrc = '/img/files/file-blob.svg';
 
 	if (process.env.PLATFORM == 'DESKTOP') {
-		src = './img/file-';
-		folderSrc = './img/file-blob.svg';
+		src = './img/files/file-';
+		folderSrc = './img/files/file-blob.svg';
 	}
 
 	if (name.split('.').length > 1) {
-		src = src + getFileIcon(name) + '.svg';
+		src = src + (getArchiveFileIcon(name) || getFileIcon(name)) + '.svg';
 	} else {
 		src = folderSrc;
 	}

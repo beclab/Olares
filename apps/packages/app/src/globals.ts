@@ -1,49 +1,27 @@
-import { App, AppState } from '@didvault/sdk/src/core/app';
-import { getPlatform } from '@didvault/sdk/src/core';
+import { WebAccountApp } from './account/webAccountApp';
+import type { WebAccountState } from './account/webAccountApp';
+import { getAppPlatform } from './application/platform';
 import { CredentialManifest, GetSchemaResponse } from '@bytetrade/core';
-import { PlatformAjaxSender } from './platform/platformAjaxSender';
 import { busEmit } from './utils/bus';
 
-let url = process.env.PL_SERVER_URL || global.location.origin + '/server';
-if (process.env.NODE_ENV === 'development') {
-	url = '/server';
-}
+export let app = (global.app = new WebAccountApp());
 
-const sender = new PlatformAjaxSender(url);
-export let app = (global.app = new App(sender));
+global.getPlatform = getAppPlatform;
 
-global.getPlatform = getPlatform;
-
-export async function clearSenderUrl() {
-	sender.url = '';
-}
-
-export function setSenderUrl({ url }: { url: string | undefined }) {
-	if (url) {
-		sender.url = url;
-	} else {
-		clearSenderUrl();
-	}
-}
-
-export function getSenderUrl() {
-	return sender.url;
-}
-
-const appSubscribeBlock = (state: AppState) => {
+const appSubscribeBlock = (state: WebAccountState) => {
 	busEmit('appSubscribe', state);
-	busEmit('orgSubscribe', state.orgs);
+	busEmit('orgSubscribe', []);
 };
 
 export function resetAPP() {
 	if (app) {
 		app.unsubscribe(appSubscribeBlock);
 	}
-	app = global.app = new App(sender);
+	app = global.app = new WebAccountApp();
 	app.subscribe(appSubscribeBlock);
 }
 
-resetAPP();
+app.subscribe(appSubscribeBlock);
 
 export enum ContactSource {
 	Terminus = 1

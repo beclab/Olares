@@ -1,3 +1,5 @@
+import { i18n } from 'src/boot/i18n';
+
 type Callback<T> = (args?: T) => void;
 
 interface Task<T> {
@@ -45,7 +47,7 @@ class Waiter<T = void> {
 	 */
 	public addTask(id: string, callback: Callback<T>, args?: T): void {
 		if (!this.sharedCondition) {
-			throw new Error('请先设置共享检查条件');
+			throw new Error(i18n.global.t('errors.shared_condition_not_set'));
 		}
 
 		// If task already exists, remove it first.

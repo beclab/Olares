@@ -27,6 +27,14 @@ module.exports = {
 		target: `${process.env.PROTOCOL}settings.${process.env.ACCOUNT_DOMAIN}`,
 		changeOrigin: true
 	},
+	'/api/cluster': {
+		target: `${process.env.PROTOCOL}settings.${process.env.ACCOUNT_DOMAIN}`,
+		changeOrigin: true
+	},
+	'/api/cluster/': {
+		target: `${process.env.PROTOCOL}settings.${process.env.ACCOUNT_DOMAIN}`,
+		changeOrigin: true
+	},
 	'/api/abilities': {
 		target: `${process.env.PROTOCOL}settings.${process.env.ACCOUNT_DOMAIN}`,
 		changeOrigin: true
@@ -64,7 +72,7 @@ module.exports = {
 		}.${process.env.ACCOUNT_DOMAIN}`,
 		changeOrigin: true
 	},
-	'/upload': {
+	'/upload/': {
 		target: `${process.env.PROTOCOL}files.${process.env.ACCOUNT_DOMAIN}`,
 		changeOrigin: true
 	},
@@ -118,6 +126,14 @@ module.exports = {
 		target: `${process.env.PROTOCOL}auth.${process.env.ACCOUNT_DOMAIN}`,
 		changeOrigin: true
 	},
+	// Dev-only same-origin proxy for auth endpoints; the prefix is stripped.
+	'/authApi': {
+		target: `${process.env.PROTOCOL}auth.${process.env.ACCOUNT_DOMAIN}`,
+		changeOrigin: true,
+		pathRewrite: {
+			'^/authApi': ''
+		}
+	},
 	'/files': {
 		target: `${process.env.PROTOCOL}files.${process.env.ACCOUNT_DOMAIN}`,
 		changeOrigin: true
@@ -159,7 +175,7 @@ module.exports = {
 		changeOrigin: true
 	},
 	'/download': {
-		target: `${process.env.PROTOCOL}${process.env.WISE_SUB_DOMAIN}.${process.env.ACCOUNT_DOMAIN}`,
+		target: `${process.env.PROTOCOL}settings.${process.env.ACCOUNT_DOMAIN}`,
 		changeOrigin: true
 	},
 	'/desktop': {

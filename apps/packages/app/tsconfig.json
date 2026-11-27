@@ -6,6 +6,7 @@
     "emitDecoratorMetadata": true,
     "baseUrl": ".",
     "outDir": "dist",
+    // "sourceMap": true,
     "module": "esnext",
     "strict": true,
 
@@ -14,6 +15,7 @@
     "noUnusedParameters": false,
     "noImplicitThis": true,
     "strictNullChecks": true,
+    //"strictPropertyInitialization": true,
     "removeComments": false,
     "preserveConstEnums": true,
     "sourceMap": false,
@@ -46,14 +48,6 @@
       "@apps/control-hub/src/*": ["src/apps/controlHub/*"],
       "@apps/control-hub/*": ["src/apps/controlHub/*"],
 
-      "@apps/studio/stores/*": ["src/apps/studio/stores/*"],
-      "@apps/studio/components/*": ["src/apps/studio/components/*"],
-      "@apps/studio/layouts/*": ["src/apps/studio/layouts/*"],
-      "@apps/studio/pages/*": ["src/apps/studio/pages/*"],
-      "@apps/studio/assets/*": ["src/apps/studio/assets/*"],
-      "@apps/studio/boot/*": ["src/apps/studio/boot/*"],
-      "@apps/studio/src/*": ["src/apps/studio/*"],
-      "@apps/studio/*": ["src/apps/studio/*"],
       "@apps/desktop/*": ["src/apps/Desktop/*"],
       "@apps/control-panel-common/assets/*": [
         "src/apps/controlPanelCommon/assets/*"
@@ -74,11 +68,10 @@
     "src/apps/**/*.vue",
     "types/**/*.ts",
     "src/did/did-key.ts",
-    "src/pages/Items/totp.vue",
     "src/i18n/en-US/index.ts",
     "src/i18n/zh-CN/index.ts",
     "src/pages/Plugin"
   ],
   "typeRoots": ["./node_modules/@types", "./src/types"],
-  "exclude": ["node_modules/**/*.ts", "src/apps/studio/stores/**/*.ts"]
+  "exclude": ["node_modules/**/*.ts"]
 }

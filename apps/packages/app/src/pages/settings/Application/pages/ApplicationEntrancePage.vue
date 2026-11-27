@@ -5,7 +5,7 @@
 		<bt-list
 			first
 			:label="t('Access policies')"
-			v-if="adminStore.isAdmin || !isDemo"
+			v-if="meStore.isAdmin || !isDemo"
 		>
 			<bt-form-item :title="t('auth_level')">
 				<bt-select
@@ -100,7 +100,7 @@ import PageTitleComponent from 'src/components/settings/PageTitleComponent.vue';
 import ApplicationDomain from 'src/pages/settings/Application/pages/ApplicationDomain.vue';
 import { useEntrancePolicyStore } from 'src/stores/settings/entrancePolicy';
 import { useApplicationStore } from 'src/stores/settings/application';
-import { useAdminStore } from 'src/stores/settings/admin';
+import { useMeStore } from 'src/stores/settings/me';
 import { useRoute, useRouter } from 'vue-router';
 import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
@@ -110,7 +110,7 @@ import {
 	factorModelOptions
 } from 'src/constant';
 
-const adminStore = useAdminStore();
+const meStore = useMeStore();
 const policyStore = useEntrancePolicyStore();
 
 const factorModeOptions = computed(() => {

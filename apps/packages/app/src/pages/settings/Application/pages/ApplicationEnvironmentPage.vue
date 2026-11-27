@@ -152,7 +152,7 @@ const { t } = useI18n();
 const $q = useQuasar();
 const route = useRoute();
 const isLoading = ref(false);
-const appName = route.query.appName as string;
+const appName = route.params.name as string;
 const environmentList = ref<BaseEnv[]>([]);
 const showPasswordList = ref<string[]>([]);
 
@@ -268,7 +268,13 @@ const onSubmit = () => {
 		})
 		.catch((err) => {
 			console.error(err.message || err.response?.data?.message || err);
-			notifyFailed(t('Failed to save changes') + (err.message || ''));
+			notifyFailed(
+				err.message
+					? t('save_changes_failed_with_message', {
+							message: err.message
+					  })
+					: t('Failed to save changes')
+			);
 		})
 		.finally(() => {
 			isLoading.value = false;

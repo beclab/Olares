@@ -31,7 +31,8 @@
 }
 
 .q-notification {
-  word-break: break-all !important;
+  word-break: normal !important;
+  overflow-wrap: break-word;
 }
 
 // Keep bottom-positioned notifications above the Android system navigation bar

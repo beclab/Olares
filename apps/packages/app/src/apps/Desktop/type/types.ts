@@ -18,7 +18,17 @@ export interface WindowInfo {
 	z: number;
 	active: boolean;
 	isResizable: boolean;
+	redirectUrl?: string;
+	pathto?: string;
+	// 'app' (default) opens the app entrance iframe; 'bookmark-iframe' renders
+	// an external bookmark URL inside the desktop window shell.
+	mode?: string;
 }
+
+// Renderable desktop/launchpad item. Apps and bookmarks share this struct so
+// the grid, drag-reorder and open logic stay unified; `kind` distinguishes the
+// two for the few code paths that need to branch (open / delete).
+export type DesktopItemKind = 'app' | 'bookmark';
 
 export interface DesktopAppInfo {
 	id: string;
@@ -41,6 +51,7 @@ export interface DesktopAppInfo {
 	isSysApp: boolean;
 	fatherState: string;
 	isClusterScoped: boolean;
+	kind?: DesktopItemKind;
 }
 
 export interface DockerAppInfo {
@@ -57,6 +68,7 @@ export interface DockerAppInfo {
 	is_temp: boolean;
 	show_dot: boolean;
 	disabled?: boolean;
+	kind?: DesktopItemKind;
 }
 
 export interface DesktopPosition {
@@ -170,6 +182,7 @@ export interface MessageData {
 	type: string;
 }
 
+// i18n-ignore-start
 export enum SearchType {
 	HomePage = 'home',
 	FilesPage = 'Files Search',
@@ -177,3 +190,4 @@ export enum SearchType {
 	AshiaDocPage = 'Ashia Doc',
 	TextSearch = 'Text Search'
 }
+// i18n-ignore-end

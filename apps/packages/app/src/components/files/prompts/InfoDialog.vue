@@ -354,7 +354,8 @@ const md5InDriveType = [
 	DriveType.Drive,
 	// DriveType.External,
 	DriveType.Cache,
-	DriveType.Data
+	DriveType.Data,
+	DriveType.Common
 ];
 
 const md5MaxSize = 50 * 1024 * 1024 * 1024; // 50GB
@@ -362,7 +363,8 @@ const md5MaxSize = 50 * 1024 * 1024 * 1024; // 50GB
 const permissionInDriveType = [
 	DriveType.Drive,
 	DriveType.Data,
-	DriveType.Cache
+	DriveType.Cache,
+	DriveType.Common
 ];
 
 const toggleSelect = () => {

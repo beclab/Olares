@@ -38,14 +38,11 @@ import moment from 'moment-mini';
 
 import { Base64 } from 'js-base64';
 import { PATTERN_LABEL, MODULE_KIND_MAP } from './constants';
+export { _capitalize } from '@apps/control-panel-common/src/utils/index';
 /**
  * format size, output the value with unit
  * @param {Number} size - the number need to be format
  */
-
-export const _capitalize = (value) => {
-	return capitalize(value).replaceAll('_', ' ');
-};
 
 export const formatSize = (size) => {
 	const divisor = 1024;
@@ -529,11 +526,13 @@ export const isMemberClusterPage = (path = location.pathname, message) => {
 		'1',
 		'host'
 	);
+	// i18n-ignore-start: server-side JWT rejection tokens, matched literally
 	const rules = [
 		'token used before issued',
 		'signature is invalid',
 		'token not found in cache'
 	];
+	// i18n-ignore-end
 	const lowerMessage = message.toLowerCase();
 
 	let isTokenOut = true;

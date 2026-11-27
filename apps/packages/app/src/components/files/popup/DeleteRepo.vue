@@ -1,8 +1,12 @@
 <template>
 	<bt-custom-dialog
 		ref="CustomRef"
-		:title="t('delete')"
-		:ok="t('confirm')"
+		:title="
+			t('files.Are you sure you want to delete {repo}', {
+				repo: item?.repo_name
+			})
+		"
+		:ok="t('delete')"
 		:cancel="t('cancel')"
 		:ok-loading="submitLoading ? t('loading') : false"
 		:platform="$q.platform.is.mobile ? 'mobile' : 'web'"
@@ -13,17 +17,11 @@
 			class="dialog-desc text-ink-2"
 			:style="{ textAlign: isMobile ? 'center' : 'left' }"
 		>
-			<div>
-				{{
-					t('files.Are you sure you want to delete {repo}', {
-						repo: item?.repo_name
-					})
-				}}
-			</div>
+			<div>{{ t('prompts.deleteMessageDesc') }}</div>
 			<div v-if="shared_length && shared_length > 0" class="text-red">
 				{{
 					t('files.This library has been shared to {count} user(s)', {
-						user: shared_length
+						count: shared_length
 					})
 				}}
 			</div>

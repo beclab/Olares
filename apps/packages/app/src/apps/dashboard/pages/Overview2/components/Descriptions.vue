@@ -8,7 +8,7 @@
 						:key="cellIndex"
 						class="table-cell"
 					>
-						{{ item.name }}：{{ item.value }}
+						{{ item.name }}:&nbsp;{{ item.value }}
 					</td>
 				</tr>
 			</tbody>

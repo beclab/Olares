@@ -9,9 +9,8 @@ import {
 	TransferBaseType
 } from '../abstractions/transferManager/interface';
 import { TransferDatabase } from 'src/utils/interface/transferDB';
-import TransferClient from '../transfer';
 import { useTransfer2Store } from 'src/stores/transfer2';
-import { notifyFailed } from 'src/utils/notifyRedefinedUtil';
+import { notifyRequestMessageError } from 'src/utils/notifyRedefinedUtil';
 import Taskmanager from '../olaresTask';
 import { OlaresTaskStatus } from '../abstractions/olaresTask/interface';
 
@@ -40,7 +39,7 @@ class CopyTransferType implements TransferBaseType {
 					node: item.node || '',
 					transfer_id: item.id,
 					pending: false,
-					task_type: memeryItem.front == TransferFront.move ? 'move' : 'copy',
+					task_type: this.getTaskType(memeryItem.front),
 					retryCount: 0,
 					pause_able:
 						memeryItem.pauseDisable != undefined
@@ -148,12 +147,8 @@ class CopyTransferType implements TransferBaseType {
 			item = store.transferMap[id];
 		}
 
-		// if (item && (await TransferClient.autoRetry(item))) {
-		// 	return false;
-		// }
-
 		if (message) {
-			notifyFailed(message);
+			notifyRequestMessageError(message);
 		}
 
 		if (item && message) {
@@ -170,6 +165,19 @@ class CopyTransferType implements TransferBaseType {
 
 	startRunEnable(item: TransferItem) {
 		return true;
+	}
+
+	private getTaskType(front: TransferFront) {
+		if (front == TransferFront.move) {
+			return 'move';
+		}
+		if (front == TransferFront.compress) {
+			return 'compress';
+		}
+		if (front == TransferFront.extract) {
+			return 'extract';
+		}
+		return 'copy';
 	}
 }
 

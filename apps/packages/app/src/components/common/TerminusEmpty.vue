@@ -2,7 +2,7 @@
 	<div class="empty-c-root column items-center">
 		<img class="img" :src="getRequireImage(imgPath)" />
 		<div class="txt-body3 content-info">
-			{{ info }}
+			{{ info || $t('there_is_nothing_for_now') }}
 		</div>
 		<div v-if="$slots.add">
 			<slot name="add"></slot>
@@ -22,7 +22,7 @@ defineProps({
 	info: {
 		type: String,
 		required: false,
-		default: 'Empty data'
+		default: ''
 	}
 });
 </script>

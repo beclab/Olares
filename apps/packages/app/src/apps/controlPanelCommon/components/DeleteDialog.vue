@@ -12,6 +12,7 @@
 			<div class="text-ink-2">
 				<div
 					v-html="
+						confirmDesc ||
 						$t('REMOVE_CONFIRM_DSC', { name: lowerCase(desc), resource: name })
 					"
 				></div>
@@ -35,6 +36,7 @@ import { lowerCase } from 'lodash';
 interface Props {
 	name: string;
 	desc: string;
+	confirmDesc?: string;
 	loading: boolean;
 	title: string;
 }

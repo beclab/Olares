@@ -79,7 +79,7 @@
 					<div>
 						{{
 							t('number_linked_agent', {
-								number: folder.linkedAgentNum || 0
+								count: folder.linkedAgentNum || 0
 							})
 						}}
 					</div>
@@ -149,7 +149,7 @@ const showRemoveDialog = (folder: DatasetFolder) => {
 				base: folder.datasetName
 			}),
 			message: t('remove_knowledge_base_message', {
-				base: `'${folder.datasetName}'`
+				base: folder.datasetName
 			}),
 			useCancel: true,
 			isReminder: true,

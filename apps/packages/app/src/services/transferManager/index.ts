@@ -18,6 +18,7 @@ import {
 } from '../abstractions/transferManager/interface';
 import TransferClient from '../transfer';
 import { notifyFailed } from 'src/utils/notifyRedefinedUtil';
+import { i18n } from 'src/boot/i18n';
 
 class TransferManager {
 	upload = uploadTransferType;
@@ -40,7 +41,12 @@ class TransferManager {
 			return undefined;
 		}
 
-		if (item.front == TransferFront.copy || item.front == TransferFront.move) {
+		if (
+			item.front == TransferFront.copy ||
+			item.front == TransferFront.move ||
+			item.front == TransferFront.compress ||
+			item.front == TransferFront.extract
+		) {
 			return await this.copy.formatTranferItemToMemeryType(item);
 		}
 
@@ -388,11 +394,11 @@ class TransferManager {
 	preResumeCheck() {
 		const deviceStore = useDeviceStore();
 		if (!deviceStore.networkOnLine) {
-			notifyFailed('please check your network');
+			notifyFailed(i18n.global.t('please check your network'));
 			return false;
 		}
 		if (!deviceStore.transferWifiEnable()) {
-			notifyFailed('select only wifi transfer file');
+			notifyFailed(i18n.global.t('select only wifi transfer file'));
 			return false;
 		}
 
@@ -414,7 +420,12 @@ class TransferManager {
 			return this.upload;
 		} else if (front == TransferFront.cloud) {
 			return this.cloud;
-		} else if (front == TransferFront.copy || front == TransferFront.move) {
+		} else if (
+			front == TransferFront.copy ||
+			front == TransferFront.move ||
+			front == TransferFront.compress ||
+			front == TransferFront.extract
+		) {
 			return this.copy;
 		}
 		return undefined;

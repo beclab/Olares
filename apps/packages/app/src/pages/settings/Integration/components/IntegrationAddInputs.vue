@@ -27,7 +27,6 @@
 		class="q-mt-lg"
 		:label="t('bucket')"
 		:show-password-img="false"
-		:hint-text="t('optional')"
 		style="width: 100%"
 		@update:model-value="setButtonStatus"
 	/>

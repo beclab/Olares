@@ -1,6 +1,6 @@
 import { NormalApplication } from './base';
 import { useWebsocketManager2Store } from 'src/stores/websocketManager2';
-import { useAdminStore } from 'src/stores/settings/admin';
+import { useMeStore } from 'src/stores/settings/me';
 import { useTokenStore } from 'src/stores/settings/token';
 import { useHeadScaleStore } from 'src/stores/settings/headscale';
 import { useApplicationStore } from 'src/stores/settings/application';
@@ -8,7 +8,6 @@ import { useAccountStore } from 'src/stores/settings/account';
 import { useBackgroundStore } from 'src/stores/settings/background';
 import { WebPlatform } from '../utils/settings/platform';
 import { languagesShort, supportLanguages, SupportLanguageType } from '../i18n';
-import { importFilesStyle } from './utils/files';
 import axios from 'axios';
 import { useBackupStore } from '../stores/settings/backup';
 import { useIntegrationStore } from '../stores/settings/integration';
@@ -23,8 +22,10 @@ import { useCookieStore } from 'src/stores/settings/cookie';
 import { i18n } from 'src/boot/i18n';
 import { useAppStore } from 'src/stores/market/appStore';
 import { CacheRequestBarrier } from 'src/stores/market/CacheRequestBarrier';
-import { useUserStore } from 'src/stores/settings/user';
+import { useUsersStore } from 'src/stores/settings/users';
 import { usePreCheckStore } from 'src/stores/market/preCheck';
+import { useTerminusStore } from 'src/stores/terminus';
+import { useDevicesStore } from 'src/stores/settings/devices';
 
 export class SettingsApplication extends NormalApplication {
 	applicationName = 'settings';
@@ -51,18 +52,19 @@ export class SettingsApplication extends NormalApplication {
 	async appMounted(): Promise<void> {
 		await super.appMounted();
 		const platform = new WebPlatform();
-		const adminStore = useAdminStore();
+		const devicesStore = useDevicesStore();
 		const deviceStore = useDeviceStore();
-		importFilesStyle(deviceStore.isMobile);
 
 		platform.getDeviceInfo().then((deviceInfo) => {
-			adminStore.thisDevice = deviceInfo;
+			devicesStore.thisDevice = deviceInfo;
 		});
 
 		setTimeout(() => {
 			const websocketStore = useWebsocketManager2Store();
 			websocketStore.start();
 		}, 1000);
+
+		this.registerAppBackendErrorToast();
 	}
 
 	async appRedirectUrl(): Promise<void> {
@@ -73,13 +75,15 @@ export class SettingsApplication extends NormalApplication {
 		tokenStore.setUrl(host);
 
 		const router = useRouter();
-		const userStore = useUserStore();
-		const adminStore = useAdminStore();
+		const usersStore = useUsersStore();
+		const meStore = useMeStore();
+		const terminusStore = useTerminusStore();
+		const devicesStore = useDevicesStore();
 		const accountStore = useAccountStore();
 		const backgroundStore = useBackgroundStore();
 		const appStore = useAppStore();
 		backgroundStore.init();
-		userStore.get_accounts();
+		usersStore.get_accounts();
 
 		await appStore.init(true);
 		const sourceRequest = appStore.initSourceRequest();
@@ -124,19 +128,19 @@ export class SettingsApplication extends NormalApplication {
 		return axios
 			.get(tokenStore.url + '/api/init')
 			.then((data: any) => {
-				adminStore.terminus = data.terminusInfo;
-				if (adminStore.terminus?.olaresId) {
+				terminusStore.terminusInfo = data.terminusInfo;
+				if (terminusStore.terminusInfo?.olaresId) {
 					const cookieStore = useCookieStore();
 					cookieStore.init(
-						adminStore.terminus.olaresId.split('@')[0],
+						terminusStore.terminusInfo.olaresId.split('@')[0],
 						window.location.origin,
 						true
 					);
 				}
-				adminStore.user = data.userInfo;
+				meStore.user = data.userInfo;
 				applicationStore.applications = data.applicationData;
 				accountStore.secrets = data.secrets;
-				adminStore.devices = data.devices;
+				devicesStore.devices = data.devices;
 				backgroundStore.wallpaper = data.wallpaper;
 			})
 			.then(() => {
@@ -146,6 +150,7 @@ export class SettingsApplication extends NormalApplication {
 
 	async appUnMounted(): Promise<void> {
 		await super.appUnMounted();
+		this.unregisterAppBackendErrorToast();
 	}
 
 	websocketConfig = {
@@ -196,8 +201,8 @@ export class SettingsApplication extends NormalApplication {
 						} else if (body.type == 'olaresStatusUpdate') {
 							bus.emit('olaresStatusUpdate', body.data);
 						} else if (body.eventType == 'userAvatarUpdate') {
-							const adminStore = useAdminStore();
-							adminStore.terminus = body.data.info;
+							const terminusStore = useTerminusStore();
+							terminusStore.terminusInfo = body.data.info;
 						}
 					}
 				} catch (e) {
@@ -263,8 +268,12 @@ export class SettingsApplication extends NormalApplication {
 					(response.status != 200 && response.status != 201) ||
 					!response.data
 				) {
-					notifyFailed('Network error, please try again later');
-					throw Error('Network error, please try again later');
+					notifyFailed(
+						i18n.global.t('errors.network_error_please_try_again_later')
+					);
+					throw Error(
+						i18n.global.t('errors.network_error_please_try_again_later')
+					);
 				}
 
 				const data = response.data;
@@ -287,6 +296,12 @@ export class SettingsApplication extends NormalApplication {
 				} else if (response.config.url!.indexOf('acl/app/status?name=') >= 0) {
 					//return app acl not found
 					return data;
+				} else if (response.config.url!.indexOf('compute-resources') >= 0) {
+					// Accelerator APIs: resolve the raw { code, message, data }
+					// envelope without notifying/throwing, matching the Market
+					// interceptor so the accelerator store + api layer handle success
+					// and business errors uniformly across both builds.
+					return data;
 				} else {
 					if (data.code != 0 && data.code != 200 && !data.items) {
 						//kapis return used in login history
@@ -297,7 +312,7 @@ export class SettingsApplication extends NormalApplication {
 						) {
 							notifyFailed(
 								i18n.global.t(data.message) ||
-									'Something wrong, please try again.'
+									i18n.global.t('errors.network_error_please_try_again_later')
 							);
 						}
 						//return response;

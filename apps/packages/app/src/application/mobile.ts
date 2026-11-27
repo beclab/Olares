@@ -9,7 +9,8 @@ import {
 } from 'vue';
 import { useApplicationStore } from 'src/stores/desktop/app';
 
-const LAUNCHPAD_GRID_ROW_TRACK_PX = 91;
+export const LAUNCHPAD_GRID_ROW_TRACK_PX = 91;
+export const LAUNCHPAD_GRID_ROW_GAP_PX = 30;
 
 export function useMobileLaunchpad(
 	containerEl: Ref<HTMLElement | null>,
@@ -31,6 +32,8 @@ export function useMobileLaunchpad(
 
 	let resizeDebounce: ReturnType<typeof setTimeout> | null = null;
 	let resizeObserver: ResizeObserver | null = null;
+	let viewportListenersAttached = false;
+	const RESIZE_DEBOUNCE_MS = 120;
 
 	function setGrid(cols: number, rows: number): boolean {
 		const cx = Math.max(3, Math.min(8, Math.round(cols)));
@@ -94,7 +97,29 @@ export function useMobileLaunchpad(
 		resizeDebounce = setTimeout(() => {
 			resizeDebounce = null;
 			applyGridFromSize();
-		}, 100);
+		}, RESIZE_DEBOUNCE_MS);
+	}
+
+	function onViewportResize() {
+		scheduleApplyGrid();
+	}
+
+	function attachViewportListeners() {
+		if (viewportListenersAttached) return;
+		window.addEventListener('resize', onViewportResize, { passive: true });
+		window.addEventListener('orientationchange', onViewportResize, {
+			passive: true
+		});
+		window.visualViewport?.addEventListener('resize', onViewportResize);
+		viewportListenersAttached = true;
+	}
+
+	function detachViewportListeners() {
+		if (!viewportListenersAttached) return;
+		window.removeEventListener('resize', onViewportResize);
+		window.removeEventListener('orientationchange', onViewportResize);
+		window.visualViewport?.removeEventListener('resize', onViewportResize);
+		viewportListenersAttached = false;
 	}
 
 	function tryAttachResize() {
@@ -108,6 +133,7 @@ export function useMobileLaunchpad(
 	}
 
 	onMounted(() => {
+		attachViewportListeners();
 		nextTick(() => tryAttachResize());
 	});
 
@@ -127,6 +153,7 @@ export function useMobileLaunchpad(
 		if (resizeDebounce) clearTimeout(resizeDebounce);
 		resizeObserver?.disconnect();
 		resizeObserver = null;
+		detachViewportListeners();
 	});
 
 	return {

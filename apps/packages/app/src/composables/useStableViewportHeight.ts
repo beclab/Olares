@@ -2,14 +2,23 @@ import { ref, onMounted, onBeforeUnmount } from 'vue';
 
 const KEYBOARD_THRESHOLD = 150;
 
+type Orientation = 'portrait' | 'landscape';
+
 export function useStableViewportHeight() {
 	const stableHeight = ref(0);
 	const keyboardOpen = ref(false);
 
 	let orientationTimer: ReturnType<typeof setTimeout> | null = null;
+	let lastOrientation: Orientation | '' = '';
 
 	function currentViewportHeight(): number {
 		return window.visualViewport?.height ?? window.innerHeight;
+	}
+
+	function getOrientation(): Orientation {
+		return window.matchMedia('(orientation: portrait)').matches
+			? 'portrait'
+			: 'landscape';
 	}
 
 	function writeCssVar() {
@@ -17,6 +26,13 @@ export function useStableViewportHeight() {
 			'--stable-vh',
 			`${stableHeight.value}px`
 		);
+	}
+
+	function resyncForOrientation() {
+		const h = currentViewportHeight();
+		stableHeight.value = h;
+		keyboardOpen.value = false;
+		writeCssVar();
 	}
 
 	function updateStableHeight() {
@@ -30,6 +46,12 @@ export function useStableViewportHeight() {
 	function checkKeyboard() {
 		if (stableHeight.value <= 0) {
 			keyboardOpen.value = false;
+			return;
+		}
+		const orientation = getOrientation();
+		if (orientation !== lastOrientation) {
+			lastOrientation = orientation;
+			resyncForOrientation();
 			return;
 		}
 		keyboardOpen.value =
@@ -47,12 +69,19 @@ export function useStableViewportHeight() {
 		if (orientationTimer) clearTimeout(orientationTimer);
 		orientationTimer = setTimeout(() => {
 			orientationTimer = null;
-			stableHeight.value = 0;
-			updateStableHeight();
+			const orientation = getOrientation();
+			if (orientation !== lastOrientation) {
+				lastOrientation = orientation;
+				resyncForOrientation();
+			} else {
+				stableHeight.value = 0;
+				updateStableHeight();
+			}
 		}, 200);
 	}
 
 	onMounted(() => {
+		lastOrientation = getOrientation();
 		stableHeight.value = currentViewportHeight();
 		writeCssVar();
 		window.visualViewport?.addEventListener('resize', onViewportResize);

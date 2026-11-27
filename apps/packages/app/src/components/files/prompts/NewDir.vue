@@ -7,7 +7,7 @@
 		:cancel="t('buttons.cancel')"
 		:size="$q.platform.is.mobile ? 'small' : 'medium'"
 		:platform="$q.platform.is.mobile ? 'mobile' : 'web'"
-		:okDisabled="!name"
+		:okDisabled="!name || errorMessage.length > 0"
 		@onSubmit="submit"
 		@onHide="handleClose"
 		@onCancel="handleClose"
@@ -22,6 +22,7 @@
 				@keyup.enter="submit"
 				v-model.trim="name"
 			/>
+			<div class="text-negative" v-if="errorMessage">{{ errorMessage }}</div>
 		</div>
 	</bt-custom-dialog>
 </template>
@@ -32,7 +33,7 @@ import { useDataStore } from '../../../stores/data';
 import { dataAPIs } from '../../../api';
 import { useFilesStore, FilesIdType } from '../../../stores/files';
 import { notifyWarning } from '../../../utils/notifyRedefinedUtil';
-import { BtNotify, NotifyDefinedType } from '@bytetrade/ui';
+import { useFileNameValidation } from 'src/composables/files/useFileNameValidation';
 
 import { useI18n } from 'vue-i18n';
 
@@ -52,18 +53,15 @@ const { t } = useI18n();
 const loading = ref(false);
 
 const CustomRef = ref();
+const { errorMessage } = useFileNameValidation(name);
 
 const submit = async () => {
 	if (!name.value) {
 		return false;
 	}
 
-	if (name.value.includes('\\') || name.value.includes('/')) {
-		BtNotify.show({
-			type: NotifyDefinedType.WARNING,
-			message: t('files.backslash_create')
-		});
-
+	if (errorMessage.value) {
+		notifyWarning(errorMessage.value);
 		return false;
 	}
 

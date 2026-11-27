@@ -9,12 +9,13 @@ import { createDir } from './utils';
 import { encodeUrl } from 'src/utils/encode';
 import { i18n } from 'src/boot/i18n';
 import * as files from './utils';
-import { getFileIcon } from '@bytetrade/core';
+import { getFileIcon, getFilePreviewType, PreviewType } from '@bytetrade/core';
 import { filterPcvPath } from '../common/common';
 import { CommonUrlApiType } from '../common/utils';
 import { appendPath } from '../path';
 import { TransferItem } from 'src/utils/interface/transfer';
 import { Router } from 'vue-router';
+import { isCommonEnable } from '../..';
 
 export default class DataDataAPI extends DriveDataAPI {
 	breadcrumbsBase = '';
@@ -41,8 +42,8 @@ export default class DataDataAPI extends DriveDataAPI {
 		return data;
 	}
 
-	async fetchMenuRepo(): Promise<DriveMenuType[]> {
-		return [
+	async fetchMenuRepo(origins?: DriveType[]): Promise<DriveMenuType[]> {
+		let items = [
 			{
 				label: i18n.global.t(`files_menu.${MenuItem.DATA}`),
 				key: MenuItem.DATA,
@@ -50,6 +51,30 @@ export default class DataDataAPI extends DriveDataAPI {
 				driveType: DriveType.Data
 			}
 		];
+
+		if (origins && !origins.includes(DriveType.Data)) {
+			items = [];
+		}
+
+		if (!origins || origins.includes(DriveType.Cache)) {
+			items.push({
+				label: i18n.global.t(`files_menu.${MenuItem.CACHE}`),
+				key: MenuItem.CACHE,
+				icon: 'sym_r_analytics',
+				driveType: DriveType.Cache
+			});
+		}
+
+		if (isCommonEnable() && (!origins || origins.includes(DriveType.Common))) {
+			items.push({
+				label: i18n.global.t(`files_menu.${MenuItem.COMMON}`),
+				key: MenuItem.COMMON,
+				icon: 'sym_r_interests',
+				driveType: DriveType.Common
+			});
+		}
+
+		return items;
 	}
 
 	async createDir(dirName: string, path: string): Promise<void> {
@@ -71,7 +96,7 @@ export default class DataDataAPI extends DriveDataAPI {
 	}
 
 	async onSaveFile(item: any, content: any): Promise<void> {
-		files.put(item.path, content);
+		await files.put(item.path, content);
 	}
 
 	getPreviewURL(file: FileItem, thumb: 'big' | 'thumb'): string {
@@ -106,7 +131,7 @@ export default class DataDataAPI extends DriveDataAPI {
 
 	async formatFileContent(file: FileItem): Promise<FileItem> {
 		const newFile = JSON.parse(JSON.stringify(file));
-		if (!['text', 'txt', 'textImmutable'].includes(newFile.type)) {
+		if (getFilePreviewType(file.name) !== PreviewType.TXT) {
 			return newFile;
 		}
 		try {

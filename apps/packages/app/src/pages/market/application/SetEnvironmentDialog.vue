@@ -43,6 +43,7 @@ import EnvVarInput from 'src/components/EnvVarInput.vue';
 import { AppEnvResponse, BaseEnv } from 'src/constant';
 import { ref, onMounted, computed, PropType } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useEnvValidation } from 'src/composables/env/useEnvValidation';
 
 const props = defineProps({
 	data: {
@@ -56,6 +57,7 @@ const props = defineProps({
 });
 
 const { t } = useI18n();
+const { validateEnvValue } = useEnvValidation();
 const CustomRef = ref();
 const missingValues = ref<BaseEnv[]>([]);
 const invalidValues = ref<BaseEnv[]>([]);
@@ -110,14 +112,11 @@ const isSetEnable = computed(() => {
 		if (!val) {
 			return false;
 		}
-		if (it.regex) {
-			try {
-				if (!new RegExp(it.regex).test(val)) {
-					return false;
-				}
-			} catch {
-				return false;
-			}
+		if (it.right === false) {
+			return false;
+		}
+		if (!validateEnvValue(it, val).right) {
+			return false;
 		}
 	}
 	return true;

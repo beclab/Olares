@@ -32,18 +32,47 @@ export function useSearch(
 
 	const filesRef = ref();
 
+	const searching = ref(false);
+	// Only the latest debounced search may clear `searching`; stale finally blocks
+	// must not reset the spinner after a newer keystroke already set it to true.
+	let searchGeneration = 0;
+
+	watch(
+		() => searchFiles.value,
+		(newVal: string | undefined) => {
+			if (!newVal || (!pattern.test(newVal) && newVal.length <= 2)) {
+				searching.value = false;
+				return;
+			}
+			searching.value = true;
+		}
+	);
+
 	watch(
 		() => searchFiles.value,
 		debounce(async (newVal: string | undefined) => {
 			if (!newVal) {
+				searchGeneration++;
+				searching.value = false;
 				return (fileData.value = []);
 			}
 			if (!pattern.test(newVal) && newVal.length <= 2) {
+				searchGeneration++;
+				searching.value = false;
 				return false;
 			}
 
-			fileData.value = await getContent(newVal);
-			hasMore.value = fileData.value.length >= searchStore.limit;
+			const generation = ++searchGeneration;
+			searching.value = true;
+
+			try {
+				fileData.value = await getContent(newVal);
+				hasMore.value = fileData.value.length >= searchStore.limit;
+			} finally {
+				if (generation === searchGeneration) {
+					searching.value = false;
+				}
+			}
 		}, 600)
 	);
 
@@ -177,6 +206,7 @@ export function useSearch(
 		scrollAreaBG,
 		hasMore,
 		chooseFile,
-		refreshScroll
+		refreshScroll,
+		searching
 	};
 }

@@ -23,13 +23,6 @@
 				/>
 				<p class="failFlag" v-if="failFlag">
 					{{ t(failInfo.message) }}
-					<a
-						v-if="failInfo.showLink"
-						href="https://docs.olares.com/manual/get-started/activate-olares.html"
-						target="_blank"
-					>
-						{{ t('err_learn_more') }}.
-					</a>
 				</p>
 			</div>
 		</div>

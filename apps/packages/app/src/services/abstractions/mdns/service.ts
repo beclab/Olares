@@ -170,7 +170,7 @@ export const installDisplayStatus = (terminusStatus: TerminusStatus) => {
 		return {
 			textClass: 'text-negative',
 			icon: 'sym_r_info',
-			status: 'Install error, please Uninstall'
+			status: i18n.global.t('Install error. Please uninstall.')
 		};
 	}
 
@@ -274,26 +274,50 @@ export interface TerminusStatus {
 	mode?: string;
 }
 
+/* i18n-ignore-start: device-name / os-type identifiers, not user-visible text */
+const DEFAULT_DEVICE_LOGO = 'wizard/devices/pve.png';
+
+// Matched top-to-bottom; first hit wins. Add new devices by inserting a rule.
+const DEVICE_LOGO_RULES: Array<{
+	match: (status: TerminusStatus) => boolean;
+	image: string;
+}> = [
+	{
+		match: (s) => s.device_name === 'Olares One',
+		image: 'wizard/devices/olares-one.png'
+	},
+	{
+		match: (s) => !!s.device_name?.startsWith('Olares'),
+		image: 'wizard/devices/terminus-zero.png'
+	},
+	{
+		match: (s) => !!s.device_name?.startsWith('Oraki'),
+		image: 'wizard/devices/oraki.png'
+	},
+	{
+		match: (s) => !!s.device_name?.startsWith('AI Cube'),
+		image: 'wizard/devices/ai-cube.png'
+	},
+	{
+		match: (s) => s.os_type === 'mac',
+		image: 'wizard/devices/macos.png'
+	},
+	{
+		match: (s) => s.os_type === 'windows',
+		image: 'wizard/devices/windows.png'
+	},
+	{
+		match: (s) => !!s.os_type?.startsWith('Raspberry Pi'),
+		image: 'wizard/devices/raspberrypi.png'
+	}
+];
+
 export const deviceLogo = (status?: TerminusStatus) => {
 	if (!status) {
-		return getRequireImage('wizard/devices/pve.png');
+		return getRequireImage(DEFAULT_DEVICE_LOGO);
 	}
-	if (status.device_name && status.device_name.startsWith('Olares')) {
-		if (status.device_name == 'Olares One') {
-			return getRequireImage('wizard/devices/olares-one.png');
-		}
-		return getRequireImage('wizard/devices/terminus-zero.png');
-	}
-	if (status.os_type == 'mac') {
-		return getRequireImage('wizard/devices/macos.png');
-	}
-	if (status.os_type == 'windows') {
-		return getRequireImage('wizard/devices/windows.png');
-	}
-	if (status.os_type.startsWith('Raspberry Pi')) {
-		return getRequireImage('wizard/devices/raspberrypi.png');
-	}
-	return getRequireImage('wizard/devices/pve.png');
+	const matched = DEVICE_LOGO_RULES.find((rule) => rule.match(status));
+	return getRequireImage(matched?.image ?? DEFAULT_DEVICE_LOGO);
 };
 
 export enum OlaresSourceType {
@@ -307,6 +331,7 @@ export const getSourceId = (status?: TerminusStatus) => {
 	}
 	return OlaresSourceType.MAIN;
 };
+/* i18n-ignore-end */
 
 export const isOlaresGlobalDevice = (status?: TerminusStatus) => {
 	if (!status) {
@@ -373,25 +398,35 @@ export enum MdnsApiEmum {
 
 	//One
 	ONE_GPU_MODE = 'oneGpuMode',
-	ONE_CPU_GPU = 'oneCpuGpu'
+	ONE_CPU_GPU = 'oneCpuGpu',
+	ONE_CPU_FREQ_LIMIT_ON = 'cpuFreqLimitOn',
+	ONE_CPU_FREQ_LIMIT_OFF = 'cpuFreqLimitOff',
+	ONE_CPU_FREQ_LIMIT_STATUS = 'cpuFreqLimitStatus',
+	ONE_GET_AUTO_POWER = 'getAutoPower',
+	ONE_SET_AUTO_POWER = 'setAutoPower'
 }
 
 export const mdnsApis: Record<MdnsApiEmum, string> = {
 	[MdnsApiEmum.UNINSTALL]: '/command/uninstall',
-	status: '/system/status',
-	install: '/command/install',
-	reboot: '/command/reboot',
-	shutdown: '/command/shutdown',
-	upgrade: '/command/upgrade',
-	upgradeComfirm: '/command/upgrade/confirm',
-	connectWifi: '/command/connect-wifi',
-	ifs: '/system/ifs',
-	changeHost: '/command/change-host',
-	checkSSHPassword: '/system/check-ssh-password',
+	[MdnsApiEmum.STATUS]: '/system/status',
+	[MdnsApiEmum.INSTALL]: '/command/install',
+	[MdnsApiEmum.REBOOT]: '/command/reboot',
+	[MdnsApiEmum.SHUTDOWN]: '/command/shutdown',
+	[MdnsApiEmum.UPGRADE]: '/command/upgrade',
+	[MdnsApiEmum.UPGRADE_CONFIRM]: '/command/upgrade/confirm',
+	[MdnsApiEmum.CONNECT_WIFI]: '/command/connect-wifi',
+	[MdnsApiEmum.IFS]: '/system/ifs',
+	[MdnsApiEmum.CHANGE_HOST]: '/command/change-host',
+	[MdnsApiEmum.CHECK_SSH_PASSWORD]: '/system/check-ssh-password',
 	[MdnsApiEmum.RESET_SSH_PASSWORD]: '/command/ssh-password',
 	[MdnsApiEmum.ONE_GPU_MODE]: '/olares-one/gpu-mode',
 	[MdnsApiEmum.ONE_CPU_GPU]: '/olares-one/cpu-gpu',
-	[MdnsApiEmum.DID_USER_NAME]: '/system/1.0/name'
+	[MdnsApiEmum.DID_USER_NAME]: '/system/1.0/name',
+	[MdnsApiEmum.ONE_CPU_FREQ_LIMIT_ON]: '/olares-one/cpu-freq-limit/on',
+	[MdnsApiEmum.ONE_CPU_FREQ_LIMIT_OFF]: '/olares-one/cpu-freq-limit/off',
+	[MdnsApiEmum.ONE_CPU_FREQ_LIMIT_STATUS]: '/olares-one/cpu-freq-limit/status',
+	[MdnsApiEmum.ONE_GET_AUTO_POWER]: '/olares-one/auto-power',
+	[MdnsApiEmum.ONE_SET_AUTO_POWER]: '/olares-one/auto-power'
 };
 
 export const getMdnsRequestApi = (

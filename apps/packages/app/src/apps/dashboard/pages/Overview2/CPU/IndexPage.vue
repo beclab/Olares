@@ -43,8 +43,8 @@
 										{{ $t('CPU_OP.UTILIZATION_RATE') }}
 									</div>
 									<div class="text-h6 text-ink-1">
-										{{ node.usageTateList[0].value }}
-										{{ node.usageTateList[0].unit }}
+										{{ node.usageTateList[0].value
+										}}{{ node.usageTateList[0].unit }}
 									</div>
 								</div>
 								<div class="column flex-gap-xs no-wrap">

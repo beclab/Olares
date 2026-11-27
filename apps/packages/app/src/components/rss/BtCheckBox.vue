@@ -1,6 +1,7 @@
 <template>
 	<div
-		class="bt-checkbox row justify-start items-center cursor-pointer"
+		class="bt-checkbox row justify-start items-center"
+		:class="disabled ? 'bt-checkbox--disabled' : 'cursor-pointer'"
 		@click.stop="handleCheckboxClick"
 	>
 		<q-img
@@ -38,6 +39,10 @@ const props = defineProps({
 	modelValue: {
 		type: Boolean,
 		required: true
+	},
+	disabled: {
+		type: Boolean,
+		default: false
 	},
 	label: {
 		type: String,
@@ -85,6 +90,9 @@ const handleCheckboxClick = (e: MouseEvent) => {
 	if (target.tagName === 'A' || target.closest('a')) {
 		return;
 	}
+	if (props.disabled) {
+		return;
+	}
 	emit('update:modelValue', !props.modelValue);
 };
 </script>
@@ -93,6 +101,11 @@ const handleCheckboxClick = (e: MouseEvent) => {
 .bt-checkbox {
 	height: 32px;
 	padding: 8px;
+
+	&--disabled {
+		cursor: not-allowed;
+		opacity: 0.5;
+	}
 
 	&__img {
 		width: 16px;
@@ -104,6 +117,7 @@ const handleCheckboxClick = (e: MouseEvent) => {
 		text-decoration: underline;
 		cursor: pointer;
 		white-space: nowrap;
+		margin-left: 4px;
 	}
 
 	&__label {

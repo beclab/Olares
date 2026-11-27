@@ -1,10 +1,11 @@
-import { UserItem, MnemonicItem } from '@didvault/sdk/src/core';
-import { app, setSenderUrl } from '../globals';
+import { app } from '../globals';
 import { useUserStore, defaultPassword } from '../stores/user';
 import { BusinessAsyncCallback } from './Callback';
 import { sendUnlock } from './bexFront';
 import { PASSWORD_RULE } from './constants';
 import { i18n } from '../boot/i18n';
+import { getAppPlatform } from '../application/platform';
+import UnlockAppDialog from '../components/unlock/UnlockAppDialog.vue';
 
 export async function savePassword(
 	password: string,
@@ -51,19 +52,7 @@ export async function unlockByPwd(
 		await userStore.unlock(password);
 
 		if (userStore.current_id) {
-			const user: UserItem = userStore.users!.items.get(userStore.current_id!)!;
-			if (user.name) {
-				setSenderUrl({
-					url: user.vault_url
-				});
-			}
-
-			const mnemonic: MnemonicItem = userStore.users!.mnemonics.get(
-				userStore.current_id!
-			)!;
-
-			await app.load(userStore.current_id!);
-			await app.unlock(mnemonic.mnemonic);
+			await app.load(userStore.current_id);
 		}
 		await callback.onSuccess(userStore.current_id);
 	} catch (error) {
@@ -80,3 +69,23 @@ export async function unlockByDefaultPwd(callback: BusinessAsyncCallback) {
 	await unlockByPwd(defaultPassword, callback);
 	userStore.sendSetPassworNotify();
 }
+
+export const unlockUserFirstBusiness = async (props: any) => {
+	if (!getAppPlatform().getQuasar()) {
+		return false;
+	}
+	return new Promise<boolean>((resolve) => {
+		getAppPlatform()
+			.getQuasar()
+			?.dialog({
+				component: UnlockAppDialog,
+				componentProps: props
+			})
+			.onOk(() => {
+				resolve(true);
+			})
+			.onCancel(() => {
+				resolve(false);
+			});
+	});
+};

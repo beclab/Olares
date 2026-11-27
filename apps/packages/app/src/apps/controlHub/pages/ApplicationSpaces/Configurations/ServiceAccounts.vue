@@ -27,12 +27,12 @@
 							dense
 							flat
 							size="16px"
-							:icon="isStudio2 ? 'sym_r_preview' : 'sym_r_edit_square'"
+							icon="sym_r_edit_square"
 							@click="clickHandler"
 						>
 							<q-tooltip>
 								<div style="white-space: nowrap">
-									{{ isStudio2 ? $t('VIEW_YAML') : $t('EDIT_YAML') }}
+									{{ $t('EDIT_YAML') }}
 								</div>
 							</q-tooltip>
 						</q-btn>
@@ -49,12 +49,7 @@
 			></Detail>
 			<q-inner-loading :showing="loading"> </q-inner-loading>
 		</MyPage>
-		<Yaml
-			ref="yamlRef"
-			:title="t('EDIT_YAML')"
-			module="serviceaccounts"
-			:readonly="isStudio2"
-		></Yaml>
+		<Yaml ref="yamlRef" :title="t('EDIT_YAML')" module="serviceaccounts"></Yaml>
 	</MyContentPage>
 </template>
 
@@ -73,11 +68,10 @@ import MyPage from '@apps/control-panel-common/src/containers/MyPage.vue';
 import MyContentPage from '@apps/control-hub/src/components/MyContentPage.vue';
 import Yaml from '@apps/control-hub/src/pages/NamespacePods/Yaml3.vue';
 import QButtonStyle from '@apps/control-panel-common/src/components/QButtonStyle.vue';
-import { useIsStudio, useIsStudio2 } from '@apps/control-hub/src/stores/hook';
+import { useIsStudio } from '@apps/control-hub/src/stores/hook';
 import MyCardHeader from '@apps/control-hub/src/components/MyCardHeader.vue';
 import { selectedNodes } from '../treeStore';
 const isStudio = useIsStudio();
-const isStudio2 = useIsStudio2();
 const loading = ref(false);
 const secrets = ref();
 const data = ref();

@@ -18,6 +18,7 @@ import url from 'src/utils/url';
 import { SharePermission } from 'src/utils/interface/share';
 import * as filesUtil from '../../common/utils';
 import { appendPath } from '../../path';
+import { getFilePreviewType, PreviewType } from '@bytetrade/core';
 
 export default class PublicShareAPI extends ShareAPI {
 	driveType: DriveType = DriveType.PublicShare;
@@ -113,7 +114,7 @@ export default class PublicShareAPI extends ShareAPI {
 
 	async getDownloadInfo(path: string): Promise<TransferItem[]> {
 		const filesStore = useFilesStore();
-		const selected = filesStore.selected[this.origin_id];
+		const selected = filesStore.selected[this.origin_id] || [];
 
 		const result: TransferItem[] = [];
 
@@ -126,9 +127,13 @@ export default class PublicShareAPI extends ShareAPI {
 			}
 			const shareStore = useShareStore();
 
-			const url = filesUtil.getDownloadUrl(selectFile, {
-				token: shareStore.token
-			});
+			// Files use the share-specific raw URL; folders use the generic
+			// stream/zip URL.
+			const url = selectFile.isDir
+				? filesUtil.getDownloadUrl(selectFile, {
+						token: shareStore.token
+				  })
+				: this.getDownloadURL(selectFile, false);
 
 			const fileObj: TransferItem = {
 				url,
@@ -156,7 +161,7 @@ export default class PublicShareAPI extends ShareAPI {
 
 	async formatFileContent(file: FileItem): Promise<FileItem> {
 		const newFile = JSON.parse(JSON.stringify(file));
-		if (!['text', 'txt', 'textImmutable'].includes(newFile.type)) {
+		if (getFilePreviewType(file.name) !== PreviewType.TXT) {
 			return newFile;
 		}
 		try {

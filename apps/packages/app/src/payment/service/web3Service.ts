@@ -6,6 +6,7 @@ import { logger } from '../logger';
 import { ref } from 'vue';
 import Web3 from 'web3';
 import BigNumber from 'bignumber.js';
+import { i18n } from 'src/boot/i18n';
 
 class ChainStrategy {
 	static async switchToTargetChain(
@@ -48,7 +49,9 @@ export class Web3Service {
 
 	private initContract(contractAddress: string): void {
 		if (!this.web3) {
-			throw new Error('Web3 instance not initialized (connect wallet first)');
+			throw new Error(
+				i18n.global.t('Web3 instance not initialized (connect wallet first)')
+			);
 		}
 		this.contract = new this.web3.eth.Contract(
 			WEB3_CONFIG.CONTRACT.abi,
@@ -63,7 +66,9 @@ export class Web3Service {
 		logger.log('Connecting to wallet...');
 		try {
 			if (!window.ethereum) {
-				throw new Error('MetaMask not detected (please install MetaMask)');
+				throw new Error(
+					i18n.global.t('MetaMask not detected (please install MetaMask)')
+				);
 			}
 
 			this.chainConfig = chainConfig;
@@ -74,7 +79,7 @@ export class Web3Service {
 			})) as string[];
 
 			if (!accounts || accounts.length === 0) {
-				throw new Error('No accounts authorized');
+				throw new Error(i18n.global.t('No accounts authorized'));
 			}
 
 			this.userAccount.value = accounts[0];
@@ -156,7 +161,7 @@ Nonce: ${orderData.nonce}`;
 		} catch (error: unknown) {
 			const err = error as { code?: number; message?: string };
 			if (err.code === 4001) {
-				const cancelMsg = 'User cancelled order signature';
+				const cancelMsg = 'User cancelled order signature'; // i18n-ignore: internal error code, caller decides UI display
 				logger.log(cancelMsg);
 				throw new Error(cancelMsg);
 			}
@@ -266,7 +271,7 @@ Nonce: ${orderData.nonce}`;
 				feeHistory.baseFeePerGas[feeHistory.baseFeePerGas.length - 1];
 
 			if (!nextBaseFee) {
-				throw new Error('Unable to retrieve base fee');
+				throw new Error(i18n.global.t('Unable to retrieve base fee'));
 			}
 
 			// 4. Calculate maxFeePerGas
@@ -325,13 +330,21 @@ Nonce: ${orderData.nonce}`;
 		logger.log('Starting transfer...');
 		try {
 			if (!AddressValidator.isValidAddress(toAddress)) {
-				throw new Error(`Invalid receiver address: ${toAddress}`);
+				throw new Error(
+					i18n.global.t('Invalid receiver address: {address}', {
+						address: toAddress
+					})
+				);
 			}
 			if (!amount) {
-				throw new Error(`Invalid transfer amount: ${amount}`);
+				throw new Error(
+					i18n.global.t('Invalid transfer amount: {amount}', {
+						amount: amount
+					})
+				);
 			}
 			if (!encryptedOrderData) {
-				throw new Error('Encrypted order data is required');
+				throw new Error(i18n.global.t('Encrypted order data is required'));
 			}
 
 			const transferData = this.contract.methods
@@ -420,12 +433,14 @@ Nonce: ${orderData.nonce}`;
 		} catch (error: unknown) {
 			const err = error as { code?: number; message?: string };
 			if (err.code === 4001) {
-				const cancelMsg = 'User cancelled transfer';
+				const cancelMsg = i18n.global.t('User cancelled transfer');
 				logger.log(cancelMsg);
 				throw new Error(cancelMsg);
 			}
 			const errorMsg =
-				error instanceof Error ? error.message : 'transfer error';
+				error instanceof Error
+					? error.message
+					: i18n.global.t('Transfer failed');
 			logger.error(`❌ transfer failed: ${errorMsg}`);
 			throw error;
 		}

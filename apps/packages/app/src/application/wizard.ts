@@ -1,6 +1,7 @@
 import { NormalApplication } from './base';
 import { useTokenStore } from './../stores/wizard-step';
 import { commonInterceptValue } from 'src/utils/response';
+import { i18n } from 'src/boot/i18n';
 
 export class WizardApplication extends NormalApplication {
 	applicationName = 'wizard';
@@ -60,7 +61,9 @@ export class WizardApplication extends NormalApplication {
 					response.status != 304) ||
 				!data
 			) {
-				throw Error('Network error, please try again later');
+				throw Error(
+					i18n.global.t('errors.network_error_please_try_again_later')
+				);
 			}
 
 			if (data.code == 100001) {

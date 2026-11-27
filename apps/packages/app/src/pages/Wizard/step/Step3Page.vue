@@ -9,13 +9,7 @@
 			</div>
 			<p class="get-text">{{ t('step_select_proxy') }}</p>
 			<p class="account_please_text">
-				{{ t('step_proxy_text_1') }}<br />
-				{{ t('step_proxy_text_2') }}
-				<a
-					href="https://docs.olares.com/manual/get-started/activate-olares.html"
-					target="_blank"
-					>{{ t('step_proxy_text_3') }}</a
-				>
+				{{ t('step_proxy_text_1') }}
 			</p>
 			<div class="Account_input_from">
 				<p>{{ t('step_select_region') }}</p>

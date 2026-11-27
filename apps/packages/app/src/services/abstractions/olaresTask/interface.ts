@@ -4,9 +4,12 @@ import {
 } from 'src/utils/interface/transfer';
 
 export interface OlaresTaskInterface {
+	maxRetries?: number;
 	setQueryResult(item: OlaresTaskBaseItem): Promise<OlaresTaskBaseItem>;
 }
 export type OlaresCopyTask = OlaresTaskInterface;
+
+export type OlaresArchiveTask = OlaresTaskInterface;
 
 export interface OlaresCloudUploadTask extends OlaresTaskInterface {
 	addTasks(items: TransferItemInMemory[]): OlaresTaskBaseItem[];
@@ -28,7 +31,12 @@ export interface OlaresTaskBaseItem {
 	node: string;
 	transfer_id?: number;
 	pending?: boolean;
-	task_type: 'copy' | 'upload' | 'move';
+	task_type: 'copy' | 'upload' | 'move' | 'compress' | 'extract';
 	retryCount: number;
 	pause_able: boolean;
+	maxRetries?: number;
+	// Files store id of the view that started the task; used to refresh the right
+	// listing on completion (e.g. the share view uses FilesIdType.SHARE, not the
+	// default PAGEID).
+	origin_id?: number;
 }

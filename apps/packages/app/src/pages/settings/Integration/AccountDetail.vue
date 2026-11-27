@@ -13,12 +13,12 @@
 						<div class="column justify-between" style="margin-left: 8px">
 							<div class="row items-center">
 								<div class="text-subtitle2 person-name q-mr-sm">
-									{{ adminStore.user.name }}
+									{{ meStore.user.name }}
 								</div>
 								<account-connect-status v-if="!bindTerminusName" />
 							</div>
 							<div class="text-body3 person-id">
-								{{ '@' + adminStore.olaresId.split('@')[1] }}
+								{{ '@' + terminusStore.olaresId.split('@')[1] }}
 							</div>
 						</div>
 					</div>
@@ -84,7 +84,7 @@
 									{{
 										blockChainStore.account
 											? t('username_is_metaMask_wallet', {
-													username: adminStore.user.name
+													username: meStore.user.name
 											  })
 											: 'MetaMask'
 									}}
@@ -183,7 +183,8 @@
 import { useQuasar } from 'quasar';
 import { ref, watch, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { useAdminStore } from 'src/stores/settings/admin';
+import { useMeStore } from 'src/stores/settings/me';
+import { useTerminusStore } from 'src/stores/terminus';
 import { useSpaceStore, BindTerminusName } from 'src/stores/settings/space';
 import { useBlockchainStore } from 'src/stores/settings/blockchain';
 import { toUtf8Bytes, keccak256, ethers } from 'ethers';
@@ -202,7 +203,8 @@ const { t } = useI18n();
 
 const $q = useQuasar();
 const blockChainStore = useBlockchainStore();
-const adminStore = useAdminStore();
+const meStore = useMeStore();
+const terminusStore = useTerminusStore();
 const router = useRouter();
 const spaceStore = useSpaceStore();
 const bindTerminusName = ref<BindTerminusName | undefined>(undefined);
@@ -330,7 +332,7 @@ async function updateAddress() {
 		const contract = getContractRootResolver();
 		const ad = [
 			...(await contract.getAuthenticationAddresses(
-				adminStore.olaresId.replace('@', '.')
+				terminusStore.olaresId.replace('@', '.')
 			))
 		];
 
@@ -377,7 +379,7 @@ const onAddSign = async () => {
 		let signData = await baseinfo.onAddAuthenticate(
 			blockChainStore.network,
 			blockChainStore.account,
-			adminStore.olaresId
+			terminusStore.olaresId
 		);
 		const uuid = keccak256(
 			toUtf8Bytes(
@@ -419,7 +421,7 @@ const onRemoveSign = async () => {
 		let signData = await baseinfo.onRemoveAuthenticate(
 			blockChainStore.network,
 			blockChainStore.account,
-			adminStore.olaresId
+			terminusStore.olaresId
 		);
 
 		const uuid = keccak256(

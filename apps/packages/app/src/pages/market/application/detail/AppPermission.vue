@@ -26,7 +26,7 @@
 				/>
 
 				<permission-request
-					v-if="clusterScopedApp"
+					v-if="isSharedApp"
 					name="sym_r_inbox_text_share"
 					:title="t('Shared App')"
 					:nodes="[
@@ -66,7 +66,7 @@
 				<permission-request
 					v-if="systemEnvsPermission.length > 0"
 					name="sym_r_stacks"
-					:title="t('Using System environment variables')"
+					:title="t('Using System Environment Variables')"
 					:nodes="systemEnvsPermission"
 				/>
 
@@ -98,9 +98,14 @@
 <script setup lang="ts">
 import PermissionRequest from '../../../../components/appintro/PermissionRequest.vue';
 import AppIntroCard from '../../../../components/appintro/AppIntroCard.vue';
-import { PermissionNode } from '../../../../constant/constants';
+import { useAppStore } from 'src/stores/market/appStore';
 import { computed, PropType } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { isMultiInstanceApp } from '../../../../constant/config';
+import {
+	isCsOrSharedApp,
+	PermissionNode
+} from '../../../../constant/constants';
 
 const props = defineProps({
 	appEntry: {
@@ -118,13 +123,20 @@ const props = defineProps({
 });
 
 const { t } = useI18n();
+const appStore = useAppStore();
+
+const simpleLatest = computed(
+	() =>
+		appStore.getAppAggregationInfo(props.appName ?? '', props.sourceId ?? '')
+			?.app_simple_latest
+);
 
 const showDialog = computed(() => {
 	return (
 		filePermissionData.value.length > 0 ||
 		publicEntrancePermission.value.length > 0 ||
 		noVisibleEntrancePermission.value.length > 0 ||
-		clusterScopedApp.value ||
+		isSharedApp.value ||
 		adminPermission.value ||
 		clonePermission.value ||
 		systemEnvsPermission.value.length > 0 ||
@@ -134,14 +146,12 @@ const showDialog = computed(() => {
 	);
 });
 
-const clusterScopedApp = computed(
-	() => props.appEntry.options?.appScope?.clusterScoped ?? false
-);
+const isSharedApp = computed(() => isCsOrSharedApp(simpleLatest.value));
 
 const adminPermission = computed(() => props.appEntry.onlyAdmin);
 
-const clonePermission = computed(
-	() => props.appEntry?.options?.allowMultipleInstall
+const clonePermission = computed(() =>
+	isMultiInstanceApp(simpleLatest.value?.app_simple_info)
 );
 
 type PermissionText =
@@ -205,7 +215,7 @@ const publicEntrancePermission = computed<PermissionNode[]>(() => {
 	return [
 		{
 			label: t(
-				'This app provides an publicly accessible entrance that does not require authentication.'
+				'This app provides a publicly accessible entrance that does not require authentication.'
 			),
 			children: []
 		},
@@ -340,7 +350,7 @@ const portPermission = computed<PermissionNode[]>(() => {
 	const targetPorts = ports.filter((port) => port.addToTailscaleAcl);
 	targetPorts.forEach((port) => {
 		const proto = port.protocol?.trim() || 'all';
-		const portStr = port.exposePort ? `*:${port.exposePort}` : '*:random port';
+		const portStr = port.exposePort ? `*:${port.exposePort}` : '*:random port'; // i18n-ignore: Tailscale ACL port spec, technical syntax
 
 		if (!portGroupMap.has(proto)) {
 			portGroupMap.set(proto, []);

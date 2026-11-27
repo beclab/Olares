@@ -220,14 +220,14 @@ const trendList = computed(() => [
 	{
 		title: t('GPU_OP.RESOURCE_ALLOCATION_TREND'),
 		unit: '%',
-		legend: [t('core'), t('MEMORY')],
+		legend: [t('GPU_OP.VRAM'), t('GPU_OP.GPU_MEMORY')],
 		data: [gaugeConfig.value[0].data, gaugeConfig.value[1].data],
 		loading: gaugeConfig.value[0].loading || gaugeConfig.value[1].loading
 	},
 	{
 		title: t('GPU_OP.RESOURCE_USAGE_TREND'),
 		unit: '%',
-		legend: [t('core'), t('MEMORY')],
+		legend: [t('GPU_OP.VRAM'), t('GPU_OP.GPU_MEMORY')],
 		data: [gaugeConfig.value[2].data, gaugeConfig.value[3].data],
 		loading: gaugeConfig.value[2].loading || gaugeConfig.value[3].loading
 	},
@@ -243,8 +243,10 @@ const trendList = computed(() => [
 const lineTools = ref([
 	{
 		title: t('GPU_OP.GPU_POWER'),
+		// i18n-ignore-start: PromQL query, not user-visible text
 		query:
 			'avg by (device_no,driver_version) (hami_device_power{deviceuuid=~"$deviceuuid"})',
+		// i18n-ignore-end
 		data: [[]],
 		unit: 'W',
 		gaugeUnit: 'W',

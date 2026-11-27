@@ -1,13 +1,9 @@
 <template>
 	<bt-custom-dialog
 		ref="CustomRef"
-		:title="
-			t('action_sub_policies', {
-				action: editMode ? t('edit') : t('add')
-			})
-		"
+		:title="editMode ? t('edit_sub_policy') : t('add_sub_policy')"
 		:skip="false"
-		:ok="t('submit')"
+		:ok="editMode ? t('buttons.save') : t('add')"
 		:cancel="t('cancel')"
 		size="medium"
 		:platform="deviceStore.platform"

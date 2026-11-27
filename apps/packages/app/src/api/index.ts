@@ -7,7 +7,10 @@ import {
 	SyncDataAPI,
 	syncUtil,
 	syncFilesFormat,
-	isShareEnable
+	isShareEnable,
+	isArchiveEnable,
+	isNfsEnable,
+	isFileBackupNewOpenEnable
 } from './files';
 import { CommonFetch } from './files/fetch';
 
@@ -21,5 +24,8 @@ export {
 	utils as filesUtil,
 	syncUtil,
 	syncFilesFormat,
-	isShareEnable
+	isShareEnable,
+	isArchiveEnable,
+	isNfsEnable,
+	isFileBackupNewOpenEnable
 };

@@ -46,6 +46,18 @@
 				></audio>
 			</div>
 		</div>
+		<vue-office-docx
+			v-else-if="
+				filesStore.previewItem[origin_id]?.type?.toLowerCase() == 'word'
+			"
+			:src="displayRaw"
+		/>
+		<vue-office-excel
+			v-else-if="
+				filesStore.previewItem[origin_id]?.type?.toLowerCase() == 'excel'
+			"
+			:src="displayRaw"
+		/>
 	</div>
 </template>
 
@@ -60,6 +72,12 @@ import { useFilesStore, FilesIdType } from '../../../stores/files';
 import { format } from '../../../utils/format';
 import { getNativeAppPlatform } from 'src/application/platform';
 import { useUserStore } from 'src/stores/user';
+
+import VueOfficeDocx from '@vue-office/docx/lib/v3';
+import VueOfficeExcel from '@vue-office/excel/lib/v3';
+
+import '@vue-office/docx/lib/v3/index.css';
+import '@vue-office/excel/lib/v3/index.css';
 
 const props = defineProps({
 	origin_id: {

@@ -31,7 +31,7 @@ import AppMenuFeature from 'src/components/settings/AppMenuFeature.vue';
 import CreateUserDialog from './dialog/CreateUserDialog.vue';
 import UserItem from 'src/components/settings/user/UserItem.vue';
 import BtList from 'src/components/settings/base/BtList.vue';
-import { useUserStore } from 'src/stores/settings/user';
+import { useUsersStore } from 'src/stores/settings/users';
 import { AccountInfo } from 'src/constant/global';
 import { MENU_TYPE } from 'src/constant';
 import { useRouter } from 'vue-router';
@@ -39,7 +39,7 @@ import { useQuasar } from 'quasar';
 import { useI18n } from 'vue-i18n';
 import { onMounted } from 'vue';
 
-const accountStore = useUserStore();
+const accountStore = useUsersStore();
 const quasar = useQuasar();
 const $router = useRouter();
 const { t } = useI18n();

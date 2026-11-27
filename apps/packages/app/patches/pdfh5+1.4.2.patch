@@ -1,0 +1,51 @@
+diff --git a/node_modules/pdfh5/js/pdfh5.js b/node_modules/pdfh5/js/pdfh5.js
+--- a/node_modules/pdfh5/js/pdfh5.js
++++ b/node_modules/pdfh5/js/pdfh5.js
+@@ -1524,1 +1524,3 @@
+-			obj.rangeChunkSize = 65536;
++			obj.rangeChunkSize = 65536;
++			// GHSA-wgrm-67xf-hhpq: never compile untrusted PDF font programs.
++			obj.isEvalSupported = false;
+@@ -1890,8 +1892,10 @@
+ 					width: "100%"
+ 				});
+ 			}
+-			setTimeout(function() {
+-				self.loadingBar.hide();
++			clearTimeout(self.loadingBarTimer);
++			self.loadingBarTimer = setTimeout(function() {
++				self.loadingBarTimer = null;
++				if (self.loadingBar) self.loadingBar.hide();
+ 			}, 300)
+ 			self.endTime = time - self.initTime;
+ 			if (options.renderType === "svg") {
+@@ -1931,11 +1935,13 @@
+ 			self.resizeEvent = true;
+ 			var timer;
+ 			if (self.pages) {
+-				$(window).on("resize", function() {
++				self.resizeHandler = function() {
++					if (!self.pages) return;
+ 					self.pages.each(function(i, item) {
+ 						$(item).css("min-height", "auto")
+ 					})
+-				})
++				};
++				$(window).on("resize", self.resizeHandler);
+ 			}
+ 		},
+ 		show: function(callback) {
+@@ -2053,6 +2059,13 @@
+ 			}
+ 		},
+ 		destroy: function(callback) {
++			clearTimeout(this.loadingBarTimer);
++			this.loadingBarTimer = null;
++			if (this.resizeHandler) {
++				$(window).off("resize", this.resizeHandler);
++				this.resizeHandler = null;
++			}
++			this.resizeEvent = false;
+ 			this.reset();
+ 			this.off();
+ 			if (this.thePDF) {

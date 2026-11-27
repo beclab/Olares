@@ -61,8 +61,8 @@ const download = () => {
 				eleLink.click();
 				document.body.removeChild(eleLink);
 			})
-			.catch((e) => {
-				notifyFailed(`File download failed : ${e.message}`);
+			.catch(() => {
+				notifyFailed(t('download_png_failed'));
 			})
 			.finally(() => {
 				setTimeout(() => {
@@ -70,7 +70,7 @@ const download = () => {
 				}, 1000);
 			});
 	} else {
-		notifyFailed('File download failed');
+		notifyFailed(t('download_png_failed'));
 	}
 };
 </script>

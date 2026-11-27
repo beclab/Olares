@@ -1,8 +1,8 @@
+import { uid } from 'quasar';
 import { BtNotify, NotifyDefinedType } from '@bytetrade/ui';
 import { CommonFetch } from '../../fetch';
 import { CopyStoragesType } from 'src/stores/operation';
 import { OPERATE_ACTION } from 'src/utils/contact';
-import { uuid } from '@didvault/sdk/src/core';
 import { decodeURIComponentSafe, getNotifyMsg } from '../utils';
 import { notifyHide, notifyWaitingShow } from 'src/utils/notifyRedefinedUtil';
 import { i18n } from 'src/boot/i18n';
@@ -17,6 +17,140 @@ import { DriveType } from 'src/utils/interface/files';
 import { appendPath } from '../path';
 import { encodeUrl } from 'src/utils/encode';
 import { useDataStore } from 'src/stores/data';
+import { useUserStore } from 'src/stores/user';
+import { FilesNodeDatabase } from 'src/utils/files/nodeDB';
+
+let filesNodeDB: FilesNodeDatabase | undefined;
+
+// Scope of the last fresh fetch (the machine/account it belonged to). Lets
+// loadNodesFromCache distinguish "store not yet populated for this machine"
+// from "API legitimately returned empty nodes" and avoid clobbering a fresh
+// empty response with stale cache data. Resets implicitly on machine switch
+// because the scope value changes.
+let freshNodesScope: string | undefined;
+
+// Dedupes concurrent node fetches per machine so the stale-while-revalidate
+// refresh in loadNodesFromCache doesn't double-fetch alongside layout fetches.
+let inflightFetch: { scope: string; promise: Promise<FileNode[]> } | undefined;
+
+function getFilesNodeDB(): FilesNodeDatabase {
+	if (!filesNodeDB) {
+		filesNodeDB = new FilesNodeDatabase();
+	}
+	return filesNodeDB;
+}
+
+// Identifies which Olares machine the cache belongs to. The same account
+// (current_id) can switch between boxes (local/remote/different machine) while
+// current_id stays constant, so the scope must also include the active files
+// endpoint (getModuleSever('files') reflects the box's url/ip/local_url and
+// changes on box switch). This ensures the cache invalidates and node lists
+// revalidate when the active machine changes, not just on account switch.
+// Falls back to the host when the user store isn't ready (e.g. web access to a
+// single box).
+function currentNodeCacheScope(): string {
+	try {
+		const userStore = useUserStore();
+		if (userStore.current_user) {
+			const account = userStore.current_id ?? '';
+			const endpoint = userStore.getModuleSever('files') ?? '';
+			const composed = `${account}|${endpoint}`;
+			if (account || endpoint) {
+				return composed;
+			}
+		}
+	} catch (error) {
+		// pinia not initialized yet; fall through to host-based scope.
+	}
+	return (typeof window !== 'undefined' && window.location.host) || 'default';
+}
+
+async function persistNodesToCache(
+	nodes: FileNode[],
+	scope: string
+): Promise<void> {
+	try {
+		const db = getFilesNodeDB();
+		await db.transaction('rw', db.nodes, async () => {
+			// Only one machine's nodes live in the table at a time; clearing first
+			// drops any previous machine's cache so it can't leak across switches.
+			await db.nodes.clear();
+			if (nodes && nodes.length > 0) {
+				await db.nodes.bulkPut(
+					nodes.map((n) => ({ name: n.name, master: !!n.master, scope }))
+				);
+			}
+		});
+	} catch (error) {
+		console.warn('persistNodesToCache failed', error);
+	}
+}
+
+export async function loadNodesFromCache(): Promise<FileNode[]> {
+	const scope = currentNodeCacheScope();
+	try {
+		const cached = await getFilesNodeDB().nodes.toArray();
+		// Drop cache that belongs to a different machine/account.
+		const scopedCache = cached.filter((n) => n.scope === scope);
+
+		if (freshNodesScope === scope) {
+			return scopedCache;
+		}
+
+		const filesStore = useFilesStore();
+		// If the store holds another machine's nodes (or is empty), replace them
+		// with this machine's cached nodes so a stale topology is dropped
+		// immediately instead of lingering until a refetch completes. When the
+		// store already matches the active scope, leave it untouched so we don't
+		// clobber a freshly fetched list with cache.
+		if (filesStore.nodesScope !== scope) {
+			filesStore.nodes = scopedCache.map((n) => ({
+				name: n.name,
+				master: !!n.master
+			}));
+			filesStore.nodesScope = scope;
+		}
+
+		// Stale-while-revalidate: seed instantly from cache for first paint, then
+		// refresh from the server so node-topology / machine changes propagate
+		// even on screens that only call loadNodesFromCache.
+		void fetchNodeList();
+		return scopedCache;
+	} catch (error) {
+		console.warn('loadNodesFromCache failed', error);
+		void fetchNodeList();
+		return [];
+	}
+}
+
+// Single record key for the files root sorting preference.
+const FILES_ROOT_SORT_KEY = 'root';
+
+export async function persistSortToCache(
+	by: number,
+	asc: boolean
+): Promise<void> {
+	try {
+		await getFilesNodeDB().sorts.put({ id: FILES_ROOT_SORT_KEY, by, asc });
+	} catch (error) {
+		console.warn('persistSortToCache failed', error);
+	}
+}
+
+export async function loadSortFromCache(): Promise<
+	{ by: number; asc: boolean } | undefined
+> {
+	try {
+		const record = await getFilesNodeDB().sorts.get(FILES_ROOT_SORT_KEY);
+		if (record) {
+			return { by: record.by, asc: record.asc };
+		}
+		return undefined;
+	} catch (error) {
+		console.warn('loadSortFromCache failed', error);
+		return undefined;
+	}
+}
 
 export type CommonUrlApiType =
 	| 'resources'
@@ -30,7 +164,8 @@ export type CommonUrlApiType =
 	| 'stream'
 	| 'tree'
 	| 'share'
-	| 'users';
+	| 'users'
+	| 'archive';
 
 export type FileType = 'drive' | 'external' | 'sync' | 'cache';
 
@@ -128,7 +263,7 @@ export const action = async (
 	callback: (action: OPERATE_ACTION, data: any) => Promise<void>
 ): Promise<TaskActionType[]> => {
 	const dest = path;
-	const notifyId = await uuid();
+	const notifyId = uid();
 	const notifyMsg = getNotifyMsg(items);
 	let tasks: TaskActionType[] = [];
 	notifyWaitingShow(notifyMsg, notifyId);
@@ -309,14 +444,64 @@ export function formatAppDataNode(
 }
 
 export async function fetchNodeList(): Promise<FileNode[]> {
-	try {
-		const res: any = await CommonFetch.get(commonUrlPrefix('nodes'), {});
-		const filesStore = useFilesStore();
-		filesStore.nodes = res.data.nodes;
-		return res.data.nodes;
-	} catch (error) {
-		return [];
+	const scope = currentNodeCacheScope();
+	if (inflightFetch && inflightFetch.scope === scope) {
+		return inflightFetch.promise;
 	}
+
+	const promise = (async () => {
+		try {
+			const res: any = await CommonFetch.get(commonUrlPrefix('nodes'), {});
+			const nodes: FileNode[] = res.data.nodes || [];
+			// The machine/account may have switched while this request was in
+			// flight. These nodes belong to the previous scope, so don't apply
+			// them (that would clobber the now-active account). Re-fetch for the
+			// active scope instead, so callers that await and then read the store
+			// still get correct, populated data rather than an empty list.
+			if (currentNodeCacheScope() !== scope) {
+				return await fetchNodeList();
+			}
+			const filesStore = useFilesStore();
+			filesStore.nodes = nodes;
+			filesStore.nodesScope = scope;
+			freshNodesScope = scope;
+			await persistNodesToCache(nodes, scope);
+			return nodes;
+		} catch (error) {
+			// On failure, never leave a previous machine's nodes on screen. If
+			// the store still holds a different scope's topology, drop it so
+			// callers that read filesStore.nodes after awaiting don't render or
+			// resolve paths against the wrong machine. A same-scope transient
+			// failure keeps its currently valid nodes. Leaving nodes empty makes
+			// ensureNodeList retry on the next call.
+			const filesStore = useFilesStore();
+			if (filesStore.nodesScope !== scope) {
+				filesStore.nodes = [];
+				filesStore.nodesScope = scope;
+			}
+			return [];
+		} finally {
+			if (inflightFetch?.scope === scope) {
+				inflightFetch = undefined;
+			}
+		}
+	})();
+
+	inflightFetch = { scope, promise };
+	return promise;
+}
+
+// Ensures filesStore.nodes is populated AND belongs to the active machine.
+// Entry points must use this instead of gating on `nodes.length === 0`, because
+// after a machine/endpoint switch the store can still hold the previous
+// machine's (non-empty) nodes, which that gate would wrongly treat as valid.
+export async function ensureNodeList(): Promise<FileNode[]> {
+	const filesStore = useFilesStore();
+	const scope = currentNodeCacheScope();
+	if (filesStore.nodes.length === 0 || filesStore.nodesScope !== scope) {
+		return fetchNodeList();
+	}
+	return filesStore.nodes;
 }
 
 export async function fetchUserList(): Promise<ShareUserList | undefined> {
@@ -378,3 +563,15 @@ export function getDownloadUrl(item: FileItem, params = {}) {
 
 	return url.toString();
 }
+
+export const getFileApiSource = (item: FileItem, encode = false) => {
+	const apiSource = appendPath(
+		'/',
+		item.fileType || '',
+		item.fileExtend,
+		item.oParentPath || '/',
+		item.name,
+		item.isDir ? '/' : ''
+	);
+	return encode ? encodeUrl(apiSource) : apiSource;
+};

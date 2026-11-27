@@ -18,6 +18,7 @@
 			v-model.trim="searchFiles"
 			:placeholder="t('search_file_placeholder')"
 		/>
+		<q-spinner v-if="searching" class="q-mr-sm" color="primary" size="20px" />
 		<q-icon
 			v-if="searchFiles"
 			class="cursor-pointer"
@@ -171,7 +172,8 @@ const {
 	chooseFile,
 	goBack,
 	handleClear,
-	getMore
+	getMore,
+	searching
 } = useSearch(
 	props.item?.serviceType as any,
 	open,

@@ -40,7 +40,7 @@
 					{{ t('Adding Chart to Local Source', { chart: file?.name || '' }) }}
 				</div>
 				<div class="row justify-start items-center q-mt-md">
-					<bt-loading size="24px" :loading="true" />
+					<bt-loading size="20px" :loading="true" />
 					<div class="text-subtitle3 text-ink-2 q-ml-sm">
 						{{ t('Processing app data') }}
 					</div>
@@ -53,10 +53,14 @@
 			>
 				<div class="text-subtitle2 text-ink-1">
 					{{
-						t(
-							'App was successfully added to your local source. Do you want to install it now?',
-							{ application: appName || '' }
-						)
+						isTemplate
+							? t('Template app was successfully added to your local source.', {
+									application: appName || ''
+							  })
+							: t(
+									'App was successfully added to your local source. Do you want to install it now?',
+									{ application: appName || '' }
+							  )
 					}}
 				</div>
 				<div class="row justify-start items-center q-mt-md full-width">
@@ -110,11 +114,16 @@
 <script setup lang="ts">
 import BtLoading from '../../../components/base/BtLoading.vue';
 import { uploadLocalPackage } from '../../../api/market/private/operations';
-import { isUpgradable, uninstalledApp } from '../../../constant/config';
+import {
+	isTemplateApp,
+	isUpgradable,
+	uninstalledApp
+} from '../../../constant/config';
 import { MARKET_SOURCE_OFFICIAL } from '../../../constant/constants';
+import { OPERATION_TYPE } from 'src/services/market/appOperation/operationTypes';
 import { usePreCheckStore } from '../../../stores/market/preCheck';
 import { useCenterStore } from '../../../stores/market/center';
-import { AppService } from '../../../stores/market/appService';
+import { AppService } from 'src/services/market/appOperation/appService';
 import { useAppStore } from '../../../stores/market/appStore';
 import { bus, BUS_EVENT, busEmit } from '../../../utils/bus';
 import { getRequireImage } from '../../../utils/imageUtils';
@@ -164,6 +173,15 @@ const appVersion = ref();
 const localVersion = ref();
 const appName = ref();
 
+const isTemplate = computed(() => {
+	if (!appName.value) return false;
+	const simple = appStore.getAppAggregationInfo(
+		appName.value,
+		MARKET_SOURCE_OFFICIAL.LOCAL.UPLOAD
+	)?.app_simple_latest?.app_simple_info;
+	return isTemplateApp(simple);
+});
+
 onMounted(() => {
 	isMounted.value = true;
 	withMountedGuard(isMounted, startUpload)();
@@ -212,7 +230,7 @@ watch(
 async function startUpload() {
 	if (!props.file) {
 		chartStatus.value = UploadStatus.FAILED;
-		errorMessage.value = 'No file selected.';
+		errorMessage.value = t('No file selected.');
 		return;
 	}
 
@@ -239,16 +257,24 @@ async function startUpload() {
 			appName.value = data.app_info.name;
 			appVersion.value = data.app_info.version;
 			chartStatus.value = UploadStatus.PROCESSING;
+			// appStore.addFullInfoQueue(
+			// 	appName.value,
+			// 	MARKET_SOURCE_OFFICIAL.LOCAL.UPLOAD,
+			// 	true,
+			// 	true,
+			// 	true
+			// );
 		} else {
 			chartStatus.value = UploadStatus.FAILED;
-			errorMessage.value = message || 'Upload failed due to an unknown error.';
+			errorMessage.value =
+				message || t('Upload failed due to an unknown error.');
 		}
 	} catch (error: any) {
 		if (error.name === 'AbortError') {
-			errorMessage.value = 'Upload has been canceled.';
+			errorMessage.value = t('Upload has been canceled.');
 		} else {
 			errorMessage.value =
-				error.response?.data?.message || 'Upload failed. Please try again.';
+				error.response?.data?.message || t('Upload failed. Please try again.');
 		}
 
 		chartStatus.value = UploadStatus.FAILED;
@@ -263,7 +289,7 @@ const okText = computed(() => {
 		case UploadStatus.FAILED:
 			return t('ok');
 		case UploadStatus.SUCCESS:
-			return t('Install now');
+			return isTemplate.value ? t('ok') : t('Install now');
 		case UploadStatus.UPDATE:
 			return t('app.update');
 		default:
@@ -276,7 +302,7 @@ const cancelText = computed(() => {
 		case UploadStatus.UPDATE:
 			return t('cancel');
 		case UploadStatus.SUCCESS:
-			return t('Install later');
+			return isTemplate.value ? false : t('Install later');
 		default:
 			return false;
 	}
@@ -290,6 +316,10 @@ const onOKClick = () => {
 	const preCheckStore = usePreCheckStore();
 	switch (chartStatus.value) {
 		case UploadStatus.SUCCESS:
+			if (isTemplate.value) {
+				customDialogRef.value.onDialogOK();
+				break;
+			}
 			if (
 				!appStatus ||
 				!appStatus.status ||
@@ -298,7 +328,7 @@ const onOKClick = () => {
 			) {
 				bus.emit(
 					BUS_EVENT.APP_BACKEND_ERROR,
-					'App information is missing. Please install manually.'
+					t('App information is missing. Please install manually.')
 				);
 				return;
 			}
@@ -313,7 +343,12 @@ const onOKClick = () => {
 					appStore.getAppFullInfo(
 						appName.value,
 						MARKET_SOURCE_OFFICIAL.LOCAL.UPLOAD
-					).app_info.app_entry
+					).app_info.app_entry,
+					{
+						op: OPERATION_TYPE.INSTALL,
+						appName: appName.value,
+						sourceId: MARKET_SOURCE_OFFICIAL.LOCAL.UPLOAD
+					}
 				);
 
 				if (errorGroup.length === 0) {
@@ -327,10 +362,6 @@ const onOKClick = () => {
 						$q
 					);
 				} else {
-					bus.emit(
-						BUS_EVENT.APP_BACKEND_ERROR,
-						'App pre-check failed; unable to install the application.'
-					);
 					console.error(
 						`App pre-check failed; unable to install the application: current status is ${appStatus.status.state}`
 					);

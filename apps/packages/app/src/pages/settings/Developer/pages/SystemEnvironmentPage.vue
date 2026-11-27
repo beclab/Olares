@@ -265,7 +265,7 @@ import BtList from 'src/components/settings/base/BtList.vue';
 import BtTooltip from 'src/components/base/BtTooltip.vue';
 import { BtDialog, BtNotify, NotifyDefinedType, useColor } from '@bytetrade/ui';
 import { notifyFailed, notifySuccess } from 'src/utils/settings/btNotify';
-import { useAdminStore } from 'src/stores/settings/admin';
+import { useMeStore } from 'src/stores/settings/me';
 import { BaseEnv, UpdateEnvBody } from 'src/constant';
 import { onBeforeRouteLeave } from 'vue-router';
 import { computed, onMounted, ref } from 'vue';
@@ -281,7 +281,7 @@ import {
 
 const { t } = useI18n();
 const $q = useQuasar();
-const adminStore = useAdminStore();
+const meStore = useMeStore();
 
 const columns: any = [
 	{
@@ -328,7 +328,7 @@ const pendingChanges = ref<
 
 onMounted(async () => {
 	const systemData = await getSystemEnvList();
-	if (adminStore.isNormal) {
+	if (meStore.isNormal) {
 		systemEnv.value = systemData.map((item) => {
 			item.editable = false;
 			return item;
@@ -492,7 +492,11 @@ const submitAllChanges = async () => {
 	} catch (err) {
 		console.error('Batch submit failed:', err);
 		const errorMessage = err instanceof Error ? err.message : String(err);
-		notifyFailed(t('Failed to save changes') + errorMessage);
+		notifyFailed(
+			t('save_changes_failed_with_message', {
+				message: errorMessage
+			})
+		);
 	} finally {
 		$q.loading.hide();
 	}

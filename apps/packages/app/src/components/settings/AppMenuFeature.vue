@@ -4,7 +4,7 @@
 			class="row justify-between items-center q-pa-lg"
 			:class="clickable ? 'cursor-pointer' : ''"
 		>
-			<div class="row justify-start items-center">
+			<div class="row justify-start items-center" style="flex: 1">
 				<q-img class="menu-icon" :src="menuItem ? menuItem.img : image" />
 				<div
 					style="width: calc(100% - 52px)"
@@ -44,6 +44,7 @@
 			/>
 			<slot name="end" />
 		</div>
+		<slot name="tips" />
 	</bt-list>
 </template>
 <script setup lang="ts">
@@ -66,8 +67,8 @@ const props = defineProps({
 		required: false
 	},
 	description: {
-		type: Boolean,
-		required: false
+		type: String,
+		required: ''
 	},
 	clickable: {
 		type: Boolean,

@@ -121,7 +121,7 @@
 			/>
 		</div>
 
-		<bt-list class="bg-background-1" :label="t('size')">
+		<bt-list :label="t('size')" first>
 			<bt-form-item
 				:title="t('Source Size')"
 				:data="restoreSize"
@@ -159,8 +159,24 @@
 				:columns="columns"
 				row-key="id"
 				v-model:pagination="pagination"
+				:rows-per-page-options="isMobileOrPad ? [] : undefined"
 				@request="onRequest"
 			>
+				<!-- Only mobile/pad override the pagination with the compact
+				     component; PC keeps the native q-table pagination. The v-for
+				     over a 0/1-length array conditionally registers the slot. -->
+				<template
+					v-for="name in mobilePaginationSlot"
+					:key="name"
+					v-slot:[name]="scope"
+				>
+					<bt-table-pagination
+						:scope="scope as any"
+						:rows-per-page-options="rowsPerPageOptions"
+						@update:rows-per-page="onRowsPerPageChange"
+					/>
+				</template>
+
 				<template v-slot:body-cell-action="props">
 					<q-td :props="props">
 						<div class="row items-center justify-end">
@@ -212,16 +228,20 @@ import { getBackupSnapshot } from 'src/api/settings/snapshot';
 import BtList from 'src/components/settings/base/BtList.vue';
 import BtPopupItem from '../../../../components/base/BtPopupItem.vue';
 import BtFormItem from 'src/components/settings/base/BtFormItem.vue';
+import BtTablePagination from 'src/components/base/BtTablePagination.vue';
 import SnapshotFrequencyDialog from './SnapshotFrequencyDialog.vue';
 import { ref, onMounted, computed, onBeforeUnmount } from 'vue';
 import BtPopup from '../../../../components/base/BtPopup.vue';
 import { useBackupStore } from 'src/stores/settings/backup';
 import BtForm from 'src/components/settings/base/BtForm.vue';
+import { useDeviceStore } from 'src/stores/settings/device';
+import { DeviceType } from '@bytetrade/core';
 import BtTooltip from 'src/components/base/BtTooltip.vue';
 import { generateStringEllipsis } from 'src/utils/utils';
 import { timestampToTime } from './FormatBackupTime';
 import { BackupFrequency } from '@bytetrade/core';
-import { date, format, useQuasar } from 'quasar';
+import { date, useQuasar } from 'quasar';
+import { format } from 'src/utils/format';
 import { bus } from 'src/utils/bus';
 import { useRouter } from 'vue-router';
 import { useRoute } from 'vue-router';
@@ -234,7 +254,8 @@ import {
 	weekOption,
 	BackupStatus,
 	BackupSnapshot,
-	BackupResourcesType
+	BackupResourcesType,
+	MENU_TYPE
 } from 'src/constant';
 
 const { t } = useI18n();
@@ -416,7 +437,7 @@ async function onDelete() {
 								type: NotifyDefinedType.SUCCESS,
 								message: t('success')
 							});
-							router.back();
+							router.replace({ name: MENU_TYPE.Backup });
 						})
 						.catch((e) => {
 							console.error(e);
@@ -520,11 +541,23 @@ const columns = [
 	{
 		name: 'action',
 		align: 'right',
-		label: t('action'),
+		label: t('actions'),
 		field: 'Action',
 		sortable: false
 	}
 ];
+
+// Match q-table's native default rows-per-page options so the compact
+// mobile/pad selector keeps the same pagination logic as PC.
+const rowsPerPageOptions = [5, 7, 10, 15, 20, 25, 50, 0];
+
+const deviceStore = useDeviceStore();
+const isMobileOrPad = computed(
+	() => deviceStore.deviceInfo.device !== DeviceType.DESKTOP
+);
+const mobilePaginationSlot = computed(() =>
+	isMobileOrPad.value ? ['pagination'] : []
+);
 
 const pagination = ref({
 	page: 1,
@@ -533,6 +566,16 @@ const pagination = ref({
 });
 
 let snapshotsRequestSeq = 0;
+
+function onRowsPerPageChange(value: number) {
+	pagination.value.rowsPerPage = value;
+	pagination.value.page = 1;
+	getSnapshots({
+		backupId,
+		offset: 0,
+		limit: normalizeRowsPerPage(value)
+	});
+}
 
 function normalizeRowsPerPage(rowsPerPage: number) {
 	if (rowsPerPage && rowsPerPage > 0) return rowsPerPage;

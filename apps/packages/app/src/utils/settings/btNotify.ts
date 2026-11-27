@@ -1,5 +1,5 @@
 import { BtNotify, NotifyDefinedType } from '@bytetrade/ui';
-
+import { i18n } from 'src/boot/i18n';
 export const showNotify = (message: string, type: NotifyDefinedType) => {
 	BtNotify.show({
 		type,
@@ -7,15 +7,15 @@ export const showNotify = (message: string, type: NotifyDefinedType) => {
 	});
 };
 
-export const notifySuccess = (info = 'Success') => {
+export const notifySuccess = (info = i18n.global.t('success')) => {
 	showNotify(info, NotifyDefinedType.SUCCESS);
 };
 
-export const notifyFailed = (info = 'Failed') => {
+export const notifyFailed = (info = i18n.global.t('failed')) => {
 	showNotify(info, NotifyDefinedType.FAILED);
 };
 
-export const notifyWarning = (info = 'Warning') => {
+export const notifyWarning = (info = i18n.global.t('warning')) => {
 	showNotify(info, NotifyDefinedType.WARNING);
 };
 

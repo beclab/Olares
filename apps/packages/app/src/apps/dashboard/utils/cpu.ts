@@ -17,7 +17,7 @@ export const formatFrequency = (value: number, fromUnit = 'Hz'): string => {
 		currentUnitIndex--;
 	}
 
-	return `${Math.round(frequency * 100) / 100}${units[currentUnitIndex]}`;
+	return `${Math.round(frequency * 100) / 100} ${units[currentUnitIndex]}`;
 };
 
 export const convertTemperature = (

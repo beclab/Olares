@@ -47,7 +47,16 @@
 			<template #body-cell-name="slotProps">
 				<q-td :props="slotProps">
 					<span class="lsblk-name-cell text-ink-1">
-						<span class="lsblk-name-text">{{ slotProps.row.name }}</span>
+						<span
+							v-if="slotProps.row.__treePrefix"
+							class="lsblk-tree-prefix text-ink-3"
+							>{{ slotProps.row.__treePrefix }}</span
+						>
+						<span
+							class="lsblk-name-text"
+							:class="{ 'text-weight-medium': slotProps.row.__depth === 0 }"
+							>{{ slotProps.row.name }}</span
+						>
 					</span>
 				</q-td>
 			</template>

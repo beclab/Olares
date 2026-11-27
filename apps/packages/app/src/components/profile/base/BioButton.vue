@@ -27,7 +27,6 @@
 
 <script lang="ts" setup>
 import { getCurrentInstance, inject, onMounted, ref } from 'vue';
-import { useUserStore } from '@apps/profile/src/stores/profileUser';
 
 const props = defineProps({
 	icon: {
@@ -35,7 +34,7 @@ const props = defineProps({
 	},
 	size: {
 		type: String,
-		default: useUserStore().isMobile ? '24px' : '16px'
+		default: '16px'
 	},
 	label: {
 		type: String,

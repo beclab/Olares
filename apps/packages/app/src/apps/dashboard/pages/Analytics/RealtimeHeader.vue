@@ -1,15 +1,23 @@
 <template>
 	<div class="row">
-		<MetricCard :value="data.pageviews?.length" label="Views" hideComparison />
 		<MetricCard
-			:value="data.visitors?.length"
-			label="Visitors"
+			:value="data.pageviews?.length"
+			:label="$t('VIEWS')"
 			hideComparison
 		/>
-		<MetricCard :value="data.events?.length" label="Events" hideComparison />
+		<MetricCard
+			:value="data.visitors?.length"
+			:label="$t('VISITORS')"
+			hideComparison
+		/>
+		<MetricCard
+			:value="data.events?.length"
+			:label="$t('EVENTS')"
+			hideComparison
+		/>
 		<MetricCard
 			:value="data.countries?.length"
-			label="Countries"
+			:label="$t('COUNTRIES')"
 			hideComparison
 		/>
 	</div>

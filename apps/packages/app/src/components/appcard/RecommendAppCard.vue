@@ -8,9 +8,9 @@
 			borderBottom: isLastLine ? 'none' : `1px solid ${separatorColor}`
 		}"
 	>
-		<app-icon :src="appIcon" :size="56" :cs-app="clusterScopedApp" />
-		<div class="app-card-right row justify-between items-center">
-			<div class="app-card-text column justify-center" :style="textAreaStyle">
+		<app-icon :src="appIcon" :size="56" :cs-app="isCsOrShared" />
+		<div class="app-card-right row justify-between items-center no-wrap">
+			<div class="app-card-text column justify-center">
 				<div class="app-card-title text-subtitle2 text-ink-1">
 					{{ appTitle }}
 				</div>
@@ -20,6 +20,7 @@
 			</div>
 			<install-button
 				v-if="appAggregation"
+				class="app-card-install"
 				:item="appAggregation.app_status_latest"
 				:layout="layout"
 				:larger="deviceStore.isMobile"
@@ -27,6 +28,7 @@
 				:app-name="appName || ''"
 				:source-id="sourceId"
 				:image-size="imageSize"
+				:manager="manager"
 			/>
 		</div>
 	</div>
@@ -52,9 +54,7 @@
 import InstallButton from '../../components/appcard/InstallButton.vue';
 import AppIcon from '../../components/appcard/AppIcon.vue';
 import { useDeviceStore } from 'src/stores/settings/device';
-import globalConfig from '../../api/market/config';
 import useAppCard from './useAppCard';
-import { computed } from 'vue';
 
 const props = defineProps({
 	appName: {
@@ -79,21 +79,18 @@ const props = defineProps({
 	},
 	imageSize: {
 		type: Boolean,
-		default: true
+		default: false
+	},
+	manager: {
+		type: Boolean,
+		default: false
 	}
 });
 const deviceStore = useDeviceStore();
-const textAreaStyle = computed(() => {
-	if (globalConfig.isOfficial) {
-		return 'flex: 1; min-width: 0; width: auto;';
-	}
-	const buttonWidth = deviceStore.isMobile ? 108 : 88;
-	return `flex: 1; min-width: 0; width: auto; max-width: calc(100% - ${buttonWidth}px - 8px);`;
-});
 
 const {
 	appAggregation,
-	clusterScopedApp,
+	isCsOrShared,
 	appIcon,
 	appTitle,
 	appDesc,
@@ -120,6 +117,7 @@ defineExpose({ goAppDetails });
 			height: 56px;
 			padding-right: 4px;
 			margin-left: 8px;
+			flex: 1;
 			min-width: 0;
 
 			.app-card-title {
@@ -137,6 +135,10 @@ defineExpose({ goAppDetails });
 				-webkit-line-clamp: 2;
 				line-clamp: 2;
 			}
+		}
+
+		.app-card-install {
+			flex-shrink: 0;
 		}
 	}
 }

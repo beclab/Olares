@@ -155,6 +155,15 @@ export class DragUploadUtil {
 		e.stopPropagation();
 	}
 
+	// Private method: Detect whether the drag actually carries OS files.
+	// Only file drags expose the 'Files' type; dragging an internal element
+	// (banner image, button icon, text, link…) does not, so those should be
+	// ignored to avoid falsely triggering the upload overlay.
+	private isFileDrag(e: DragEvent): boolean {
+		const types = e.dataTransfer?.types;
+		return !!types && Array.from(types).includes('Files');
+	}
+
 	// Private method: Generate error information
 	private createErrorInfo(
 		file: File,
@@ -166,11 +175,13 @@ export class DragUploadUtil {
 
 	// Event handler: dragover
 	private onDragOver(e: DragEvent): void {
+		if (!this.isFileDrag(e)) return;
 		this.preventDefault(e);
 	}
 
 	// Event handler: dragenter
 	private onDragEnter(e: DragEvent): void {
+		if (!this.isFileDrag(e)) return;
 		this.preventDefault(e);
 		if (this.isExternal) return;
 
@@ -182,6 +193,7 @@ export class DragUploadUtil {
 
 	// Event handler: dragleave
 	private onDragLeave(e: DragEvent): void {
+		if (this.dragCounter === 0) return;
 		this.preventDefault(e);
 		if (this.isExternal) return;
 
@@ -193,6 +205,7 @@ export class DragUploadUtil {
 
 	// Event handler: drop
 	private onDrop(e: DragEvent): void {
+		if (!this.isFileDrag(e)) return;
 		this.preventDefault(e);
 		if (this.isExternal) return;
 

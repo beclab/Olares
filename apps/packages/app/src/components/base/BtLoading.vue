@@ -6,12 +6,12 @@
 			width: size,
 			height: size
 		}"
-		:src="getRequireImage('loading_image.svg')"
+		:src="srcPath"
 	/>
 </template>
 
 <script lang="ts" setup>
-import { getRequireImage } from 'src/utils/rss-utils';
+import { ref } from 'vue';
 
 defineProps({
 	loading: {
@@ -24,6 +24,10 @@ defineProps({
 		default: '16px'
 	}
 });
+
+const srcPath = ref(
+	process.env.APPLICATION?.toString().toLowerCase() + '/loading_image.svg'
+);
 </script>
 
 <style lang="scss" scoped>

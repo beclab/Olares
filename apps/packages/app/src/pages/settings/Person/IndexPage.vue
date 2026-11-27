@@ -1,12 +1,16 @@
 <template>
-	<bt-scroll-area class="scroll-area-height">
+	<page-title-component :show-back="true" v-if="deviceStore.isMobile" />
+	<bt-scroll-area
+		class="scroll-area-height"
+		:class="deviceStore.isMobile ? 'scroll-area-height-mobile' : ''"
+	>
 		<div class="q-mt-lg q-mb-md column items-center justify-center">
 			<setting-avatar :size="72" />
 			<div class="text-h4 text-ink-1 q-mt-md">
-				{{ adminStore.user.name }}
+				{{ meStore.user.name }}
 			</div>
 			<div class="text-ink-3 text-body1 q-mt-xs">
-				{{ '@' + adminStore.olaresId.split('@')[1] }}
+				{{ '@' + terminusStore.olaresId.split('@')[1] }}
 			</div>
 		</div>
 		<BtList>
@@ -47,14 +51,14 @@
 				<template v-slot:title>
 					<div class="q-my-lg">
 						<div class="row items-center">
-							{{ t('current_version') }}
+							{{ t('olares_os_version') }}
 						</div>
 					</div>
 				</template>
 
 				<div class="row items-center justify-end">
 					<div>
-						{{ adminStore.terminus.osVersion }}
+						{{ terminusStore.terminusInfo.osVersion }}
 					</div>
 				</div>
 			</bt-form-item>
@@ -77,14 +81,14 @@
 
 		<BtList
 			class="q-mb-lg"
-			v-if="adminStore.isAdmin || !isDemo"
+			v-if="meStore.isAdmin || !isDemo"
 			:label="t('devices')"
 		>
 			<device-item
-				v-for="(device, index) in adminStore.devices"
+				v-for="(device, index) in devicesStore.devices"
 				:key="'device' + index"
 				:device="device"
-				:is-latest="index + 1 == adminStore.devices.length"
+				:is-latest="index + 1 == devicesStore.devices.length"
 				:is-first="index == 0"
 			/>
 		</BtList>
@@ -103,8 +107,10 @@ import SettingAvatar from 'src/components/settings/base/SettingAvatar.vue';
 import DeviceItem from 'src/components/settings/person/DeviceItem.vue';
 import BtFormItem from 'src/components/settings/base/BtFormItem.vue';
 import BtList from 'src/components/settings/base/BtList.vue';
-import { useAdminStore } from 'src/stores/settings/admin';
-import { useUserStore } from 'src/stores/settings/user';
+import { useMeStore } from 'src/stores/settings/me';
+import { useUsersStore } from 'src/stores/settings/users';
+import { useTerminusStore } from 'src/stores/terminus';
+import { useDevicesStore } from 'src/stores/settings/devices';
 import { AccountInfo } from 'src/constant/global';
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
@@ -115,10 +121,15 @@ import { useTerminusDStore } from 'src/stores/settings/terminusd';
 import ListBottomFuncBtn from 'src/components/settings/ListBottomFuncBtn.vue';
 import ReminderDialogComponent from 'src/components/settings/ReminderDialogComponent.vue';
 import { notifyFailed } from 'src/utils/settings/btNotify';
+import PageTitleComponent from 'src/components/settings/PageTitleComponent.vue';
+import { useDeviceStore } from 'src/stores/settings/device';
 
-const adminStore = useAdminStore();
-const userStore = useUserStore();
+const meStore = useMeStore();
+const usersStore = useUsersStore();
+const terminusStore = useTerminusStore();
+const devicesStore = useDevicesStore();
 const router = useRouter();
+const deviceStore = useDeviceStore();
 const quasar = useQuasar();
 const { t } = useI18n();
 const terminusDStore = useTerminusDStore();
@@ -129,9 +140,9 @@ const isDemo = computed(() => {
 });
 
 onMounted(async () => {
-	await userStore.get_accounts();
+	await usersStore.get_accounts();
 	terminusDStore.system_status();
-	userInfo.value = await userStore.get_account_info(adminStore.user.name);
+	userInfo.value = await usersStore.get_account_info(meStore.user.name);
 });
 
 function gotoPage(path: string) {
@@ -142,7 +153,7 @@ const updatePassword = async () => {
 	quasar.dialog({
 		component: UpdateUserPassworDialog,
 		componentProps: {
-			name: adminStore.user.name
+			name: meStore.user.name
 		}
 	});
 };
@@ -191,8 +202,8 @@ const signOut = () => {
 	}).onOk(async () => {
 		try {
 			$q.loading.show();
-			await adminStore.logout();
-			const auth_url = adminStore.getAuthURL() + '?logout=1';
+			await meStore.logout();
+			const auth_url = terminusStore.getAuthURL() + '?logout=1';
 			if (window.top == window) {
 				window.location.replace(auth_url);
 			} else {
@@ -219,5 +230,9 @@ const signOut = () => {
 	max-height: 100%;
 	padding-left: 20px;
 	padding-right: 20px;
+}
+
+.scroll-area-height-mobile {
+	height: calc(100% - 56px);
 }
 </style>

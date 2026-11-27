@@ -125,22 +125,22 @@ const enableThumbs = true;
 const resizePreview = true;
 const enableExec = false;
 const origin = window.location.origin;
-const fileList = [
-	'avi',
-	'doc',
-	'docx',
-	'gif',
-	'png',
-	'jpeg',
-	'jpg',
-	'mp3',
-	'mp4',
-	'pdf',
-	'txt',
-	'xls',
-	'xlsx',
-	'webp'
-];
+// const fileList = [
+// 	'avi',
+// 	'doc',
+// 	'docx',
+// 	'gif',
+// 	'png',
+// 	'jpeg',
+// 	'jpg',
+// 	'mp3',
+// 	'mp4',
+// 	'pdf',
+// 	'txt',
+// 	'xls',
+// 	'xlsx',
+// 	'webp'
+// ];
 
 export enum SortTpe {
 	name = 'name',
@@ -214,6 +214,6 @@ export {
 	enableThumbs,
 	resizePreview,
 	enableExec,
-	origin,
-	fileList
+	origin
+	// fileList
 };

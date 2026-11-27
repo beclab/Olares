@@ -58,7 +58,6 @@
 </template>
 
 <script lang="ts" setup>
-import { useRouter } from 'vue-router';
 import AdaptiveLayout from '../settings/AdaptiveLayout.vue';
 
 defineProps({
@@ -91,12 +90,7 @@ defineProps({
 });
 
 const emit = defineEmits(['onReturn']);
-const router = useRouter();
 const onReturn = () => {
-	if (window.history && window.history.state && !window.history.state.back) {
-		router.replace('/');
-		return;
-	}
 	emit('onReturn');
 };
 </script>

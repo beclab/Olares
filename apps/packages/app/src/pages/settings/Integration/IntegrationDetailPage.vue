@@ -137,13 +137,11 @@ const deleteAction = async () => {
 	$q.dialog({
 		component: ReminderDialogComponent,
 		componentProps: {
-			title: t('delete_item', {
-				item: t('account')
-			}),
-			message: t('are_you_sure_you_want_to_delete_item', {
-				item: name
-			}),
-			useCancel: true
+			title: t('remove_integration_title'),
+			message: t('remove_integration_message'),
+			useCancel: true,
+			confirmText: t('remove'),
+			cancelText: t('cancel')
 		}
 	}).onOk(async () => {
 		try {

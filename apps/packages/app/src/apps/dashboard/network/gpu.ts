@@ -64,9 +64,3 @@ export const getGPUNodeList = (
 ): Promise<AxiosResponse<GPUNodeList>> => {
 	return api.post(`${apiPrefix}/v1/nodes`, params);
 };
-
-// export const getSettingsGPUList = (): Promise<
-// 	AxiosResponse<SettingsGPUResponse>
-// > => {
-// 	return api.get(`/api/gpu/list`);
-// };

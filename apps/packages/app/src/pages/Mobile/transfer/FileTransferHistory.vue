@@ -14,13 +14,24 @@
 				/>
 
 				<file-transfer-processing-item
-					v-if="checkTransferStatus(file) === TransferMobileItem.PROCESSING"
+					v-if="
+						checkTransferStatus(file) === TransferMobileItem.PROCESSING &&
+						!isArchiveTransfer(file)
+					"
 					:file="(file as number)"
 				/>
 
 				<file-transfer-complete-item
-					v-if="checkTransferStatus(file) === TransferMobileItem.COMPLETED"
+					v-if="
+						checkTransferStatus(file) === TransferMobileItem.COMPLETED &&
+						!isArchiveTransfer(file)
+					"
 					:file="(file as number)"
+				/>
+				<archive-task-item
+					v-if="isArchiveTransfer(file)"
+					:task="transferStore.transferMap[file as number]"
+					mode="mobile"
 				/>
 
 				<!-- <file-transfer-error-item
@@ -42,6 +53,7 @@ import {
 import FileTransferDateItem from './FileTransferDateItem.vue';
 import FileTransferProcessingItem from './FileTransferProcessingItem.vue';
 import FileTransferCompleteItem from './FileTransferCompleteItem.vue';
+import ArchiveTaskItem from '../../../components/files/panel/ArchiveTaskItem.vue';
 import TerminusSelectAll from './../../../components/common/TerminusSelectAll.vue';
 import {
 	TransferFront,
@@ -54,8 +66,13 @@ const props = defineProps({
 		required: true
 	},
 	transferFront: {
-		type: Object as PropType<TransferFront>,
-		required: true
+		type: Number as PropType<TransferFront>,
+		required: false
+	},
+	transferFronts: {
+		type: Array as PropType<TransferFront[]>,
+		required: false,
+		default: undefined
 	},
 	lockEvent: {
 		type: Boolean,
@@ -129,6 +146,28 @@ defineExpose({
 function isNumber(value) {
 	return typeof value === 'number' && !isNaN(value);
 }
+
+const currentTransferFronts = computed(() => {
+	if (props.transferFronts && props.transferFronts.length > 0) {
+		return props.transferFronts;
+	}
+	return props.transferFront ? [props.transferFront] : [];
+});
+
+const isArchiveTransfer = (file: number | DateMarker) => {
+	return (
+		isNumber(file) &&
+		[TransferFront.compress, TransferFront.extract].includes(
+			transferStore.transferMap[file as number]?.front
+		)
+	);
+};
+
+const isCompletedStatus = (id: number) => {
+	return [TransferStatus.Completed, TransferStatus.Canceled].includes(
+		transferStore.transferMap[id]?.status
+	);
+};
 
 const checkTransferStatus = (file: number | DateMarker): TransferMobileItem => {
 	if (!isNumber(file)) {
@@ -223,20 +262,23 @@ const groupByDate = (items: number[]): (number | DateMarker)[] => {
 const data = computed(() => {
 	let transferData: number[] = [];
 	if (props.activeStatus === TransferStatus.All) {
-		transferData =
-			props.transferFront === TransferFront.upload
-				? transferStore.upload
-				: transferStore.download;
+		transferData = transferStore.transfers.filter((id) =>
+			currentTransferFronts.value.includes(transferStore.transferMap[id]?.front)
+		);
 	} else if (props.activeStatus === TransferStatus.Completed) {
-		transferData =
-			props.transferFront === TransferFront.upload
-				? transferStore.uploadComplete
-				: transferStore.downloadComplete;
+		transferData = transferStore.transfers.filter(
+			(id) =>
+				currentTransferFronts.value.includes(
+					transferStore.transferMap[id]?.front
+				) && isCompletedStatus(id)
+		);
 	} else if (props.activeStatus === TransferStatus.Running) {
-		transferData =
-			props.transferFront === TransferFront.upload
-				? transferStore.uploading
-				: transferStore.downloading;
+		transferData = transferStore.transfers.filter(
+			(id) =>
+				currentTransferFronts.value.includes(
+					transferStore.transferMap[id]?.front
+				) && !isCompletedStatus(id)
+		);
 	}
 
 	return groupByDate(transferData);

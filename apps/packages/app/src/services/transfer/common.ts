@@ -11,7 +11,7 @@ import { useUserStore } from 'src/stores/user';
 import { DOWNLOAD_OPERATE } from 'src/utils/rss-types';
 import { DownloadRecordOperateRequest } from 'src/api/wise';
 import { axiosInstanceProxy } from 'src/platform/httpProxy';
-import { getAppPlatform } from 'src/application/platform';
+import { getUserStorage } from 'src/application/platform/userStorage';
 import { useWebsocketManager2Store } from 'src/stores/websocketManager2';
 import { DownloadRecord } from 'src/utils/interface/rss';
 import {
@@ -453,7 +453,7 @@ export const commonClouder = {
 		if (!userStore.current_id) {
 			return undefined;
 		}
-		let info = await getAppPlatform().userStorage.getItem(
+		let info = await getUserStorage().getItem(
 			cloudHistoryIdentify + userStore.current_id
 		);
 		if (typeof info == 'string') {
@@ -467,7 +467,7 @@ export const commonClouder = {
 			terminusID: userStore.current_user!.olares_device_id,
 			timer
 		};
-		await getAppPlatform().userStorage.setItem(
+		await getUserStorage().setItem(
 			cloudHistoryIdentify + userStore.current_id,
 			JSON.stringify(saveInfo)
 		);

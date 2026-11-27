@@ -1,5 +1,11 @@
 <template>
-	<q-dialog class="card-dialog" v-model="show" ref="dialogRef" @hide="onCancel">
+	<q-dialog
+		class="card-dialog"
+		v-model="show"
+		ref="dialogRef"
+		:persistent="persistent"
+		@hide="onCancel"
+	>
 		<q-card class="card-container" v-if="tokenStore.deviceInfo.isMobile" flat>
 			<div class="text-ink-1 text-subtitle2 row items-center justify-center">
 				{{ title }}
@@ -14,13 +20,15 @@
 					class="cancel-mobile text-ink-2 q-mr-md"
 					v-if="showCancel"
 					@click="onCancel"
-					>{{ t('buttons.cancel') }}</span
 				>
+					{{ cancelTitle }}
+				</span>
 				<span
 					class="confirm-mobile bg-yellow-default text-ink-1"
 					@click="submit"
-					>{{ t('buttons.confirm') }}</span
 				>
+					{{ okTitle }}
+				</span>
 			</div>
 		</q-card>
 
@@ -49,16 +57,17 @@
 				</div>
 			</div>
 
-			<span class="confirm bg-blue-default text-white" @click="submit">{{
-				t('buttons.confirm')
-			}}</span>
+			<span class="confirm bg-blue-default text-white" @click="submit">
+				{{ okTitle }}
+			</span>
 
 			<span
 				class="cancel text-ink-2 q-mr-md"
 				v-if="showCancel"
 				@click="onCancel"
-				>{{ t('buttons.cancel') }}</span
 			>
+				{{ cancelTitle }}
+			</span>
 		</q-card>
 	</q-dialog>
 </template>
@@ -66,6 +75,7 @@
 <script lang="ts" setup>
 import { useI18n } from 'vue-i18n';
 import { useDialogPluginComponent } from 'quasar';
+import { i18n } from 'src/boot/i18n';
 import { ref } from 'vue';
 import { useTokenStore } from '../../../stores/desktop/token';
 
@@ -77,7 +87,7 @@ defineProps({
 	},
 	message: {
 		type: String,
-		default: 'This is a message',
+		default: '',
 		required: false
 	},
 	icon: {
@@ -86,6 +96,21 @@ defineProps({
 		required: false
 	},
 	showCancel: {
+		type: Boolean,
+		default: false,
+		required: false
+	},
+	okTitle: {
+		type: String,
+		default: i18n.global.t('buttons.confirm'),
+		required: false
+	},
+	cancelTitle: {
+		type: String,
+		default: i18n.global.t('buttons.cancel'),
+		required: false
+	},
+	persistent: {
 		type: Boolean,
 		default: false,
 		required: false

@@ -1,5 +1,9 @@
 <template>
-	<my-card flat :title="`Node Resource Usage ( ${node} )`" class="col-12">
+	<my-card
+		flat
+		:title="`${$t('NODE_RESOURCE_USAGE')} ( ${node} )`"
+		class="col-12"
+	>
 		<template #extra>
 			<q-btn
 				flat

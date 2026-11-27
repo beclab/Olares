@@ -13,7 +13,7 @@ import { createURL, getPurePath } from '../../utils';
 import { encodeUrl } from 'src/utils/encode';
 import { i18n } from 'src/boot/i18n';
 import * as files from './utils';
-import { getFileIcon } from '@bytetrade/core';
+import { getFileIcon, getFilePreviewType, PreviewType } from '@bytetrade/core';
 import {
 	driveTypeByFileTypeAndFileExtend,
 	filterPcvPath
@@ -29,7 +29,7 @@ export default class ShareAPI extends DriveDataAPI {
 	breadcrumbsBase = '';
 	driveType: DriveType = DriveType.Share;
 
-	fileEditEnable = false;
+	// fileEditEnable = true;
 
 	async fetch(url: string): Promise<FileResType> {
 		const res: FileResType = await this.fetchData(url);
@@ -86,7 +86,7 @@ export default class ShareAPI extends DriveDataAPI {
 	}
 
 	async onSaveFile(item: any, content: any): Promise<void> {
-		files.put(item.path, content);
+		await files.put(item.path, content);
 	}
 
 	getPreviewURL(file: FileItem, thumb: 'big' | 'thumb'): string {
@@ -130,7 +130,7 @@ export default class ShareAPI extends DriveDataAPI {
 
 	async formatFileContent(file: FileItem): Promise<FileItem> {
 		const newFile = JSON.parse(JSON.stringify(file));
-		if (!['text', 'txt', 'textImmutable'].includes(newFile.type)) {
+		if (getFilePreviewType(file.name) !== PreviewType.TXT) {
 			return newFile;
 		}
 		try {
@@ -155,7 +155,7 @@ export default class ShareAPI extends DriveDataAPI {
 	formatSteamDownloadItem(file: any, _infoPath?: string, parentPath?: string) {
 		const fileType = getFileIcon(file.name);
 		file.type = fileType;
-		file.driveType = DriveType.Data;
+		file.driveType = DriveType.Share;
 		file.parentPath = parentPath;
 		file.url = this.getFormatSteamDownloadFileURL(file);
 		file.path = appendPath('/', file.fileExtend, encodeUrl(file.path));

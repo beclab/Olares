@@ -933,7 +933,7 @@ export const API_VERSIONS = {
 	statefulsets: 'apis/apps/v1',
 	daemonsets: 'apis/apps/v1',
 	jobs: 'apis/batch/v1',
-	cronjobs: 'apis/batch/v1beta1',
+	cronjobs: '/apis/batch/v1',
 	pods: 'api/v1',
 	namespaces: 'api/v1',
 	services: 'api/v1',

@@ -74,7 +74,7 @@
 				<bio-button
 					width="75px"
 					class="text-body3 q-mr-lg"
-					:label="t('base.create')"
+					:label="t('base.save')"
 					@click="onOKClick"
 				/>
 			</div>

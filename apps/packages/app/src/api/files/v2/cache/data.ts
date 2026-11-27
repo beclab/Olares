@@ -12,7 +12,7 @@ import { TransferItem, TransferFront } from 'src/utils/interface/transfer';
 import { createURL, decodeURIComponentSafe, getPurePath } from '../utils';
 import { encodeUrl, decodeUrl } from 'src/utils/encode';
 import { i18n } from 'src/boot/i18n';
-import { getFileIcon } from '@bytetrade/core';
+import { getFileIcon, getFilePreviewType, PreviewType } from '@bytetrade/core';
 import { filterPcvPath } from '../common/common';
 import { getextension } from 'src/utils/utils';
 import { appendPath } from '../path';
@@ -33,9 +33,7 @@ export default class CacheDataAPI extends DriveDataAPI {
 	async fetchCache(url: string): Promise<FileResType> {
 		if (url == '/Cache/') {
 			const filesStore = useFilesStore();
-			if (filesStore.nodes.length == 0) {
-				await filesUtil.fetchNodeList();
-			}
+			await filesUtil.ensureNodeList();
 			return formatAppDataNode(
 				url,
 				filesStore.onlyMasterNodes[this.origin_id]
@@ -60,26 +58,9 @@ export default class CacheDataAPI extends DriveDataAPI {
 		);
 	}
 
-	async fetchMenuRepo(): Promise<DriveMenuType[]> {
-		const filesStore = useFilesStore();
-		if (filesStore.nodes.length == 0) {
-			await filesUtil.fetchNodeList();
-		}
-		return [
-			{
-				label: i18n.global.t(`files_menu.${MenuItem.CACHE}`),
-				key: MenuItem.CACHE,
-				icon: 'sym_r_analytics',
-				driveType: DriveType.Cache
-			}
-		];
-	}
-
 	async formatRepotoPath(item: any): Promise<string> {
 		const filesStore = useFilesStore();
-		if (filesStore.nodes.length == 0) {
-			await filesUtil.fetchNodeList();
-		}
+		await filesUtil.ensureNodeList();
 
 		if (filesStore.onlyMasterNodes[this.origin_id]) {
 			return appendPath('/Cache/', filesStore.masterNode, '/');
@@ -142,7 +123,7 @@ export default class CacheDataAPI extends DriveDataAPI {
 	}
 
 	async formatFileContent(file: FileItem): Promise<FileItem> {
-		if (!['text', 'txt', 'textImmutable'].includes(file.type)) {
+		if (getFilePreviewType(file.name) !== PreviewType.TXT) {
 			return file;
 		}
 		try {
@@ -166,7 +147,7 @@ export default class CacheDataAPI extends DriveDataAPI {
 	}
 
 	async onSaveFile(item: any, content: any): Promise<void> {
-		files.put(item.path, content);
+		await files.put(item.path, content);
 	}
 
 	async createDir(dirName: string, path: string): Promise<void> {
@@ -212,8 +193,7 @@ export default class CacheDataAPI extends DriveDataAPI {
 			mode: 0,
 			modified: item.updateTime || 0,
 			name: item.name,
-			path:
-				item.front == TransferFront.download ? encodeUrl(item.path) : item.path,
+			path: item.path,
 			size: item.size,
 			type: item.type,
 			parentPath: item.parentPath,

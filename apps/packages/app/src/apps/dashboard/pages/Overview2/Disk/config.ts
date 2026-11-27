@@ -235,11 +235,9 @@ export const getDiskOptions = (
 			},
 			{
 				name: t('DISK_OP.POWER_ON_DURATION'),
-				value: isNumber(Number(disk_power_on_hours))
-					? t('DISK_OP.POWER_ON_DURATION_VALUE', {
-							count: disk_power_on_hours
-					  })
-					: '-'
+				value: Number.isFinite(Number(disk_power_on_hours))
+					? t('DISK_OP.POWER_ON_DURATION_VALUE', Number(disk_power_on_hours))
+					: '--'
 			},
 			{
 				name: t('DISK_OP.WRITE_VOLUME'),
@@ -256,7 +254,7 @@ export const getDiskOptions = (
 const metricFromSample = (m: Record<string, string>): LsblkMetricRow => ({
 	name: m.name ?? '',
 	node: m.node ?? '',
-	pkname: m.pkname,
+	pkname: m.pkname ?? m.parent,
 	size: m.size,
 	fstype: m.fstype,
 	mountpoint: m.mountpoint,
@@ -308,6 +306,25 @@ const collectSubtreeByPkname = (
 	}
 
 	return allRows.filter((r) => seen.has(r.name));
+};
+
+// Whether `childName` is a partition of the disk `diskName` by kernel naming
+// convention (see `disk_name()` in block/genhd.c): the partition name is the
+// disk name plus a `p` separator when the disk name ends in a digit (e.g.
+// `nvme0n1` -> `nvme0n1p1`, `mmcblk0` -> `mmcblk0p1`), or just the appended
+// partition number otherwise (e.g. `sda` -> `sda1`). A plain `startsWith`
+// check is not disk-specific and would wrongly match sibling devices such as
+// `nvme0n10` against `nvme0n1`, or `sdaa` against `sda`.
+const isPartitionOfDisk = (childName: string, diskName: string): boolean => {
+	if (!childName || !diskName) return false;
+	if (childName === diskName) return true;
+	if (!childName.startsWith(diskName)) return false;
+	let suffix = childName.slice(diskName.length);
+	if (/\d$/.test(diskName)) {
+		if (!suffix.startsWith('p')) return false;
+		suffix = suffix.slice(1);
+	}
+	return suffix.length > 0 && /^\d+$/.test(suffix);
 };
 
 const resolveParent = (
@@ -414,13 +431,28 @@ export const getDiskPartitionRows = (
 			metricFromSample(item.metric)
 		);
 
-	let subset: LsblkMetricRow[];
-	if (hasPknameLabels(allForNode)) {
-		subset = collectSubtreeByPkname(allForNode, name);
-	} else {
-		subset = allForNode.filter(
-			(r) => r.name === name || r.name.startsWith(name)
-		);
+	// A row belongs to the selected disk if it is reachable via the pkname
+	// chain OR it is a partition of the disk by kernel naming convention.
+	// Using the union of both strategies avoids dropping partitions whose
+	// pkname/parent chain is not populated (which the all-or-nothing toggle on
+	// `hasPknameLabels` would otherwise omit) while still capturing chain-only
+	// descendants such as dm/LVM devices whose names don't share the disk
+	// prefix. The partition match is disk-specific (not a plain prefix) so
+	// sibling devices like `nvme0n10` are not mistaken for partitions of
+	// `nvme0n1`.
+	const matchesByName = allForNode.filter((r) =>
+		isPartitionOfDisk(r.name, name)
+	);
+	const candidates = hasPknameLabels(allForNode)
+		? [...collectSubtreeByPkname(allForNode, name), ...matchesByName]
+		: matchesByName;
+
+	const seenNames = new Set<string>();
+	const subset: LsblkMetricRow[] = [];
+	for (const r of candidates) {
+		if (seenNames.has(r.name)) continue;
+		seenNames.add(r.name);
+		subset.push(r);
 	}
 
 	return flattenLsblkHierarchy(subset, name, node);

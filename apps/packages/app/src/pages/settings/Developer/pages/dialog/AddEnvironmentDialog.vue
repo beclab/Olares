@@ -121,7 +121,7 @@ const addEnv = async () => {
 			.catch((e) => {
 				BtNotify.show({
 					type: NotifyDefinedType.FAILED,
-					message: e.response.data.message || e.message
+					message: e.response?.data?.message || e.message
 				});
 			});
 	}

@@ -35,7 +35,7 @@
 
 <script lang="ts" setup>
 import { computed } from 'vue';
-import { getValueByUnit, getSuitableUnit } from 'src/utils/settings/monitoring';
+import { getValueByUnit } from 'src/utils/settings/monitoring';
 import { useDeviceStore } from 'src/stores/settings/device';
 
 const props = defineProps({
@@ -57,11 +57,7 @@ const totalFormat = computed(() => {
 		}
 		return Number(numTotal.value.toFixed(2));
 	}
-	const _unit = getSuitableUnit(
-		numTotal.value || numUsage.value,
-		props.unitKey as any
-	);
-	return getValueByUnit(`${props.total}`, _unit);
+	return getValueByUnit(`${props.total}`, 'Gi');
 });
 
 const usageFormat = computed(() => {
@@ -71,11 +67,7 @@ const usageFormat = computed(() => {
 		}
 		return Number(numUsage.value.toFixed(2));
 	}
-	const _unit = getSuitableUnit(
-		numTotal.value || numUsage.value,
-		props.unitKey as any
-	);
-	return getValueByUnit(`${props.usage}`, _unit);
+	return getValueByUnit(`${props.usage}`, 'Gi');
 });
 
 const percent = computed(() => {

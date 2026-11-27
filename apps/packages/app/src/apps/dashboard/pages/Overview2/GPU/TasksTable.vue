@@ -144,7 +144,7 @@ const columns: any = [
 		label: t('GPU_OP.VIDEO_MEMORY_USAGE_OP'),
 		field: 'devicesMemUtilized',
 		format: (val: any) => {
-			return val[0] ? `${round(val[0] / 1024, 2)}Gi` : '0Gi';
+			return val[0] ? `${round(val[0] / 1024, 2)} Gi` : '0 Gi';
 		},
 		align: 'left'
 	},

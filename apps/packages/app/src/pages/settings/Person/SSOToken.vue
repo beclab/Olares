@@ -121,7 +121,7 @@
 
 <script lang="ts" setup>
 import { computed, onMounted, ref } from 'vue';
-import { useAdminStore, SSOResult } from 'src/stores/settings/admin';
+import { useDevicesStore, SSOResult } from 'src/stores/settings/devices';
 import PageTitleComponent from 'src/components/settings/PageTitleComponent.vue';
 import ReminderDialogComponent from 'src/components/settings/ReminderDialogComponent.vue';
 import AdaptiveLayout from 'src/components/settings/AdaptiveLayout.vue';
@@ -132,14 +132,14 @@ import { useI18n } from 'vue-i18n';
 
 const { t } = useI18n();
 
-const adminStore = useAdminStore();
+const devicesStore = useDevicesStore();
 const $q = useQuasar();
 const sso = ref<SSOResult[]>([]);
 const allCookies = ref(document.cookie);
 
 onMounted(async () => {
 	// allCookies.value = document.cookie;
-	sso.value = await adminStore.get_sso();
+	sso.value = await devicesStore.get_sso();
 });
 
 const revokeToken = async (token: SSOResult) => {
@@ -153,8 +153,8 @@ const revokeToken = async (token: SSOResult) => {
 		// deleteUserSureAction();
 		$q.loading.show();
 		try {
-			await adminStore.revoke_token(token);
-			sso.value = await adminStore.get_sso();
+			await devicesStore.revoke_token(token);
+			sso.value = await devicesStore.get_sso();
 			$q.loading.hide();
 		} catch (error) {
 			console.log(error);

@@ -81,7 +81,7 @@ export const useWidgetPreferencesStore = defineStore('widgetPreferences', {
 			const now = new Date();
 			const result = {
 				date: date.formatDate(now, this.dateFormat),
-				time: date.formatDate(now, this.is24HourFormat ? 'HH:mm' : 'hh:mm'),
+				time: date.formatDate(now, this.is24HourFormat ? 'HH:mm' : 'h:mm'),
 				week: date.formatDate(now, 'dddd'),
 				year: date.formatDate(now, 'YYYY'),
 				month: date.formatDate(now, 'MM'),

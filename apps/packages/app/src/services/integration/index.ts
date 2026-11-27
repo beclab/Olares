@@ -12,12 +12,13 @@ import { AWSS3AuthService } from './awss3';
 import { AccountType } from '@bytetrade/core';
 import { TencentAuthService } from './tencent';
 import { useUserStore } from 'src/stores/user';
+import { i18n } from 'src/boot/i18n';
 class IntegrationService implements IntegrationServiceInterface {
 	supportAuthList = [
 		{
 			type: AccountType.Space,
 			detail: {
-				name: 'Space',
+				name: 'Olares Space',
 				icon: 'space.svg'
 			}
 		},
@@ -31,7 +32,7 @@ class IntegrationService implements IntegrationServiceInterface {
 		{
 			type: AccountType.Google,
 			detail: {
-				name: 'Google Drive',
+				name: 'Google Drive', // i18n-ignore: third-party product brand name
 				icon: 'google.svg'
 			}
 		},
@@ -55,7 +56,7 @@ class IntegrationService implements IntegrationServiceInterface {
 		{
 			type: AccountType.Space,
 			detail: {
-				name: 'Space',
+				name: 'Olares Space',
 				icon: 'space.svg'
 			}
 		},
@@ -111,7 +112,9 @@ class IntegrationService implements IntegrationServiceInterface {
 				}
 			}
 		} catch (e) {
-			result.message = e.message ? e.message : 'Auth failed';
+			result.message = e.message
+				? e.message
+				: i18n.global.t('errors.auth_failed');
 		}
 		return result;
 	}
@@ -147,7 +150,9 @@ class IntegrationService implements IntegrationServiceInterface {
 			}
 			return await authAccountInstance.webSupport();
 		} catch (e) {
-			result.message = e.message ? e.message : 'Auth failed';
+			result.message = e.message
+				? e.message
+				: i18n.global.t('errors.auth_failed');
 			return result;
 		}
 	}

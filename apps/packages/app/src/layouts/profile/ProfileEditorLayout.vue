@@ -84,11 +84,15 @@
 				</div>
 			</div>
 		</div>
+
+		<landscape-screen-index v-if="showLandscapeBlock" />
 	</div>
 </template>
 <script setup lang="ts">
 import PreviewLayout from '@apps/profile/src/components/profile/layout/PreviewLayout.vue';
 import BioShareHeader from '@apps/profile/src/components/profile/share/BioShareHeader.vue';
+import LandscapeScreenIndex from 'src/apps/Desktop/LandscapeScreenIndex.vue';
+import { useLandscapeScreen } from 'src/composables/useLandscapeScreen';
 import AppearancePage from '@apps/profile/src/pages/profile/AppearancePage.vue';
 import ProfilePage from '@apps/profile/src/pages/profile/ProfilePage.vue';
 import SocialPage from '@apps/profile/src/pages/profile/SocialPage.vue';
@@ -104,6 +108,8 @@ import axios from 'axios';
 const userStore = useUserStore();
 const { t } = useI18n();
 const router = useRouter();
+
+const { showLandscapeBlock } = useLandscapeScreen();
 
 const tabs = computed(() => {
 	return [
@@ -165,21 +171,21 @@ watch(
 <style lang="scss">
 .index-root {
 	width: 100vw;
-	height: 100vh;
+	height: 100dvh;
 
 	.index-loading {
 		width: 100vw;
-		height: 100vh;
+		height: 100dvh;
 	}
 
 	@media (max-width: 768px) {
 		.index-layout {
 			width: 100%;
-			height: 100vh;
+			height: 100dvh;
 			position: relative;
 
 			.left-editor {
-				height: 100vh;
+				height: 100dvh;
 				width: 100%;
 
 				.editor-top {
@@ -232,10 +238,10 @@ watch(
 			width: 100%;
 			min-width: 810px;
 			max-width: 1280px;
-			height: 100vh;
+			height: 100dvh;
 
 			.left-editor {
-				height: 100vh;
+				height: 100dvh;
 				width: 60%;
 				max-width: 758px;
 				min-width: 478px;
@@ -254,7 +260,7 @@ watch(
 
 			.right-preview {
 				width: 40%;
-				height: 100vh;
+				height: 100dvh;
 				overflow: scroll;
 				min-width: 322px;
 				max-width: 522px;
