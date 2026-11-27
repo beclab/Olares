@@ -260,11 +260,7 @@ func (n *NodeTerminaler) getNSEnterPod() (*v1.Pod, error) {
 						Env: []v1.EnvVar{
 							{
 								Name:  "LANG",
-								Value: "en_US.UTF-8",
-							},
-							{
-								Name:  "LC_ALL",
-								Value: "en_US.UTF-8",
+								Value: "C.UTF-8",
 							},
 						},
 						VolumeMounts: []v1.VolumeMount{
