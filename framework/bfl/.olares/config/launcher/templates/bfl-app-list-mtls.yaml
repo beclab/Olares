@@ -1,0 +1,49 @@
+{{- if or .Values.bfl.prepareAPIMesh .Values.bfl.enforceAPIMesh -}}
+{{- $tenant := .Values.bfl.username -}}
+{{- if or (gt (len $tenant) 51) (not (regexMatch "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$" $tenant)) (ne .Release.Namespace (printf "user-space-%s" $tenant)) -}}
+{{- fail "BFL app list policy requires the launcher tenant's namespace" -}}
+{{- end -}}
+{{- $name := printf "bfl-list-%s" $tenant -}}
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ $name }}
+  namespace: os-framework
+spec:
+  parentRefs:
+    - group: policy.linkerd.io
+      kind: Server
+      name: app-service-api
+  rules:
+    - matches:
+        - method: GET
+          path:
+            type: Exact
+            value: {{ printf "/app-service/v1/user-apps/%s" $tenant | quote }}
+---
+apiVersion: policy.linkerd.io/v1alpha1
+kind: MeshTLSAuthentication
+metadata:
+  name: {{ $name }}
+  namespace: os-framework
+spec:
+  identityRefs:
+    - kind: ServiceAccount
+      name: bytetrade-sys-ops
+      namespace: {{ printf "user-system-%s" $tenant }}
+---
+apiVersion: policy.linkerd.io/v1alpha1
+kind: AuthorizationPolicy
+metadata:
+  name: {{ $name }}
+  namespace: os-framework
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: {{ $name }}
+  requiredAuthenticationRefs:
+    - group: policy.linkerd.io
+      kind: MeshTLSAuthentication
+      name: {{ $name }}
+{{- end }}

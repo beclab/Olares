@@ -237,3 +237,57 @@ func TestBFLPrepareAndEnforceRenderSameStorageAndImage(t *testing.T) {
 		t.Fatalf("activation would change launcher storage: %v != %v", pvcs(prepared), pvcs(enforced))
 	}
 }
+
+func TestBFLLauncherEnrollsExactTenantAppList(t *testing.T) {
+	const template = "../../../bfl/.olares/config/launcher/templates/bfl-app-list-mtls.yaml"
+	render := func(tenant, namespace string, prepare bool) (map[string]map[string]any, error) {
+		t.Helper()
+		return renderMeshManifestsInNamespace(t, namespace, false, map[string]any{
+			"bfl": map[string]any{"username": tenant, "prepareAPIMesh": prepare},
+		}, template)
+	}
+	for _, tenant := range []string{"alice", "bob"} {
+		docs, err := render(tenant, "user-space-"+tenant, true)
+		if err != nil || len(docs) != 3 {
+			t.Fatalf("want a single tenant's app list grant, got %d objects: %v", len(docs), err)
+		}
+		name := "bfl-list-" + tenant
+		spec := func(kind string) map[string]any {
+			t.Helper()
+			doc := docs[kind+"/"+name]
+			if doc == nil || doc["metadata"].(map[string]any)["namespace"] != "os-framework" {
+				t.Fatalf("missing app-service policy %s/%s", kind, name)
+			}
+			return doc["spec"].(map[string]any)
+		}
+		route := spec("HTTPRoute")
+		wantRoute := map[string]any{
+			"parentRefs": []any{map[string]any{"group": "policy.linkerd.io", "kind": "Server", "name": "app-service-api"}},
+			"rules": []any{map[string]any{"matches": []any{map[string]any{
+				"method": "GET", "path": map[string]any{"type": "Exact", "value": "/app-service/v1/user-apps/" + tenant},
+			}}}},
+		}
+		if !reflect.DeepEqual(route, wantRoute) {
+			t.Fatalf("app list route was broadened: %v", route)
+		}
+		if got := spec("MeshTLSAuthentication")["identityRefs"]; !reflect.DeepEqual(got, []any{map[string]any{
+			"kind": "ServiceAccount", "name": "bytetrade-sys-ops", "namespace": "user-system-" + tenant,
+		}}) {
+			t.Fatalf("app list grant includes a foreign or unauthenticated caller: %v", got)
+		}
+		authz := spec("AuthorizationPolicy")
+		if !reflect.DeepEqual(authz["targetRef"], map[string]any{
+			"group": "gateway.networking.k8s.io", "kind": "HTTPRoute", "name": name,
+		}) || !reflect.DeepEqual(authz["requiredAuthenticationRefs"], []any{map[string]any{
+			"group": "policy.linkerd.io", "kind": "MeshTLSAuthentication", "name": name,
+		}}) {
+			t.Fatalf("app list policy did not bind the authenticated tenant: %v", authz)
+		}
+	}
+	if _, err := render("alice", "user-space-bob", true); err == nil {
+		t.Fatal("launcher could grant another tenant's identity")
+	}
+	if docs, err := render("alice", "user-space-alice", false); err != nil || len(docs) != 0 {
+		t.Fatalf("an unprepared launcher must not grant app-service access: %v, %v", docs, err)
+	}
+}
