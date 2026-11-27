@@ -53,7 +53,8 @@ head:
    - **macOS**：下载 [Wingman](https://github.com/duggan/Wingman/releases)，需要 macOS 13 或更高版本。
    - **Windows**：下载 [Rufus](https://rufus.ie/)。
 
-   :::details 在 macOS 上使用 Wingman 的示例
+   <details>
+   <summary>在 macOS 上使用 Wingman 的示例</summary>
 
    1. 打开下载的 `Wingman.dmg`，将 Wingman 拖入“应用程序”。
    2. 打开 Wingman。如果出现 **Wingman needs permission to format USB drives** 提示，点击 **Open System Settings**，在“通用 > 登录项与扩展”的“允许在后台”列表中开启 **Wingman**。如果 macOS 要求验证，请使用触控 ID 或 Mac 登录密码。授权后返回 Wingman，应用会自动检测权限。
@@ -62,7 +63,7 @@ head:
    5. 点击 **Create Windows USB**，在确认窗口中再次核对设备名称和容量，然后点击 **Erase and Create**。这会清空该 U 盘上的所有现有数据。
    6. Wingman 会格式化 U 盘、复制安装文件并拆分 `install.wim`。制作期间保持 U 盘连接。等待出现 **Windows 11 USB created. You can unplug it now.** 提示。此时安装 U 盘已自动弹出，可以拔下。
 
-   :::
+   </details>
 
 ## 步骤 2：从 Windows U 盘启动
 
@@ -105,7 +106,7 @@ Windows 安装向导将引导你完成安装。
    :::warning 删除前确认自己的磁盘
    图片仅为示例，不代表所有设备的磁盘布局。你的磁盘编号、卷名、容量和分区布局可能不同。
 
-   你需要自行确认目标磁盘并完成备份。只删除准备清空的 SSD 上的分区。如果无法确认目标 SSD，请停止操作并联系技术支持。
+   你需要自行确认目标磁盘并完成备份。只删除准备清空的 SSD 上的分区。如果无法确认目标 SSD，请勿继续操作。
    :::
 
 3. 逐个选择已确认的目标 SSD 上的分区，点击 **Delete Partition**。在此示例中，删除 **Disk 0 Partition 1** 和 **Disk 0 Partition 2**，保留 Disk 1 和 Disk 2 不动。

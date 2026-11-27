@@ -49,7 +49,8 @@ By the end of this guide, you will learn how to:
    - **macOS**: Download [Wingman](https://github.com/duggan/Wingman/releases). Requires macOS 13 or later.
    - **Windows**: Download [Rufus](https://rufus.ie/).
 
-   :::details Example using Wingman on macOS
+   <details>
+   <summary>Example using Wingman on macOS</summary>
 
    1. Open the downloaded `Wingman.dmg` and drag Wingman to **Applications**.
    2. Open Wingman. If you see **Wingman needs permission to format USB drives**, click **Open System Settings**. Go to **General > Login Items & Extensions** and turn on **Wingman** under **Allow in the Background**. If macOS asks for authentication, use Touch ID or your Mac login password. Return to Wingman after approving the change. The app detects the permission automatically.
@@ -58,7 +59,7 @@ By the end of this guide, you will learn how to:
    5. Click **Create Windows USB**. In the confirmation dialog, check the device name and capacity again, then click **Erase and Create**. This erases all existing data on that USB drive.
    6. Keep the USB drive connected while Wingman formats it, copies the installation files, and splits `install.wim`. Wait until Wingman displays **Windows 11 USB created. You can unplug it now.** The installation USB drive has been ejected and is ready to unplug.
 
-   :::
+   </details>
 
 ## Step 2: Boot from the Windows USB drive
 
@@ -101,7 +102,7 @@ The Windows setup wizard guides you through the installation.
    :::warning Confirm your disk before deleting anything
    This image is an example, not a fixed disk map. Disk numbers, volume names, capacities, and partition layouts can differ on your device.
 
-   You are responsible for confirming the target disk and completing your backup. Delete only partitions on the SSD you intend to erase. If you cannot confidently identify that SSD, stop and contact support before continuing.
+   You are responsible for confirming the target disk and completing your backup. Delete only partitions on the SSD you intend to erase. If you cannot confidently identify that SSD, do not proceed.
    :::
 
 3. Select each partition on the confirmed target SSD and click **Delete Partition**. In this example, delete **Disk 0 Partition 1** and **Disk 0 Partition 2**. Leave Disk 1 and Disk 2 unchanged.
