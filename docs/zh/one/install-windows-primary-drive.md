@@ -13,12 +13,12 @@ head:
 
 # 在 Olares One 上安装 Windows <Badge type="tip" text="30 min" />
 
-当你希望将设备作为专用 Windows 机器使用时，可以在 Olares One 的主盘上安装 Windows。
+如果希望将 Olares One 用作专门运行 Windows 的电脑，可以在主硬盘上安装 Windows。
 
-此过程将替换 Olares OS。如果你希望保留 Olares OS 并在同一设备上安装 Windows，请使用双启动方案。
+此操作会替换 Olares OS。如果希望在同一台设备上保留 Olares OS 和 Windows，请使用双系统方案。
 
 :::danger 这会清除 Olares OS
-在主盘上安装 Windows 将永久删除 Olares OS、本地账户、已安装的应用、设置以及该驱动器上存储的数据。在继续之前，请备份所有需要保留的数据。
+在主盘上安装 Windows 将永久删除 Olares OS、本地账户、已安装的应用、设置以及该硬盘上存储的数据。继续前，请备份需要保留的内容。
 :::
 
 ## 学习目标
@@ -28,11 +28,12 @@ head:
 - 创建可启动的 Windows 安装 U 盘。
 - 从 Windows U 盘启动 Olares One。
 - 删除现有的 Olares OS 分区，在主盘上安装 Windows。
-- 安装为 Olares One 提供的 Windows 驱动程序。
+- 安装 Olares One 的 Windows 驱动程序。
 
 ## 前提条件
 
 **硬件**<br>
+- 一台电脑，用于制作安装 U 盘。
 - 一个 8 GB 或更大的 U 盘，用于制作 Windows 安装介质。
 - 有线键盘和鼠标，连接到 Olares One。
 - 显示器，连接到 Olares One。
@@ -41,20 +42,28 @@ head:
 
 ## 步骤 1：创建可启动的 Windows U 盘
 
-1. 从 [Microsoft 官方网站](https://www.microsoft.com/en-us/software-download/windows11)下载 Windows 11 ISO。
-2. 下载并安装 [balenaEtcher](https://etcher.balena.io/)。
-3. 将 U 盘插入你的电脑。
-4. 打开 balenaEtcher，按以下步骤操作：
+1. 打开 [Microsoft 下载页面](https://www.microsoft.com/zh-cn/software-download/windows11)，找到适用于 x64 设备的 Windows 11 磁盘映像（ISO）下载区域（英文页面标题为 **Download Windows 11 Disk Image (ISO) for x64 devices**），下载 ISO 文件。即使使用 Apple Silicon Mac 制作 U 盘，也要选择 x64 版本，因为 Windows 将安装在 Olares One 上。
 
-   a. 点击 **Flash from file**，选择你下载的 ISO 文件。
+   :::warning
+   制作安装盘会清空所选 U 盘。请先备份其中的文件，并在写入前核对 U 盘名称和容量。
+   :::
 
-   b. 点击 **Select target**，选择你的 U 盘。
+2. 根据电脑的操作系统下载工具，然后按照工具的说明，使用 Windows 11 ISO 制作可启动的安装 U 盘。
 
-   c. 点击 **Flash!**，将安装程序写入 U 盘。
+   - **macOS**：下载 [Wingman](https://github.com/duggan/Wingman/releases)，需要 macOS 13 或更高版本。
+   - **Windows**：下载 [Rufus](https://rufus.ie/)。
 
-   ![balenaEtcher 刷写界面](/images/one/balenaEtcher.png#bordered)
+   <details>
+   <summary>在 macOS 上使用 Wingman 的示例</summary>
 
-5. 等待刷写和验证完成，然后安全弹出 U 盘。
+   1. 打开下载的 `Wingman.dmg`，将 Wingman 拖入“应用程序”。
+   2. 打开 Wingman。如果出现 **Wingman needs permission to format USB drives** 提示，点击 **Open System Settings**，在“通用 > 登录项与扩展”的“允许在后台”列表中开启 **Wingman**。如果 macOS 要求验证，请使用触控 ID 或 Mac 登录密码。授权后返回 Wingman，应用会自动检测权限。
+   3. 插入 U 盘。点击 **Choose ISO…**，选择已下载的 Windows 11 x64 ISO 文件。
+   4. 在 **USB drive** 下选择目标 U 盘。Wingman 显示的是设备名称和容量，名称可能与访达中的卷名不同。请根据这些信息确认目标 U 盘。
+   5. 点击 **Create Windows USB**，在确认窗口中再次核对设备名称和容量，然后点击 **Erase and Create**。这会清空该 U 盘上的所有现有数据。
+   6. Wingman 会格式化 U 盘、复制安装文件并拆分 `install.wim`。制作期间保持 U 盘连接。等待出现 **Windows 11 USB created. You can unplug it now.** 提示。此时安装 U 盘已自动弹出，可以拔下。
+
+   </details>
 
 ## 步骤 2：从 Windows U 盘启动
 
@@ -64,10 +73,8 @@ head:
 
    ![BIOS 设置](/images/one/bios-setup-interface.png#bordered)
 
-4. 进入 **Save and Exit** 选项卡。
-5. 在 **Boot Override** 下选择 Windows U 盘，然后按 **Enter**。
-
-   Olares One 将重新启动并从 Windows 安装程序启动。
+4. 进入 **Save & Exit** 选项卡。
+5. 在 **Boot Override** 下选择 Windows U 盘，然后按 **Enter**。Olares One 将重启并进入 Windows 安装程序。
 
    :::tip
    如果出现 Ventoy 界面，选择 Windows ISO 文件，然后选择 **Boot in normal mode**。
@@ -77,18 +84,41 @@ head:
 
 Windows 安装向导将引导你完成安装。
 
-1. 按照屏幕提示操作，直到到达 **Select location to install Windows 11** 界面。
-2. 选择主盘上的每个现有分区，然后点击 **Delete**。
+1. 按照屏幕提示操作，直到进入 **Select location to install Windows 11** 界面。
 
-   :::danger **不要删除 "Ventoy" 或 "VTOYEFI" 分区**
-   这些分区属于你的 U 盘安装介质，不属于主盘。删除它们可能会损坏安装介质。
+   ![Windows 11 安装位置选择界面，显示内置 SSD 和安装 U 盘](/images/one/windows-select-install-location.png)
+
+2. 确认 Olares OS 所在的内置 SSD。
+
+   :::tip 磁盘和分区标识
+   **Disk** 后的编号表示磁盘，同一编号下的 **Partition** 表示这块磁盘上的不同分区。**Type** 列中的 **Primary** 表示分区类型。它不代表应该安装 Windows 的目标 SSD。
    :::
 
-3. 主盘上的所有分区删除后，选择生成的 **Unallocated Space**。
-4. 点击 **Next** 开始安装 Windows。
-5. 等待 Windows 复制文件并重启数次。
-6. 当最终设置过程开始时，按照屏幕提示配置 Windows。
-7. Windows 桌面出现后，拔出 Windows U 盘。
+   以上图为例：
+
+   | 列表项 | 含义 | 操作 |
+   | --- | --- | --- |
+   | Disk 0 Partition 1，512.0 MB，System | 内置 SSD 上的启动分区 | 确定替换 Olares OS 后，删除此分区。 |
+   | Disk 0 Partition 2，1.9 TB，Unknown | 同一块内置 SSD 上原有的 Olares OS 分区 | 确定替换 Olares OS 后，删除此分区。 |
+   | Disk 1 Partition 1: WINDOWS，57.7 GB，Primary | Windows 安装 U 盘 | 保留，不要删除或格式化。 |
+   | Disk 2 Unallocated Space，0 B | 没有可用容量的列表项 | 忽略此 0 B 条目。 |
+
+   :::warning 删除前确认自己的磁盘
+   图片仅为示例，不代表所有设备的磁盘布局。你的磁盘编号、卷名、容量和分区布局可能不同。
+
+   你需要自行确认目标磁盘并完成备份。只删除准备清空的 SSD 上的分区。如果无法确认目标 SSD，请勿继续操作。
+   :::
+
+3. 逐个选择已确认的目标 SSD 上的分区，点击 **Delete Partition**。在此示例中，删除 **Disk 0 Partition 1** 和 **Disk 0 Partition 2**，保留 Disk 1 和 Disk 2 不动。
+4. 删除目标 SSD 上的所有分区后，选择同一块磁盘上释放出的未分配空间。在此示例中，选择 **Disk 0 Unallocated Space**（**1.9 TB**）。
+
+   ![删除目标 SSD 分区后选择 Disk 0 Unallocated Space](/images/one/windows-select-unallocated-space.png)
+
+5. 点击 **Next** 继续。
+6. 在 **Ready to install** 界面核对安装信息，然后点击 **Install** 开始安装 Windows。
+7. 等待 Windows 复制文件并重启数次。
+8. 进入 Windows 初始设置流程后，按照屏幕提示完成配置。
+9. Windows 桌面出现后，拔出 Windows U 盘。
 
 ## 步骤 4：安装 Olares One Windows 驱动
 
