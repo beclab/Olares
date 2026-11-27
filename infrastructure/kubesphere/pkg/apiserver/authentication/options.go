@@ -19,12 +19,8 @@
 package authentication
 
 import (
-	"errors"
 	"time"
 
-	"github.com/spf13/pflag"
-
-	"kubesphere.io/kubesphere/pkg/apiserver/authentication/identityprovider"
 	_ "kubesphere.io/kubesphere/pkg/apiserver/authentication/identityprovider/aliyunidaas"
 	_ "kubesphere.io/kubesphere/pkg/apiserver/authentication/identityprovider/cas"
 	_ "kubesphere.io/kubesphere/pkg/apiserver/authentication/identityprovider/github"
@@ -74,30 +70,4 @@ func NewOptions() *Options {
 		JwtSecret:                       "",
 		KubectlImage:                    "kubesphere/kubectl:v1.22.0",
 	}
-}
-
-func (options *Options) Validate() []error {
-	var errs []error
-	if len(options.JwtSecret) == 0 {
-		errs = append(errs, errors.New("JWT secret MUST not be empty"))
-	}
-	if options.AuthenticateRateLimiterMaxTries > options.LoginHistoryMaximumEntries {
-		errs = append(errs, errors.New("authenticateRateLimiterMaxTries MUST not be greater than loginHistoryMaximumEntries"))
-	}
-	if err := identityprovider.SetupWithOptions(options.OAuthOptions.IdentityProviders); err != nil {
-		errs = append(errs, err)
-	}
-	return errs
-}
-
-func (options *Options) AddFlags(fs *pflag.FlagSet, s *Options) {
-	fs.IntVar(&options.AuthenticateRateLimiterMaxTries, "authenticate-rate-limiter-max-retries", s.AuthenticateRateLimiterMaxTries, "")
-	fs.DurationVar(&options.AuthenticateRateLimiterDuration, "authenticate-rate-limiter-duration", s.AuthenticateRateLimiterDuration, "")
-	fs.BoolVar(&options.MultipleLogin, "multiple-login", s.MultipleLogin, "Allow multiple login with the same account, disable means only one user can login at the same time.")
-	fs.StringVar(&options.JwtSecret, "jwt-secret", s.JwtSecret, "Secret to sign jwt token, must not be empty.")
-	fs.DurationVar(&options.LoginHistoryRetentionPeriod, "login-history-retention-period", s.LoginHistoryRetentionPeriod, "login-history-retention-period defines how long login history should be kept.")
-	fs.IntVar(&options.LoginHistoryMaximumEntries, "login-history-maximum-entries", s.LoginHistoryMaximumEntries, "login-history-maximum-entries defines how many entries of login history should be kept.")
-	fs.DurationVar(&options.OAuthOptions.AccessTokenMaxAge, "access-token-max-age", s.OAuthOptions.AccessTokenMaxAge, "access-token-max-age control the lifetime of access tokens, 0 means no expiration.")
-	fs.StringVar(&s.KubectlImage, "kubectl-image", s.KubectlImage, "Setup the image used by kubectl terminal pod")
-	fs.DurationVar(&options.MaximumClockSkew, "maximum-clock-skew", s.MaximumClockSkew, "The maximum time difference between the system clocks of the ks-apiserver that issued a JWT and the ks-apiserver that verified the JWT.")
 }

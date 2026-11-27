@@ -86,22 +86,6 @@ func (h handler) handleNodeMetricsQuery(req *restful.Request, resp *restful.Resp
 	h.handleNamedMetricsQuery(resp, opt)
 }
 
-func (h handler) handleWorkloadMetricsQuery(req *restful.Request, resp *restful.Response) {
-	params := parseRequestParams(req)
-	opt, err := h.makeQueryOptions(params, monitoring.LevelWorkload)
-	if err != nil {
-		if err.Error() == ErrNoHit {
-			res := handleNoHit(opt.namedMetrics)
-			resp.WriteAsJson(res)
-			return
-		}
-
-		api.HandleBadRequest(resp, nil, err)
-		return
-	}
-	h.handleNamedMetricsQuery(resp, opt)
-}
-
 func (h handler) handlePodMetricsQuery(req *restful.Request, resp *restful.Response) {
 	params := parseRequestParams(req)
 	opt, err := h.makeQueryOptions(params, monitoring.LevelPod)

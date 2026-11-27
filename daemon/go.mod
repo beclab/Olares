@@ -11,7 +11,6 @@ replace (
 	k8s.io/api => k8s.io/api v0.34.0
 	k8s.io/apimachinery => k8s.io/apimachinery v0.34.0
 	k8s.io/client-go => k8s.io/client-go v0.34.0
-	kubesphere.io/api => ../../kubesphere-ext/staging/src/kubesphere.io/api/
 	olares.com/backups-sdk => github.com/Above-Os/backups-sdk v0.1.17
 	sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.19.6
 )

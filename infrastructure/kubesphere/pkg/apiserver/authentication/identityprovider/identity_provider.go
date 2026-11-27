@@ -79,22 +79,6 @@ func SetupWithOptions(options []oauth.IdentityProviderOptions) error {
 	return nil
 }
 
-// GetGenericProvider returns GenericProvider with given name
-func GetGenericProvider(providerName string) (GenericProvider, error) {
-	if provider, ok := genericProviders[providerName]; ok {
-		return provider, nil
-	}
-	return nil, identityProviderNotFound
-}
-
-// GetOAuthProvider returns OAuthProvider with given name
-func GetOAuthProvider(providerName string) (OAuthProvider, error) {
-	if provider, ok := oauthProviders[providerName]; ok {
-		return provider, nil
-	}
-	return nil, identityProviderNotFound
-}
-
 // RegisterOAuthProvider register OAuthProviderFactory with the specified type
 func RegisterOAuthProvider(factory OAuthProviderFactory) {
 	oauthProviderFactories[factory.Type()] = factory
