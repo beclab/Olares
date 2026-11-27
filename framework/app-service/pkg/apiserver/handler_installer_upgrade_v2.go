@@ -2,12 +2,14 @@ package apiserver
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"slices"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/applifecycle/domain"
+	"github.com/beclab/Olares/framework/app-service/pkg/applifecycle/exposeports"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/kubesphere"
 	"github.com/beclab/Olares/framework/app-service/pkg/utils"
@@ -236,20 +238,17 @@ func (h *Handler) appUpgradeV2(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	configJSON, err := helper.setAndEncodingAppCofnig(&prevCfg)
-	if err != nil {
-		klog.Errorf("Failed to encode app config err=%v", err)
-		return
-	}
+	base.prepareUpgradeConfig(&prevCfg)
 
 	h.deliverUpgradeV2(req.Request.Context(), req, resp, appMgrName, &appMgr, app, upgradeV2Options{
-		Token:        token,
-		RepoURL:      request.RepoURL,
-		Version:      request.Version,
-		MarketSource: marketSource,
-		ConfigJSON:   configJSON,
-		ChartURL:     chartURL,
-		ChartDigest:  chartDigest,
+		Token:         token,
+		RepoURL:       request.RepoURL,
+		Version:       request.Version,
+		MarketSource:  marketSource,
+		AppConfig:     base.appConfig,
+		PreviousPorts: prevCfg.Ports,
+		ChartURL:      chartURL,
+		ChartDigest:   chartDigest,
 	})
 }
 
@@ -258,11 +257,12 @@ func (h *Handler) appUpgradeV2(req *restful.Request, resp *restful.Response) {
 // field: deliverUpgradeV2 snapshots it from Status.State so a retry
 // cannot overwrite a stopped intent with UpgradeFailed.
 type upgradeV2Options struct {
-	Token        string
-	RepoURL      string
-	Version      string
-	MarketSource string
-	ConfigJSON   string
+	Token         string
+	RepoURL       string
+	Version       string
+	MarketSource  string
+	AppConfig     *appcfg.ApplicationConfig
+	PreviousPorts []appcfg.ServicePort
 	// ChartURL / ChartDigest are recorded on the AM when market sent an
 	// exact chart reference; otherwise any earlier reference is removed.
 	ChartURL    string
@@ -321,7 +321,6 @@ func (h *Handler) deliverUpgradeV2(
 	patched := am.DeepCopy()
 	patched.Spec.OpType = appv1alpha1.UpgradeOp
 	api.PrepareUpgradeMetadata(patched.Annotations, am.Spec.Config, opts.Version)
-	patched.Spec.Config = opts.ConfigJSON
 	patched.Annotations[api.AppRepoURLKey] = opts.RepoURL
 	patched.Annotations[api.AppTokenKey] = opts.Token
 	patched.Annotations[api.AppMarketSourceKey] = opts.MarketSource
@@ -338,7 +337,15 @@ func (h *Handler) deliverUpgradeV2(
 	var opID string
 	patched.Annotations, opID = stampDurableOperationRequest(patched.Annotations)
 
-	if err := h.ctrlClient.Patch(ctx, patched, client.MergeFrom(&am)); err != nil {
+	err := exposeports.Reserve(ctx, &am, opts.AppConfig, opts.PreviousPorts, func(ctx context.Context, cfg *appcfg.ApplicationConfig) error {
+		data, err := json.Marshal(cfg)
+		if err != nil {
+			return err
+		}
+		patched.Spec.Config = string(data)
+		return h.ctrlClient.Patch(ctx, patched, client.MergeFromWithOptions(&am, client.MergeFromWithOptimisticLock{}))
+	})
+	if err != nil {
 		api.HandleError(resp, req, err)
 		return
 	}

@@ -270,10 +270,6 @@ spec:
           value: os.groups
         - name: NATS_SUBJECT_SYSTEM_APPLICATION
           value: os.application
-        - name: HOSTIP
-          valueFrom:
-            fieldRef:
-              fieldPath: status.hostIP
         - name: POD_IP
           valueFrom:
             fieldRef:
@@ -291,6 +287,18 @@ spec:
           name: configtoml
         - mountPath: /Cache
           name: app-cache
+        - mountPath: /run/olares/node-sockets/tcp
+          name: node-sockets-tcp
+          readOnly: true
+        - mountPath: /run/olares/node-sockets/tcp6
+          name: node-sockets-tcp6
+          readOnly: true
+        - mountPath: /run/olares/node-sockets/udp
+          name: node-sockets-udp
+          readOnly: true
+        - mountPath: /run/olares/node-sockets/udp6
+          name: node-sockets-udp6
+          readOnly: true
       initContainers:
       - name: generate-certs
         image: beclab/openssl:v3
@@ -314,6 +322,22 @@ spec:
           - name: certs
             mountPath: /etc/certs
       volumes:
+      - name: node-sockets-tcp
+        hostPath:
+          path: /proc/1/net/tcp
+          type: File
+      - name: node-sockets-tcp6
+        hostPath:
+          path: /proc/1/net/tcp6
+          type: File
+      - name: node-sockets-udp
+        hostPath:
+          path: /proc/1/net/udp
+          type: File
+      - name: node-sockets-udp6
+        hostPath:
+          path: /proc/1/net/udp6
+          type: File
       - name: app-cache
         hostPath:
           path: '{{ .Values.rootPath }}/userdata/Cache'

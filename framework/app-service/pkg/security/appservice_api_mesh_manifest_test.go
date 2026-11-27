@@ -484,3 +484,49 @@ func TestMarketMeshRequiresEnrollmentAndMatchingTenant(t *testing.T) {
 		}
 	}
 }
+
+func TestAppServiceMountsOnlyReadOnlyNodeSocketTables(t *testing.T) {
+	docs, err := renderAppServiceMeshManifests(t, map[string]any{
+		"appServiceAPIMesh": map[string]any{"prepare": true, "activate": true, "tenants": []string{"alice"}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	template := docs["StatefulSet/app-service"]["spec"].(map[string]any)["template"].(map[string]any)
+	spec := template["spec"].(map[string]any)
+	annotations := template["metadata"].(map[string]any)["annotations"].(map[string]any)
+	if annotations["linkerd.io/inject"] != "enabled" || annotations["config.linkerd.io/default-inbound-policy"] != "deny" ||
+		annotations["config.linkerd.io/skip-outbound-ports"] != nil || spec["hostNetwork"] == true || spec["hostPID"] == true {
+		t.Fatal("host socket inspection must preserve the app-service mesh boundary")
+	}
+	want := map[string]bool{"tcp": true, "tcp6": true, "udp": true, "udp6": true}
+	for _, raw := range spec["volumes"].([]any) {
+		volume := raw.(map[string]any)
+		if name, ok := strings.CutPrefix(volume["name"].(string), "node-sockets-"); ok {
+			host := volume["hostPath"].(map[string]any)
+			if !want[name] || host["path"] != "/proc/1/net/"+name || host["type"] != "File" {
+				t.Fatalf("unexpected node socket volume %v", volume)
+			}
+			delete(want, name)
+		}
+	}
+	if len(want) != 0 {
+		t.Fatalf("missing node socket volumes: %v", want)
+	}
+	mounts := 0
+	for _, raw := range spec["containers"].([]any) {
+		c := raw.(map[string]any)
+		for _, rawMount := range c["volumeMounts"].([]any) {
+			mount := rawMount.(map[string]any)
+			if name, ok := strings.CutPrefix(mount["name"].(string), "node-sockets-"); ok {
+				if c["name"] != "app-service" || mount["readOnly"] != true || mount["mountPath"] != "/run/olares/node-sockets/"+name {
+					t.Fatalf("unexpected node socket mount %v", mount)
+				}
+				mounts++
+			}
+		}
+	}
+	if mounts != 4 {
+		t.Fatalf("got %d read-only socket mounts, want 4", mounts)
+	}
+}

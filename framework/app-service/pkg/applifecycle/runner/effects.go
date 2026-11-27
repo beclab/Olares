@@ -18,6 +18,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/applifecycle/domain"
+	"github.com/beclab/Olares/framework/app-service/pkg/applifecycle/exposeports"
 	"github.com/beclab/Olares/framework/app-service/pkg/applifecycle/ports"
 	"github.com/beclab/Olares/framework/app-service/pkg/compute/validation"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
@@ -1038,35 +1039,34 @@ func (r *Runner) dispatchSetExposePorts(ctx context.Context, req ports.WorkloadR
 	if len(cfg.Ports) == 0 {
 		return ports.WorkloadResult{}
 	}
-	if err := apputils.SetExposePorts(ctx, cfg, nil); err != nil {
-		return ports.WorkloadResult{LandedReason: "SetExposePortsFailed", Err: err}
-	}
-	raw, err := json.Marshal(cfg)
-	if err != nil {
-		return ports.WorkloadResult{LandedReason: "SetExposePortsFailed", Err: err}
-	}
 	if req.AM == nil {
-		return ports.WorkloadResult{}
+		return ports.WorkloadResult{LandedReason: "SetExposePortsFailed", Err: errors.New("application manager is required to reserve exposed ports")}
 	}
-	// The workload request still carries the ResourceVersion from
-	// the Reconcile that dispatched it. Status writes (the
-	// Installing phase stamp, download progress) bump that version
-	// before this spec write runs. Patch against a fresh read, and
-	// retry when another status write wins the race.
-	if err := r.patchExposeConfig(ctx, req.AM.Name, raw); err != nil {
+	if err := exposeports.Reserve(ctx, req.AM, cfg, nil, func(ctx context.Context, assigned *appcfg.ApplicationConfig) error {
+		raw, err := json.Marshal(assigned)
+		if err != nil {
+			return err
+		}
+		return r.patchExposeConfig(ctx, req.AM, raw)
+	}); err != nil {
 		return ports.WorkloadResult{LandedReason: "SetExposePortsFailed", Err: err}
 	}
 	return ports.WorkloadResult{}
 }
 
-func (r *Runner) patchExposeConfig(ctx context.Context, name string, raw []byte) error {
+func (r *Runner) patchExposeConfig(ctx context.Context, original *appv1.ApplicationManager, raw []byte) error {
 	spec := &ports.SpecPatch{Config: string(raw)}
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		latest, err := r.amStore.Get(ctx, name)
+		latest, err := r.amStore.Get(ctx, original.Name)
 		if err != nil {
 			return err
 		}
-		return r.amStore.PatchSpecAndAnnotations(ctx, name, latest.ResourceVersion, spec, nil)
+		if latest.Spec.Config != original.Spec.Config || latest.Annotations[domain.AnnotationOperationRequestID] != original.Annotations[domain.AnnotationOperationRequestID] {
+			return errors.New("application configuration changed during exposed port allocation")
+		}
+		return r.amStore.PatchSpecAndAnnotations(ctx, original.Name, latest.ResourceVersion, spec, &ports.AnnotationPatch{
+			Set: map[string]string{exposeports.ReservationAnnotation: "true"},
+		})
 	})
 }
 

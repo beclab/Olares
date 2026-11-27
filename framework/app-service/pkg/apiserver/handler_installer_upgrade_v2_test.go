@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
+	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/applifecycle/domain"
 	"github.com/beclab/Olares/framework/app-service/pkg/testutil"
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
@@ -92,13 +93,22 @@ func (f *upgradeV2Fixture) currentAM() *appv1alpha1.ApplicationManager {
 	return &got
 }
 
+func upgradeConfigJSON(t *testing.T, cfg *appcfg.ApplicationConfig) string {
+	t.Helper()
+	data, err := json.Marshal(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(data)
+}
+
 func fullUpgradeOpts() upgradeV2Options {
 	return upgradeV2Options{
 		Token:        "new-token",
 		RepoURL:      "https://new.example.com/charts",
 		Version:      "2.0.0",
 		MarketSource: "new-market",
-		ConfigJSON:   `{"appName":"nginx","version":"2.0.0"}`,
+		AppConfig:    &appcfg.ApplicationConfig{AppName: "nginx", Version: "2.0.0"},
 	}
 }
 
@@ -124,8 +134,8 @@ func TestUpgradeV2_DeliversTriggerOp(t *testing.T) {
 	if updated.Spec.OpType != appv1alpha1.UpgradeOp {
 		t.Errorf("Spec.OpType = %q, want %q", updated.Spec.OpType, appv1alpha1.UpgradeOp)
 	}
-	if updated.Spec.Config != opts.ConfigJSON {
-		t.Errorf("Spec.Config mismatch:\n got %q\nwant %q", updated.Spec.Config, opts.ConfigJSON)
+	if want := upgradeConfigJSON(t, opts.AppConfig); updated.Spec.Config != want {
+		t.Errorf("Spec.Config mismatch:\n got %q\nwant %q", updated.Spec.Config, want)
 	}
 	wantAnn := map[string]string{
 		"unrelated.example.com/keep-me":     "yes",
@@ -283,7 +293,8 @@ func TestUpgradeV2_ConfigOverwritten(t *testing.T) {
 	seededConfig := f.am.Spec.Config
 
 	opts := fullUpgradeOpts()
-	opts.ConfigJSON = `{"appName":"nginx","version":"3.0.0","new":"field"}`
+	opts.AppConfig.Version = "3.0.0"
+	opts.AppConfig.Title = "New title"
 
 	f.handler.deliverUpgradeV2(context.Background(), f.req, f.resp,
 		f.am.Name, f.am, f.am.Spec.AppName, opts)
@@ -295,8 +306,8 @@ func TestUpgradeV2_ConfigOverwritten(t *testing.T) {
 	if updated.Spec.Config == seededConfig {
 		t.Errorf("Spec.Config must be overwritten, still shows seed %q", seededConfig)
 	}
-	if updated.Spec.Config != opts.ConfigJSON {
-		t.Errorf("Spec.Config = %q, want %q", updated.Spec.Config, opts.ConfigJSON)
+	if want := upgradeConfigJSON(t, opts.AppConfig); updated.Spec.Config != want {
+		t.Errorf("Spec.Config = %q, want %q", updated.Spec.Config, want)
 	}
 }
 

@@ -7,9 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
-	"net"
-	"os"
-	"strconv"
 	"time"
 	"unicode"
 
@@ -104,31 +101,6 @@ func GetRandomCharacters() (r string) {
 	rand := &Cryptographical{}
 
 	return rand.StringCustom(n, charset)
-}
-
-func isUDPPortAvailable(port int) bool {
-	return true
-}
-
-func isTCPPortAvailable(port int) bool {
-	address := net.JoinHostPort(os.Getenv("HOSTIP"), strconv.Itoa(port))
-
-	_, err := net.Dial("tcp", address)
-	if err == nil {
-		return false
-	}
-
-	return true
-}
-
-func IsPortAvailable(protocol string, port int) bool {
-	if protocol == "tcp" {
-		return isTCPPortAvailable(port)
-	}
-	if protocol == "udp" {
-		return isUDPPortAvailable(port)
-	}
-	return false
 }
 
 func ListToMap[K comparable, T any](list []T, keyFunc func(T) K) map[K]T {

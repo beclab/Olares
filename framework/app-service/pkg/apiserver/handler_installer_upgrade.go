@@ -2,7 +2,6 @@ package apiserver
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
@@ -23,7 +22,6 @@ type upgradeHelperIntf interface {
 	validate() error
 	lintChart() error
 	applyAppEnv(ctx context.Context) error
-	setAndEncodingAppCofnig(prevCfg *appcfg.ApplicationConfig) (string, error)
 }
 
 var _ upgradeHelperIntf = (upgradeHelperIntf)(nil)
@@ -160,7 +158,7 @@ func (h *upgradeHandlerHelper) lintChart() error {
 	return nil
 }
 
-func (h *upgradeHandlerHelper) setAndEncodingAppCofnig(prevCfg *appcfg.ApplicationConfig) (string, error) {
+func (h *upgradeHandlerHelper) prepareUpgradeConfig(prevCfg *appcfg.ApplicationConfig) {
 	// cloned app
 	if h.app != h.rawAppName {
 		h.appConfig.Title = prevCfg.Title
@@ -180,23 +178,6 @@ func (h *upgradeHandlerHelper) setAndEncodingAppCofnig(prevCfg *appcfg.Applicati
 			}
 		}
 	}
-
-	prevPortsMap := apputils.BuildPrevPortsMap(prevCfg)
-
-	// Set expose ports for upgrade, preserving existing ports with same name
-	err := apputils.SetExposePorts(context.TODO(), h.appConfig, prevPortsMap)
-	if err != nil {
-		klog.Errorf("set expose ports failed %v", err)
-		return "", err
-	}
-
-	encoding, err := json.Marshal(h.appConfig)
-	if err != nil {
-		klog.Errorf("Failed to marshal app config err=%v", err)
-		api.HandleError(h.resp, h.req, err)
-		return "", err
-	}
-	return string(encoding), nil
 }
 
 func (h *upgradeHandlerHelper) applyAppEnv(ctx context.Context) (err error) {

@@ -8,6 +8,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/applifecycle/adapters/fake"
+	"github.com/beclab/Olares/framework/app-service/pkg/applifecycle/exposeports"
 	"github.com/beclab/Olares/framework/app-service/pkg/applifecycle/ports"
 )
 
@@ -29,7 +30,7 @@ func TestPatchExposeConfig_UsesLatestResourceVersion(t *testing.T) {
 	}
 
 	r := &Runner{amStore: store}
-	if err := r.patchExposeConfig(context.Background(), "app1", []byte(`{"ports":1}`)); err != nil {
+	if err := r.patchExposeConfig(context.Background(), snap, []byte(`{"ports":1}`)); err != nil {
 		t.Fatalf("patchExposeConfig: %v", err)
 	}
 	got, err := store.Get(context.Background(), "app1")
@@ -38,6 +39,12 @@ func TestPatchExposeConfig_UsesLatestResourceVersion(t *testing.T) {
 	}
 	if got.Spec.Config != `{"ports":1}` {
 		t.Fatalf("Spec.Config = %q, want assigned ports", got.Spec.Config)
+	}
+	if got.Annotations[exposeports.ReservationAnnotation] != "true" {
+		t.Fatal("allocated config was committed without its reservation marker")
+	}
+	if err := r.patchExposeConfig(context.Background(), snap, []byte(`{"ports":2}`)); err == nil {
+		t.Fatal("stale allocation overwrote newer application config")
 	}
 	if got.Status.State != appv1.Installing {
 		t.Fatalf("Status.State = %q, want Installing", got.Status.State)

@@ -11,6 +11,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/applifecycle/domain"
+	"github.com/beclab/Olares/framework/app-service/pkg/applifecycle/exposeports"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/testutil"
 	appv1alpha1 "github.com/beclab/api/api/app.bytetrade.io/v1alpha1"
@@ -205,8 +206,9 @@ func TestInstallV2_PatchesReinstallableAM(t *testing.T) {
 				"unrelated.example.com/keep-me": "yes",
 			},
 			Annotations: map[string]string{
-				"unrelated.example.com/keep-me": "yes",
-				api.AppTokenKey:                 "old-token",
+				"unrelated.example.com/keep-me":   "yes",
+				api.AppTokenKey:                   "old-token",
+				exposeports.ReservationAnnotation: "true",
 			},
 		},
 		Spec: appv1alpha1.ApplicationManagerSpec{
@@ -258,6 +260,9 @@ func TestInstallV2_PatchesReinstallableAM(t *testing.T) {
 	// new value.
 	if v := got.Annotations[api.AppTokenKey]; v != "sa-token" {
 		t.Errorf("Annotations[%q] = %q, want %q", api.AppTokenKey, v, "sa-token")
+	}
+	if _, exists := got.Annotations[exposeports.ReservationAnnotation]; exists {
+		t.Fatal("reinstall retained the old port reservation")
 	}
 	requireDurableRequestID(t, got.Annotations)
 }

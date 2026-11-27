@@ -10,6 +10,7 @@ import (
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
 	"github.com/beclab/Olares/framework/app-service/pkg/applifecycle/domain"
+	"github.com/beclab/Olares/framework/app-service/pkg/applifecycle/exposeports"
 	"github.com/beclab/Olares/framework/app-service/pkg/compute"
 	"github.com/beclab/Olares/framework/app-service/pkg/compute/validation"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
@@ -475,6 +476,7 @@ func (h *Handler) deliverInstallV2(
 		// below re-adds it when this request carries one.
 		delete(patched.Annotations, api.AppChartURLKey)
 		delete(patched.Annotations, api.AppChartDigestKey)
+		delete(patched.Annotations, exposeports.ReservationAnnotation)
 		for k, v := range annotations {
 			patched.Annotations[k] = v
 		}
