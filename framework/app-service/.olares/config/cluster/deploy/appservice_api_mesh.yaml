@@ -33,16 +33,17 @@
 {{- if or (gt (len $tenant) 51) (not (regexMatch "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$" $tenant)) -}}
 {{- fail "invalid app-service API mTLS tenant" -}}
 {{- end -}}
+{{- $appPath := "^/app-service/v1/apps/[a-z0-9]([a-z0-9-]*[a-z0-9])?" -}}
+{{- /* Keep the existing progress route name and share its read-only match with the tenant proxy. */ -}}
+{{- $routes = append $routes (dict "name" (printf "market-app-progress-%s" $tenant) "namespace" (printf "user-system-%s" $tenant) "account" "bytetrade-sys-ops" "userHeader" $tenant "method" "GET" "path" (printf "%s/status$" $appPath) "pathType" "RegularExpression" "allowMarket" $mesh.marketLifecycle) -}}
 {{- if $mesh.marketLifecycle -}}
-{{- $marketAppPath := "^/app-service/v1/apps/[a-z0-9]([a-z0-9-]*[a-z0-9])?" -}}
 {{- $lifecycle := list
-  (dict "method" "POST" "path" (printf "%s/install$" $marketAppPath) "pathType" "RegularExpression")
-  (dict "method" "GET" "path" (printf "%s/status$" $marketAppPath) "pathType" "RegularExpression")
-  (dict "method" "POST" "path" (printf "%s/cancel$" $marketAppPath) "pathType" "RegularExpression" "queryParams" (list (dict "type" "Exact" "name" "type" "value" "operate"))) -}}
+  (dict "method" "POST" "path" (printf "%s/install$" $appPath) "pathType" "RegularExpression")
+  (dict "method" "POST" "path" (printf "%s/cancel$" $appPath) "pathType" "RegularExpression" "queryParams" (list (dict "type" "Exact" "name" "type" "value" "operate"))) -}}
 {{- $routes = append $routes (dict "name" (printf "market-lifecycle-%s" $tenant) "namespace" "os-framework" "account" "market-sa" "userHeader" $tenant "matches" $lifecycle) -}}
 {{- $runtime := list
-  (dict "method" "POST" "path" (printf "%s/suspend$" $marketAppPath) "pathType" "RegularExpression")
-  (dict "method" "POST" "path" (printf "%s/resume$" $marketAppPath) "pathType" "RegularExpression") -}}
+  (dict "method" "POST" "path" (printf "%s/suspend$" $appPath) "pathType" "RegularExpression")
+  (dict "method" "POST" "path" (printf "%s/resume$" $appPath) "pathType" "RegularExpression") -}}
 {{- $routes = append $routes (dict "name" (printf "market-runtime-%s" $tenant) "namespace" "os-framework" "account" "market-sa" "userHeader" $tenant "matches" $runtime) -}}
 {{- end -}}
 {{- $routes = append $routes (dict "name" (printf "user-apps-%s" $tenant) "namespace" (printf "user-system-%s" $tenant) "account" "bytetrade-sys-ops" "method" "GET" "path" (printf "/app-service/v1/user-apps/%s" $tenant)) -}}
@@ -127,6 +128,11 @@ spec:
     - kind: ServiceAccount
       name: {{ $route.account }}
       namespace: {{ $route.namespace }}
+    {{- if $route.allowMarket }}
+    - kind: ServiceAccount
+      name: market-sa
+      namespace: os-framework
+    {{- end }}
 ---
 apiVersion: policy.linkerd.io/v1alpha1
 kind: AuthorizationPolicy

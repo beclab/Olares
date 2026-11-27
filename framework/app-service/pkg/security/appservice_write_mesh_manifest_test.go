@@ -61,7 +61,6 @@ func TestAppServiceMeshScopedWrites(t *testing.T) {
 				query          []any
 			}{
 				{method: "POST", action: "install"},
-				{method: "GET", action: "status"},
 				{method: "POST", action: "cancel", query: []any{map[string]any{"type": "Exact", "name": "type", "value": "operate"}}},
 			}
 			var matches []any
@@ -95,6 +94,57 @@ func TestAppServiceMeshScopedWrites(t *testing.T) {
 	}
 }
 
+func TestAppServiceAppStatusMeshAccess(t *testing.T) {
+	const statusPath = `^/app-service/v1/apps/[a-z0-9]([a-z0-9-]*[a-z0-9])?/status$`
+	for _, mode := range []struct {
+		name            string
+		marketLifecycle bool
+	}{
+		{name: "tenant proxy only"},
+		{name: "strict Market and tenant proxy", marketLifecycle: true},
+	} {
+		t.Run(mode.name, func(t *testing.T) {
+			tenants := []string{"alice", "bob"}
+			resources, err := renderAppServiceMeshManifests(t, map[string]any{
+				"appServiceAPIMesh": map[string]any{"prepare": true, "activate": true, "tenants": tenants, "marketLifecycle": mode.marketLifecycle},
+				"marketBackendMTLS": map[string]any{"prepare": mode.marketLifecycle, "activate": mode.marketLifecycle, "tenants": tenants},
+				"marketLinkerd":     mode.marketLifecycle,
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			var marketIdentity []map[string]any
+			if mode.marketLifecycle {
+				marketIdentity = append(marketIdentity, map[string]any{"kind": "ServiceAccount", "namespace": "os-framework", "name": "market-sa"})
+			}
+			for _, tenant := range tenants {
+				name := "market-app-progress-" + tenant
+				match := appServiceTenantMatch(tenant, "GET", "RegularExpression", statusPath)
+				checkAppServiceCapability(t, resources, name, "user-system-"+tenant, "bytetrade-sys-ops", []any{match}, marketIdentity...)
+				for key, resource := range resources {
+					if resource["kind"] != "HTTPRoute" || key == "HTTPRoute/"+name {
+						continue
+					}
+					rules, _ := resource["spec"].(map[string]any)["rules"].([]any)
+					for _, rule := range rules {
+						matches, _ := rule.(map[string]any)["matches"].([]any)
+						for _, otherMatch := range matches {
+							if reflect.DeepEqual(otherMatch, match) {
+								t.Fatalf("%s competes with %s for the same tenant status request", key, name)
+							}
+						}
+					}
+				}
+			}
+			for _, kind := range []string{"HTTPRoute", "MeshTLSAuthentication", "AuthorizationPolicy"} {
+				if resources[kind+"/market-app-progress-unregistered"] != nil {
+					t.Fatalf("%s grants status access to an unregistered tenant", kind)
+				}
+			}
+		})
+	}
+}
+
 func appServiceTenantMatch(tenant, method, pathType, path string) map[string]any {
 	return map[string]any{
 		"method":  method,
@@ -103,7 +153,7 @@ func appServiceTenantMatch(tenant, method, pathType, path string) map[string]any
 	}
 }
 
-func checkAppServiceCapability(t *testing.T, resources map[string]map[string]any, name, namespace, account string, matches []any) {
+func checkAppServiceCapability(t *testing.T, resources map[string]map[string]any, name, namespace, account string, matches []any, additionalIdentities ...map[string]any) {
 	t.Helper()
 	spec := func(kind string) map[string]any {
 		t.Helper()
@@ -119,8 +169,11 @@ func checkAppServiceCapability(t *testing.T, resources map[string]map[string]any
 		!reflect.DeepEqual(route["parentRefs"], []any{map[string]any{"group": "policy.linkerd.io", "kind": "Server", "name": "app-service-api"}}) {
 		t.Fatalf("wrong HTTP scope for %s: %v", name, route)
 	}
-	wantIdentity := map[string]any{"kind": "ServiceAccount", "namespace": namespace, "name": account}
-	if !reflect.DeepEqual(spec("MeshTLSAuthentication"), map[string]any{"identityRefs": []any{wantIdentity}}) {
+	wantIdentities := []any{map[string]any{"kind": "ServiceAccount", "namespace": namespace, "name": account}}
+	for _, identity := range additionalIdentities {
+		wantIdentities = append(wantIdentities, identity)
+	}
+	if !reflect.DeepEqual(spec("MeshTLSAuthentication"), map[string]any{"identityRefs": wantIdentities}) {
 		t.Fatalf("wrong authenticated workload for %s: %v", name, spec("MeshTLSAuthentication"))
 	}
 	authorization := spec("AuthorizationPolicy")
