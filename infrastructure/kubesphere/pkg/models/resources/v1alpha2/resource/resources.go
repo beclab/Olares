@@ -51,13 +51,6 @@ type ResourceGetter struct {
 	resourcesGetters map[string]v1alpha2.Interface
 }
 
-func (r ResourceGetter) Add(resource string, getter v1alpha2.Interface) {
-	if r.resourcesGetters == nil {
-		r.resourcesGetters = make(map[string]v1alpha2.Interface)
-	}
-	r.resourcesGetters[resource] = getter
-}
-
 func NewResourceGetter(factory informers.InformerFactory) *ResourceGetter {
 	resourceGetters := make(map[string]v1alpha2.Interface)
 

@@ -17,8 +17,6 @@ limitations under the License.
 package k8s
 
 import (
-	"strings"
-
 	snapshotclient "github.com/kubernetes-csi/external-snapshotter/client/v4/clientset/versioned"
 	promresourcesclient "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned"
 	istioclient "istio.io/client-go/pkg/clientset/versioned"
@@ -59,39 +57,6 @@ type kubernetesClient struct {
 	master string
 
 	config *rest.Config
-}
-
-// NewKubernetesClientOrDie creates KubernetesClient and panic if there is an error
-func NewKubernetesClientOrDie(options *KubernetesOptions) Client {
-	config, err := clientcmd.BuildConfigFromFlags("", options.KubeConfig)
-	if err != nil {
-		panic(err)
-	}
-
-	config.QPS = options.QPS
-	config.Burst = options.Burst
-
-	k := &kubernetesClient{
-		k8s:           kubernetes.NewForConfigOrDie(config),
-		ks:            kubesphere.NewForConfigOrDie(config),
-		istio:         istioclient.NewForConfigOrDie(config),
-		snapshot:      snapshotclient.NewForConfigOrDie(config),
-		apiextensions: apiextensionsclient.NewForConfigOrDie(config),
-		prometheus:    promresourcesclient.NewForConfigOrDie(config),
-		master:        config.Host,
-		config:        config,
-	}
-
-	if options.Master != "" {
-		k.master = options.Master
-	}
-	// The https prefix is automatically added when using sa.
-	// But it will not be set automatically when reading from kubeconfig
-	// which may cause some problems in the client of other languages.
-	if !strings.HasPrefix(k.master, "http://") && !strings.HasPrefix(k.master, "https://") {
-		k.master = "https://" + k.master
-	}
-	return k
 }
 
 // NewKubernetesClient creates a KubernetesClient
