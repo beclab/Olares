@@ -494,6 +494,44 @@ func TestSharedInclusterEntrancesFromSRRItems_empty(t *testing.T) {
 	}
 }
 
+func TestExactWorkloadAliasRequiresCurrentGatewayReadiness(t *testing.T) {
+	srr := &unstructured.Unstructured{Object: map[string]any{
+		"metadata": map[string]any{"name": "router-frontend", "namespace": "router-shared", "generation": int64(3),
+			"labels": map[string]any{labelSRRAppID: "f3395cd5", labelSRREntrance: "frontend", "app.kubernetes.io/managed-by": "app-service"}},
+		"spec": map[string]any{"entranceClass": "application", "routeMode": "gateway", "hostPatterns": []any{
+			"router.alice.olares.com", "f3395cd5.alice.olares.com", "router.alice.olares.local", "*.invalid.example.com",
+		}},
+	}}
+	assertCount := func(want int, passthrough map[string]struct{}) []SharedInclusterEntrance {
+		t.Helper()
+		got := sharedInclusterEntrancesFromSRRItems([]unstructured.Unstructured{*srr}, passthrough)
+		if len(got) != want {
+			t.Fatalf("got %d DNS records, want %d", len(got), want)
+		}
+		return got
+	}
+	assertCount(0, nil)
+	condition := map[string]any{"type": "WorkloadAliasesReady", "status": "True", "observedGeneration": int64(2)}
+	srr.Object["status"] = map[string]any{"conditions": []any{condition}}
+	assertCount(0, nil)
+	condition["observedGeneration"] = int64(3)
+	aliases := assertCount(3, nil)
+	plugins := buildSharedInclusterTemplates(aliases, "10.233.37.18", nil)
+	if len(plugins) != 6 || plugins[1].Args[1] != "AAAA" || !strings.Contains(plugins[1].ToString(), "rcode NOERROR") {
+		t.Fatalf("workload aliases must suppress external AAAA fallback: %v", plugins)
+	}
+	for _, alias := range aliases {
+		expr := regexp.MustCompile(strings.Trim(alias.matchRegex(nil), `"`))
+		if !expr.MatchString(alias.HostPattern+".") || expr.MatchString("other."+alias.HostPattern+".") ||
+			expr.MatchString(strings.Replace(alias.HostPattern, ".alice.", ".bob.", 1)+".") {
+			t.Fatalf("record escaped its exact authority: %v", alias)
+		}
+	}
+	assertCount(0, map[string]struct{}{"router-shared": {}})
+	condition["status"] = "False"
+	assertCount(0, nil)
+}
+
 func TestBuildSharedInclusterTemplates_overridesUserWildcard(t *testing.T) {
 	// Render incluster server block that mirrors the production layout:
 	// shared-FQDN templates appear BEFORE the user-zone wildcard templates.

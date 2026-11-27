@@ -9,6 +9,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -632,6 +633,7 @@ type SharedInclusterEntrance struct {
 	EntranceID     string
 	PlatformDomain string
 	HostPattern    string
+	WorkloadAlias  bool
 }
 
 const (
@@ -648,6 +650,9 @@ const (
 // Olares must not resolve to this cluster's gateway; it falls through to the
 // upstream resolver instead. No local viewer means no template.
 func (e SharedInclusterEntrance) matchRegex(viewersFor func(platformDomain string) []string) string {
+	if e.WorkloadAlias {
+		return `"^` + regexp.QuoteMeta(e.HostPattern) + `\.$"`
+	}
 	entranceID, platformDomain, hostPatternType, ok := parseLogicalHostPattern(e.HostPattern)
 	if !ok {
 		platformDomain = strings.ToLower(strings.TrimSpace(strings.TrimSuffix(e.PlatformDomain, ".")))
@@ -743,11 +748,15 @@ func buildSharedInclusterTemplates(entrances []SharedInclusterEntrance, gatewayD
 	}
 
 	seen := make(map[string]struct{})
+	workloadMatches := make(map[string]bool)
 	var matches []string
 	for _, ent := range entrances {
 		match := ent.matchRegex(viewersFor)
 		if match == "" {
 			continue
+		}
+		if ent.WorkloadAlias {
+			workloadMatches[match] = true
 		}
 		if _, ok := seen[match]; ok {
 			continue
@@ -772,6 +781,19 @@ func buildSharedInclusterTemplates(entrances []SharedInclusterEntrance, gatewayD
 				{Name: "fallthrough"},
 			},
 		})
+		if workloadMatches[match] {
+			// The gateway address is IPv4; prevent public IPv6 fallthrough
+			// for the same in-cluster alias.
+			plugins = append(plugins, &corefile.Plugin{
+				Name: "template",
+				Args: []string{"IN", "AAAA", "."},
+				Options: []*corefile.Option{
+					{Name: "match", Args: []string{match}},
+					{Name: "rcode", Args: []string{"NOERROR"}},
+					{Name: "fallthrough"},
+				},
+			})
+		}
 	}
 	return plugins
 }
@@ -865,8 +887,17 @@ func sharedInclusterEntrancesFromSRRItems(
 		}
 		// One CoreDNS rewrite per logical hostPattern so friendly + hash
 		// aliases on the same SRR both point at app-gateway-data.
+		class, _, _ := unstructured.NestedString(srr.Object, "spec", "entranceClass")
+		ordinary := class == "application"
+		aliasReady := ordinary && workloadAliasReady(srr)
 		for _, pattern := range patterns {
-			id, domain, _, ok := parseLogicalHostPattern(pattern)
+			id, domain, kind, ok := parseLogicalHostPattern(pattern)
+			if ordinary && (!ok || kind == hostPatternSharedExact) {
+				if aliasReady && strings.Count(pattern, ".") >= 3 && len(validation.IsDNS1123Subdomain(pattern)) == 0 {
+					entrances = append(entrances, SharedInclusterEntrance{HostPattern: pattern, WorkloadAlias: true})
+				}
+				continue
+			}
 			if !ok {
 				continue
 			}
@@ -884,6 +915,21 @@ func sharedInclusterEntrancesFromSRRItems(
 		}
 	}
 	return entrances
+}
+
+func workloadAliasReady(srr *unstructured.Unstructured) bool {
+	if srr.GetLabels()["app.kubernetes.io/managed-by"] != "app-service" || srr.GetDeletionTimestamp() != nil {
+		return false
+	}
+	conditions, _, _ := unstructured.NestedSlice(srr.Object, "status", "conditions")
+	for _, raw := range conditions {
+		condition, _ := raw.(map[string]any)
+		generation, found, _ := unstructured.NestedInt64(condition, "observedGeneration")
+		if condition["type"] == "WorkloadAliasesReady" && condition["status"] == "True" && found && generation == srr.GetGeneration() {
+			return true
+		}
+	}
+	return false
 }
 
 func sharedInclusterEntrancesFromCluster(
