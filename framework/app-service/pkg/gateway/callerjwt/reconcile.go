@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -15,12 +16,14 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/appcfg"
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway"
 )
 
 const (
@@ -298,6 +301,7 @@ func issueRequestFromApplication(app *appv1alpha1.Application) IssueRequest {
 		Namespace:          app.Spec.Namespace,
 		ServiceAccountName: sa,
 		AppRef:             app.Spec.Name,
+		SharedTargets:      sharedAliasTargets(app),
 	}
 	if appcfg.IsShared(app) {
 		// Shared callers authenticate as appid; do not put the user Owner into viewer.
@@ -307,6 +311,34 @@ func issueRequestFromApplication(app *appv1alpha1.Application) IssueRequest {
 	req.Viewer = strings.TrimSpace(app.Spec.Owner)
 	req.ClientAppid = strings.TrimSpace(app.Spec.Appid)
 	return req
+}
+
+func sharedAliasTargets(app *appv1alpha1.Application) []string {
+	owner := strings.TrimSpace(app.Spec.Owner)
+	if len(validation.IsDNS1123Label(owner)) != 0 || !applicationDeclaresSharedAccess(app) {
+		return nil
+	}
+	const edges = "gateway.olares.io/shared-caller-edges"
+	var targets []string
+	seen := map[string]bool{}
+	var named bool
+	for _, raw := range []string{app.Spec.Settings[settingClusterAppRef], app.Spec.Settings[settingSharedAppDeps], app.Spec.Settings[edges], app.Annotations[edges]} {
+		named = named || strings.TrimSpace(raw) != ""
+		for _, ref := range gateway.SplitClusterAppRefs(raw) {
+			if seen[ref] || len(validation.IsDNS1123Label(ref)) != 0 || len(targets) >= 32 {
+				continue
+			}
+			seen[ref] = true
+			targets = append(targets, owner+"/"+ref)
+		}
+	}
+	// Preserve platform-approved eligibility when no named edge constrains it.
+	// Scope this existing Shared access to the workload's own tenant aliases.
+	if !named && strings.EqualFold(strings.TrimSpace(app.Spec.Settings[settingSharedCallerDecide]), "true") {
+		return []string{owner + "/@all"}
+	}
+	sort.Strings(targets)
+	return targets
 }
 
 func upsertAppJWTSecret(ctx context.Context, c client.Client, scheme *runtime.Scheme, app *appv1alpha1.Application, token string) error {

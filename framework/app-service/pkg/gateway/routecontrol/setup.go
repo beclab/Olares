@@ -74,6 +74,15 @@ func (r *SharedRouteReconciler) Reconcile(ctx context.Context, req reconcile.Req
 			retry = 30 * time.Second
 		}
 	}
+	if aliasErr := reconcileSharedAlias(ctx, r.Client, GatewayRef{}, srr, rerr == nil && res.Status == metav1.ConditionTrue && res.HTTPRouteName != ""); aliasErr != nil {
+		klog.Warningf("reconcile workload alias for %s/%s: %v", srr.Namespace, srr.Name, aliasErr)
+		if err := setSharedAliasReady(ctx, r.Client, srr, false); err != nil {
+			klog.Warningf("withdraw workload alias DNS readiness for %s/%s: %v", srr.Namespace, srr.Name, err)
+		}
+		if rerr == nil {
+			rerr = aliasErr
+		}
+	}
 	if statusErr := UpdateSRRStatus(ctx, r.Client, srr, res); statusErr != nil {
 		klog.Warningf("update SRR status %s/%s failed: %v", srr.Namespace, srr.Name, statusErr)
 		if rerr == nil {

@@ -24,11 +24,12 @@ const (
 	Audience = "app-gateway-data"
 	// Claim* constants are Envoy jwt_authn claim_to_headers paths (dot =
 	// nested JSON), not flat JWT object keys.
-	ClaimAppRef      = "olares.caller.appRef"
-	ClaimEntrance    = "olares.entrance"
-	ClaimViewer      = "olares.viewer"
-	ClaimAppid       = "olares.caller.appid"
-	ClaimClientAppid = "olares.caller.clientAppid"
+	ClaimAppRef        = "olares.caller.appRef"
+	ClaimEntrance      = "olares.entrance"
+	ClaimViewer        = "olares.viewer"
+	ClaimAppid         = "olares.caller.appid"
+	ClaimClientAppid   = "olares.caller.clientAppid"
+	ClaimSharedTargets = "olares_shared_targets"
 	// CallerJWTHeaderName is the platform caller-jwt transport header (bare JWT,
 	// no Bearer prefix). Distinct from Authorization so app credentials pass through.
 	CallerJWTHeaderName  = "X-Olares-Caller-Jwt"
@@ -54,6 +55,7 @@ type IssueRequest struct {
 	Viewer             string
 	Appid              string
 	ClientAppid        string
+	SharedTargets      []string
 	TTL                time.Duration
 }
 
@@ -64,7 +66,8 @@ type IssueRequest struct {
 // olares.caller.clientAppid both map to X-Caller-Appid (mutually exclusive).
 type Claims struct {
 	jwt.RegisteredClaims
-	Olares OlaresClaims `json:"olares"`
+	Olares        OlaresClaims `json:"olares"`
+	SharedTargets []string     `json:"olares_shared_targets,omitempty"`
 }
 
 // OlaresClaims holds platform identity claims under the "olares" JSON object.
@@ -194,6 +197,7 @@ func (i *Issuer) Issue(req IssueRequest) (string, error) {
 		Olares: OlaresClaims{
 			Caller: CallerClaims{AppRef: appRef},
 		},
+		SharedTargets: req.SharedTargets,
 	}
 	if v := strings.TrimSpace(req.Entrance); v != "" {
 		claims.Olares.Entrance = v

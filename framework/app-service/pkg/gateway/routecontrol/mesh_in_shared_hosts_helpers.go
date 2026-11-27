@@ -300,7 +300,7 @@ func enumerateHostsForViewer(viewer string, srrs []srrv1alpha1.SharedRouteRegist
 				continue
 			}
 			authSeen[h] = struct{}{}
-			if allowTLS {
+			if allowTLS && !strings.HasSuffix(h, ".olares.local") {
 				tlsSeen[h] = struct{}{}
 			} else {
 				sharedHostsDropTotal.WithLabelValues(rDropSharedAuthOnly).Inc()
@@ -333,7 +333,7 @@ func materializeHost(pattern, viewer, platformDomain string) (string, string) {
 	if !validDNSChars(p) {
 		return "", rDropInvalidChars
 	}
-	if appcfg.IsSharedMeshExactHost(p) || isPlatformHostGo(p, domLower) {
+	if appcfg.IsSharedMeshExactHost(p) || isPlatformHostGo(p, domLower) || strings.HasSuffix(p, "."+viewerLower+".olares.local") {
 		return p, ""
 	}
 	return "", rDropNonPlatformHost

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -85,6 +86,47 @@ func TestIssueCallerJWTClaimsAndVerify(t *testing.T) {
 	}
 	if claims.ExpiresAt == nil || claims.ExpiresAt.Time.Before(time.Now()) {
 		t.Fatalf("exp missing or in the past")
+	}
+}
+
+func TestWorkloadAliasGrantsAreSignedAndTenantScoped(t *testing.T) {
+	ring, err := NewKeyRingForTest(false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	issuer, err := NewIssuer(ring)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		name, tenant, decide, edges string
+		want                        []string
+	}{
+		{"declared", "alice", "true", "router,router,_,model", []string{"alice/model", "alice/router"}},
+		{"other tenant", "bob", "true", "router", []string{"bob/router"}},
+		{"unrelated workload", "alice", "true", "model", []string{"alice/model"}},
+		{"explicit denial", "alice", "false", "router", nil},
+		{"existing eligibility", "alice", "true", "", []string{"alice/@all"}},
+		{"invalid entitlement", "alice", "true", "_", nil},
+		{"no entitlement", "alice", "", "", nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			app := &appv1alpha1.Application{}
+			app.Spec.Owner, app.Spec.Name, app.Spec.Namespace, app.Spec.Appid = tc.tenant, "lares", "lares-"+tc.tenant, "549bfabc"
+			app.Spec.Settings = map[string]string{settingSharedCallerDecide: tc.decide, "gateway.olares.io/shared-caller-edges": tc.edges}
+			request := issueRequestFromApplication(app)
+			token, err := issuer.Issue(request)
+			if err != nil {
+				t.Fatal(err)
+			}
+			claims, err := issuer.ParseClaims(token)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(claims.SharedTargets, tc.want) || claims.Viewer() != tc.tenant || claims.ClientAppid() != "549bfabc" {
+				t.Fatalf("unexpected claims %v", claims.SharedTargets)
+			}
+		})
 	}
 }
 
