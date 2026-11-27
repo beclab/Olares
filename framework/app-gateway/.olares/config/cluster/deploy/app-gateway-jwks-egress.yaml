@@ -1,0 +1,28 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: app-gateway-caller-jwt-jwks-egress
+  namespace: os-gateway
+spec:
+  podSelector:
+    matchLabels:
+      gateway.envoyproxy.io/owning-gateway-name: app-gateway
+      gateway.envoyproxy.io/owning-gateway-namespace: os-gateway
+      app.kubernetes.io/component: proxy
+      app.kubernetes.io/managed-by: envoy-gateway
+      app.kubernetes.io/name: envoy
+      linkerd.io/control-plane-ns: os-mesh
+  policyTypes:
+    - Egress
+  egress:
+    # Envoy resolves the JWKS Service to Pod endpoints before connecting.
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: os-framework
+          podSelector:
+            matchLabels:
+              tier: app-service
+      ports:
+        - port: 8444
+          protocol: TCP

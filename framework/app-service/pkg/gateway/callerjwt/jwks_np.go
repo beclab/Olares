@@ -13,8 +13,8 @@ import (
 	"k8s.io/klog/v2"
 )
 
-// reconcileJWKSIngressNP ensures a NetworkPolicy so Envoy Gateway pods in
-// os-gateway can reach the JWKS listen port on app-service pods.
+// reconcileJWKSIngressNP permits the app-gateway data plane to reach the
+// JWKS listener on app-service pods.
 func (r *IssuerReconciler) reconcileJWKSIngressNP(ctx context.Context) error {
 	if r == nil || r.Client == nil {
 		return nil
@@ -80,6 +80,16 @@ func desiredJWKSIngressNP(targetPort int32) *networkingv1.NetworkPolicy {
 							NamespaceSelector: &metav1.LabelSelector{
 								MatchLabels: map[string]string{
 									corev1.LabelMetadataName: JWKSIngressNPFromNamespace,
+								},
+							},
+							PodSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{
+									"gateway.envoyproxy.io/owning-gateway-name":      "app-gateway",
+									"gateway.envoyproxy.io/owning-gateway-namespace": "os-gateway",
+									"app.kubernetes.io/component":                    "proxy",
+									"app.kubernetes.io/managed-by":                   "envoy-gateway",
+									"app.kubernetes.io/name":                         "envoy",
+									"linkerd.io/control-plane-ns":                    "os-mesh",
 								},
 							},
 						},

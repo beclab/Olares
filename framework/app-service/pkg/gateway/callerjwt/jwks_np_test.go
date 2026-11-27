@@ -2,14 +2,19 @@ package callerjwt
 
 import (
 	"context"
+	"maps"
+	"os"
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/yaml"
 )
 
 func testSchemeWithNetworking(t *testing.T) *runtime.Scheme {
@@ -93,5 +98,53 @@ func TestDesiredJWKSIngressNPShape(t *testing.T) {
 	}
 	if len(np.Spec.PolicyTypes) != 1 || np.Spec.PolicyTypes[0] != networkingv1.PolicyTypeIngress {
 		t.Fatalf("policyTypes = %#v", np.Spec.PolicyTypes)
+	}
+}
+
+func TestJWKSPoliciesAllowOnlyMeshedAppGatewayOnBackendPort(t *testing.T) {
+	data, err := os.ReadFile("../../../../app-gateway/.olares/config/cluster/deploy/app-gateway-jwks-egress.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var egress networkingv1.NetworkPolicy
+	if err := yaml.UnmarshalStrict(data, &egress); err != nil {
+		t.Fatal(err)
+	}
+	ingress := desiredJWKSIngressNP(8444)
+	if len(egress.Spec.PolicyTypes) != 1 || egress.Spec.PolicyTypes[0] != networkingv1.PolicyTypeEgress ||
+		len(egress.Spec.Egress) != 1 || len(egress.Spec.Egress[0].To) != 1 ||
+		len(egress.Spec.Egress[0].Ports) != 1 || len(ingress.Spec.Ingress[0].From) != 1 {
+		t.Fatalf("unexpected JWKS policy shape: %+v", egress.Spec)
+	}
+	dst, src := egress.Spec.Egress[0].To[0], ingress.Spec.Ingress[0].From[0]
+	port := egress.Spec.Egress[0].Ports[0]
+	if egress.Namespace != "os-gateway" || port.Port == nil || *port.Port != intstr.FromInt(8444) ||
+		port.Protocol == nil || *port.Protocol != corev1.ProtocolTCP ||
+		dst.NamespaceSelector == nil || !maps.Equal(dst.NamespaceSelector.MatchLabels, map[string]string{corev1.LabelMetadataName: "os-framework"}) ||
+		dst.PodSelector == nil || !maps.Equal(dst.PodSelector.MatchLabels, ingress.Spec.PodSelector.MatchLabels) ||
+		src.PodSelector == nil || !maps.Equal(src.PodSelector.MatchLabels, egress.Spec.PodSelector.MatchLabels) {
+		t.Fatal("JWKS policies disagree on the TLS endpoint or caller boundary")
+	}
+	selector, err := metav1.LabelSelectorAsSelector(src.PodSelector)
+	if err != nil {
+		t.Fatal(err)
+	}
+	gateway := labels.Set{
+		"gateway.envoyproxy.io/owning-gateway-name":      "app-gateway",
+		"gateway.envoyproxy.io/owning-gateway-namespace": "os-gateway",
+		"app.kubernetes.io/component":                    "proxy",
+		"app.kubernetes.io/managed-by":                   "envoy-gateway",
+		"app.kubernetes.io/name":                         "envoy",
+		"linkerd.io/control-plane-ns":                    "os-mesh",
+	}
+	if !selector.Matches(gateway) {
+		t.Fatal("app-gateway data plane is excluded")
+	}
+	for key := range gateway {
+		other := maps.Clone(gateway)
+		delete(other, key)
+		if selector.Matches(other) {
+			t.Errorf("allowed a source missing %s", key)
+		}
 	}
 }
