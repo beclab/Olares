@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -609,6 +610,61 @@ func TestReconcileSharedRouteGatewayModeCreatesSecurityPolicy(t *testing.T) {
 	to0, ok := to[0].(map[string]any)
 	if !ok || to0["kind"] != "Service" || to0["name"] != CallerJWTJWKSServiceName {
 		t.Fatalf("spec.to[0] = %#v", to0)
+	}
+}
+
+func TestJWKSReferenceGrantSurvivesReconciliationOfSiblingRoutes(t *testing.T) {
+	ctx := context.Background()
+	application := &srrv1alpha1.SharedRouteRegistry{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "app-router-console", Namespace: "router-shared",
+			Annotations: map[string]string{gateway.AnnotationExtAuthUser: "alice"},
+		},
+		Spec: srrv1alpha1.SharedRouteRegistrySpec{
+			EntranceClass: srrv1alpha1.EntranceClassApplication,
+			RouteMode:     srrv1alpha1.RouteModeGateway,
+		},
+	}
+	shared := &srrv1alpha1.SharedRouteRegistry{
+		ObjectMeta: metav1.ObjectMeta{Name: "shared-router-api", Namespace: application.Namespace},
+		Spec:       srrv1alpha1.SharedRouteRegistrySpec{RouteMode: srrv1alpha1.RouteModeGateway},
+	}
+	sibling := shared.DeepCopy()
+	sibling.Name = "shared-router-other"
+	sibling.Spec.RouteMode = srrv1alpha1.RouteModeDirect
+	otherTenant := shared.DeepCopy()
+	otherTenant.Namespace = "unrelated-shared"
+	c := fake.NewClientBuilder().WithScheme(testSchemeWithSecurityPolicy(t)).WithObjects(application, shared, sibling, otherTenant).Build()
+	grantKey := types.NamespacedName{Namespace: CallerJWTJWKSServiceNamespace, Name: jwksReferenceGrantName(shared)}
+	getGrant := func() error {
+		grant := &unstructured.Unstructured{}
+		grant.SetGroupVersionKind(referenceGrantGVK)
+		return c.Get(ctx, grantKey, grant)
+	}
+	if err := applyJWKSReferenceGrant(ctx, c, shared); err != nil {
+		t.Fatal(err)
+	}
+	if err := applyJWKSReferenceGrant(ctx, c, application); err != nil {
+		t.Fatal(err)
+	}
+	if err := getGrant(); err != nil {
+		t.Fatalf("application reconciliation withdrew the Shared grant: %v", err)
+	}
+	if err := deleteJWKSReferenceGrant(ctx, c, sibling); err != nil {
+		t.Fatal(err)
+	}
+	if err := getGrant(); err != nil {
+		t.Fatalf("direct-mode sibling withdrew the Shared grant: %v", err)
+	}
+	shared.Spec.RouteMode = srrv1alpha1.RouteModeDirect
+	if err := c.Update(ctx, shared); err != nil {
+		t.Fatal(err)
+	}
+	if err := deleteJWKSReferenceGrant(ctx, c, shared); err != nil {
+		t.Fatal(err)
+	}
+	if err := getGrant(); !apierrors.IsNotFound(err) {
+		t.Fatalf("last Shared route cleanup should withdraw its namespace grant, got %v", err)
 	}
 }
 

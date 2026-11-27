@@ -210,6 +210,18 @@ func deleteJWKSReferenceGrant(ctx context.Context, c client.Client, srr *srrv1al
 }
 
 func deleteJWKSReferenceGrantOnly(ctx context.Context, c client.Client, srr *srrv1alpha1.SharedRouteRegistry) error {
+	// A ReferenceGrant authorizes the source namespace. An application route
+	// or a retiring Shared route must not withdraw it from surviving routes.
+	var routes srrv1alpha1.SharedRouteRegistryList
+	if err := c.List(ctx, &routes, client.InNamespace(srr.Namespace)); err != nil {
+		return fmt.Errorf("list routes before deleting JWKS ReferenceGrant for %s: %w", srr.Namespace, err)
+	}
+	for i := range routes.Items {
+		other := &routes.Items[i]
+		if other.Name != srr.Name && other.DeletionTimestamp.IsZero() && !isApplicationSRR(other) && isGatewayModeSRR(other) {
+			return nil
+		}
+	}
 	obj := &unstructured.Unstructured{}
 	obj.SetGroupVersionKind(referenceGrantGVK)
 	obj.SetName(jwksReferenceGrantName(srr))
