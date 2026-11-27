@@ -20,7 +20,7 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-type launcherRoute struct{ namespace, name, server string }
+type launcherRoute struct{ namespace, name, server, authorization string }
 
 // WaitForTenantActivationPolicies checks the port-specific routes before the
 // installer or tenant controller reports provisioning complete.
@@ -31,11 +31,11 @@ func WaitForTenantActivationPolicies(ctx context.Context, config *rest.Config, s
 	}
 	system := "user-system-" + strings.TrimPrefix(space, "user-space-")
 	return waitForLauncherRoutes(ctx, client, []launcherRoute{
-		{system, "activation-password", "systemserver-existing-28080"},
-		{system, "activation-password-deny", "systemserver-existing-28080"},
-		{system, "activation-provider", "systemserver-existing-28080"},
-		{system, "activation-login", "systemserver-existing-9091"},
-		{system, "activation-vault", "systemserver-existing-3000"},
+		{system, "activation-password", "systemserver-existing-28080", "activation-password"},
+		{system, "activation-password-deny", "systemserver-existing-28080", ""},
+		{system, "activation-provider", "systemserver-existing-28080", "activation-provider"},
+		{system, "activation-login", "systemserver-existing-9091", "activation-login"},
+		{system, "activation-vault", "systemserver-existing-3000", "activation-vault"},
 	})
 }
 
@@ -48,17 +48,17 @@ func WaitForLauncherPolicies(ctx context.Context, config *rest.Config, space str
 	}
 	tenant := strings.TrimPrefix(space, "user-space-")
 	routes := []launcherRoute{
-		{space, "bfl-api-frontend-apps", "bfl-api"},
-		{space, "bfl-api-login-password", "bfl-api"},
-		{"os-framework", "vault-public-rpc", "vault-public-rpc"},
+		{space, "bfl-api-frontend-apps", "bfl-api", "bfl-api-frontend-apps"},
+		{space, "bfl-api-login-password", "bfl-api", "bfl-api-login-password"},
+		{"os-framework", "vault-public-rpc", "vault-public-rpc", "vault-rpc-" + tenant},
 	}
 	// Full app-service API enforcement has its own enrollment prerequisites.
 	// Keep compatibility for installers that have not enabled that profile.
 	server := schema.GroupVersionResource{Group: "policy.linkerd.io", Version: "v1beta3", Resource: "servers"}
 	if _, err := client.Resource(server).Namespace("os-framework").Get(ctx, "app-service-api", metav1.GetOptions{}); err == nil {
-		routes = append(routes, launcherRoute{"os-framework", "bfl-list-" + tenant, "app-service-api"})
+		routes = append(routes, launcherRoute{"os-framework", "bfl-list-" + tenant, "app-service-api", "bfl-list-" + tenant})
 		if tenantAPI {
-			routes = append(routes, launcherRoute{"os-framework", "launcher-api-" + tenant, "app-service-api"})
+			routes = append(routes, launcherRoute{"os-framework", "launcher-api-" + tenant, "app-service-api", "launcher-api-" + tenant})
 		}
 	} else if !apierrors.IsNotFound(err) {
 		return err
@@ -82,13 +82,53 @@ func waitForLauncherRoutes(ctx context.Context, client dynamic.Interface, routes
 			if !launcherRouteAccepted(obj, route.server) {
 				return false, nil
 			}
+			if route.authorization != "" {
+				pending = route.namespace + "/" + route.authorization
+				ready, err := launcherAuthorizationReady(ctx, client, route)
+				if err != nil || !ready {
+					return false, err
+				}
+			}
 		}
 		return true, nil
 	})
 	if err != nil {
-		return fmt.Errorf("waiting for Linkerd route %s: %w", pending, err)
+		return fmt.Errorf("waiting for Linkerd attachment %s: %w", pending, err)
 	}
 	return nil
+}
+
+// An Accepted HTTPRoute can exist before its authentication and authorization
+// have been applied. Do not treat it as usable until the bindings are present.
+func launcherAuthorizationReady(ctx context.Context, client dynamic.Interface, route launcherRoute) (bool, error) {
+	read := func(resource string) (*unstructured.Unstructured, error) {
+		gvr := schema.GroupVersionResource{Group: "policy.linkerd.io", Version: "v1alpha1", Resource: resource}
+		return client.Resource(gvr).Namespace(route.namespace).Get(ctx, route.authorization, metav1.GetOptions{})
+	}
+	policy, err := read("authorizationpolicies")
+	if apierrors.IsNotFound(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	target, _, _ := unstructured.NestedMap(policy.Object, "spec", "targetRef")
+	refs, _, _ := unstructured.NestedSlice(policy.Object, "spec", "requiredAuthenticationRefs")
+	if policy.GetDeletionTimestamp() != nil ||
+		!reflect.DeepEqual(target, map[string]any{"group": "gateway.networking.k8s.io", "kind": "HTTPRoute", "name": route.name}) ||
+		!reflect.DeepEqual(refs, []any{map[string]any{"group": "policy.linkerd.io", "kind": "MeshTLSAuthentication", "name": route.authorization}}) {
+		return false, nil
+	}
+	authentication, err := read("meshtlsauthentications")
+	if apierrors.IsNotFound(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	identities, _, _ := unstructured.NestedStringSlice(authentication.Object, "spec", "identities")
+	refs, _, _ = unstructured.NestedSlice(authentication.Object, "spec", "identityRefs")
+	return authentication.GetDeletionTimestamp() == nil && (len(identities) != 0 || len(refs) != 0), nil
 }
 
 func launcherRouteAccepted(obj *unstructured.Unstructured, server string) bool {

@@ -137,14 +137,14 @@ func WaitForPreparedAppServiceAPI(ctx context.Context, config *rest.Config, tena
 }
 
 func waitForPreparedAppServiceAPI(ctx context.Context, client dynamic.Interface, tenants []AppServiceAPITenant) error {
-	routes := []launcherRoute{{"os-framework", "market-image-info", "app-service-api"}}
+	routes := []launcherRoute{{"os-framework", "market-image-info", "app-service-api", ""}}
 	for _, tenant := range tenants {
 		routes = append(routes,
-			launcherRoute{"os-framework", "users-" + tenant.Name, "app-service-api"},
-			launcherRoute{"os-framework", "user-apps-" + tenant.Name, "app-service-api"},
+			launcherRoute{"os-framework", "users-" + tenant.Name, "app-service-api", ""},
+			launcherRoute{"os-framework", "user-apps-" + tenant.Name, "app-service-api", ""},
 		)
 		if tenant.Role == "owner" {
-			routes = append(routes, launcherRoute{"os-framework", "settings-user-create-" + tenant.Name, "app-service-api"})
+			routes = append(routes, launcherRoute{"os-framework", "settings-user-create-" + tenant.Name, "app-service-api", ""})
 		}
 	}
 	server := client.Resource(schema.GroupVersionResource{Group: "policy.linkerd.io", Version: "v1beta3", Resource: "servers"}).Namespace("os-framework")
