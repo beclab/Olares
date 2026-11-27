@@ -91,3 +91,26 @@ func TestTenantActivationMesh(t *testing.T) {
 		})
 	}
 }
+
+func TestWizardChartInjectsAuthenticatedInboundMeshWithoutChangingImage(t *testing.T) {
+	const template = "../../../../apps/.olares/config/user/helm-charts/wizard/templates/wizard_deploy.yaml"
+	docs, err := renderMeshManifestsInNamespace(t, "user-space-alice", false, map[string]any{
+		"bfl": map[string]any{"username": "alice"}, "userspace": map[string]any{"userData": "/olares"},
+	}, template)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pod := docs["Deployment/wizard"]["spec"].(map[string]any)["template"].(map[string]any)
+	annotations := pod["metadata"].(map[string]any)["annotations"].(map[string]any)
+	spec := pod["spec"].(map[string]any)
+	if annotations["linkerd.io/inject"] != "enabled" ||
+		annotations["config.linkerd.io/default-inbound-policy"] != "cluster-authenticated" ||
+		annotations["config.linkerd.io/proxy-enable-native-sidecar"] != "true" ||
+		spec["serviceAccountName"] != "bfl-wizard" {
+		t.Fatalf("Wizard does not declare its activation mesh posture: %v", annotations)
+	}
+	container := spec["containers"].([]any)[0].(map[string]any)
+	if container["image"] != "beclab/wizard:v1.13.1" {
+		t.Fatalf("unexpected Wizard business image: %v", container["image"])
+	}
+}

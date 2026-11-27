@@ -22,6 +22,7 @@ spec:
       annotations:
         linkerd.io/inject: enabled
         config.linkerd.io/proxy-enable-native-sidecar: "true"
+        config.linkerd.io/default-inbound-policy: cluster-authenticated
     spec:
       serviceAccountName: bfl-wizard
       initContainers:

@@ -765,3 +765,115 @@ func TestBFLMeshTransportForRegisteredCallers(t *testing.T) {
 		t.Fatal("deleting the tenant BFL Service must withdraw mesh data-plane grants")
 	}
 }
+
+func TestWizardVaultTrafficUsesItsOwnMeshedTenantProxy(t *testing.T) {
+	const egress = "olares-platform-wizard-vault-egress"
+	const ingress = "olares-platform-wizard-vault-ingress"
+	wizard := map[string]string{"app": "wizard", platformMeshControlPlaneLabel: "os-mesh"}
+	proxy := map[string]string{"app": "systemserver", platformMeshControlPlaneLabel: "os-mesh"}
+	for i, tenant := range []string{"alice", "bob"} {
+		t.Run(tenant, func(t *testing.T) {
+			space, system := "user-space-"+tenant, "user-system-"+tenant
+			key := types.NamespacedName{Namespace: system, Name: "vault-server"}
+			service := &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{Namespace: system, Name: key.Name},
+				Spec: corev1.ServiceSpec{
+					Type: corev1.ServiceTypeClusterIP, ClusterIP: []string{"10.96.0.33", "10.96.0.34"}[i],
+					Selector: map[string]string{"app": "systemserver"},
+					Ports:    []corev1.ServicePort{{Port: 3000, TargetPort: intstr.FromInt(3000), Protocol: corev1.ProtocolTCP}},
+				},
+			}
+			find := func(namespace, name string, svc *corev1.Service) netv1.NetworkPolicySpec {
+				t.Helper()
+				for _, policy := range BuildPlatformTrafficPolicies(namespace, map[types.NamespacedName]*corev1.Service{key: svc}) {
+					if policy.Name == name && IsTrafficGroupManagedNP(&policy) {
+						return policy.Spec
+					}
+				}
+				t.Fatalf("missing managed policy %s/%s", namespace, name)
+				return netv1.NetworkPolicySpec{}
+			}
+			out := find(space, egress, service)
+			in := find(system, ingress, service)
+			ports := []netv1.NetworkPolicyPort{tcpPort(3000), tcpPort(4143)}
+			wantOut := []netv1.NetworkPolicyEgressRule{
+				{To: []netv1.NetworkPolicyPeer{platformPeer(system, proxy)}, Ports: ports},
+				{To: []netv1.NetworkPolicyPeer{{IPBlock: &netv1.IPBlock{CIDR: service.Spec.ClusterIP + "/32"}}}, Ports: []netv1.NetworkPolicyPort{tcpPort(3000)}},
+			}
+			wantIn := []netv1.NetworkPolicyIngressRule{{From: []netv1.NetworkPolicyPeer{platformPeer(space, wizard)}, Ports: ports}}
+			if !reflect.DeepEqual(out.PodSelector.MatchLabels, wizard) || !reflect.DeepEqual(out.Egress, wantOut) ||
+				!reflect.DeepEqual(in.PodSelector.MatchLabels, proxy) || !reflect.DeepEqual(in.Ingress, wantIn) {
+				t.Fatalf("Wizard Vault RPC is not confined to its own meshed tenant proxy: egress=%+v ingress=%+v", out, in)
+			}
+			if !reflect.DeepEqual(PlatformTrafficNamespaces(key), []string{space, system}) {
+				t.Fatal("a Vault Service update must reconcile both tenant namespaces")
+			}
+			pod := corev1.Pod{ObjectMeta: metav1.ObjectMeta{Namespace: space, Labels: wizard}}
+			if !slices.Contains(ActivePlatformTrafficServices(space, []corev1.Pod{pod}), key) {
+				t.Fatal("Wizard activation does not wait for the tenant Vault Service before egress isolation")
+			}
+			foreign := service.DeepCopy()
+			foreign.Namespace = "user-system-foreign"
+			wrongPort := service.DeepCopy()
+			wrongPort.Spec.Ports[0].TargetPort = intstr.FromInt(3010)
+			misdirected := service.DeepCopy()
+			misdirected.Spec.Selector = map[string]string{"app": "vault-server"}
+			for _, invalid := range []*corev1.Service{nil, foreign, wrongPort, misdirected} {
+				if len(find(space, egress, invalid).Egress) != 0 || len(find(system, ingress, invalid).Ingress) != 0 {
+					t.Fatal("missing or invalid tenant Vault Service grants traffic")
+				}
+			}
+		})
+	}
+}
+
+func TestPasswordResetTransportDoesNotDependOnAppService(t *testing.T) {
+	for _, tenant := range []string{"alice", "bob"} {
+		t.Run(tenant, func(t *testing.T) {
+			space, system := "user-space-"+tenant, "user-system-"+tenant
+			key := types.NamespacedName{Namespace: system, Name: "authelia-backend-provider"}
+			service := &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{Namespace: system, Name: key.Name},
+				Spec: corev1.ServiceSpec{Type: corev1.ServiceTypeClusterIP, ClusterIP: "10.96.0.54",
+					Selector: map[string]string{"app": "systemserver"},
+					Ports:    []corev1.ServicePort{{Protocol: corev1.ProtocolTCP, Port: 28080, TargetPort: intstr.FromInt(28080)}},
+				},
+			}
+			bfl := map[string]string{"tier": "bfl", platformMeshControlPlaneLabel: "os-mesh"}
+			proxy := map[string]string{"app": "systemserver", platformMeshControlPlaneLabel: "os-mesh"}
+			find := func(namespace, suffix string, svc *corev1.Service) netv1.NetworkPolicySpec {
+				t.Helper()
+				for _, policy := range BuildPlatformTrafficPolicies(namespace, map[types.NamespacedName]*corev1.Service{key: svc}) {
+					if policy.Name == "olares-platform-bfl-auth-reset-"+suffix && IsTrafficGroupManagedNP(&policy) {
+						return policy.Spec
+					}
+				}
+				t.Fatalf("missing password reset policy in %s", namespace)
+				return netv1.NetworkPolicySpec{}
+			}
+			out, in := find(space, "egress", service), find(system, "ingress", service)
+			ports := []netv1.NetworkPolicyPort{tcpPort(28080), tcpPort(4143)}
+			wantOut := []netv1.NetworkPolicyEgressRule{
+				{To: []netv1.NetworkPolicyPeer{platformPeer(system, proxy)}, Ports: ports},
+				{To: []netv1.NetworkPolicyPeer{{IPBlock: &netv1.IPBlock{CIDR: "10.96.0.54/32"}}}, Ports: []netv1.NetworkPolicyPort{tcpPort(28080)}},
+			}
+			wantIn := []netv1.NetworkPolicyIngressRule{{From: []netv1.NetworkPolicyPeer{platformPeer(space, bfl)}, Ports: ports}}
+			if !reflect.DeepEqual(out.PodSelector.MatchLabels, bfl) || !reflect.DeepEqual(out.Egress, wantOut) ||
+				!reflect.DeepEqual(in.PodSelector.MatchLabels, proxy) || !reflect.DeepEqual(in.Ingress, wantIn) {
+				t.Fatalf("reset path escapes the local tenant identity: egress=%+v ingress=%+v", out, in)
+			}
+			if !reflect.DeepEqual(PlatformTrafficNamespaces(key), []string{space, system}) {
+				t.Fatal("password provider changes must reconcile both namespaces")
+			}
+			wrong := service.DeepCopy()
+			wrong.Spec.Ports[0].TargetPort = intstr.FromInt(9091)
+			foreign := service.DeepCopy()
+			foreign.Namespace = "user-system-foreign"
+			for _, invalid := range []*corev1.Service{nil, wrong, foreign} {
+				if len(find(space, "egress", invalid).Egress) != 0 || len(find(system, "ingress", invalid).Ingress) != 0 {
+					t.Fatal("missing, wrong-port or foreign password provider granted access")
+				}
+			}
+		})
+	}
+}

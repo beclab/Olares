@@ -196,10 +196,12 @@ func platformTrafficFlows(namespace string) []platformServiceFlow {
 	auth := types.NamespacedName{Namespace: system, Name: "authelia-backend"}
 	bfl := types.NamespacedName{Namespace: space, Name: "bfl"}
 	systemProxy := map[string]string{"app": "systemserver"}
+	bflCaller := platformWorkload{space, map[string]string{"tier": "bfl", platformMeshControlPlaneLabel: "os-mesh"}}
 	return []platformServiceFlow{
 		{"authelia-frontend-auth", frontend("authelia"), auth, systemProxy, 9091, 9091, "auth-proxy"},
 		{"desktop-auth", frontend("olares-app"), auth, systemProxy, 9091, 9091, "auth-proxy"},
 		{"wizard-auth", frontend("wizard"), auth, systemProxy, 9091, 9091, "auth-proxy"},
+		{"wizard-vault", frontend("wizard"), types.NamespacedName{Namespace: system, Name: "vault-server"}, systemProxy, 3000, 3000, ""},
 		{"desktop-logout", frontend("olares-app"), types.NamespacedName{Namespace: space, Name: "authelia-svc"}, map[string]string{"app": "authelia"}, 80, 80, ""},
 		{"login-bfl", frontend("authelia"), bfl, bflPods, 80, 8080, ""},
 		{"desktop-bfl", frontend("olares-app"), bfl, bflPods, 80, 8080, ""},
@@ -207,9 +209,9 @@ func platformTrafficFlows(namespace string) []platformServiceFlow {
 		{"tapr-images-bfl", platformWorkload{system, map[string]string{
 			"app": "tapr-images", platformMeshControlPlaneLabel: "os-mesh",
 		}}, bfl, bflPods, 80, 8080, ""},
-		{"bfl-app-service", platformWorkload{space, map[string]string{
-			"tier": "bfl", platformMeshControlPlaneLabel: "os-mesh",
-		}}, types.NamespacedName{Namespace: system, Name: "app-service"}, systemProxy, 28080, 28080, ""},
+		// Password reset must remain reachable independently of the app-service proxy Service.
+		{"bfl-auth-reset", bflCaller, types.NamespacedName{Namespace: system, Name: "authelia-backend-provider"}, systemProxy, 28080, 28080, ""},
+		{"bfl-app-service", bflCaller, types.NamespacedName{Namespace: system, Name: "app-service"}, systemProxy, 28080, 28080, ""},
 		{"bfl-backup-mesh", platformWorkload{space, map[string]string{
 			"tier": "bfl", platformMeshControlPlaneLabel: "os-mesh",
 		}}, BackupBackendService, map[string]string{"tier": "backup"}, 8082, 8082, ""},
