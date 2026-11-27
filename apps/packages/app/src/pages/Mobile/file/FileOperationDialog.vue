@@ -35,19 +35,20 @@
 					<file-operation-item
 						v-if="
 							!disableHomeMenu &&
-							permission === 'rw' &&
+							canWrite &&
 							!selectItem?.isShareItem &&
-							!isExternalRoot
+							!isExternalRoot &&
+							!isSyncAndRepo
 						"
+						:origin_id="origin_id"
 						icon="sym_r_move_up"
 						:label="t('files.cut')"
 						:action="OPERATE_ACTION.CUT"
 						@on-item-click="onItemClick"
 					/>
 					<file-operation-item
-						v-if="
-							permission === 'rw' && !selectItem?.isShareItem && !isExternalRoot
-						"
+						v-if="!selectItem?.isShareItem && !isExternalRoot && !isSyncAndRepo"
+						:origin_id="origin_id"
 						icon="sym_r_content_copy"
 						:label="t('copy')"
 						:action="OPERATE_ACTION.COPY"
@@ -60,61 +61,63 @@
 							!selectItem?.isShareItem &&
 							!isExternalRoot
 						"
+						:origin_id="origin_id"
 						icon="sym_r_browser_updated"
 						:label="t('buttons.download')"
 						:action="OPERATE_ACTION.DOWNLOAD"
 						@on-item-click="onItemClick"
 					/>
 					<file-operation-item
-						v-if="
-							isShareEnable() &&
-							(driveType === DriveType.Sync ||
-								driveType === DriveType.Drive ||
-								driveType === DriveType.External ||
-								driveType === DriveType.Cache ||
-								driveType === DriveType.Data) &&
-							selectItem?.isDir &&
-							!selectItem?.isShareItem
-						"
-						icon="sym_r_folder_supervised"
-						:label="t('files_popup_menu.Share to Internal')"
-						:action="OPERATE_ACTION.SHARE_IN_INTERNAL"
-						@on-item-click="onItemClick"
+						v-if="showArchivePreview"
+						:origin_id="origin_id"
+						icon="sym_r_visibility"
+						:label="t('files_popup_menu.preview_contents')"
+						:action="OPERATE_ACTION.PREVIEW_CONTENTS"
+						@hide-menu="hideDialog"
 					/>
 					<file-operation-item
-						v-if="
-							isShareEnable() &&
-							(driveType === DriveType.Drive ||
-								driveType === DriveType.Data ||
-								driveType === DriveType.Cache ||
-								driveType === DriveType.External) &&
-							selectItem?.isDir &&
-							!selectItem?.isShareItem
-						"
-						icon="sym_r_smb_share"
-						:label="t('files_popup_menu.Share to SMB')"
-						:action="OPERATE_ACTION.SHARE_IN_SMB"
-						@on-item-click="onItemClick"
+						v-if="showArchiveExtract"
+						:origin_id="origin_id"
+						icon="sym_r_folder_open"
+						:label="t('files_popup_menu.extract_to')"
+						:action="OPERATE_ACTION.EXTRACT"
+						:mobile-submenu="true"
+						@hide-menu="hideDialog"
 					/>
 					<file-operation-item
-						v-if="
-							isShareEnable() &&
-							(driveType === DriveType.Drive || driveType === DriveType.Data) &&
-							selectItem?.isDir &&
-							!selectItem?.isShareItem
-						"
-						icon="sym_r_link"
-						:label="t('files_popup_menu.Share to Public')"
-						:action="OPERATE_ACTION.SHARE_IN_PUBLIC"
-						@on-item-click="onItemClick"
+						v-if="showArchiveCompress"
+						:origin_id="origin_id"
+						icon="sym_r_archive"
+						:label="t('files_popup_menu.compress_to')"
+						:action="OPERATE_ACTION.COMPRESS"
+						:mobile-submenu="true"
+						@hide-menu="hideDialog"
+					/>
+					<file-operation-item
+						v-if="showShareMenu"
+						:origin_id="origin_id"
+						icon="sym_r_share_windows"
+						:label="t('files_popup_menu.share_to')"
+						:action="OPERATE_ACTION.SHARE"
+						:mobile-submenu="true"
+						@hide-menu="hideDialog"
+					/>
+					<file-operation-item
+						v-if="showBackup"
+						:origin_id="origin_id"
+						icon="sym_r_backup"
+						:label="t('files_popup_menu.backup')"
+						:action="OPERATE_ACTION.BACKUP"
+						@hide-menu="hideDialog"
 					/>
 					<file-operation-item
 						v-if="
 							!disableHomeMenu &&
-							permission === 'rw' &&
+							canWrite &&
 							!selectItem?.isShareItem &&
 							!isExternalRoot
 						"
+						:origin_id="origin_id"
 						icon="sym_r_delete"
 						:label="t('delete')"
 						:action="
@@ -124,10 +127,11 @@
 					<file-operation-item
 						v-if="
 							!disableHomeMenu &&
-							permission === 'rw' &&
+							canWrite &&
 							!selectItem?.isShareItem &&
 							!isExternalRoot
 						"
+						:origin_id="origin_id"
 						icon="sym_r_edit_square"
 						:label="t('buttons.rename')"
 						:action="
@@ -139,6 +143,7 @@
 							!!selectItem?.isShareItem &&
 							selectItem.share_type == ShareType.PUBLIC
 						"
+						:origin_id="origin_id"
 						icon="sym_r_visibility_lock"
 						:label="t('files_popup_menu.Reset Password')"
 						:action="OPERATE_ACTION.RESET_PASSWORD"
@@ -151,12 +156,14 @@
 								selectItem.permission == SharePermission.ADMIN) ||
 								selectItem.share_type == ShareType.SMB)
 						"
+						:origin_id="origin_id"
 						icon="sym_r_admin_panel_settings"
 						:label="t('files_popup_menu.Edit permissions')"
 						:action="OPERATE_ACTION.EDIT_PERMISSIONS"
 					/>
 					<file-operation-item
 						v-if="!!selectItem?.isShareItem"
+						:origin_id="origin_id"
 						icon="sym_r_do_not_disturb_on"
 						:label="t('files_popup_menu.Revoke sharing')"
 						:action="OPERATE_ACTION.REVOKE_SHARING"
@@ -164,12 +171,14 @@
 
 					<file-operation-item
 						v-if="isExternalRoot"
+						:origin_id="origin_id"
 						icon="sym_r_delete"
 						:label="t('files_popup_menu.unmount')"
 						:action="OPERATE_ACTION.UNMOUNT"
 					/>
 
 					<file-operation-item
+						:origin_id="origin_id"
 						icon="sym_r_contract"
 						:label="t('files.attributes')"
 						:action="OPERATE_ACTION.ATTRIBUTES"
@@ -212,10 +221,18 @@ import {
 } from './../../../stores/files';
 import { common, isShareEnable } from './../../../api';
 import { useOperateinStore } from './../../../stores/operation';
+import { backupOriginsRef } from './../../../constant';
 import { DriveType } from '../../../utils/interface/files';
 import { ShareType, SharePermission } from 'src/utils/interface/share';
+import {
+	isArchiveDriveTypeSupported,
+	isArchiveFile,
+	isArchivePreviewSupported,
+	isUnsupportedArchiveExtract
+} from '../../../utils/interface/archive';
+import { isArchiveEnable } from '../../../api';
 
-const { dialogRef } = useDialogPluginComponent();
+const { dialogRef, onDialogCancel } = useDialogPluginComponent();
 
 const props = defineProps({
 	driveType: {
@@ -270,6 +287,8 @@ const isSyncAndRepo = ref(false);
 const operateinStore = useOperateinStore();
 const isExternalRoot = ref(false);
 
+const canWrite = computed(() => ['rw', 'admin'].includes(props.permission));
+
 const onShow = async () => {
 	const driveType = common().formatUrltoDriveType(route.fullPath);
 
@@ -285,6 +304,7 @@ const onShow = async () => {
 			isExternalRoot.value = [
 				ExternalType.HDD,
 				ExternalType.SMB,
+				ExternalType.NFS,
 				ExternalType.USB
 			].includes(item.externalType);
 		} else {
@@ -305,8 +325,8 @@ const onShow = async () => {
 		}
 
 		stopScrollMove();
-		filesStore.resetSelected();
-		filesStore.addSelected(props.index);
+		filesStore.resetSelected(props.origin_id);
+		filesStore.addSelected(props.index, props.origin_id);
 	}
 };
 
@@ -322,12 +342,88 @@ const onItemClick = async (action: OPERATE_ACTION) => {
 	}
 };
 
+const hideDialog = () => {
+	onDialogCancel();
+};
+
 const disableHomeMenu = computed(() => {
 	const item = filesStore.getTargetFileItem(props.index, props.origin_id);
 	if (!item) {
 		return false;
 	}
 	return operateinStore.isDisableMenuItem(item.name || '', route.path);
+});
+
+const isArchiveSelected = computed(() => {
+	const item = selectItem.value;
+	return item ? isArchiveFile(item) : false;
+});
+
+const showArchivePreview = computed(() => {
+	return (
+		isArchiveEnable() &&
+		!!selectItem.value &&
+		!selectItem.value.isDir &&
+		isArchivePreviewSupported(selectItem.value) &&
+		isArchiveDriveTypeSupported(props.driveType)
+	);
+});
+
+const showArchiveExtract = computed(() => {
+	return (
+		isArchiveEnable() &&
+		!!selectItem.value &&
+		isArchiveSelected.value &&
+		canWrite.value &&
+		isArchiveDriveTypeSupported(props.driveType) &&
+		!isExternalRoot.value &&
+		!selectItem.value?.isShareItem
+	);
+});
+
+const showArchiveCompress = computed(() => {
+	return (
+		isArchiveEnable() &&
+		!!selectItem.value &&
+		canWrite.value &&
+		!isArchiveSelected.value &&
+		isArchiveDriveTypeSupported(props.driveType) &&
+		!isExternalRoot.value &&
+		!selectItem.value?.isShareItem &&
+		!isUnsupportedArchiveExtract(selectItem.value)
+	);
+});
+
+// Mirrors the PC context-menu `canBackup` rule: a single directory living in a
+// backup-capable drive. Hidden on the 1.11 build, matching the desktop guard.
+const showBackup = computed(() => {
+	if (process.env.VERSIONTAG === '1.11') {
+		return false;
+	}
+	const item = selectItem.value;
+	return (
+		!!item &&
+		!!item.isDir &&
+		!item.isShareItem &&
+		!isExternalRoot.value &&
+		backupOriginsRef.value.includes(props.driveType)
+	);
+});
+
+const showShareMenu = computed(() => {
+	return (
+		isShareEnable() &&
+		[
+			DriveType.Drive,
+			DriveType.Data,
+			DriveType.Common,
+			DriveType.Sync,
+			DriveType.External,
+			DriveType.Cache
+		].includes(props.driveType) &&
+		!!selectItem.value?.isDir &&
+		!selectItem.value?.isShareItem
+	);
 });
 
 const selectItem = computed(() => {

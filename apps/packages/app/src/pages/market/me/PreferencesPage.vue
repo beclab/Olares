@@ -1,7 +1,7 @@
 <template>
 	<page-container :title-height="56">
 		<template v-slot:title>
-			<title-bar :show="true" @onReturn="router.back()" />
+			<title-bar :show="true" @onReturn="handleMarketBack(router, route)" />
 		</template>
 		<template v-slot:page>
 			<div class="preferences-scroll">
@@ -74,14 +74,16 @@ import AddSourceDialog from './AddSourceDialog.vue';
 import { notifyFailed } from '../../../utils/notifyRedefinedUtil';
 import { useSettingStore } from '../../../stores/market/setting';
 import { useAppStore } from '../../../stores/market/appStore';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useQuasar } from 'quasar';
 import { watch, ref } from 'vue';
+import { handleMarketBack } from '../../../utils/marketBack';
 
 const $q = useQuasar();
 const { t } = useI18n();
 const router = useRouter();
+const route = useRoute();
 const clearLoading = ref(false);
 const appStore = useAppStore();
 const settingStore = useSettingStore();

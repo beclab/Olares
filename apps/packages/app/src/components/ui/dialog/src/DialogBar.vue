@@ -10,15 +10,12 @@
 		</div>
 		<q-space />
 		<q-btn dense flat icon="close" color="ink-3" v-close-popup>
-			<q-tooltip>Close</q-tooltip>
+			<q-tooltip>{{ $t('close') }}</q-tooltip>
 		</q-btn>
 	</q-bar>
 </template>
 
 <script lang="ts" setup>
-import { ref } from 'vue';
-import { useQuasar } from 'quasar';
-
 defineProps({
 	platform: {
 		type: String,
@@ -41,8 +38,6 @@ defineProps({
 		required: false
 	}
 });
-
-const $q = useQuasar();
 </script>
 
 <style scoped lang="scss">

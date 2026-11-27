@@ -16,9 +16,26 @@ const dotenv = require('dotenv');
 const packageJson = require('./package.json');
 const changeVariablesCssSource = require('./build/quasarVariables');
 dotenv.config();
+process.env.PROTOCOL = process.env.PROTOCOL || 'https://';
+
+// webpack-dev-server 5 dropped the `context -> options` object form of `proxy`
+// and validates for an array. The per-app files under ./config still author the
+// map form, which merges more cleanly, so normalize at this single hand-off
+// point rather than rewriting all of them.
+function toDevServerProxy(proxy) {
+	if (!proxy || Array.isArray(proxy)) {
+		return proxy;
+	}
+
+	return Object.entries(proxy).map(([context, options]) => ({
+		context: [context],
+		...options
+	}));
+}
 
 module.exports = configure(function (ctx) {
 	const config = require('./config')(ctx);
+
 	return {
 		// https://v2.quasar.dev/quasar-cli-webpack/supporting-ts
 		supportTS: {
@@ -60,6 +77,7 @@ module.exports = configure(function (ctx) {
 			// },
 
 			env: {
+				DEV_ACCOUNT_DOMAIN: ctx.dev ? process.env.ACCOUNT_DOMAIN : '',
 				PL_SERVER_URL: process.env.PL_SERVER_URL,
 				VAULT_MOCK_BFL_TOKEN: process.env.VAULT_MOCK_BFL_TOKEN,
 				VAULT_MOCK_PASSWORD: process.env.VAULT_MOCK_PASSWORD,
@@ -76,8 +94,9 @@ module.exports = configure(function (ctx) {
 				IS_BEX: process.env.PLATFORM == 'BEX',
 				APP_SERVICES: process.env.APP_SERVICES,
 				CACHE_CONTROL: 'max-age=31536000, public',
-				EXPIRES: 'Wed, 01 Jan 2025 00:00:00 GMT',
-				APP_VERSION: packageJson.version,
+				EXPIRES: 'Wed, 01 Jan 2025 00:00:00 GMT', // i18n-ignore: HTTP Expires header value
+				// The Web copy may live inside Olares; never read the parent repo's tags.
+				APP_VERSION: process.env.APP_VERSION || packageJson.version,
 				VERSIONTAG: process.env.VERSIONTAG,
 				APPLICATION: process.env.APPLICATION,
 				IS_DEV: process.env.NODE_ENV == 'development',
@@ -85,6 +104,7 @@ module.exports = configure(function (ctx) {
 				RSS_DEBUG_URL: process.env.RSS_DEBUG_URL,
 				WISE_SUB_DOMAIN: process.env.WISE_SUB_DOMAIN,
 				PROTOCOL: process.env.PROTOCOL ? process.env.PROTOCOL : 'https://',
+				DOWNLOAD_EDGE_PREFIX: process.env.DOWNLOAD_EDGE_PREFIX,
 				...config.build.env
 			},
 			// transpile: false,
@@ -131,11 +151,17 @@ module.exports = configure(function (ctx) {
 			// 	'Cross-Origin-Embedder-Policy': 'require-corp',
 			// 	'Cross-Origin-Opener-Policy': 'same-origin'
 			// },
+			// Allow deep links whose last path segment contains a dot
+			// (e.g. /Files/Home/Downloads/Archive.zip) to fall back to
+			// index.html instead of being treated as a static file request.
+			historyApiFallback: {
+				disableDotRule: true
+			},
 			https: config.devServer.https,
 			host: config.devServer.host,
 			port: process.env.DEV_PORT,
 			open: true,
-			proxy: config.devServer.proxy
+			proxy: toDevServerProxy(config.devServer.proxy)
 		},
 
 		// https://v2.quasar.dev/quasar-cli-webpack/quasar-config-js#Property%3A-framework
@@ -144,7 +170,15 @@ module.exports = configure(function (ctx) {
 				// dark: false, // Boolean true/false
 				dark: false, //ctx.modeName === 'capacitor' ? true : 'auto',
 				capacitor: {
-					backButton: false
+					backButton: false,
+					// Quasar 2.20 changed the `q-ios-padding` gate from opt-out
+					// (`iosStatusBarPadding !== false`) to opt-in (truthy). Because
+					// this `capacitor` config object is defined, the class is no
+					// longer added by default, which dropped the iOS safe-area
+					// padding Quasar applies to drawers/dialogs/notifications
+					// (e.g. the Vault menu drawer overflowing the home indicator).
+					// Restore the pre-2.20 behavior explicitly.
+					iosStatusBarPadding: true
 				}
 			},
 

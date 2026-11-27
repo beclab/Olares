@@ -2,6 +2,7 @@ import { NormalApplication } from './base';
 import axios from 'axios';
 import { useTokenStore } from '../stores/desktop/token';
 import { useApplicationStore } from '../stores/desktop/app';
+import { useBookmarkStore } from '../stores/desktop/bookmark';
 import { useUpgradeStore } from '../stores/desktop/upgrade';
 import { WebPlatform } from '../utils/desktop/platform';
 import { useWebsocketManager2Store } from 'src/stores/websocketManager2';
@@ -13,7 +14,10 @@ import { commonInterceptValue } from 'src/utils/response';
 import { useNotificationStore } from 'src/stores/desktop/notification';
 import { CacheRequestBarrier } from 'src/stores/market/CacheRequestBarrier';
 import { useAppStore } from 'src/stores/market/appStore';
+import { useMeStore } from 'src/stores/settings/me';
+import { useUsersStore } from 'src/stores/settings/users';
 import { useWidgetPreferencesStore } from 'src/stores/settings/widgetPreferences';
+import { i18n } from 'src/boot/i18n';
 
 export class DesktopApplication extends NormalApplication {
 	applicationName = 'desktop';
@@ -24,11 +28,26 @@ export class DesktopApplication extends NormalApplication {
 		const appStore = useApplicationStore();
 		const tokenStore = useTokenStore();
 		const socketStore = useWebsocketManager2Store();
-		appStore.get_my_apps_info(
-			tokenStore.deviceInfo.device === DeviceType.MOBILE
-		);
+		const isMobile = tokenStore.deviceInfo.device === DeviceType.MOBILE;
 
-		socketStore.start();
+		await tokenStore.ensureLoaded();
+		const prefetchedApps =
+			Array.isArray(tokenStore.initMyApps) && tokenStore.initMyApps.length
+				? tokenStore.initMyApps
+				: undefined;
+		const initLayout = tokenStore.initLayout || undefined;
+
+		await appStore.get_my_apps_info(isMobile, prefetchedApps);
+		try {
+			await Promise.all([
+				appStore.syncDesktopLayoutOnBoot(initLayout),
+				useBookmarkStore().fetchAll()
+			]);
+			appStore.backfillBookmarksOnLaunchpads();
+			appStore.refreshDesktopForBookmarks();
+		} finally {
+			socketStore.start();
+		}
 	};
 
 	private preFetch = async () => {
@@ -50,7 +69,7 @@ export class DesktopApplication extends NormalApplication {
 	async appLoadPrepare(data): Promise<void> {
 		await super.appLoadPrepare(data);
 		const tokenStore = useTokenStore();
-		await tokenStore.loadData();
+		await tokenStore.ensureLoaded();
 		const notificationStore = useNotificationStore();
 		await tokenStore.validateTerminusInfo(
 			(currentId: string, lastId: string) => {
@@ -93,7 +112,11 @@ export class DesktopApplication extends NormalApplication {
 
 		const appStore = useAppStore();
 
-		await appStore.init(true);
+		const meStore = useMeStore();
+		const usersStore = useUsersStore();
+		usersStore.get_accounts();
+
+		await Promise.all([meStore.init(), appStore.init(true)]);
 		const sourceRequest = appStore.initSourceRequest();
 
 		const barrier = new CacheRequestBarrier(['source'], (data) => {
@@ -111,6 +134,7 @@ export class DesktopApplication extends NormalApplication {
 		socketStore.start();
 
 		window.addEventListener('message', this.messages);
+		this.registerAppBackendErrorToast();
 	}
 
 	async appUnMounted() {
@@ -119,6 +143,7 @@ export class DesktopApplication extends NormalApplication {
 		const { cleanup } = useDevice();
 		cleanup();
 		this.refreshTimer && clearInterval(this.refreshTimer);
+		this.unregisterAppBackendErrorToast();
 	}
 
 	websocketConfig = {
@@ -137,6 +162,7 @@ export class DesktopApplication extends NormalApplication {
 				try {
 					const applicationStore = useApplicationStore();
 					const appStore = useAppStore();
+					const bookmarkStore = useBookmarkStore();
 					const message = JSON.parse(data.data);
 					if (message.topic == MessageTopic.Data) {
 						if (message.event == 'updateConfig') {
@@ -144,6 +170,40 @@ export class DesktopApplication extends NormalApplication {
 							tokenStore.config = message.message.data;
 							const widgetStore = useWidgetPreferencesStore();
 							widgetStore.save(message.message.data.widget);
+						} else if (message.event == 'desktop_layout_updated') {
+							const msg = message.message || {};
+							const surface = msg.surface;
+							const layout = msg.layout;
+							const isReset = msg.reset === true;
+							const appliedOpIds: string[] = Array.isArray(msg.appliedOpIds)
+								? msg.appliedOpIds
+								: [];
+							if (isReset) {
+								// Another device just reset the layout. Drop our local
+								// caches + pending saves so the next boot sync rebuilds
+								// from the now-unseeded server state.
+								applicationStore.cancelPendingLayoutSaves();
+								applicationStore.resetLocalLayoutCaches();
+								void applicationStore.syncDesktopLayoutOnBoot();
+								return;
+							}
+							if (layout) {
+								if (surface === 'launchpad') {
+									applicationStore.applyRemoteLaunchLayout(
+										layout,
+										appliedOpIds
+									);
+								} else if (surface === 'dock') {
+									applicationStore.applyRemoteDockLayout(layout, appliedOpIds);
+								}
+							}
+						} else if (message.event == 'bookmarks_updated') {
+							const msg = message.message || {};
+							bookmarkStore.applyRemoteBookmarks({
+								bookmarks: Array.isArray(msg.bookmarks) ? msg.bookmarks : [],
+								version: msg.version || 0
+							});
+							applicationStore.refreshDesktopForBookmarks();
 						}
 					} else {
 						if (message.event == 'app_installation_event') {
@@ -195,6 +255,13 @@ export class DesktopApplication extends NormalApplication {
 				const appStore = useApplicationStore();
 				upgradeStore.update_upgrade_state_info();
 				appStore.get_my_apps_info();
+				void Promise.all([
+					appStore.syncDesktopLayoutOnBoot(),
+					useBookmarkStore().fetchAll()
+				]).then(() => {
+					appStore.backfillBookmarksOnLaunchpads();
+					appStore.refreshDesktopForBookmarks();
+				});
 			} else if (data.type == 'notification') {
 				const notificationStore = useNotificationStore();
 				notificationStore.addItem(data.data);
@@ -226,7 +293,9 @@ export class DesktopApplication extends NormalApplication {
 					response.status != 304) ||
 				!data
 			) {
-				throw Error('Network error, please try again later');
+				throw Error(
+					i18n.global.t('errors.network_error_please_try_again_later')
+				);
 			}
 
 			if (data.code === undefined) {

@@ -32,44 +32,44 @@ const getConfig = (ctx) => {
 		devServer: {
 			proxy: {
 				'/hami': {
-					target: `https://dashboard.${proxyTarget}`,
+					target: `${process.env.PROTOCOL}dashboard.${proxyTarget}`,
 					changeOrigin: true
 				},
 				'/kapis': {
-					target: `https://dashboard.${proxyTarget}`,
+					target: `${process.env.PROTOCOL}dashboard.${proxyTarget}`,
 					changeOrigin: true
 				},
 				'/api/mdns/': {
-					target: `https://settings.${proxyTarget}`,
+					target: `${process.env.PROTOCOL}settings.${proxyTarget}`,
 					changeOrigin: true
 				},
 				'/api/gpu/list': {
-					target: `https://settings.${proxyTarget}`,
+					target: `${process.env.PROTOCOL}settings.${proxyTarget}`,
 					changeOrigin: true
 				},
 				'/api': {
-					target: `https://dashboard.${proxyTarget}`,
+					target: `${process.env.PROTOCOL}dashboard.${proxyTarget}`,
 					changeOrigin: true
 				},
 				'/bfl': {
-					target: `https://dashboard.${proxyTarget}`,
+					target: `${process.env.PROTOCOL}dashboard.${proxyTarget}`,
 					changeOrigin: true
 				},
 				'/server': {
-					target: `https://dashboard.${proxyTarget}`,
+					target: `${process.env.PROTOCOL}dashboard.${proxyTarget}`,
 					changeOrigin: true
 				},
 				'/analytics_service': {
-					target: `https://dashboard.${proxyTarget}`,
+					target: `${process.env.PROTOCOL}dashboard.${proxyTarget}`,
 					changeOrigin: true
 				},
 				'/capi': {
-					target: `https://dashboard.${proxyTarget}`,
+					target: `${process.env.PROTOCOL}dashboard.${proxyTarget}`,
 					changeOrigin: true,
 					secure: false
 				},
 				'/user-service': {
-					target: `https://dashboard.${proxyTarget}`,
+					target: `${process.env.PROTOCOL}dashboard.${proxyTarget}`,
 					changeOrigin: true
 				}
 			}

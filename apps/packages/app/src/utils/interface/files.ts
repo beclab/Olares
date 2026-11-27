@@ -4,6 +4,7 @@ export enum DriveType {
 	Drive = 'drive',
 	Sync = 'sync',
 	Data = 'data',
+	Common = 'common',
 	Cache = 'cache',
 	GoogleDrive = 'google',
 	Dropbox = 'dropbox',
@@ -20,6 +21,7 @@ export const supportDriveTypes = [
 	DriveType.Drive,
 	DriveType.Sync,
 	DriveType.Data,
+	DriveType.Common,
 	DriveType.Cache,
 	DriveType.GoogleDrive,
 	DriveType.Dropbox,
@@ -62,3 +64,10 @@ export const filesSortOptions = [
 		type: FilesSortType.SIZE
 	}
 ];
+
+export type FileViewMode = 'list' | 'mosaic';
+
+// Reserved POSIX directory names that must not be used as file/folder/library
+// names. Slash/backslash characters are handled separately by the slash check
+// in useFileNameValidation, so they are intentionally not included here.
+export const disabledFolderNames = ['.', '..'];

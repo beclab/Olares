@@ -78,7 +78,7 @@ const submit = async () => {
 	if (pathActive.value) {
 		loading.value = true;
 		try {
-			await filesStore.mountSmbInExternal({
+			await filesStore.mountServerInExternal({
 				...props.connectData,
 				url: pathActive.value
 			});

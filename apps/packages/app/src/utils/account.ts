@@ -3,12 +3,11 @@ import { axiosInstanceProxy } from 'src/platform/httpProxy';
 import { i18n } from '../boot/i18n';
 import { saltedMD5 } from './salted-md5';
 import { getLoginResponseErrorMessage } from './interface/login';
-import { UserItem } from '@didvault/sdk/src/core';
 // import axios from 'axios';
 
 export const onFirstFactor = async (
 	baseURL: string,
-	user: UserItem,
+	user: { vault_target_url: string; desktop_target_url: string },
 	osUser: string,
 	osPwd: string,
 	acceptCookie = true,
@@ -49,14 +48,14 @@ export const onFirstFactor = async (
 		);
 
 		if (!response || response.status != 200 || !response.data) {
-			throw Error('Network error, please try again later');
+			throw Error(i18n.global.t('errors.network_error_please_try_again_later'));
 		}
 		if (response.data.status != 'OK') {
-			throw new Error('Password Error');
+			throw new Error(i18n.global.t('errors.password_error'));
 		}
 		const token = response.data.data;
 		if (!token) {
-			throw new Error('Password Error');
+			throw new Error(i18n.global.t('errors.password_error'));
 		}
 
 		return token;
@@ -110,13 +109,8 @@ export const refresh_token = async (
 		throw Error(i18n.global.t('errors.network_error_please_try_again_later'));
 	}
 	if (response.data.status != 'OK') {
-		// throw Error('Network error, please try again later')
 		throw new Error('refresh token error');
 	}
-	// const token = response.data.data;
-	// if (!token) {
-	// 	throw new Error('Password Error');
-	// }
 
 	return response.data.data;
 };
@@ -153,7 +147,7 @@ export const reset_password = async (
 		if (response.data.message) {
 			throw Error(response.data.message);
 		}
-		throw Error('Network error, please try again later');
+		throw Error(i18n.global.t('errors.network_error_please_try_again_later'));
 	}
 
 	return response.data;

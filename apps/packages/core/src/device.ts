@@ -89,6 +89,15 @@ export class HeadScaleDevice {
 	public registerMethod = '';
 	public online = false;
 
+	public approvedRoutes: string[];
+	public availableRoutes: string[];
+	public subnetRoutes: string[];
+	public nodeKey: string;
+	public machineKey: string;
+	public discoKey: string;
+	public preAuthKey: string;
+	public tags: string[];
+
 	public constructor(init?: Partial<HeadScaleDevice>) {
 		Object.assign(this, init);
 	}

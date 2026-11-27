@@ -10,7 +10,13 @@
 			<img v-else fit="fill" class="desktop-bg" src="/desktop/bg/0.jpg" />
 		</div>
 
-		<q-tab-panels v-model="panel" animated swipeable class="tab-panels-bg">
+		<q-tab-panels
+			v-model="panel"
+			animated
+			swipeable
+			class="tab-panels-bg"
+			style="z-index: 9"
+		>
 			<q-tab-panel name="notification" class="tab-item">
 				<NotificationView />
 			</q-tab-panel>
@@ -101,6 +107,7 @@ watch(
 	min-width: 100%;
 	height: 100%;
 	object-fit: cover;
+	pointer-events: none;
 }
 
 .tab-panels-bg {

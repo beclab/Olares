@@ -1,9 +1,18 @@
 import { WebSocketBean, WebSocketStatusEnum } from '@bytetrade/core';
 
+export type AppMessagePayload = {
+	type: string;
+	data?: any;
+	[key: string]: any;
+};
+
 export class BaseWebsocketBean {
 	websocket: WebSocketBean | null = null;
 	token: string;
 	connections = new Set<MessagePort>();
+	private messagePublisher:
+		| ((payload: AppMessagePayload, retain?: boolean) => void)
+		| null = null;
 
 	reconnectMaxNum = 5;
 	reconnectGapTime = 3000;
@@ -108,6 +117,20 @@ export class BaseWebsocketBean {
 		}
 		return false;
 	}
+	setMessagePublisher(
+		publisher: (payload: AppMessagePayload, retain?: boolean) => void
+	) {
+		this.messagePublisher = publisher;
+	}
+
+	// When `retain` is true the message represents durable cross-tab state
+	// (e.g. the current copy/cut clipboard) that should be replayed to tabs
+	// opened later. Transient events must leave `retain` false so they are not
+	// re-delivered (which would duplicate side effects).
+	protected publishAppMessage(payload: AppMessagePayload, retain = false) {
+		this.messagePublisher?.(payload, retain);
+	}
+
 	addConnection(port: MessagePort) {
 		this.connections.add(port);
 	}

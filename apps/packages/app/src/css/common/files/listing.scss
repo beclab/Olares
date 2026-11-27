@@ -433,10 +433,14 @@ body.rtl #listing {
 	flex: 0 0 auto;
 }
 
-// modified DOM order is <i>icon</i><span>text</span>; push the icon to the end
-// so the label appears on the left and the sort icon appears on the right
+// modified DOM order is <i>icon</i><span>text</span>; keep the sort icon on the
+// LEFT and push the label to the RIGHT (opposite of the other columns).
 #listing.list.col-grid .item.header .modified i.material-icons {
-	order: 1;
+	order: 0;
+}
+
+#listing.list.col-grid .item.header .modified span {
+	text-align: right;
 }
 
 // Resize handle – a thin vertical bar at the right edge of each resizable header cell

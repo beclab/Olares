@@ -3,7 +3,7 @@
 		ref="CustomRef"
 		:title="t('change_password')"
 		:skip="false"
-		:ok="t('ok')"
+		:ok="t('save')"
 		size="medium"
 		:platform="deviceStore.platform"
 		:cancel="t('cancel')"
@@ -49,23 +49,23 @@
 import { useQuasar } from 'quasar';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useUserStore } from 'src/stores/settings/user';
+import { useUsersStore } from 'src/stores/settings/users';
 import TerminusEdit from 'src/components/settings/base/TerminusEdit.vue';
 import ReminderDialogComponent from 'src/components/settings/ReminderDialogComponent.vue';
 import { useDeviceStore } from 'src/stores/settings/device';
 import { notifySuccess } from 'src/utils/settings/btNotify';
 import { passwordAddSort } from 'src/utils/account';
-import { useAdminStore } from 'src/stores/settings/admin';
+import { useTerminusStore } from 'src/stores/terminus';
 import { PASSWORD_RULE } from 'src/utils/constants';
 
 const oldPassword = ref('');
 const newPassword = ref('');
 const repeatPassword = ref('');
 
-const accountStore = useUserStore();
+const accountStore = useUsersStore();
 const quasar = useQuasar();
 const { t } = useI18n();
-const adminStore = useAdminStore();
+const terminusStore = useTerminusStore();
 
 const allRule = new RegExp(PASSWORD_RULE.ALL_RULE);
 
@@ -152,11 +152,11 @@ const updatePasswordConfirm = async () => {
 		await accountStore.reset_account_password({
 			password: passwordAddSort(
 				newPassword.value,
-				adminStore.terminus.osVersion
+				terminusStore.terminusInfo.osVersion
 			),
 			current_password: passwordAddSort(
 				oldPassword.value,
-				adminStore.terminus.osVersion
+				terminusStore.terminusInfo.osVersion
 			),
 			username: props.name
 		});

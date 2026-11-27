@@ -2,6 +2,7 @@ import { busOn } from 'src/utils/bus';
 
 import { QVueGlobals } from 'quasar';
 import { delay } from 'src/utils/utils';
+import { useDeviceStore } from 'src/stores/settings/device';
 
 export const registerFilePreviewEvent = async ($q?: QVueGlobals) => {
 	if (!$q) {
@@ -17,9 +18,11 @@ export const registerFilePreviewEvent = async ($q?: QVueGlobals) => {
 		while (!previewInit) {
 			await delay(500);
 		}
+
+		const deviceStore = useDeviceStore();
 		if (isVideo) {
 			$q.dialog({
-				component: $q.platform.is.mobile
+				component: deviceStore.isMobile
 					? FileMobilePreVideoDialog
 					: FilePreVideoDialog,
 				componentProps: {
@@ -28,7 +31,7 @@ export const registerFilePreviewEvent = async ($q?: QVueGlobals) => {
 			});
 		} else {
 			$q.dialog({
-				component: $q.platform.is.mobile
+				component: deviceStore.isMobile
 					? FileMobilePreviewPage
 					: FilePreViewDialog,
 				componentProps: {

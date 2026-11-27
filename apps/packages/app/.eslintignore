@@ -8,3 +8,4 @@
 babel.config.js
 /src-ssr
 /src/utils/resumable.js
+/src/account/sjcl.js

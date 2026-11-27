@@ -13,7 +13,8 @@
 						:src="appIcon"
 						:skeleton="false"
 						:size="108"
-						:cs-app="clusterScopedApp"
+						:cs-app="isCsOrShared"
+						:template-app="isTemplate"
 					/>
 				</app-featured-image>
 				<div class="my-application-info column justify-start items-start">
@@ -101,12 +102,22 @@
 							:larger="true"
 							:manager="manager"
 						/>
-						<app-tag
-							v-if="isCloneApp(appAggregation.app_status_latest.status)"
-							label="Clone"
-							class="text-blue-default q-mt-xs"
-						/>
-						<app-tag v-else :label="sourceName" class="text-positive q-mt-xs" />
+						<div class="row items-center">
+							<template
+								v-if="isCloneApp(appAggregation.app_status_latest.status)"
+							>
+								<app-tag :label="sourceName" class="text-positive q-mt-xs" />
+								<app-tag
+									:label="isFromTemplate ? t('From Template') : t('From App')"
+									class="text-blue-default q-mt-xs q-ml-xs"
+								/>
+							</template>
+							<app-tag
+								v-else
+								:label="sourceName"
+								class="text-positive q-mt-xs"
+							/>
+						</div>
 					</div>
 				</div>
 			</div>
@@ -143,7 +154,12 @@
 				@click="goAppDetails"
 			>
 				<div class="func-app-card-mobile row justify-between items-center">
-					<app-icon :src="appIcon" :size="56" :cs-app="clusterScopedApp" />
+					<app-icon
+						:src="appIcon"
+						:size="56"
+						:cs-app="isCsOrShared"
+						:template-app="isTemplate"
+					/>
 					<div
 						class="func-app-card-mobile-right row justify-between items-center"
 					>
@@ -215,11 +231,17 @@
 								{{ appDesc }}
 							</div>
 
-							<app-tag
+							<template
 								v-if="isCloneApp(appAggregation.app_status_latest.status)"
-								label="Clone"
-								class="text-blue-default q-mt-xs"
-							/>
+							>
+								<div class="row items-center">
+									<app-tag :label="sourceName" class="text-positive q-mt-xs" />
+									<app-tag
+										:label="isFromTemplate ? t('From Template') : t('From App')"
+										class="text-blue-default q-mt-xs"
+									/>
+								</div>
+							</template>
 							<app-tag
 								v-else
 								:label="sourceName"
@@ -281,9 +303,9 @@ import { VERSION_DISPLAY_MODE } from '../../constant/constants';
 import AdaptiveLayout from '../settings/AdaptiveLayout.vue';
 import globalConfig from '../../api/market/config';
 import useAppCard from './useAppCard';
-import { PropType, ref } from 'vue';
+import { computed, PropType, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { isCloneApp } from '../../constant/config';
+import { isCloneApp, isTemplateInstance } from '../../constant/config';
 
 const props = defineProps({
 	appName: {
@@ -318,7 +340,8 @@ const hoverRef = ref(false);
 const { t } = useI18n();
 const {
 	appAggregation,
-	clusterScopedApp,
+	isCsOrShared,
+	isTemplate,
 	appIcon,
 	appTitle,
 	appDesc,
@@ -328,6 +351,13 @@ const {
 	goAppDetails,
 	sourceName
 } = useAppCard(props);
+
+const isFromTemplate = computed(() =>
+	isTemplateInstance(
+		appAggregation.value?.app_status_latest?.status,
+		appAggregation.value?.app_simple_latest?.app_simple_info
+	)
+);
 </script>
 <style lang="scss" scoped>
 .my-application-root {

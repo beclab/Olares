@@ -1,6 +1,6 @@
 <template>
 	<div class="">
-		<my-card flat title="Service Component Monitoring">
+		<my-card flat :title="$t('SERVICE_COMPONENT_MONITORING')">
 			<MyLoading style="min-height: 268px" :showing="loading">
 				<div class="row q-gutter-x-lg">
 					<InfoCardRadio2

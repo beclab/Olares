@@ -27,6 +27,17 @@ module.exports = {
 		target: `${process.env.PROTOCOL}desktop.${process.env.ACCOUNT_DOMAIN}`,
 		changeOrigin: true
 	},
+	'/knowledge/api/cookie': {
+		target: `${process.env.PROTOCOL}settings.${process.env.ACCOUNT_DOMAIN}`,
+		changeOrigin: true,
+		pathRewrite: {
+			'^/knowledge': ''
+		}
+	},
+	'/knowledge': {
+		target: `${process.env.PROTOCOL}${process.env.WISE_SUB_DOMAIN}.${process.env.ACCOUNT_DOMAIN}`,
+		changeOrigin: true
+	},
 	'/kapis': {
 		target: `${process.env.PROTOCOL}desktop.${process.env.ACCOUNT_DOMAIN}`,
 		changeOrigin: true

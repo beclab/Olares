@@ -93,7 +93,6 @@
 			ref="yamlRef"
 			:name="t('EDIT_YAML')"
 			name-key="pods_name"
-			:readonly="isStudio2"
 			@change="fetchList"
 		></Yaml>
 		<Dialog2 :title="$t('DETAILS')" ref="dialog2Ref" full-width full-height>
@@ -102,6 +101,11 @@
 		<DeleteDialog
 			:title="`${$t('STOP_POD')} ${$route.params.pods_name}`"
 			:desc="$t('POD')"
+			:confirm-desc="
+				$t('APP_CONTROL_HUB_ACTION_CONFIRM_DESC', {
+					resource: $route.params.pods_name
+				})
+			"
 			:name="$route.params.pods_name"
 			ref="deleteDialogRef"
 			@submit="confirmHandler"
@@ -109,6 +113,11 @@
 		<DeleteDialog
 			:title="`${$t('RESTART_POD')} ${$route.params.pods_name}`"
 			:desc="$t('POD')"
+			:confirm-desc="
+				$t('APP_CONTROL_HUB_ACTION_CONFIRM_DESC', {
+					resource: $route.params.pods_name
+				})
+			"
 			:name="$route.params.pods_name"
 			ref="deleteDialogRef2"
 			@submit="confirmHandler2"
@@ -134,12 +143,11 @@ import { usePodList } from '@apps/control-panel-common/src/stores/podList';
 import DeleteDialog from '@apps/control-panel-common/src/components/DeleteDialog.vue';
 import DetailData from '@apps/control-hub/src/pages/ApplicationSpaces/Workloads/DetailData.vue';
 import MyCard from '@apps/control-panel-common/src/components/MyCard2.vue';
-import { useIsStudio, useIsStudio2 } from '../../../stores/hook';
+import { useIsStudio } from '../../../stores/hook';
 import MyButton from '@apps/control-hub/src/components/MyButton.vue';
 import { selectedNodes } from '../treeStore';
 import MyCardHeader from '@apps/control-hub/src/components/MyCardHeader.vue';
 const isStudio = useIsStudio();
-const isStudio2 = useIsStudio2();
 const podList = usePodList();
 interface Props {
 	drawer: boolean;
@@ -160,9 +168,9 @@ const options4 = computed(() => optionsChildren1.value);
 
 const optionsChildren1 = computed(() => [
 	{
-		label: isStudio2.value ? t('VIEW_YAML') : t('EDIT_YAML'),
+		label: t('EDIT_YAML'),
 		value: 'edit',
-		icon: isStudio2.value ? 'sym_r_preview' : 'sym_r_edit_square',
+		icon: 'sym_r_edit_square',
 		onClick: () => {
 			yamlRef.value.show();
 		}

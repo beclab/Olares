@@ -206,6 +206,7 @@ import { useRoute, useRouter } from 'vue-router';
 import cloneDeep from 'lodash/cloneDeep';
 import { useI18n } from 'vue-i18n';
 import { computed } from 'vue';
+import { pushWithParent } from '../../../utils/marketBack';
 import {
 	CONTENT_TYPE,
 	getI18nValue,
@@ -278,7 +279,7 @@ const paddingX = computed(() => {
 });
 
 const clickList = (type: string) => {
-	router.push({
+	pushWithParent(router, {
 		name: TRANSACTION_PAGE.List,
 		params: {
 			categories: category,
@@ -288,7 +289,7 @@ const clickList = (type: string) => {
 };
 
 const onTopicClick = (info: TopicInfo) => {
-	router.push({
+	pushWithParent(router, {
 		name: TRANSACTION_PAGE.TOPIC,
 		params: {
 			category: 'All',

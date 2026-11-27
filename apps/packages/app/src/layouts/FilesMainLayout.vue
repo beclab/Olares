@@ -94,16 +94,16 @@ onMounted(async () => {
 }
 
 .files-content-common {
-	height: calc(100vh - 73px) !important;
+	height: calc(100dvh - 73px) !important;
 }
 
 .files-content-android-pad {
-	height: calc(100vh - 88px) !important;
+	height: calc(100dvh - 88px) !important;
 }
 .files-content-ipad {
-	height: calc(100vh - 116px) !important;
+	height: calc(100dvh - 116px) !important;
 }
 .files-content-win {
-	height: calc(100vh - 145px) !important;
+	height: calc(100dvh - 145px) !important;
 }
 </style>

@@ -9,9 +9,23 @@
 		@dragover="dragOver"
 		@drop="drop"
 		@click="itemClick"
+		@touchstart="onTouchStart"
+		@touchend="onTouchEnd"
+		@touchcancel="onTouchEnd"
+		@touchmove="onTouchMove"
 		:aria-label="item.name"
 		:aria-selected="isSelected"
 	>
+		<div
+			v-if="viewMode === 'mosaic' && deviceStore.isInEditor && canSelect"
+			class="mosaic-select-box"
+			@click.stop="toggleSelect"
+		>
+			<img v-if="isSelected" :src="checkboxActiveImage" />
+			<img v-else-if="!$q.dark.isActive" :src="checkboxNormalImage" />
+			<img v-else :src="checkboxNormalDarkImage" />
+		</div>
+
 		<terminus-file-icon
 			:name="item.name"
 			:type="item.type"
@@ -19,11 +33,13 @@
 			:modified="item.modified"
 			:is-dir="item.isDir"
 			:driveType="item.driveType"
-			:icon-size="viewMode === 'mosaic' ? 64 : 32"
+			:icon-size="
+				viewMode === 'mosaic' ? (deviceStore.isInEditor ? 48 : 64) : 32
+			"
 		/>
 
 		<q-icon
-			v-if="viewMode === 'mosaic' && showMoreHoriz"
+			v-if="viewMode === 'mosaic' && showMoreHoriz && !deviceStore.isInEditor"
 			name="sym_r_more_horiz"
 			size="20px"
 			@click.stop="fileOperation"
@@ -37,7 +53,11 @@
 		>
 		</q-icon>
 
-		<div v-if="viewMode === 'mosaic'" style="margin-top: 0.3rem">
+		<div
+			v-if="viewMode === 'mosaic'"
+			class="mosaic-meta"
+			style="margin-top: 0.3rem"
+		>
 			<span class="name text-ink-1">{{
 				translateFolderName(route.path, item.name)
 			}}</span>
@@ -74,6 +94,7 @@
 <script lang="ts" setup>
 import { computed, onMounted, onUnmounted, PropType } from 'vue';
 import { useDataStore } from '../../../stores/data';
+import { useDeviceStore } from '../../../stores/device';
 import { useQuasar } from 'quasar';
 import { format } from '../../../utils/format';
 
@@ -90,9 +111,10 @@ import { formatFileModified, hideHeaderOpt } from '../../../utils/file';
 import { useOperateinStore } from '../../../stores/operation';
 import { OPERATE_ACTION } from '../../../utils/contact';
 import { getParams } from '../../../utils/utils';
-// import { useI18n } from 'vue-i18n';
+import { useI18n } from 'vue-i18n';
 import { translateFolderName } from '../../../utils/file';
 import { busOff, busOn } from 'src/utils/bus';
+import { FileViewMode } from 'src/utils/interface/files';
 
 const props = defineProps({
 	item: {
@@ -100,8 +122,9 @@ const props = defineProps({
 		required: true
 	},
 	viewMode: {
-		type: String,
-		required: true
+		type: String as PropType<FileViewMode>,
+		required: false,
+		default: 'list'
 	},
 	origin_id: {
 		type: Number,
@@ -122,11 +145,12 @@ const props = defineProps({
 
 const { humanStorageSize } = format;
 
-const emits = defineEmits(['openSyncPage']);
+const emits = defineEmits(['openSyncPage', 'enterSelectMode', 'selectChanged']);
 
-// const { t } = useI18n();
+const { t } = useI18n();
 const store = useDataStore();
 const filesStore = useFilesStore();
+const deviceStore = useDeviceStore();
 const route = useRoute();
 const operateinStore = useOperateinStore();
 
@@ -138,6 +162,16 @@ const itemClass = computed(() => {
 		return 'disabled';
 	}
 	return '';
+});
+
+// Some entries (e.g. system folders under drive/Home, external/AI/common
+// folder whitelists) can't be operated on and must not be selectable. Mirrors
+// the `selectedEnable` rule used by the list-view multi-select.
+const canSelect = computed(() => {
+	if (itemClass.value) {
+		return false;
+	}
+	return !operateinStore.isDisableMenuItem(props.item.name, route.path);
 });
 
 const showMoreHoriz = computed(() => {
@@ -183,7 +217,7 @@ const canDrop = computed(function () {
 
 const humanSize = () => {
 	return props.item.type == 'invalid_link'
-		? 'invalid link'
+		? t('files.invalid_link')
 		: props.item.size
 		? humanStorageSize(props.item.size)
 		: '--';
@@ -246,14 +280,107 @@ const drop = async (event: any) => {
 	);
 };
 
+const $q = useQuasar();
+
+const checkboxActiveImage = `${
+	$q.platform.is.electron ? '.' : ''
+}/img/checkbox/check_box.svg`;
+const checkboxNormalImage = `${
+	$q.platform.is.electron ? '.' : ''
+}/img/checkbox/uncheck_box_light.svg`;
+const checkboxNormalDarkImage = `${
+	$q.platform.is.electron ? '.' : ''
+}/img/checkbox/uncheck_box_dark.svg`;
+
+// Long-press to enter multi-select mode (mosaic view). `longPressed` swallows
+// the synthetic click that fires after the press is released, so the item just
+// selected by the long-press is not immediately toggled back off.
+const LONG_PRESS_DURATION = 500;
+// Tolerate small finger drift during a press; cancelling on any movement makes
+// the long-press almost impossible to trigger on real touch devices.
+const LONG_PRESS_MOVE_TOLERANCE = 10;
+let pressTimer: ReturnType<typeof setTimeout> | null = null;
+let longPressed = false;
+let touchStartX = 0;
+let touchStartY = 0;
+
+const isSelectModeActive = computed(
+	() => props.viewMode === 'mosaic' && deviceStore.isInEditor
+);
+
+const toggleSelect = () => {
+	if (!canSelect.value) {
+		return;
+	}
+	if (isSelected.value) {
+		filesStore.removeSelected(props.item.index, props.origin_id);
+	} else {
+		filesStore.addSelected(props.item.index, props.origin_id);
+	}
+	emits('selectChanged');
+};
+
+const clearPressTimer = () => {
+	if (pressTimer) {
+		clearTimeout(pressTimer);
+		pressTimer = null;
+	}
+};
+
+const onTouchStart = (event: TouchEvent) => {
+	if (
+		props.viewMode !== 'mosaic' ||
+		props.selectType ||
+		deviceStore.isInEditor ||
+		!canSelect.value
+	) {
+		return;
+	}
+	const touch = event.touches[0];
+	if (touch) {
+		touchStartX = touch.clientX;
+		touchStartY = touch.clientY;
+	}
+	longPressed = false;
+	clearPressTimer();
+	pressTimer = setTimeout(() => {
+		longPressed = true;
+		emits('enterSelectMode', props.item.index);
+	}, LONG_PRESS_DURATION);
+};
+
+const onTouchMove = (event: TouchEvent) => {
+	const touch = event.touches[0];
+	if (!touch) {
+		return;
+	}
+	if (
+		Math.abs(touch.clientX - touchStartX) > LONG_PRESS_MOVE_TOLERANCE ||
+		Math.abs(touch.clientY - touchStartY) > LONG_PRESS_MOVE_TOLERANCE
+	) {
+		clearPressTimer();
+	}
+};
+
+const onTouchEnd = () => {
+	clearPressTimer();
+};
+
 const itemClick = () => {
+	// Ignore the click that immediately follows a long-press selection.
+	if (longPressed) {
+		longPressed = false;
+		return;
+	}
+	if (isSelectModeActive.value) {
+		toggleSelect();
+		return;
+	}
 	open();
 };
 
-const $q = useQuasar();
-
 const fileOperation = () => {
-	filesStore.addSelected(props.item.index);
+	filesStore.addSelected(props.item.index, props.origin_id);
 	const path = props.item.path;
 	const p = getParams(path, 'p');
 	let permission = 'rw';
@@ -328,6 +455,27 @@ const open = async () => {
 .disabled {
 	pointer-events: none;
 	opacity: 0.5;
+}
+
+.mosaic-select-box {
+	position: absolute;
+	left: 4px;
+	top: 4px;
+	z-index: 2;
+	width: 16px;
+	height: 16px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+
+	img {
+		width: 16px;
+		height: 16px;
+	}
+}
+
+#listing-mobile.mosaic .mobile-item[aria-selected='true'] {
+	background: $background-hover;
 }
 
 #listing.list {

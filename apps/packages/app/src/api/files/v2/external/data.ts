@@ -1,7 +1,4 @@
 import { DriveDataAPI } from './../index';
-import { MenuItem } from 'src/utils/contact';
-import { DriveMenuType } from './type';
-import { i18n } from 'src/boot/i18n';
 import { DriveType } from 'src/utils/interface/files';
 import { FileItem, FileResType, useFilesStore } from 'src/stores/files';
 import * as files from './utils';
@@ -13,7 +10,7 @@ import * as filesUtil from '../common/utils';
 import { CommonUrlApiType, formatAppDataNode } from '../common/utils';
 import { TransferFront, TransferItem } from 'src/utils/interface/transfer';
 import { appendPath } from '../path';
-import { getFileIcon } from '@bytetrade/core';
+import { getFileIcon, getFilePreviewType, PreviewType } from '@bytetrade/core';
 import { getextension } from 'src/utils/utils';
 
 export default class ExternalDataAPI extends DriveDataAPI {
@@ -28,9 +25,7 @@ export default class ExternalDataAPI extends DriveDataAPI {
 	async fetchDrive(url: string): Promise<FileResType> {
 		if (url == '/') {
 			const filesStore = useFilesStore();
-			if (filesStore.nodes.length == 0) {
-				await filesUtil.fetchNodeList();
-			}
+			await filesUtil.ensureNodeList();
 			return formatAppDataNode(
 				url,
 				filesStore.onlyMasterNodes[this.origin_id]
@@ -55,23 +50,10 @@ export default class ExternalDataAPI extends DriveDataAPI {
 		return data;
 	}
 
-	async fetchMenuRepo(): Promise<DriveMenuType[]> {
-		return [
-			{
-				label: i18n.global.t(`files_menu.${MenuItem.EXTERNAL}`),
-				key: MenuItem.EXTERNAL,
-				icon: 'sym_r_hard_drive',
-				driveType: DriveType.External
-			}
-		];
-	}
-
 	async formatRepotoPath(item: any): Promise<string> {
 		const filesStore = useFilesStore();
 
-		if (filesStore.nodes.length == 0) {
-			await filesUtil.fetchNodeList();
-		}
+		await filesUtil.ensureNodeList();
 
 		if (filesStore.onlyMasterNodes[this.origin_id]) {
 			return appendPath('/Files/External/', filesStore.masterNode, '/');
@@ -112,7 +94,7 @@ export default class ExternalDataAPI extends DriveDataAPI {
 	}
 
 	async formatFileContent(file: FileItem): Promise<FileItem> {
-		if (!['text', 'txt', 'textImmutable'].includes(file.type)) {
+		if (getFilePreviewType(file.name) !== PreviewType.TXT) {
 			return file;
 		}
 
@@ -183,7 +165,7 @@ export default class ExternalDataAPI extends DriveDataAPI {
 	}
 
 	async onSaveFile(item: any, content: any): Promise<void> {
-		files.put(item.path, content);
+		await files.put(item.path, content);
 	}
 
 	formatSearchPath(search: string): string {
@@ -259,8 +241,7 @@ export default class ExternalDataAPI extends DriveDataAPI {
 			mode: 0,
 			modified: item.updateTime || 0,
 			name: item.name,
-			path:
-				item.front == TransferFront.download ? encodeUrl(item.path) : item.path,
+			path: item.path,
 			size: item.size,
 			type: item.type,
 			parentPath: item.parentPath,

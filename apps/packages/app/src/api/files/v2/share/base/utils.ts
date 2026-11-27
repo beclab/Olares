@@ -17,7 +17,7 @@ export async function remove(url) {
 }
 
 export async function put(url, content = '') {
-	return CommonFetch.put(formatResourcesUrl(url), content, {
+	return await CommonFetch.put(formatResourcesUrl(url), content, {
 		headers: {
 			'Content-Type': 'text/plain'
 		}
@@ -63,7 +63,7 @@ export const displaySharePath = (file: { id: string }) => {
 export function getShareDataPath(url: string) {
 	const res = url.split('/');
 	if (res[1] != 'Share' && res[1] != 'share') {
-		throw Error('Invalid AppData path');
+		throw Error('Invalid AppData path'); // i18n-ignore: internal path validation error
 	}
 	const path_id = res[2];
 	let path = '';

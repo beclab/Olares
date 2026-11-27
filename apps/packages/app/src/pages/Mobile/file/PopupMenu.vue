@@ -22,6 +22,28 @@
 				</q-item>
 				<q-separator class="q-my-sm" v-if="item.action === 'mosaic'" />
 			</template>
+
+			<template v-if="showPaste">
+				<q-separator class="q-my-sm" />
+				<q-item
+					class="row items-center justify-between text-ink-2 popup-item"
+					clickable
+					v-close-popup
+					@click="handleEvent('paste', 'clipboard')"
+				>
+					<q-icon name="sym_r_content_paste" size="20px" class="q-mr-sm" />
+					<q-item-section class="menuName">{{ t('paste') }}</q-item-section>
+				</q-item>
+				<q-item
+					class="row items-center justify-between text-ink-2 popup-item"
+					clickable
+					v-close-popup
+					@click="handleEvent('cancel', 'clipboard')"
+				>
+					<q-icon name="sym_r_close" size="20px" class="q-mr-sm" />
+					<q-item-section class="menuName">{{ t('cancel') }}</q-item-section>
+				</q-item>
+			</template>
 		</q-list>
 	</q-menu>
 </template>
@@ -41,6 +63,11 @@ defineProps({
 		default: ''
 	},
 	isSide: {
+		type: Boolean,
+		require: false,
+		default: false
+	},
+	showPaste: {
 		type: Boolean,
 		require: false,
 		default: false

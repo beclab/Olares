@@ -19,5 +19,10 @@ defineProps({
 <style scoped lang="scss">
 .view-item-root {
 	width: 120px;
+
+	&:hover {
+		background-color: $background-2 !important;
+		border-radius: 8px !important;
+	}
 }
 </style>

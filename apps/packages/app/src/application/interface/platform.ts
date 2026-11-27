@@ -1,15 +1,20 @@
-import { Platform } from '@didvault/sdk/src/core';
-
+import type { TermiPassDeviceInfo } from '@bytetrade/core';
 import { TabbarItem, HookCapacitorHttpPlugin } from './';
-import { PlatformExtension } from '@didvault/sdk/src/core/PlatformExtension';
-import { AppState } from '@didvault/sdk/src/core/app';
 import { RouteLocationNormalizedLoaded } from 'vue-router';
 import { QVueGlobals } from 'quasar';
+
+export interface UserStorage {
+	getItem(key: string): Promise<any>;
+	setItem(key: string, value: unknown): Promise<void>;
+	removeItem(key: string): Promise<void>;
+}
 
 /**
  * app App life cycle
  */
-export interface AppPlatform extends Platform, PlatformExtension {
+export interface AppPlatform {
+	userStorage?: UserStorage;
+
 	/******** app start *************/
 	/**
 	 * app.vue start
@@ -71,7 +76,7 @@ export interface AppPlatform extends Platform, PlatformExtension {
 
 	getTailscaleId(): Promise<string>;
 
-	reconfigAppStateDefaultValue(appState: AppState): void;
+	getDeviceInfo(): Promise<TermiPassDeviceInfo>;
 
 	getQuasar(): QVueGlobals | undefined;
 
@@ -91,5 +96,5 @@ export interface AppPlatform extends Platform, PlatformExtension {
 		};
 	};
 
-	vaultSync: () => Promise<void>;
+	vpnAbility: boolean;
 }

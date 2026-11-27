@@ -193,7 +193,8 @@ export enum ProcessingState {
 	Init = '',
 	Completed = 'completed',
 	Failed = 'failed',
-	InProgress = 'in-progress'
+	InProgress = 'in-progress',
+	NotFound = 'not-found'
 }
 
 export interface ApplicationCustonDomain {

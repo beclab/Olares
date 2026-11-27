@@ -7,7 +7,7 @@
 		:okLoading="loading ? t('loading') : false"
 		:size="$q.platform.is.mobile ? 'small' : 'medium'"
 		:platform="$q.platform.is.mobile ? 'mobile' : 'web'"
-		:okDisabled="!name"
+		:okDisabled="!name || errorMessage.length > 0"
 		@onSubmit="submit"
 		@onHide="close"
 		@onCancel="close"
@@ -23,6 +23,7 @@
 				v-model.trim="name"
 				@keyup.enter="submit"
 			/>
+			<div class="text-negative" v-if="errorMessage">{{ errorMessage }}</div>
 		</div>
 	</bt-custom-dialog>
 </template>
@@ -35,6 +36,8 @@ import { useFilesStore } from '../../../stores/files';
 
 import { useI18n } from 'vue-i18n';
 import { busEmit } from 'src/utils/bus';
+import { notifyWarning } from 'src/utils/notifyRedefinedUtil';
+import { useFileNameValidation } from 'src/composables/files/useFileNameValidation';
 
 const CustomRef = ref();
 
@@ -45,9 +48,14 @@ const name = ref<string>('');
 const loading = ref(false);
 
 const { t } = useI18n();
+const { errorMessage } = useFileNameValidation(name);
 
 const submit = async () => {
 	if (!name.value) {
+		return false;
+	}
+	if (errorMessage.value) {
+		notifyWarning(errorMessage.value);
 		return false;
 	}
 	if (loading.value) {

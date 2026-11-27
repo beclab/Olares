@@ -33,11 +33,15 @@ export async function updateFile(
 	repoId: string,
 	content: string
 ) {
-	CommonFetch.put(syncCommonUrl('resources', path, repoId), content, {
-		headers: {
-			'Content-Type': 'text/plain'
+	return await CommonFetch.put(
+		syncCommonUrl('resources', path, repoId),
+		content,
+		{
+			headers: {
+				'Content-Type': 'text/plain'
+			}
 		}
-	});
+	);
 }
 
 export async function remove(url: string, repoId: string) {

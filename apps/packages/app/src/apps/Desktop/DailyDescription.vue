@@ -1,34 +1,34 @@
 <template>
 	<div v-if="widgetPrefsStore.showWeight" class="description_box">
-		<div class="description_weather">
-			<div class="description_time">{{ state.time }}</div>
-			<div class="description_daily">
-				<div class="description_singapore">
-					<p class="description_week">{{ state.week }}</p>
-					<p class="description_day">
-						{{ state.date }}
-					</p>
-				</div>
+		<div class="clock_row">
+			<div class="time_block">
+				<span class="time">{{ state.time }}</span>
+				<span v-if="!widgetPrefsStore.is24HourFormat" class="meridiem">
+					{{ state.isAM ? 'AM' : 'PM' }}
+				</span>
+			</div>
+			<div class="date_block">
+				<span class="date">{{ state.date }}</span>
+				<span class="week">{{ state.week }}</span>
 			</div>
 		</div>
-		<div v-if="widgetPrefsStore.showDashboard" class="description_thickness">
+		<div v-if="widgetPrefsStore.showDashboard" class="dashboard_row">
 			<div
-				class="description_track"
+				class="usage_item"
 				v-for="(item, index) in monitorStore.usages"
 				:key="`d` + index"
 			>
 				<q-knob
 					readonly
 					v-model="item.ratio"
-					font-size="80px"
-					size="24px"
+					size="32px"
 					:thickness="0.5"
 					:color="item.color"
-					track-color="grey-4"
-				></q-knob>
-				<div class="description_track_txt">
-					<p class="text-uppercase">{{ item.name }}</p>
-					<p>{{ item.ratio }}%</p>
+					track-color="grey-7"
+				/>
+				<div class="usage_text">
+					<p class="usage_label text-uppercase">{{ item.name }}</p>
+					<p class="usage_value">{{ item.ratio }}%</p>
 				</div>
 			</div>
 		</div>
@@ -85,63 +85,81 @@ onUnmounted(() => {
 	position: absolute;
 	bottom: 122px;
 	right: 165px;
-	.description_weather {
-		height: 72px;
+	font-family: Inter, Roboto, sans-serif;
+	.clock_row {
 		display: flex;
-		.description_time {
-			font-size: 70px;
-			font-family: Roboto-Bold, Roboto;
-			font-weight: bold;
-			color: #ffffff;
-			line-height: 72px;
-			text-shadow: 0px 2px 6px rgba(0, 0, 0, 0.16);
-		}
-		.description_daily {
+		align-items: center;
+		gap: 20px;
+		.time_block {
 			display: flex;
-			padding-top: 14px;
-			margin-left: 14px;
-			p {
-				margin: 0;
+			align-items: flex-end;
+			gap: 4px;
+			.time {
+				font-size: 64px;
+				font-weight: 700;
+				line-height: 64px;
+				color: rgba(255, 255, 255, 0.8);
+				text-shadow: 0px 2px 6px rgba(0, 0, 0, 0.1);
+				font-feature-settings: 'tnum' 1, 'lnum' 1;
 			}
-			.description_singapore {
-				.description_week {
-					font-size: 20px;
-					font-family: Roboto-Bold, Roboto;
-					font-weight: bold;
-					color: #ffffff;
-					text-shadow: 0px 2px 6px rgba(0, 0, 0, 0.16);
-				}
-				.description_day {
-					font-size: 12px;
-					font-family: Roboto-Regular, Roboto;
-					font-weight: 400;
-					color: #ffffff;
-					text-shadow: 0px 2px 6px rgba(0, 0, 0, 0.16);
-				}
+			.meridiem {
+				padding-bottom: 4px;
+				font-size: 12px;
+				font-weight: 500;
+				line-height: 20px;
+				color: rgba(255, 255, 255, 0.8);
+				text-shadow: 0px 2px 6px rgba(0, 0, 0, 0.1);
+			}
+		}
+		.date_block {
+			display: flex;
+			flex-direction: column;
+			align-items: flex-start;
+			justify-content: center;
+			gap: 8px;
+			.date,
+			.week {
+				font-size: 20px;
+				font-weight: 500;
+				line-height: 20px;
+				color: rgba(255, 255, 255, 0.8);
+				text-shadow: 0px 2px 6px rgba(0, 0, 0, 0.1);
 			}
 		}
 	}
-	.description_thickness {
+	.dashboard_row {
+		width: 100%;
 		display: flex;
-		margin-top: 15px;
+		align-items: center;
 		justify-content: space-between;
+		padding: 0 8px;
 		.q-circular-progress__track {
-			color: rgba(255, 255, 255, 0.46) !important;
+			color: rgba(255, 255, 255, 0.2) !important;
 		}
-		.description_track {
+		.usage_item {
 			display: flex;
-			opacity: 0.8;
-			p {
-				margin: 0px;
-			}
-			.description_track_txt {
-				font-size: 12px;
-				font-family: Roboto-Regular, Roboto;
-				font-weight: 400;
-				color: #ffffff;
-				line-height: 12px;
-				text-shadow: 0px 2px 6px rgba(0, 0, 0, 0.16);
-				margin-left: 8px;
+			align-items: center;
+			gap: 9px;
+			.usage_text {
+				display: flex;
+				flex-direction: column;
+				p {
+					margin: 0;
+				}
+				.usage_label {
+					font-size: 12px;
+					font-weight: 400;
+					line-height: 20px;
+					color: rgba(255, 255, 255, 0.8);
+					text-shadow: 0px 2px 6px rgba(0, 0, 0, 0.1);
+				}
+				.usage_value {
+					font-size: 12px;
+					font-weight: 700;
+					line-height: 20px;
+					color: rgba(255, 255, 255, 0.8);
+					text-shadow: 0px 2px 6px rgba(0, 0, 0, 0.1);
+				}
 			}
 		}
 	}

@@ -59,7 +59,7 @@
 					: 'text-subtitle1 q-mt-md'
 			"
 		>
-			{{ t('info') }}
+			{{ t('account_details') }}
 		</div>
 
 		<bt-list>
@@ -149,16 +149,14 @@
 					<bt-form-item
 						:title="t('wizard_url')"
 						:width-separator="false"
-						:data="`https://wizard-${userInfo?.name}.${url_domain}`"
+						:data="usersStore.getUrlWizardUrl(userInfo.name)"
 					/>
 				</template>
 				<template v-slot:mobile>
 					<bt-form-item :title="t('wizard_url')" :width-separator="false">
 						<div
 							class="row items-center justify-end"
-							@click="
-								setCopyInfo(`https://wizard-${userInfo?.name}.${url_domain}`)
-							"
+							@click="setCopyInfo(usersStore.getUrlWizardUrl(userInfo.name))"
 						>
 							<div
 								style="
@@ -169,7 +167,7 @@
 								"
 								class="text-body-3 text-ink-3"
 							>
-								{{ `https://wizard-${userInfo?.name}.${url_domain}` }}
+								{{ usersStore.getUrlWizardUrl(userInfo.name) }}
 							</div>
 							<q-icon name="sym_r_content_copy" size="24px" />
 						</div>
@@ -228,16 +226,16 @@ import ListBottomFuncBtn from 'src/components/settings/ListBottomFuncBtn.vue';
 import UpdateUserPassworDialog from '../dialog/UpdateUserPassworDialog.vue';
 import ResourceLimit from 'src/components/settings/user/ResourceLimit.vue';
 import AdaptiveLayout from 'src/components/settings/AdaptiveLayout.vue';
-import UpdateUserQutoaDialog from './dialog/UpdateUserQutoaDialog.vue';
+import UpdateUserQuotaDialog from './dialog/UpdateUserQuotaDialog.vue';
 import BtFormItem from 'src/components/settings/base/BtFormItem.vue';
 import BtList from 'src/components/settings/base/BtList.vue';
-import { useUserStore } from 'src/stores/settings/user';
+import { useUsersStore } from 'src/stores/settings/users';
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { copyToClipboard, Loading, useQuasar } from 'quasar';
 import { notifySuccess } from 'src/utils/settings/btNotify';
 import { useDeviceStore } from 'src/stores/settings/device';
-import { useAdminStore } from 'src/stores/settings/admin';
-import { useTokenStore } from 'src/stores/settings/token';
+import { useMeStore } from 'src/stores/settings/me';
+import { useTerminusStore } from 'src/stores/terminus';
 import { getLocalTime } from 'src/utils/settings/utils';
 import { getRoleName, OLARES_ROLE } from 'src/constant';
 import { passwordAddSort } from 'src/utils/account';
@@ -257,32 +255,28 @@ import {
 
 import { useWebsocketManager2Store } from 'src/stores/websocketManager2';
 
-const userStore = useUserStore();
-const tokenStore = useTokenStore();
-const adminStore = useAdminStore();
+const usersStore = useUsersStore();
+const meStore = useMeStore();
+const terminusStore = useTerminusStore();
 const deviceStore = useDeviceStore();
 const { t } = useI18n();
-
-const url_domain = computed(() => {
-	return tokenStore.url?.split('.').slice(1).join('.');
-});
 
 const quasar = useQuasar();
 const Route = useRoute();
 const router = useRouter();
 
 const userInfo = ref<AccountInfo | undefined>(
-	userStore.getUserByName(Route.params.name as string)
+	usersStore.getUserByName(Route.params.name as string)
 );
 
 console.log(userInfo.value);
-console.log(adminStore.user.name);
+console.log(meStore.user.name);
 const usage = ref<UserUsage | undefined>(undefined);
 
 async function changeQuota() {
 	quasar
 		.dialog({
-			component: UpdateUserQutoaDialog,
+			component: UpdateUserQuotaDialog,
 			componentProps: {
 				cpu: userInfo.value?.cpu_limit,
 				memory: Number(
@@ -298,12 +292,12 @@ async function changeQuota() {
 				return;
 			}
 			try {
-				await userStore.update_account_quoto(userInfo.value.name, {
+				await usersStore.update_account_quoto(userInfo.value.name, {
 					memory_limit: data.memoryLimit + 'G',
 					cpu_limit: '' + data.cpuLimit
 				});
-				await userStore.update_account_info(userInfo.value.name);
-				userInfo.value = userStore.getUserByName(userInfo.value.name);
+				await usersStore.update_account_info(userInfo.value.name);
+				userInfo.value = usersStore.getUserByName(userInfo.value.name);
 
 				if (usage.value) {
 					usage.value = {
@@ -319,11 +313,11 @@ async function changeQuota() {
 }
 
 const managerPermission = computed(() => {
-	return adminStore.canManageAccount(userInfo.value);
+	return meStore.canManageAccount(userInfo.value);
 });
 
 const isCurrentUser = computed(() => {
-	return adminStore.isCurrentAccount(userInfo.value);
+	return meStore.isCurrentAccount(userInfo.value);
 });
 
 const isDemo = computed(() => {
@@ -341,13 +335,15 @@ const deleteUser = () => {
 		.dialog({
 			component: ReminderDialogComponent,
 			componentProps: {
-				title: t('delete_item', {
-					item: userInfo.value.name
+				title: t('delete_user_title', {
+					account: userInfo.value.name
 				}),
 				message: t('delete_user_message', {
 					account: userInfo.value.name
 				}),
-				useCancel: true
+				useCancel: true,
+				confirmText: t('confirm'),
+				cancelText: t('cancel')
 			}
 		})
 		.onOk(() => {
@@ -362,7 +358,7 @@ const deleteUserSureAction = async () => {
 	const userName = userInfo.value.name;
 	Loading.show();
 	try {
-		await userStore.delete_account(userName);
+		await usersStore.delete_account(userName);
 		checkAccountDeleteProgress = setInterval(async () => {
 			checkAccountDelete(userName);
 		}, 4 * 1000);
@@ -374,14 +370,14 @@ const deleteUserSureAction = async () => {
 
 async function checkAccountDelete(username: string) {
 	try {
-		const data: AccountModifyStatus = await userStore.get_account_status(
+		const data: AccountModifyStatus = await usersStore.get_account_status(
 			username
 		);
 		if (data.status == AccountStatus.Deleted) {
 			if (checkAccountDeleteProgress) {
 				clearInterval(checkAccountDeleteProgress);
 			}
-			userStore.removeLocalAccount(username);
+			usersStore.removeLocalAccount(username);
 
 			const socketStore = useWebsocketManager2Store();
 			socketStore.apply('usersUpdate', {
@@ -425,8 +421,11 @@ const resetPassword = async () => {
 		.onOk(async () => {
 			const password = generatePasword();
 			try {
-				await userStore.reset_account_password({
-					password: passwordAddSort(password, adminStore.terminus.osVersion),
+				await usersStore.reset_account_password({
+					password: passwordAddSort(
+						password,
+						terminusStore.terminusInfo.osVersion
+					),
 					current_password: '',
 					username: userInfo.value?.name
 				});
@@ -452,8 +451,8 @@ let updateUserInfoInterval: NodeJS.Timeout | null = null;
 
 async function executeUpdateAccount(username: string) {
 	try {
-		await userStore.update_account_info(username);
-		userInfo.value = userStore.getUserByName(Route.params.name as string);
+		await usersStore.update_account_info(username);
+		userInfo.value = usersStore.getUserByName(Route.params.name as string);
 
 		if (userInfo.value?.wizard_complete) {
 			stopUserInfoPolling();
@@ -482,7 +481,7 @@ function startUserInfoPolling(username: string) {
 
 async function updateUserInfo(username: string) {
 	try {
-		userInfo.value = userStore.getUserByName(Route.params.name as string);
+		userInfo.value = usersStore.getUserByName(Route.params.name as string);
 		executeUpdateAccount(username);
 
 		if (userInfo.value?.roles.find((r: any) => r === OLARES_ROLE.OWNER)) {

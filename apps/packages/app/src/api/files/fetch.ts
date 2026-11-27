@@ -87,8 +87,18 @@ type TermipassStoreType = Store<
 	}
 >;
 
+const assertRequestNotBlocked = (termipassStore: TermipassStoreType) => {
+	if (
+		getAppPlatform().isClient &&
+		termipassStore.totalStatus?.isError !== UserStatusActive.active
+	) {
+		console.error('Request blocked');
+		throw new Error('Request blocked');
+	}
+};
+
 /**
- * Apply baseURL, blocking and X-Authorization to a request config.
+ * Apply baseURL, blocking and the auth header to a request config.
  * Used by both axios native interceptor and the proxy interceptor.
  */
 const applyRequestConfig = (
@@ -98,13 +108,7 @@ const applyRequestConfig = (
 	const dataStore = useDataStore();
 	config.baseURL = dataStore.baseURL();
 
-	if (
-		getAppPlatform().isClient &&
-		termipassStore.totalStatus?.isError !== UserStatusActive.active
-	) {
-		console.error('Request blocked');
-		throw new Error('Request blocked');
-	}
+	assertRequestNotBlocked(termipassStore);
 
 	if (!config.headers) {
 		return config;
@@ -130,17 +134,33 @@ const applyRequestConfig = (
  * codes as strings (e.g. `"200"`); strict equality would treat those as
  * errors and trigger a false notification.
  */
-const inspectBusinessError = (response: AxiosResponse) => {
-	if (
+const inspectBusinessError = (
+	response: AxiosResponse,
+	options: { notify?: boolean; throwError?: boolean } = {}
+) => {
+	const notify = options.notify !== false;
+	const code = response?.data?.code;
+	const responseMessage =
+		response?.data?.message || response?.data?.msg || response?.data?.error;
+	const isBusinessError =
 		response &&
 		response.status === 200 &&
-		response.data?.code &&
-		response.data.code != 0 &&
-		response.data.code != 200 &&
-		response.data.code != 300 &&
-		response.data?.message
-	) {
-		handleError(response.data.message);
+		code !== undefined &&
+		code !== null &&
+		code !== '' &&
+		code != 0 &&
+		code != 200 &&
+		code != 300 &&
+		(responseMessage || options.throwError);
+	if (isBusinessError) {
+		const message =
+			responseMessage || `Request failed with business code ${code}`;
+		if (notify && responseMessage) {
+			handleError(responseMessage);
+		}
+		if (options.throwError) {
+			throw new ErrorResponse(response, message);
+		}
 	}
 };
 
@@ -167,7 +187,14 @@ class Fetch {
 			};
 
 			const proxyResponseInterceptor = (response: AxiosResponse) => {
-				inspectBusinessError(response);
+				const isNoToast = response?.config?.noToast === true;
+				inspectBusinessError(response, {
+					notify: !isNoToast,
+					throwError: isNoToast
+				});
+				if (isNoToast) {
+					return response;
+				}
 				if (
 					response &&
 					response.status !== 200 &&
@@ -184,9 +211,11 @@ class Fetch {
 							? `${response.data.message}`
 							: `Request failed with status code ${response.status}`
 					);
+					// i18n-ignore-start
 					if (responseError.message !== 'Request blocked') {
 						handleError(getRequestErrorMessage(responseError));
 					}
+					// i18n-ignore-end
 				}
 
 				return response;
@@ -203,11 +232,21 @@ class Fetch {
 
 			this.instance.interceptors.response.use(
 				(response) => {
-					inspectBusinessError(response);
+					const isNoToast = response?.config?.noToast === true;
+					inspectBusinessError(response, {
+						notify: !isNoToast,
+						throwError: isNoToast
+					});
 					return response;
 				},
 				(error) => {
+					const isNoToast = error.response?.config?.noToast === true;
+					if (isNoToast) {
+						throw error;
+					}
+
 					const errorMessage = getRequestErrorMessage(error);
+					// i18n-ignore-start
 					if (error.message !== 'Request blocked') {
 						handleError(errorMessage);
 					}
@@ -219,6 +258,7 @@ class Fetch {
 						type: NetworkErrorMode.file,
 						error: error.message
 					});
+					// i18n-ignore-end
 					throw new Error(errorMessage);
 				}
 			);
@@ -240,6 +280,35 @@ class Fetch {
 		this.ensureStore();
 		const response: AxiosResponse<T> = await this.instance.get(url, config);
 		return response.data;
+	}
+
+	async getStream(url: string, config?: RequestInit): Promise<Response> {
+		this.ensureStore();
+		assertRequestNotBlocked(this.termipassStore);
+		const dataStore = useDataStore();
+		const userStore = useUserStore();
+		const baseURL = dataStore.baseURL();
+		const fullUrl = url.startsWith('http')
+			? url
+			: new URL(url, baseURL).toString();
+		const headers = new Headers(config?.headers || {});
+
+		let credentials = config?.credentials;
+		if (
+			userStore.current_user?.access_token &&
+			!headers.has('X-Authorization')
+		) {
+			headers.set('X-Authorization', userStore.current_user.access_token);
+			credentials = credentials = config?.credentials || 'omit';
+		}
+
+		const response = await fetch(fullUrl, {
+			...config,
+			headers,
+			credentials: credentials
+		});
+
+		return response;
 	}
 
 	async post<T = any>(

@@ -30,6 +30,19 @@ export const localVPNSDKStatusStringToStatus = (statusString: string) => {
 	return LocalVPNSDKStatusMap[statusString] || LocalVPNSDKStatus.NoState;
 };
 
+export interface ExitNodeOption {
+	id: string;
+	arg: string;
+	label: string;
+}
+
+export interface ExitNodeState {
+	nodes: ExitNodeOption[];
+	enabled: boolean;
+	selected?: string;
+	exitNodeAllowLanAccess?: boolean;
+}
+
 export interface ConfigVPNInterface {
 	vpnDiscriminator: 'ConfigVPNInterface' | string;
 	vpnOpen(options: {
@@ -42,6 +55,13 @@ export interface ConfigVPNInterface {
 	currentNodeId(): Promise<string>;
 	hostPeerInfo(): Promise<HostPeerInfo | undefined>;
 	resendCache(options: { server: string; authToken: string }): Promise<void>;
+	resendPreauthKey(options: { authKey: string }): Promise<void>;
+	getExitNodeState?(): Promise<ExitNodeState>;
+	enableExitNode?(options: { exitNode?: string }): Promise<ExitNodeState>;
+	disableExitNode?(): Promise<ExitNodeState>;
+	setExitNodeAllowLanAccess?(options: {
+		allow: boolean;
+	}): Promise<ExitNodeState>;
 }
 
 export const instanceOfConfigVPNInterface = (obj: any) => {

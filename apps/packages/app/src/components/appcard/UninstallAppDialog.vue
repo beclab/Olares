@@ -2,18 +2,15 @@
 	<bt-custom-dialog
 		ref="customRef"
 		size="medium"
-		:title="t('app.uninstall')"
-		:ok="t('confirm')"
+		persistent
+		:title="dialogTitle"
+		:ok="okText"
 		:cancel="t('cancel')"
 		@onSubmit="onOK"
 	>
 		<div v-if="step === 1" class="column">
 			<div class="text-ink-2 text-body3">
-				{{
-					t('my.sure_to_uninstall_the_app', {
-						title: appName
-					})
-				}}
+				{{ t('uninstall_options_desc') }}
 			</div>
 
 			<bt-check-box
@@ -24,6 +21,7 @@
 				check-img="market/check_box.svg"
 				uncheck-img="market/uncheck_box.svg"
 				class="q-mt-md"
+				:disabled="allDisabled"
 				:model-value="allRef"
 				@update:model-value="onUpdateAll"
 			/>
@@ -51,7 +49,7 @@
 <script lang="ts" setup>
 import BtCheckBox from '../rss/BtCheckBox.vue';
 import { useI18n } from 'vue-i18n';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 
 const { t } = useI18n();
 const customRef = ref();
@@ -63,6 +61,10 @@ const props = defineProps({
 		required: true
 	},
 	showCSAppCheckbox: {
+		type: Boolean,
+		default: false
+	},
+	allDisabled: {
 		type: Boolean,
 		default: false
 	},
@@ -80,6 +82,20 @@ const props = defineProps({
 
 const allRef = ref(props.all);
 const clearDataRef = ref(props.clearData);
+const dialogTitle = computed(() => {
+	if (step.value === 2) {
+		return t('uninstall_shared_server_title');
+	}
+	return t('my.sure_to_uninstall_the_app', {
+		title: props.appName
+	});
+});
+const okText = computed(() => {
+	if (step.value === 1 && props.showCSAppCheckbox && allRef.value) {
+		return t('continue');
+	}
+	return t('app.uninstall');
+});
 
 const onUpdateAll = (status: boolean) => {
 	allRef.value = status;

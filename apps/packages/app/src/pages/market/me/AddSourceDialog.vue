@@ -112,7 +112,7 @@ const onOK = async () => {
 			}
 		})
 		.catch((err) => {
-			notifyFailed(err.message || err.response?.data?.message || err);
+			notifyFailed(err.response?.data?.message || err.message || String(err));
 		})
 		.finally(() => {
 			isLoading.value = false;

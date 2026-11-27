@@ -1,5 +1,6 @@
-import { isString, capitalize, isUndefined, isNull } from 'lodash';
+import { isString, isUndefined, isNull } from 'lodash';
 import moment from 'moment-mini';
+export { _capitalize } from '@apps/control-panel-common/src/utils/index';
 
 export const getLocalTime = (time: any) => {
 	let formatTime = time;
@@ -9,10 +10,6 @@ export const getLocalTime = (time: any) => {
 	}
 
 	return moment.utc(formatTime).local();
-};
-
-export const _capitalize = (value: string | undefined) => {
-	return capitalize(value).replace(/_/g, ' ');
 };
 
 /**

@@ -51,6 +51,7 @@ import { computed, ref } from 'vue';
 
 const { t } = useI18n();
 
+// i18n-ignore-start backer names are proper nouns and must not be translated
 const backerList = ref<Backer[]>([
 	{ number: 1, uid: 987045608, name: 'Anthony C' },
 	{ number: 2, uid: 243629099, name: 'Graham Chow' },
@@ -264,7 +265,6 @@ const backerList = ref<Backer[]>([
 	{ number: 322, uid: 1060830231, name: 'Global Warming' },
 	{ number: 323, uid: 1914665037, name: 'BluB' },
 	{ number: 324, uid: 1739672569, name: 'Manu' },
-	{ number: 328, uid: 439018003, name: 'Ivan Maple' },
 	{ number: 329, uid: 1546598086, name: 'Abdullah Alazemi' },
 	{ number: 332, uid: 1029312303, name: 'Christian Schröder' },
 	{ number: 333, uid: 1404175633, name: 'Ben Peter' },
@@ -800,10 +800,11 @@ const backerList = ref<Backer[]>([
 	{ number: 199, uid: '', name: 'Tariq Chaudhry' },
 	{ number: 94, uid: '', name: 'Slava Solodkiy.cv' }
 ]);
+// i18n-ignore-end
 
 const highlightedText = computed(() => {
 	const fullText = t('Sincere thanks to our backer', {
-		number: backerList.value.length
+		count: backerList.value.length
 	});
 	return fullText.replace(
 		String(backerList.value.length),

@@ -9,6 +9,8 @@ import { TransferItem } from 'src/utils/interface/transfer';
 import { IUploadCloudParams } from 'src/platform/interface/electron/interface';
 import { Router } from 'vue-router';
 import { CommonUrlApiType } from './common/utils';
+import { ArchiveConflict, ArchiveFormat } from 'src/utils/interface/archive';
+import { DriveType } from 'src/utils/interface/files';
 
 export default abstract class Origin {
 	public origin_id: number;
@@ -37,7 +39,7 @@ export default abstract class Origin {
 	 * Retrieves this menu from the Sync
 	 */
 	abstract fetchMenuRepo(
-		menu?: string
+		origins?: DriveType[]
 	): Promise<DriveMenuType[] | SyncRepoMineType[]>;
 
 	/**
@@ -277,6 +279,12 @@ export default abstract class Origin {
 
 	abstract getPanelJumpPath(file: any): string;
 
+	/**
+	 * @deprecated Not invoked anywhere in the codebase as of this writing.
+	 * Search-result navigation currently goes through `displayPath` /
+	 * `driveTypeBySearchMeta`. Kept only because subclasses still implement it.
+	 * Remove together with all subclass implementations once confirmed unused.
+	 */
 	abstract formatSearchPath(search: string): string;
 
 	abstract renameRepo(item: SyncRepoItemType, newName: string): Promise<void>;
@@ -299,4 +307,34 @@ export default abstract class Origin {
 	};
 
 	abstract uploadEmptyFile(tranfeItemId: number): Promise<any>;
+
+	abstract createArchiveCompressTask(params: {
+		node: string;
+		parentPath: string;
+		param?: string;
+		format: ArchiveFormat;
+		items: FileItem[];
+		targetFileName: string;
+		password?: string;
+		splitVolume?: number;
+		conflictStrategy?: ArchiveConflict;
+		compressionLevel?: number;
+		preserveSymbolicLinks?: boolean;
+	}): Promise<{ task_id: string; node: string }>;
+
+	abstract createArchiveExtractTask(params: {
+		node: string;
+		parentPath: string;
+		param?: string;
+		format?: ArchiveFormat;
+		items: FileItem[];
+		targetFolderName?: string;
+		password?: string;
+		splitVolume?: number;
+		conflictStrategy?: ArchiveConflict;
+		compressionLevel?: number;
+		preserveSymbolicLinks?: boolean;
+	}): Promise<{ task_id: string; node: string }>;
+
+	abstract getFileApiFrontendPath(file: FileItem): string;
 }

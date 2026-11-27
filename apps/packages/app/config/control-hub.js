@@ -50,33 +50,33 @@ const getConfig = (ctx) => {
 					http: false
 				},
 				'/kapis': {
-					target: `https://${proxyTarget}`,
+					target: `${process.env.PROTOCOL}${proxyTarget}`,
 					changeOrigin: true,
 					secure: false,
 					ws: false
 				},
 				'/api': {
-					target: `https://${proxyTarget}`,
+					target: `${process.env.PROTOCOL}${proxyTarget}`,
 					changeOrigin: true,
 					secure: false
 				},
 				'/bfl': {
-					target: `https://${proxyTarget}`,
+					target: `${process.env.PROTOCOL}${proxyTarget}`,
 					changeOrigin: true,
 					secure: false
 				},
 				'/capi': {
-					target: `https://${proxyTarget}`,
+					target: `${process.env.PROTOCOL}${proxyTarget}`,
 					changeOrigin: true,
 					secure: false
 				},
 				'/middleware': {
-					target: `https://${proxyTarget}`,
+					target: `${process.env.PROTOCOL}${proxyTarget}`,
 					changeOrigin: true,
 					secure: false
 				},
 				'/user-service': {
-					target: `https://${proxyTarget}`,
+					target: `${process.env.PROTOCOL}${proxyTarget}`,
 					changeOrigin: true
 				}
 			}

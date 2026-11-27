@@ -3,7 +3,7 @@ import { useTokenStore } from './token';
 import { notifyFailed } from 'src/utils/settings/btNotify';
 import axios from 'axios';
 import { useBackgroundStore } from './background';
-import { useAdminStore } from './admin';
+import { useTerminusStore } from '../terminus';
 import { OlaresTunneV2Interface } from 'src/utils/interface/frp';
 import { useTerminusDStore } from './terminusd';
 
@@ -73,7 +73,7 @@ export const useNetworkStore = defineStore('network', {
 		},
 		async getOlaresTunnelsV2() {
 			const tokenStore = useTokenStore();
-			const adminStore = useAdminStore();
+			const terminusStore = useTerminusStore();
 			const terminusDStore = useTerminusDStore();
 			try {
 				if (!terminusDStore.olaresInfo) {
@@ -82,7 +82,7 @@ export const useNetworkStore = defineStore('network', {
 				const olaresTunnels: any = await axios.post(
 					`${tokenStore.url}/api/frp-servers-v2`,
 					{
-						name: adminStore.olaresId,
+						name: terminusStore.olaresId,
 						device_name: terminusDStore.olaresInfo?.device_name
 					}
 				);

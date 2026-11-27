@@ -33,7 +33,6 @@ export async function login(username, password) {
 	const store = useDataStore();
 	store.setUser({
 		id: 1,
-		locale: 'en',
 		viewMode: 'list',
 		singleClick: false,
 		perm: {
@@ -46,9 +45,6 @@ export async function login(username, password) {
 			share: true,
 			download: true
 		},
-		commands: [],
-		lockPassword: false,
-		hideDotfiles: false,
 		dateFormat: false
 	});
 }
@@ -93,7 +89,7 @@ export async function signup(username, password) {
 
 export function logout() {
 	const store = useDataStore();
-	document.cookie = 'auth=; expires=Thu, 01 Jan 1970 00:00:01 GMT; path=/';
+	document.cookie = 'auth=; expires=Thu, 01 Jan 1970 00:00:01 GMT; path=/'; // i18n-ignore
 	const router = useRouter();
 	store.commit('setJWT', '');
 	store.commit('setUser', null);

@@ -26,6 +26,12 @@ const extendWebpack = (ctx, cfg) => {
 	});
 };
 const getConfig = (ctx) => {
+	const proxy = { ...require('./proxyDefault') };
+	// /download is a Wise page route; only forward its API prefix so opening or
+	// refreshing the page serves the SPA.
+	proxy['/download/api'] = proxy['/download'];
+	delete proxy['/download'];
+
 	if (!ctx.dev) {
 		css.push('font.pro.scss');
 	}
@@ -37,6 +43,20 @@ const getConfig = (ctx) => {
 
 	return {
 		boot,
+		devServer: {
+			proxy: {
+				// Local dev proxy for Files raw and preview endpoints.
+				'/api/raw/': {
+					target: `${process.env.PROTOCOL}files.${process.env.ACCOUNT_DOMAIN}`,
+					changeOrigin: true
+				},
+				'/api/preview/': {
+					target: `${process.env.PROTOCOL}files.${process.env.ACCOUNT_DOMAIN}`,
+					changeOrigin: true
+				},
+				...proxy
+			}
+		},
 		css,
 		build: {
 			env: {},

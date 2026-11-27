@@ -1,6 +1,6 @@
 <template>
 	<div class="q-gutter-y-lg">
-		<MyCard bordered square flat animated title="Detail">
+		<MyCard bordered square flat animated :title="t('DETAILS')">
 			<template #extra>
 				<div class="row">
 					<!-- <Terminal :data="containerPath">{{ t('TERMINAL') }}</Terminal> -->

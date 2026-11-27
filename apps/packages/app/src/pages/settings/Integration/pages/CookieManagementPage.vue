@@ -15,7 +15,7 @@
 				class="cookie-search-input"
 				dense
 				borderless
-				placeholder="Type a domain name"
+				:placeholder="$t('type_a_domain_name')"
 				v-model="searchDomain"
 			/>
 			<div
@@ -100,10 +100,20 @@
 	>
 		<template v-slot:message>
 			<div
-				class="cookie-message text-body2 text-ink-3 text-center q-mt-sm"
+				class="text-body2 text-ink-3 text-center q-mt-sm"
 				style="max-width: 408px"
-				v-html="formattedMessage"
-			/>
+			>
+				{{ t('Please add manually or link') }}
+				<a
+					:href="cookieStore.openCollectionCookiesLink"
+					target="_blank"
+					rel="noopener noreferrer"
+					class="text-blue-default"
+					style="text-decoration: none"
+				>
+					{{ t('upload via LarePass Chrome extension') }}
+				</a>
+			</div>
 		</template>
 	</app-menu-empty>
 </template>
@@ -133,24 +143,12 @@ const searchCookie = computed(() => {
 	);
 });
 
-const formattedMessage = computed(() => {
-	const linkHtml = `<a
-    href="${cookieStore.openCollectionCookiesLink}"
-    target="_blank"
-    rel="noopener noreferrer"
-    class="link text-blue-default"
-    style="text-decoration: underline"
-  >${t('upload via LarePass Chrome extension')}</a>`;
-
-	return t('Please add manually or link', { link: linkHtml });
-});
-
 const addCookie = () => {
 	$q.dialog({
 		component: MultiTextDialog,
 		componentProps: {
 			title: 'dialog.upload_cookie',
-			label: 'dialog.Add cookie',
+			label: 'dialog.Add cookie', // i18n-ignore: this is an i18n key passed to MultiTextDialog, not user-visible text
 			link: false
 		}
 	});

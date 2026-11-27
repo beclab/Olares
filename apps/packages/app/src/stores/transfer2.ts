@@ -17,6 +17,7 @@ import {
 	updateFolderMemoryItemInfo,
 	updateMemoryItemInfo
 } from 'src/services/abstractions/transferManager/interface';
+import { isArchiveEnable } from 'src/api';
 
 export enum TransferType {
 	UPLOADING,
@@ -26,7 +27,9 @@ export enum TransferType {
 	CLOUDING,
 	CLOUDED,
 	COPYING,
-	COPIED
+	COPIED,
+	ARCHIVING,
+	ARCHIVED
 }
 
 export enum TransferMobileItem {
@@ -282,6 +285,50 @@ export const useTransfer2Store = defineStore('transfer2', {
 			});
 		},
 
+		archiveComplete: (state) => {
+			return state.transfers.filter((item: number) => {
+				return (
+					state.transferMap[item] &&
+					[TransferFront.compress, TransferFront.extract].includes(
+						state.transferMap[item].front
+					) &&
+					(state.transferMap[item].status === TransferStatus.Completed ||
+						state.transferMap[item].status === TransferStatus.Canceled) &&
+					(TransferClient.getUserId()
+						? TransferClient.getUserId() == state.transferMap[item].userId
+						: true)
+				);
+			});
+		},
+		archiving: (state) => {
+			return state.transfers.filter((item: number) => {
+				return (
+					state.transferMap[item] &&
+					[TransferFront.compress, TransferFront.extract].includes(
+						state.transferMap[item].front
+					) &&
+					state.transferMap[item].status != TransferStatus.Completed &&
+					state.transferMap[item].status != TransferStatus.Canceled &&
+					(TransferClient.getUserId()
+						? TransferClient.getUserId() == state.transferMap[item].userId
+						: true)
+				);
+			});
+		},
+		archive: (state) => {
+			return state.transfers.filter((item: number) => {
+				return (
+					state.transferMap[item] &&
+					[TransferFront.compress, TransferFront.extract].includes(
+						state.transferMap[item].front
+					) &&
+					(TransferClient.getUserId()
+						? TransferClient.getUserId() == state.transferMap[item].userId
+						: true)
+				);
+			});
+		},
+
 		shareUploadList: (state) => (id: string) => {
 			return state.transfers.filter((item: number) => {
 				return (
@@ -359,6 +406,15 @@ export const useTransfer2Store = defineStore('transfer2', {
 				key: `${TransferFront.copy}`,
 				count: 0
 			});
+			if (isArchiveEnable()) {
+				items[0].children.push({
+					label: i18n.global.t('transmission.archive'),
+					icon: 'sym_r_archive',
+					key: `${TransferFront.compress}`,
+					count: 0
+				});
+			}
+
 			return items;
 		},
 
@@ -711,7 +767,7 @@ export const useTransfer2Store = defineStore('transfer2', {
 				item.status === TransferStatus.Canceling ||
 				item.status === TransferStatus.Canceled
 			) {
-				throw Error('Task already completed');
+				throw Error('Task already completed'); // i18n-ignore
 			}
 
 			if (
@@ -994,7 +1050,7 @@ export const useTransfer2Store = defineStore('transfer2', {
 						item.onlyWifiPaused = false;
 						if (!item.isFolder) {
 							item.retryCount = 0;
-							this.onFileError(item.id!, item.front, 'need resume');
+							this.onFileError(item.id!, item.front, 'need resume'); // i18n-ignore
 						} else {
 							if (this.taskCurrentSingleFiles[item.front][item.id]) {
 								// this.taskCurrentSingleFiles[item.front][item.id].retryCount = 0;
@@ -1004,7 +1060,7 @@ export const useTransfer2Store = defineStore('transfer2', {
 								if (tasks) {
 									tasks.forEach((task) => {
 										task.retryCount = 0;
-										this.onFileError(task.id!, task.front, 'need resume');
+										this.onFileError(task.id!, task.front, 'need resume'); // i18n-ignore
 									});
 								}
 							}
@@ -1020,7 +1076,7 @@ export const useTransfer2Store = defineStore('transfer2', {
 				if (!item.isFolder) {
 					await TransferClient.doAction(item, 'pause');
 					item.retryCount = 0;
-					await this.onFileError(item.id!, item.front, 'base url update error');
+					await this.onFileError(item.id!, item.front, 'base url update error'); // i18n-ignore
 				} else {
 					if (this.taskCurrentSingleFiles[item.front][item.id]) {
 						const tasks: TransferItemInMemory[] =
@@ -1029,7 +1085,7 @@ export const useTransfer2Store = defineStore('transfer2', {
 							tasks.forEach(async (task) => {
 								await TransferClient.doAction(task, 'pause');
 								task.retryCount = 0;
-								this.onFileError(task.id!, task.front, 'base url update error');
+								this.onFileError(task.id!, task.front, 'base url update error'); // i18n-ignore
 							});
 						}
 					}

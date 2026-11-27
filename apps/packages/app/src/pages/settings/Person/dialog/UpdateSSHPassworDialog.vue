@@ -3,7 +3,7 @@
 		ref="CustomRef"
 		:title="t('Reset SSH Password')"
 		:skip="false"
-		:ok="t('ok')"
+		:ok="t('reset')"
 		size="medium"
 		:platform="deviceStore.platform"
 		:cancel="t('cancel')"

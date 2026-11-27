@@ -2,8 +2,6 @@ import { defineStore } from 'pinia';
 import { useUserStore } from './user';
 import { useScaleStore } from './scale';
 import { getAppPlatform } from '../application/platform';
-import { DeviceInfo } from '@didvault/sdk/src/core';
-import { app } from 'src/globals';
 import { TermiPassDeviceInfo } from '@bytetrade/core';
 import { ThemeDefinedMode } from '@bytetrade/ui';
 import { ThemePlugin } from 'src/plugins/theme';
@@ -52,7 +50,7 @@ export const useDeviceStore = defineStore('device', {
 
 			const platform = getAppPlatform();
 
-			const device_info: DeviceInfo = await platform.getDeviceInfo();
+			const device_info = await platform.getDeviceInfo();
 
 			const info = new TermiPassDeviceInfo(device_info);
 
@@ -71,11 +69,6 @@ export const useDeviceStore = defineStore('device', {
 			info.firebase_token = await platform.getFirebaseToken();
 
 			info.tailScale_id = await platform.getTailscaleId();
-
-			info.srp_id =
-				app.authInfo && app.authInfo.sessions.length > 0
-					? app.authInfo.sessions[0].id
-					: '';
 
 			return info;
 		},

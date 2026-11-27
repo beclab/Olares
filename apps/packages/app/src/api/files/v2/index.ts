@@ -7,6 +7,7 @@ import Origin from './origin';
 import DriveDataAPI from './drive/data';
 import SyncDataAPI from './sync/data';
 import DataDataAPI from './data/data';
+import CommonDataAPI from './commonDrive/data';
 import CacheDataAPI from './cache/data';
 import GoogleDataAPI from './google/data';
 import DropboxDataAPI from './dropbox/data';
@@ -31,6 +32,7 @@ class DriveAPI {
 		[DriveType.Sync]: SyncDataAPI,
 		[DriveType.Drive]: DriveDataAPI,
 		[DriveType.Data]: DataDataAPI,
+		[DriveType.Common]: CommonDataAPI,
 		[DriveType.Cache]: CacheDataAPI,
 		[DriveType.GoogleDrive]: GoogleDataAPI,
 		[DriveType.Dropbox]: DropboxDataAPI,
@@ -87,6 +89,7 @@ export {
 	DriveDataAPI,
 	SyncDataAPI,
 	DataDataAPI,
+	CommonDataAPI,
 	CacheDataAPI,
 	GoogleDataAPI,
 	DropboxDataAPI,

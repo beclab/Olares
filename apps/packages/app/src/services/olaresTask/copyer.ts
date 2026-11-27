@@ -60,7 +60,7 @@ class Copyer implements OlaresCopyTask {
 			return item;
 		}
 		const dstDriveType = getCopyTaskDriveType(item);
-		const dataAPI = DriveAPI.getAPI(dstDriveType);
+		const dataAPI = DriveAPI.getAPI(dstDriveType, item.origin_id);
 		await this.formatTransferData(item);
 
 		const transferStore = useTransfer2Store();
@@ -91,8 +91,6 @@ class Copyer implements OlaresCopyTask {
 					item.action == 'copy' ? TransferFront.copy : TransferFront.move,
 					item.current_phase
 				);
-				console.log('refresh 111', dataAPI);
-
 				dataAPI.uploadSuccessRefreshData(item.transfer_id);
 
 				break;
@@ -154,6 +152,14 @@ class Copyer implements OlaresCopyTask {
 			});
 		}
 
+		const pauseDisable = !updatedTask.pause_able;
+		if (pauseDisable !== transterItem.pauseDisable) {
+			transterItem.pauseDisable = pauseDisable;
+			await transferStore.update(transterItem.id!, {
+				pauseDisable
+			});
+		}
+
 		if (
 			updatedTask.current_phase != transterItem.currentPhase ||
 			updatedTask.total_phases != transterItem.totalPhase
@@ -190,6 +196,7 @@ class Copyer implements OlaresCopyTask {
 			dst_drive_type?: DriveType;
 			type: TransferFront;
 			node: string;
+			origin_id?: number;
 		}
 	) {
 		const dstDriveType = getCopyTaskDriveType(taskIdItem);
@@ -207,6 +214,7 @@ class Copyer implements OlaresCopyTask {
 		const transferId = await transferStore.add(transferItem, info.type);
 		taskIdItem.transfer_id = transferId;
 		taskIdItem.node = info.node;
+		taskIdItem.origin_id = info.origin_id;
 		return taskIdItem;
 	}
 

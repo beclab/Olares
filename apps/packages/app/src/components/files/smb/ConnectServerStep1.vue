@@ -14,25 +14,31 @@
 		<div class="dialog-desc">
 			<div>
 				<div class="form-item-key text-body1 text-ink-3 q-mb-xs">
-					{{ t('files.dir_address') }}
+					{{ t('files.mount_protocol') }}
 				</div>
-				<div class="form-item-value row item-center justify-between">
-					<q-input
-						dense
-						borderless
-						no-error-icon
-						v-model="connectUrl"
-						:placeholder="t('files.server_address_placeholder')"
-						class="form-item-input text-ink-2 text-body1"
-						:rules="[
-							(val) =>
-								(val && val.length > 0) ||
-								t('files.server_address_placeholder'),
-							(val) => /^\/\//.test(val) || t('files.server_address_rules')
-						]"
-					>
-					</q-input>
+				<div class="form-item-value">
+					<bt-select
+						v-model="mountType"
+						:options="mountTypeOptions"
+						:border="true"
+						class="form-item-select"
+					/>
 				</div>
+			</div>
+
+			<div class="q-mt-lg">
+				<terminus-edit
+					v-model="connectUrl"
+					label-class="form-item-key text-body1 text-ink-3 q-mb-xs"
+					:label="t('files.dir_address')"
+					:hint-text="addressPlaceholder"
+					:is-error="showAddressError"
+					:error-message="addressErrorMessage"
+					:input-height="40"
+					:show-password-img="false"
+					class="form-item-input text-ink-2 text-body1"
+					@onBlur="validateAddress"
+				/>
 			</div>
 
 			<div class="q-mt-lg">
@@ -71,12 +77,19 @@
 
 <script lang="ts" setup>
 import { useI18n } from 'vue-i18n';
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { CommonFetch } from '../../../api';
-import { useFilesStore, SmbMountType } from './../../../stores/files';
+import {
+	useFilesStore,
+	SmbMountType,
+	ExternalType,
+	isValidMountUrlForType
+} from './../../../stores/files';
 import ConnectServerFooterEdit from './ConnectServerFooterEdit.vue';
-import { files } from 'jszip';
+import BtSelect from '../../base/BtSelect.vue';
+import TerminusEdit from '../../common/TerminusEdit.vue';
+import { isNfsEnable } from '../../../api';
 
 const props = defineProps({
 	origin_id: {
@@ -91,12 +104,74 @@ const filesStore = useFilesStore();
 const route = useRoute();
 
 const loading = ref(false);
-const connectUrl = ref();
+const connectUrl = ref('');
 const favoriteActive = ref();
+const mountType = ref<ExternalType>(ExternalType.SMB);
 
 const CustomRef = ref();
 
 const server_address = ref<any[]>([]);
+
+const mountTypeOptions = computed(() => {
+	if (isNfsEnable()) {
+		return [
+			{ label: t('files.mount_protocol_smb'), value: ExternalType.SMB },
+			{ label: t('files.mount_protocol_nfs'), value: ExternalType.NFS }
+		];
+	}
+	return [{ label: t('files.mount_protocol_smb'), value: ExternalType.SMB }];
+});
+
+const isNfsMount = computed(() => mountType.value === ExternalType.NFS);
+
+const addressPlaceholder = computed(() =>
+	isNfsMount.value
+		? t('files.server_address_placeholder_nfs')
+		: t('files.server_address_placeholder_smb')
+);
+
+const addressRulesMessage = computed(() =>
+	isNfsMount.value
+		? t('files.server_address_rules_nfs')
+		: t('files.server_address_rules_smb')
+);
+
+const addressErrorMessage = computed(() => {
+	if (!connectUrl.value) {
+		return '';
+	}
+	return addressRulesMessage.value;
+});
+
+const isAddressValid = computed(
+	() =>
+		!!connectUrl.value &&
+		isValidMountUrlForType(connectUrl.value, mountType.value)
+);
+
+const showAddressError = computed(() => {
+	if (!connectUrl.value) {
+		return false;
+	}
+	return !isAddressValid.value;
+});
+
+const validateAddress = () => {
+	return isAddressValid.value;
+};
+
+const buildConnectData = (
+	data: Partial<SmbMountType> & { url: string }
+): SmbMountType => ({
+	...data,
+	externalType: data.externalType ?? mountType.value
+});
+
+watch(mountType, () => {
+	if (connectUrl.value) {
+		validateAddress();
+	}
+});
 
 const showAdd = computed(() => {
 	if (connectUrl.value) {
@@ -147,7 +222,7 @@ const handleActive = (item: any) => {
 const mountSmb = async (connectData: SmbMountType) => {
 	loading.value = true;
 	try {
-		const res = await filesStore.mountSmbInExternal(connectData);
+		const res = await filesStore.mountServerInExternal(connectData);
 		if (res.code === 300) {
 			return CustomRef.value.onDialogOK({
 				connectData,
@@ -163,35 +238,55 @@ const mountSmb = async (connectData: SmbMountType) => {
 		loading.value = false;
 	} catch (error) {
 		console.log('error');
+		// NFS does not require credentials, so there is no credentials step
+		// to fall back to. Only SMB re-opens the username/password dialog.
+		if (connectData.externalType === ExternalType.NFS) {
+			// notifyFailed((error as Error).message);
+			loading.value = false;
+			return;
+		}
 		CustomRef.value.onDialogOK({
 			connectUrl: connectUrl.value,
-			hasFavorite: true
+			hasFavorite: true,
+			externalType: mountType.value
 		});
 		loading.value = false;
 	}
 };
 
 const submit = async () => {
+	if (!validateAddress()) {
+		return false;
+	}
+
+	// NFS mounts without credentials, mount it directly.
+	if (isNfsMount.value) {
+		await mountSmb(buildConnectData({ url: connectUrl.value }));
+		return false;
+	}
+
 	const hasFavorite = server_address.value.find(
 		(item) => item.url === connectUrl.value
 	);
 
 	if (hasFavorite && hasFavorite.username && hasFavorite.password) {
-		await mountSmb(hasFavorite);
+		await mountSmb(buildConnectData(hasFavorite));
 		return false;
 	}
 
 	if (hasFavorite && (!hasFavorite.username || !hasFavorite.password)) {
 		CustomRef.value.onDialogOK({
 			connectUrl: connectUrl.value,
-			hasFavorite: true
+			hasFavorite: true,
+			externalType: mountType.value
 		});
 		return false;
 	}
 
 	CustomRef.value.onDialogOK({
 		connectUrl: connectUrl.value,
-		hasFavorite: false
+		hasFavorite: false,
+		externalType: mountType.value
 	});
 };
 
@@ -216,6 +311,10 @@ onMounted(() => {
 	padding: 0 0px;
 
 	.form-item-input {
+		flex: 1;
+	}
+
+	.form-item-select {
 		flex: 1;
 		border: 1px solid $input-stroke;
 		border-radius: 8px;

@@ -20,10 +20,10 @@
 				<q-item-section>
 					<div class="column justify-between" style="margin-left: 8px">
 						<div class="text-h5-m test-ink-1">
-							{{ adminStore.user.name }}
+							{{ meStore.user.name }}
 						</div>
 						<div class="text-body3-m text-ink-2">
-							{{ '@' + adminStore.olaresId.split('@')[1] }}
+							{{ '@' + terminusStore.olaresId.split('@')[1] }}
 						</div>
 					</div>
 				</q-item-section>
@@ -34,7 +34,7 @@
 		</q-list>
 
 		<q-list
-			v-for="(list, index) in adminStore.menus"
+			v-for="(list, index) in menus"
 			:key="index"
 			dense
 			class="mobile-items-list"
@@ -75,13 +75,17 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router';
 import SettingAvatar from 'src/components/settings/base/SettingAvatar.vue';
-import { useAdminStore } from 'src/stores/settings/admin';
+import { useMeStore } from 'src/stores/settings/me';
+import { useTerminusStore } from 'src/stores/terminus';
+import { useSettingsMenus } from 'src/composables/useSettingsMenus';
 import BtSeparator from 'src/components/settings/base/BtSeparator.vue';
 import { useDeviceStore } from 'src/stores/settings/device';
 import { useI18n } from 'vue-i18n';
 
 const router = useRouter();
-const adminStore = useAdminStore();
+const meStore = useMeStore();
+const terminusStore = useTerminusStore();
+const menus = useSettingsMenus();
 const deviceStore = useDeviceStore();
 
 if (deviceStore.isMobile) {

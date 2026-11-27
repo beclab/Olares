@@ -89,7 +89,9 @@ body.rtl #listing-mobile {
 	justify-content: space-between; */
 	/* flex-direction: row; */
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(33%, 1fr));
+	/* min(33%, 120px) keeps three columns on phones and caps cells at 120px on
+	   tablets, where the column count grows with the width instead. */
+	grid-template-columns: repeat(auto-fill, minmax(min(33%, 120px), 1fr));
 }
 
 #listing-mobile.mosaic .mobile-item {
@@ -111,6 +113,11 @@ body.rtl #listing-mobile {
 	padding-left: 10px;
 	padding-right: 10px;
 	padding-top: 16px;
+	/* Allow the grid cell to clamp to its track so the nowrap name/modified
+	   text can ellipsize instead of stretching the card (and bleeding into the
+	   neighbouring cells). */
+	min-width: 0;
+	overflow: hidden;
 }
 
 #listing-mobile.mosaic .mobile-item:hover {
@@ -143,6 +150,26 @@ body.rtl #listing-mobile {
 #listing-mobile.mosaic .mobile-item div:last-of-type {
 	width: 100%;
 	text-align: center;
+}
+
+/* Constrain the name/modified text to the card width and ellipsize it. The
+   higher specificity here also overrides the over-broad `div:first-of-type`
+   rule above, which otherwise turns `.modified` into a flex box and breaks
+   text-overflow. */
+#listing-mobile.mosaic .mobile-item .mosaic-meta {
+	width: 100%;
+	min-width: 0;
+	max-width: 100%;
+}
+
+#listing-mobile.mosaic .mobile-item .mosaic-meta .name,
+#listing-mobile.mosaic .mobile-item .mosaic-meta .modified {
+	display: block;
+	width: 100%;
+	max-width: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 #listing-mobile.mosaic.gallery .mobile-item div:first-of-type {

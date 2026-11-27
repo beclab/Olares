@@ -4,16 +4,16 @@
 		:title="
 			selectType === PickType.FOLDER
 				? t('files.select_directory')
-				: t('files.select_file')
+				: t('files.select_file_title')
 		"
-		:skip="t('files.add_directory')"
+		:skip="canCreateDir ? t('files.add_directory') : false"
 		:okLoading="loading ? t('loading') : false"
 		:cancel="t('cancel')"
 		:ok="t('confirm')"
 		size="large"
 		resizable
 		resizable-height="680px"
-		storage-key="folder-picker-dialog-size"
+		storage-key="folder-picker-dialog-size-1"
 		@onSubmit="submit"
 		@onSkip="createDir"
 	>
@@ -48,11 +48,13 @@ import DialogListing from './DialogListing.vue';
 import NewDir from './../../components/files/prompts/NewDir.vue';
 import { BtNotify, NotifyDefinedType } from '@bytetrade/ui';
 import { useFilesStore, PickType } from 'src/stores/files';
-import { ref, onMounted, provide, PropType } from 'vue';
+import { computed, ref, onMounted, provide, PropType } from 'vue';
 import { DriveType } from 'src/utils/interface/files';
 import { formatFilePath } from 'src/constant';
 import { useI18n } from 'vue-i18n';
 import { useQuasar } from 'quasar';
+import { useOperateinStore } from 'src/stores/operation';
+import { disabledClick } from 'src/utils/file';
 import {
 	useColumnResize,
 	COL_RESIZE_KEY
@@ -81,7 +83,8 @@ const props = defineProps({
 				DriveType.Sync,
 				DriveType.External,
 				DriveType.Cache,
-				DriveType.Data
+				DriveType.Data,
+				DriveType.Common
 			];
 		}
 	}
@@ -95,8 +98,19 @@ const $q = useQuasar();
 // const show = ref(true);
 const loading = ref(false);
 const filesStore = useFilesStore();
+const operateinStore = useOperateinStore();
 
-const initPath = ref('/Files/Home/');
+const canCreateDir = computed(() => {
+	const currentPath = filesStore.currentPath[props.origin_id];
+	if (!currentPath) {
+		return false;
+	}
+
+	return (
+		disabledClick(currentPath.path) &&
+		!operateinStore.ieExternalRootPath(currentPath.path)
+	);
+});
 
 const selectHandler = async (value) => {
 	const path = await filesStore.formatRepotoPath(value.item, props.origin_id);
@@ -144,7 +158,7 @@ const submit = async () => {
 		} else {
 			BtNotify.show({
 				type: NotifyDefinedType.WARNING,
-				message: 'Please select a file'
+				message: t('please_select_a_file')
 			});
 			loading.value = false;
 			return false;
@@ -160,6 +174,10 @@ const submit = async () => {
 };
 
 const createDir = () => {
+	if (!canCreateDir.value) {
+		return;
+	}
+
 	$q.dialog({
 		component: NewDir,
 		componentProps: {
@@ -174,18 +192,8 @@ const createDir = () => {
 // };
 
 onMounted(async () => {
-	filesStore.setFilePath(
-		{
-			path: initPath.value,
-			isDir: true,
-			driveType: DriveType.Drive,
-			param: ''
-		},
-		false,
-		true,
-		props.origin_id
-	);
 	await filesStore.getMenu(props.origins, props.origin_id);
+	await filesStore.openFirstMenuRepo(props.origin_id);
 });
 </script>
 

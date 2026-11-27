@@ -15,7 +15,7 @@
 				<q-icon name="sym_r_language" size="24px" color="white" />
 			</div>
 			<div class="connect-content">
-				<div class="text-ink-1 text-body2">Connecting</div>
+				<div class="text-ink-1 text-body2">{{ $t('Connecting') }}</div>
 				<div class="text-ink-1 text-body2">{{ smb_url }}</div>
 			</div>
 		</div>

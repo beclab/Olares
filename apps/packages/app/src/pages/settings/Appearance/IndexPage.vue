@@ -112,7 +112,6 @@
 							<wallpaper-image
 								:width="166"
 								:border-radius="8"
-								style=""
 								src="settings/theme/dark.jpg"
 								:selected="backgroundStore.theme == ThemeDefinedMode.DARK"
 								@click="themeUpdate(ThemeDefinedMode.DARK)"
@@ -151,6 +150,64 @@
 						/>
 					</bt-form-item>
 				</div>
+				<bt-list>
+					<bt-form-item :width-separator="widgetPrefsStore.showWeight">
+						<template v-slot:title>
+							<div class="text-subtitle1">
+								{{ t('Widget') }}
+							</div>
+						</template>
+						<bt-switch
+							size="sm"
+							truthy-track-color="blue-default"
+							v-model="widgetPrefsStore.showWeight"
+							@update:model-value="widgetPrefsStore.update()"
+						/>
+					</bt-form-item>
+
+					<bt-form-item
+						v-if="widgetPrefsStore.showWeight"
+						:title="t('Date & Time')"
+					>
+						<div class="text-body1 text-ink-2">{{ currentDateTime }}</div>
+					</bt-form-item>
+
+					<bt-form-item
+						v-if="widgetPrefsStore.showWeight"
+						:title="t('24-hour format')"
+					>
+						<bt-switch
+							size="sm"
+							truthy-track-color="blue-default"
+							v-model="widgetPrefsStore.is24HourFormat"
+							@update:model-value="widgetPrefsStore.update()"
+						/>
+					</bt-form-item>
+
+					<bt-form-item
+						v-if="widgetPrefsStore.showWeight"
+						:title="t('Date format')"
+					>
+						<bt-select
+							v-model="widgetPrefsStore.dateFormat"
+							:options="dateFormatOptions"
+							@update:modelValue="widgetPrefsStore.update()"
+						/>
+					</bt-form-item>
+
+					<bt-form-item
+						v-if="widgetPrefsStore.showWeight"
+						:title="t('Show Dashboard')"
+						:width-separator="false"
+					>
+						<bt-switch
+							size="sm"
+							truthy-track-color="blue-default"
+							v-model="widgetPrefsStore.showDashboard"
+							@update:model-value="widgetPrefsStore.update()"
+						/>
+					</bt-form-item>
+				</bt-list>
 				<div class="text-subtitle2-m text-ink-1 q-mt-lg q-mb-sm">
 					{{ t('theme') }}
 				</div>
@@ -203,18 +260,20 @@
 		</AdaptiveLayout>
 		<AdaptiveLayout>
 			<template v-slot:pc>
-				<bt-list class="q-mb-lg">
+				<bt-list>
 					<div class="row justify-between select-radio-bg">
 						<div class="text-subtitle1 text-ink-1">
 							{{ t('wallpaper') }}
 						</div>
 						<div class="column justify-end">
-							<div class="row justify-end items-center q-mb-lg">
+							<div
+								class="row justify-end items-center q-mb-lg wallpaper-toolbar"
+								style="gap: 8px"
+							>
 								<BtUploader
 									:size="5"
 									width="110px"
 									height="32px"
-									class="q-mr-md"
 									:file-guard="imagesUploadFormatGuard"
 									fileName="image"
 									:accept="IMAGES_UPLOAD_V1_ACCEPT"
@@ -233,9 +292,10 @@
 									v-if="selectBackgroundMode == BackgroundMode.login"
 									width="120px"
 									height="32px"
-									inputClass="text-body3"
+									inputClass="text-body3 text-ink-2"
 									v-model="backgroundStore.wallpaper.loginStyle"
 									:options="imgContentMode"
+									show-selected-icon
 									@update:modelValue="setLoginStyleMode"
 								/>
 
@@ -243,9 +303,10 @@
 									v-if="selectBackgroundMode == BackgroundMode.desktop"
 									width="120px"
 									height="32px"
-									inputClass="text-body3"
+									inputClass="text-body3 text-ink-2"
 									v-model="backgroundStore.wallpaper.desktopStyle"
 									:options="imgContentMode"
+									show-selected-icon
 									@update:modelValue="setDesktopStyleMode"
 								/>
 							</div>
@@ -275,7 +336,6 @@
 
 								<wallpaper-image
 									:width="166"
-									style=""
 									:src="loginImgUrl.replace('/bg/', '/login/')"
 									:border-radius="8"
 									:selected="selectBackgroundMode == BackgroundMode.login"
@@ -405,6 +465,18 @@
 						</div>
 					</div>
 				</bt-list>
+				<bt-list class="q-mb-lg">
+					<bt-form-item
+						:title="t('desktop_layout.reset_layout_title')"
+						:margin-top="false"
+						:chevron-right="false"
+						:widthSeparator="false"
+					>
+						<div class="upgradeNow" @click="confirmReset">
+							{{ t('desktop_layout.reset_layout_button') }}
+						</div>
+					</bt-form-item>
+				</bt-list>
 			</template>
 		</AdaptiveLayout>
 	</bt-scroll-area>
@@ -442,6 +514,7 @@ import {
 	createImagesUploadV1FormatGuard,
 	IMAGES_UPLOAD_V1_ACCEPT
 } from '../../../utils/upload/imagesUploadV1Formats';
+import { useConfirmResetLayout } from 'src/composables/useConfirmResetLayout';
 
 const backgroundStore = useBackgroundStore();
 const widgetPrefsStore = useWidgetPreferencesStore();
@@ -615,6 +688,7 @@ const languages = ref(supportLanguages);
 const currentLanguage = ref(backgroundStore.locale);
 let lastLanguage = backgroundStore.locale;
 const $q = useQuasar();
+const { confirmReset } = useConfirmResetLayout();
 
 const languageUpdate = (language: SupportLanguageType) => {
 	if (backgroundStore.locale == language) {
@@ -663,9 +737,16 @@ const languageUpdate = (language: SupportLanguageType) => {
 }
 
 .upload-image-btn {
+	display: flex;
+	align-items: center;
+	justify-content: flex-start;
+	width: 100%;
+	height: 100%;
+	box-sizing: border-box;
 	border-radius: 8px;
-	border: 1px solid $btn-stroke;
-	padding: 8px 12px;
+	border: 1px solid $input-stroke;
+	padding: 0 12px;
+	white-space: nowrap;
 }
 
 .radio-class {
@@ -674,5 +755,15 @@ const languageUpdate = (language: SupportLanguageType) => {
 
 .select-radio-bg {
 	padding: 20px;
+}
+.upgradeNow {
+	border: 1px solid $btn-stroke;
+	padding: 8px 12px;
+	border-radius: 8px;
+	cursor: pointer;
+
+	&:hover {
+		background: $background-5;
+	}
 }
 </style>

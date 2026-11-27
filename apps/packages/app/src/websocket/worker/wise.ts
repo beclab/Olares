@@ -13,7 +13,8 @@ export class WiseWebsocketBean extends BaseWebsocketBean {
 			url: string;
 			login: boolean;
 			loginData: any;
-			pongRes: (data: any) => boolean;
+			pongRes?: (data: any) => boolean;
+			protocols?: string | string[];
 		},
 		statusUpdate: () => void
 	): void {
@@ -46,40 +47,25 @@ export class WiseWebsocketBean extends BaseWebsocketBean {
 				id: messageData.task_id
 			});
 		} else if (messageType === WiseWSType.ENCLOSURE) {
-			this.connections.forEach((port) =>
-				port.postMessage({
-					type: 'message',
-					data: {
-						type: WiseWSType.ENCLOSURE,
-						data: messageData
-					}
-				})
-			);
+			this.publishAppMessage({
+				type: WiseWSType.ENCLOSURE,
+				data: messageData
+			});
 		} else if (messageType === WiseWSType.SYNC) {
-			this.connections.forEach((port) =>
-				port.postMessage({
-					type: 'message',
-					data: {
-						type: WiseWSType.SYNC,
-						data: messageData
-					}
-				})
-			);
+			this.publishAppMessage({
+				type: WiseWSType.SYNC,
+				data: messageData
+			});
 		}
 	}
 
 	private insertTransferItem(downloadItem: DownloadRecord) {
 		wiseInsertTransferItem(downloadItem, this.db, this.terminusId, (item) => {
-			this.connections.forEach((port) =>
-				port.postMessage({
-					type: 'message',
-					data: {
-						type: 'transfer',
-						item,
-						data: downloadItem
-					}
-				})
-			);
+			this.publishAppMessage({
+				type: 'transfer',
+				item,
+				data: downloadItem
+			});
 		});
 	}
 }

@@ -7,7 +7,7 @@
 		v-model="show"
 		@hide="hide"
 	>
-		<q-card class="files-shard-root" style="height: 100vh">
+		<q-card class="files-shard-root" :style="{ height: ['100vh', '100dvh'] }">
 			<files-shard-page
 				v-if="currentPage === CurrentPageType.FilesShardPage"
 				:origin_id="origin_id"

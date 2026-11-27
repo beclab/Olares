@@ -1,7 +1,7 @@
 <template>
 	<adaptive-layout>
 		<template v-slot:pc>
-			<q-layout class="main-layout" view="lHh Lpr lFf">
+			<q-layout ref="pcLayoutRef" class="main-layout" view="lHh Lpr lFf">
 				<q-drawer
 					v-if="showMenu"
 					v-model="menuStore.leftDrawerOpen"
@@ -15,8 +15,8 @@
 					<bt-scroll-area
 						:style="
 							globalConfig.isOfficial
-								? 'height : 100dvh'
-								: 'height: calc(100dvh - 65px)'
+								? { height: ['100vh', '100dvh'] }
+								: { height: ['calc(100vh - 65px)', 'calc(100dvh - 65px)'] }
 						"
 						@scroll="onScroll"
 					>
@@ -100,7 +100,7 @@
 								<component
 									:is="Component"
 									style="overflow-y: hidden"
-									:key="route.fullPath"
+									:key="route.path"
 								/>
 							</keep-alive>
 						</transition>
@@ -113,6 +113,15 @@
 					@click="installOS"
 					>{{ t('main.install_terminus_os') }}
 				</q-btn>
+
+				<div v-if="isDragOver" class="drag-mask">
+					<div class="upload-btn bg-background-3">
+						<q-icon size="40px" name="sym_r_upload_file" color="blue-default" />
+					</div>
+					<div class="text-subtitle1 text-white q-mt-lg">
+						{{ t('Drop chart here to upload') }}
+					</div>
+				</div>
 			</q-layout>
 		</template>
 
@@ -127,7 +136,7 @@
 					:width="240"
 				>
 					<bt-scroll-area
-						style="height: calc(100dvh - 65px)"
+						:style="{ height: ['calc(100vh - 65px)', 'calc(100dvh - 65px)'] }"
 						@scroll="onScroll"
 					>
 						<bt-menu
@@ -212,7 +221,7 @@
 								<component
 									:is="Component"
 									style="overflow-y: hidden"
-									:key="route.fullPath"
+									:key="route.path"
 								/>
 							</keep-alive>
 						</transition>
@@ -227,19 +236,38 @@
 
 <script lang="ts" setup>
 import StatusMonitorFloat from 'src/pages/market/debug/StatusMonitorFloat.vue';
+import { MARKET_DEBUG_ENABLED } from 'src/services/market/marketDebugFlags';
 import AdaptiveLayout from 'src/components/settings/AdaptiveLayout.vue';
+import LocalUploadDialog from 'src/pages/market/me/LocalUploadDialog.vue';
 import { onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router';
-import { bytetrade } from '@bytetrade/core';
 import { useSettingStore } from '@apps/market/src/stores/market/setting';
 import { useMenuStore } from '@apps/market/src/stores/market/menu';
 import { useDeviceStore } from 'src/stores/settings/device';
 import { useCenterStore } from 'src/stores/market/center';
-import { TRANSACTION_PAGE } from '../constant/constants';
-import { computed, nextTick, onMounted, ref, watch } from 'vue';
+import {
+	MARKET_SOURCE_OFFICIAL,
+	TRANSACTION_PAGE
+} from '../constant/constants';
+import {
+	computed,
+	nextTick,
+	onBeforeUnmount,
+	onMounted,
+	ref,
+	watch
+} from 'vue';
 import globalConfig from 'src/api/market/config';
 import { SupportLanguageType } from 'src/i18n';
 import { SelectorProps } from 'src/constant';
 import { useI18n } from 'vue-i18n';
+import { useQuasar } from 'quasar';
+import { getMarketStackDepth } from '../utils/marketBack';
+import {
+	DragUploadUtil,
+	ProcessedEvent,
+	FileFilterErrorInfo
+} from 'src/utils/DragUploadUtils';
+import { notifyFailed } from 'src/utils/notifyRedefinedUtil';
 
 const keepAliveExclude = ref('LogPage');
 const showBarShadow = ref(false);
@@ -251,13 +279,19 @@ const position = ref(-1);
 const transitionName = ref();
 const Router = useRouter();
 const route = useRoute();
+const $q = useQuasar();
 const { t } = useI18n();
+const pcLayoutRef = ref();
+const isDragOver = ref(false);
+const dragUploadInstance = ref<DragUploadUtil | null>(null);
 const supportLanguages: SelectorProps[] = [
 	{ value: 'zh-CN', label: 'ZH' },
 	{ value: 'en-US', label: 'EN' }
 ];
 
-const showDebugMonitor = computed(() => route.query._dm === 'Olares');
+const showDebugMonitor = computed(
+	() => MARKET_DEBUG_ENABLED && route.query._dm === 'Olares'
+);
 
 const onLanguagechange = (language: SupportLanguageType) => {
 	settingStore.languageUpdate(language);
@@ -343,37 +377,35 @@ onBeforeRouteUpdate((to, from, next) => {
 watch(
 	() => route.path,
 	(to, from) => {
-		// console.log(Router.options.history)
-		if (Router.options.history.state) {
-			if (
-				route.name === TRANSACTION_PAGE.App ||
-				route.name === TRANSACTION_PAGE.TOPIC ||
-				route.name === TRANSACTION_PAGE.List ||
-				route.name === TRANSACTION_PAGE.Preview ||
-				route.name === TRANSACTION_PAGE.Version ||
-				route.name === TRANSACTION_PAGE.Log ||
-				from.includes('/app/') ||
-				from.includes('/middleware/') ||
-				from.includes('/recommend/') ||
-				from.includes('/model/') ||
-				from.includes('/discover') ||
-				from.includes('/list') ||
-				from.includes('/preview') ||
-				from.includes('/log') ||
-				from.includes('/versionHistory')
-			) {
-				transitionName.value =
-					Number(Router.options.history.state.position) >= position.value
-						? 'slide-left'
-						: 'slide-right';
-			} else {
-				transitionName.value = '';
-			}
-			// console.log(`router position ${Router.options.history.state.position}`)
-			// console.log(`current position ${position.value}`)
-			// console.log(transitionName.value)
-			position.value = Number(Router.options.history.state.position);
+		const rawPosition = Router.options.history.state
+			? Number(Router.options.history.state.position)
+			: NaN;
+		const currentPosition = Number.isNaN(rawPosition)
+			? getMarketStackDepth(Router)
+			: rawPosition;
+		if (
+			route.name === TRANSACTION_PAGE.App ||
+			route.name === TRANSACTION_PAGE.TOPIC ||
+			route.name === TRANSACTION_PAGE.List ||
+			route.name === TRANSACTION_PAGE.Preview ||
+			route.name === TRANSACTION_PAGE.Version ||
+			route.name === TRANSACTION_PAGE.Log ||
+			from.includes('/app/') ||
+			from.includes('/middleware/') ||
+			from.includes('/recommend/') ||
+			from.includes('/model/') ||
+			from.includes('/discover') ||
+			from.includes('/list') ||
+			from.includes('/preview') ||
+			from.includes('/log') ||
+			from.includes('/versionHistory')
+		) {
+			transitionName.value =
+				currentPosition > position.value ? 'slide-left' : 'slide-right';
+		} else {
+			transitionName.value = '';
 		}
+		position.value = currentPosition;
 		updateMenu();
 	}
 );
@@ -391,11 +423,71 @@ watch(
 
 onMounted(async () => {
 	updateMenu();
-	nextTick(() => {
-		bytetrade.observeUrlChange.childPostMessage({
-			type: 'locationHref'
-		});
+	setupDragUpload();
+});
+
+const setupDragUpload = async () => {
+	dragUploadInstance.value?.destroy();
+	dragUploadInstance.value = null;
+	isDragOver.value = false;
+	if (deviceStore.isMobile) {
+		return;
+	}
+	await nextTick();
+	const dropTarget = pcLayoutRef.value?.$el as HTMLElement | undefined;
+	if (!dropTarget) {
+		return;
+	}
+	dragUploadInstance.value = new DragUploadUtil({
+		dropTarget,
+		allowedFileTypes: ['.tgz', '.gz'],
+		maxFileCount: 1,
+		onDragEnter: () => {
+			isDragOver.value = true;
+		},
+		onDragLeave: () => {
+			isDragOver.value = false;
+		},
+		onTargetProcessed: (_event: ProcessedEvent, validFiles: FileList) => {
+			handleDropFiles(validFiles);
+		},
+		onFileFilterError: (errorInfo: FileFilterErrorInfo) => {
+			notifyFailed(errorInfo.message);
+		},
+		onAllFilesFiltered: () => {
+			isDragOver.value = false;
+		}
 	});
+};
+
+const handleDropFiles = (validFiles: FileList) => {
+	const file = validFiles?.[0];
+	if (!file) {
+		return;
+	}
+	Router.push({
+		name: TRANSACTION_PAGE.MyTerminus,
+		query: { ...route.query, source: MARKET_SOURCE_OFFICIAL.LOCAL.UPLOAD }
+	});
+	$q.dialog({
+		component: LocalUploadDialog,
+		componentProps: {
+			file
+		}
+	});
+};
+
+watch(
+	() => deviceStore.isMobile,
+	() => {
+		setupDragUpload();
+	}
+);
+
+onBeforeUnmount(() => {
+	dragUploadInstance.value?.destroy();
+	dragUploadInstance.value = null;
+	isDragOver.value = false;
 });
 
 const updateMenu = () => {
@@ -523,6 +615,29 @@ const installOS = async () => {
 		border-radius: 46px !important;
 		text-transform: unset;
 		box-shadow: 0 8px 40px 0 #00000033;
+	}
+
+	.drag-mask {
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 100vw;
+		height: 100vh;
+		background: rgba(0, 0, 0, 0.4);
+		backdrop-filter: blur(20px);
+		-webkit-backdrop-filter: blur(20px);
+		z-index: 9999;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		box-sizing: border-box;
+		pointer-events: none;
+
+		.upload-btn {
+			border-radius: 20px;
+			padding: 16px;
+		}
 	}
 }
 

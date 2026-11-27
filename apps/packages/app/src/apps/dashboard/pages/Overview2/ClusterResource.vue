@@ -125,10 +125,12 @@ import { useNetStore } from '@apps/dashboard/stores/Net';
 import { getThroughput } from '@apps/dashboard/src/utils/memory';
 import { useAppDetailStore } from 'src/apps/controlHub/stores/AppDetail';
 import { useFanStore } from '@apps/dashboard/stores/Fan';
+import { useOlaresInfoStore } from '@apps/dashboard/stores/OlaresInfo';
 const resourcesStore = useResourcesStore();
 const netStore = useNetStore();
 const FanStore = useFanStore();
 const appDetail = useAppDetailStore();
+const olaresInfoStore = useOlaresInfoStore();
 const $q = useQuasar();
 const { t, locale } = useI18n();
 interface Props {
@@ -229,9 +231,11 @@ const options = computed(() => {
 			}
 		}
 	];
+	const networkOptions = olaresInfoStore.isOlaresd ? defaultNetworkOptions : [];
+
 	const defaultOptions = hasGPU.value
-		? defaultGPUOptions.concat(defaultNetworkOptions)
-		: defaultNetworkOptions;
+		? defaultGPUOptions.concat(networkOptions)
+		: networkOptions;
 
 	const options = clusterOptions.value.concat(defaultOptions);
 
@@ -299,6 +303,7 @@ onMounted(() => {
 	fetchGraphicsList();
 	netStore.init();
 	FanStore.init();
+	olaresInfoStore.fetchOlaresInfo();
 });
 
 onBeforeUnmount(() => {

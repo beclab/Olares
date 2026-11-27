@@ -18,7 +18,7 @@ export async function remove(url) {
 }
 
 export async function put(url, content = '') {
-	return CommonFetch.put(formatResourcesUrl(url), content, {
+	return await CommonFetch.put(formatResourcesUrl(url), content, {
 		headers: {
 			'Content-Type': 'text/plain'
 		}

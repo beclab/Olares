@@ -12,6 +12,8 @@ import {
 import { notifyRequestMessageError } from 'src/utils/notifyRedefinedUtil';
 import { throttle } from 'lodash';
 import { useWebsocketManager2Store } from 'src/stores/websocketManager2';
+import { BtNotify, NotifyDefinedType } from '@bytetrade/ui';
+import { bus, BUS_EVENT } from 'src/utils/bus';
 
 export const APPLICATION_WS_ID = 'application_ws_id';
 
@@ -183,6 +185,21 @@ export class NormalApplication extends SubApplication {
 	}
 	async appUnMounted(): Promise<void> {
 		document.removeEventListener('visibilitychange', this._onVisibilityChange);
+	}
+
+	protected onAppBackendError = (failureMessage: string) => {
+		BtNotify.show({
+			type: NotifyDefinedType.FAILED,
+			message: this.i18nInstance.global.t(failureMessage)
+		});
+	};
+
+	protected registerAppBackendErrorToast() {
+		bus.on(BUS_EVENT.APP_BACKEND_ERROR, this.onAppBackendError);
+	}
+
+	protected unregisterAppBackendErrorToast() {
+		bus.off(BUS_EVENT.APP_BACKEND_ERROR, this.onAppBackendError);
 	}
 	async appRedirectUrl(
 		_redirect: any,

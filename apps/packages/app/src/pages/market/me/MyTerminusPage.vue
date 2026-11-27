@@ -93,22 +93,25 @@ import MarketRemotePage from './MarketRemotePage.vue';
 import MarketLocalPage from './MarketLocalPage.vue';
 import { useDeviceStore } from '../../../stores/settings/device';
 import { useSettingStore } from '../../../stores/market/setting';
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useAppStore } from '../../../stores/market/appStore';
 import { useMenuStore } from '../../../stores/market/menu';
 import SimpleWaiter from '../../../utils/simpleWaiter';
 import { busOn, busOff } from '../../../utils/bus';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
+import { pushWithParent } from '../../../utils/marketBack';
 import {
 	MARKET_SOURCE_OFFICIAL,
 	MARKET_SOURCE_TYPE,
+	MarketSource,
 	TRANSACTION_PAGE
 } from '../../../constant/constants';
 
 const { t } = useI18n();
 const selectedTab = ref();
 const router = useRouter();
+const route = useRoute();
 const rssWaiter = new SimpleWaiter();
 const settingStore = useSettingStore();
 const deviceStore = useDeviceStore();
@@ -126,24 +129,73 @@ const showSource = computed(() => {
 	return [];
 });
 
+// Restore the selected source from `?source=` when it points to an existing
+// source; returns false when no valid source query is present.
+const applySourceFromQuery = (): boolean => {
+	const sources = appStore.remoteSource.concat(appStore.localSource);
+	if (sources.length === 0) {
+		return false;
+	}
+	const querySource = route.query.source as string;
+	if (
+		querySource &&
+		sources.some((item: MarketSource) => item.id === querySource)
+	) {
+		selectedTab.value = querySource;
+		return true;
+	}
+	return false;
+};
+
 rssWaiter.waitForCondition(
 	() =>
 		settingStore.initialized && appStore.sources && appStore.sources.length > 0,
 	() => {
-		selectedTab.value = appStore.remoteSource.concat(
-			appStore.localSource
-		)[0].id;
+		if (!applySourceFromQuery()) {
+			selectedTab.value = appStore.remoteSource.concat(
+				appStore.localSource
+			)[0].id;
+		}
+	}
+);
+
+// Mirror the selected source into the URL so refresh / desktop window
+// maximize / open-in-new-tab keep the same tab. Guarded by route name to avoid
+// clobbering a sub-page's query while this page is kept alive.
+watch(selectedTab, (val) => {
+	if (!val || route.name !== TRANSACTION_PAGE.MyTerminus) {
+		return;
+	}
+	if ((route.query.source as string) === val) {
+		return;
+	}
+	router.replace({ query: { ...route.query, source: val } });
+});
+
+// Keep the tab in sync when the source query changes from outside (browser
+// back / forward). Guarded against the echo of our own router.replace.
+watch(
+	() => route.query.source,
+	(src) => {
+		const next = (src as string) ?? '';
+		if (!next || next === selectedTab.value) {
+			return;
+		}
+		const sources = appStore.remoteSource.concat(appStore.localSource);
+		if (sources.some((item: MarketSource) => item.id === next)) {
+			selectedTab.value = next;
+		}
 	}
 );
 
 const goLogPage = () => {
-	router.push({
+	pushWithParent(router, {
 		name: TRANSACTION_PAGE.Log
 	});
 };
 
 const goPreferencePage = () => {
-	router.push({
+	pushWithParent(router, {
 		name: TRANSACTION_PAGE.Preference
 	});
 };

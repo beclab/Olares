@@ -47,8 +47,9 @@
 						<span
 							v-if="item.type === SearchCategory.Command"
 							class="name q-ml-sm text-ink-2"
-							>{{ item.name }}</span
 						>
+							{{ t(item.name) }}
+						</span>
 					</div>
 					<div class="desc q-mr-sm text-ink-2">
 						{{

@@ -215,7 +215,7 @@ import { notifySuccess, notifyWarning } from 'src/utils/settings/btNotify';
 import { useApplicationStore } from 'src/stores/settings/application';
 import { ref, onMounted, computed, watch, onUnmounted } from 'vue';
 import { useNetworkStore } from 'src/stores/settings/network';
-import { useAdminStore } from 'src/stores/settings/admin';
+import { useTerminusStore } from 'src/stores/terminus';
 import { getApplication } from 'src/application/base';
 import { SetupDomain } from 'src/constant/global';
 import { ReverseProxyMode } from 'src/constant';
@@ -241,7 +241,7 @@ const props = defineProps({
 const $q = useQuasar();
 const { t } = useI18n();
 const Route = useRoute();
-const adminStore = useAdminStore();
+const terminusStore = useTerminusStore();
 const networkStore = useNetworkStore();
 const applicationStore = useApplicationStore();
 
@@ -385,7 +385,7 @@ async function setCName() {
 		try {
 			await applicationStore.setupCName(props.name, props.entrance);
 		} catch (e: any) {
-			notifyWarning(e.message || t('errors.network_error'));
+			// notifyWarning(e.message || t('errors.network_error'));
 		}
 
 		await updateDomain();
@@ -459,7 +459,7 @@ const entranceUrl = computed(() => {
 		'https://' +
 		entranceRef.value.id +
 		'.' +
-		adminStore.olaresId.replace('@', '.')
+		terminusStore.olaresId.replace('@', '.')
 	);
 });
 

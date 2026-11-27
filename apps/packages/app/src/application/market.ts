@@ -4,14 +4,13 @@ import { WebsocketSharedWorkerEnum } from 'src/websocket/interface';
 import { usePreCheckStore } from 'src/stores/market/preCheck';
 import { useSettingStore } from 'src/stores/market/setting';
 import { useDeviceStore } from 'src/stores/settings/device';
-import { BtNotify, NotifyDefinedType } from '@bytetrade/ui';
 import { useCenterStore } from 'src/stores/market/center';
 import { useAppStore } from 'src/stores/market/appStore';
 import { useTokenStore } from 'src/stores/settings/token';
-import { useUserStore } from '../stores/settings/user';
+import { useUsersStore } from '../stores/settings/users';
+import { useMeStore } from '../stores/settings/me';
 import { useMenuStore } from '../stores/market/menu';
 import globalConfig from 'src/api/market/config';
-import { bus, BUS_EVENT } from '../utils/bus';
 import { DeviceType } from '@bytetrade/core';
 import { NormalApplication, getApplication } from './base';
 import { supportLanguages } from '../i18n';
@@ -27,13 +26,6 @@ export class MarketApplication extends NormalApplication {
 	protected shouldEnsureSocketAlive(): boolean {
 		return !globalConfig.isOfficial;
 	}
-
-	onErrorMessage = (failureMessage: string) => {
-		BtNotify.show({
-			type: NotifyDefinedType.FAILED,
-			message: i18n.global.t(failureMessage)
-		});
-	};
 
 	refreshData = async () => {
 		const appStore = useAppStore();
@@ -65,11 +57,6 @@ export class MarketApplication extends NormalApplication {
 			barrier.addRequest('user', preCheckRequest);
 			barrier.addRequest('setting', settingRequest);
 			barrier.addRequest('source', sourceRequest);
-			const tokenStore = useTokenStore();
-			const host = window.location.origin;
-			tokenStore.setUrl(host);
-			const userStore = useUserStore();
-			userStore.get_accounts();
 		} else {
 			const barrier = new CacheRequestBarrier(
 				['setting', 'source'],
@@ -132,14 +119,23 @@ export class MarketApplication extends NormalApplication {
 	async appMounted(): Promise<void> {
 		await super.appMounted();
 		await this.initializeApp();
-		bus.on(BUS_EVENT.APP_BACKEND_ERROR, this.onErrorMessage);
+		this.registerAppBackendErrorToast();
 	}
 
-	async appRedirectUrl(): Promise<void> {}
+	async appRedirectUrl(): Promise<void> {
+		const tokenStore = useTokenStore();
+		tokenStore.setUrl(window.location.origin);
+		if (globalConfig.isOfficial) {
+			return;
+		}
+		const meStore = useMeStore();
+		const usersStore = useUsersStore();
+		await Promise.all([meStore.init(), usersStore.get_accounts()]);
+	}
 
 	async appUnMounted(): Promise<void> {
 		await super.appUnMounted();
-		bus.off(BUS_EVENT.APP_BACKEND_ERROR, this.onErrorMessage);
+		this.unregisterAppBackendErrorToast();
 	}
 
 	websocketConfig = {
@@ -174,11 +170,10 @@ export class MarketApplication extends NormalApplication {
 								}
 							);
 						} else if (body['eventType'] == 'usersUpdate') {
-							const userStore = useUserStore();
-							userStore.get_accounts();
+							const usersStore = useUsersStore();
+							usersStore.get_accounts();
 							const preCheckStore = usePreCheckStore();
-							const request = preCheckStore.initSystemRequest();
-							request.get();
+							void preCheckStore.refreshSystemStatus(true);
 						}
 					}
 				} catch (e) {
@@ -187,6 +182,10 @@ export class MarketApplication extends NormalApplication {
 				}
 			} else if (data.type == 'reconnected') {
 				console.log('[market] socket reconnected, refreshing data');
+				if (!globalConfig.isOfficial) {
+					const usersStore = useUsersStore();
+					usersStore.get_accounts();
+				}
 				(getApplication() as MarketApplication).refreshData().catch((err) => {
 					console.error('Error refreshing market data after reconnect:', err);
 				});

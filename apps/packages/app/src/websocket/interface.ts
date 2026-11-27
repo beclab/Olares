@@ -3,10 +3,8 @@ export enum WebsocketSharedWorkerEnum {
 	FILES_NAME = 'olares-files-socket-worker',
 	MARKET_NAME = 'olares-market-socket-worker',
 	SETTINGS_NAME = 'olares-settings-socket-worker',
-	VAULT_NAME = 'olares-vault-socket-worker',
 	DESKTOP_NAME = 'olares-desktop-socket-worker',
-	DASHBOARD_NAME = 'olares-dashboard-socket-worker',
-	STUDIO_NAME = 'olares-studio-socket-worker'
+	DASHBOARD_NAME = 'olares-dashboard-socket-worker'
 }
 
 export enum WebsocketApplicationEnum {

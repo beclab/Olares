@@ -177,7 +177,7 @@
 						>
 							{{
 								t(
-									'Time in seconds for which segments should be kept after they are downloaded by the client. Only works if segment deletion is enabled.'
+									'Maximum number of packets that can be buffered while waiting for all streams to initialize. Try to increase it if you still meet "Too many packets buffered for output stream" error in FFmpeg logs. The recommended value is 2048.'
 								)
 							}}
 						</div>

@@ -74,7 +74,6 @@ const paymentStore = usePaymentStore();
 const isLoading = ref(false);
 
 onMounted(() => {
-	console.log(props.tokenInfo);
 	const appFullInfoLatest = appStore.getAppFullInfo(
 		props.appId,
 		props.sourceId

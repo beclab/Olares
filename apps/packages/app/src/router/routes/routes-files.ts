@@ -36,6 +36,13 @@ export default [
 				}
 			},
 			{
+				path: 'Common/:path*',
+				name: 'Common',
+				meta: {
+					requiresAuth: true
+				}
+			},
+			{
 				path: 'Cache/:path*',
 				name: 'Cache',
 				meta: {
@@ -99,6 +106,16 @@ export default [
 			{
 				path: '/files',
 				component: () => import('src/pages/Mobile/file/FileRootPage.vue')
+			},
+			{
+				path: '/transfer/history',
+				meta: {
+					disableFilesBack: 'true',
+					tabIdentify: 'transfer',
+					minimizeApp: 'true'
+				},
+				component: () =>
+					import('src/pages/Mobile/transfer/FilesTransferPage.vue')
 			}
 		]
 	}

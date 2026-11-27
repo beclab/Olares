@@ -163,7 +163,7 @@ const items = computed(function () {
 		// breadcrumbs.shift();
 
 		if (breadcrumbs.length > 0) {
-			breadcrumbs[0].name = 'all';
+			breadcrumbs[0].name = t('all');
 		}
 	}
 

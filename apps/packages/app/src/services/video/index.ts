@@ -146,10 +146,10 @@ class VideoService implements VideoServiceInterface {
 		videoStore.configOthers(this.initData);
 	}
 
-	updateInitDataProps(props: Partial<VideoConfigData>) {
+	async updateInitDataProps(props: Partial<VideoConfigData>) {
 		props && Object.assign(this.initData, props);
 		const videoStore = useVideoStore();
-		videoStore.updateVideoConfig(this.initData);
+		await videoStore.updateVideoConfig(this.initData);
 	}
 }
 

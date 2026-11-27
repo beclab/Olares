@@ -39,7 +39,11 @@
 					:error-message="t('errors.naming_is_not_compliant')"
 					:with-popup="true"
 				>
-					<bt-form-item :title="t('backup_url')" :width-separator="false">
+					<bt-form-item
+						:title="t('backup_url')"
+						:description="backupUrlTooltip"
+						:width-separator="false"
+					>
 						<bt-edit-view
 							style="width: 200px"
 							v-model="backupUrl"
@@ -128,7 +132,7 @@
 							class="text-orange-default text-body1 cursor-pointer"
 							@click="showSnapshotsDialog"
 						>
-							query snapshots
+							{{ t('query_snapshots') }}
 						</div>
 						<div
 							v-if="snapshotStatus === SnapshotStatus.COMPLETED"
@@ -144,6 +148,7 @@
 				<bt-form-item
 					v-if="resourcesType === BackupResourcesType.files"
 					:title="t('Restore location')"
+					:description="t('restore_location_tooltip')"
 				>
 					<transfet-select-to
 						class="q-mt-xs"
@@ -178,7 +183,11 @@
 					:with-popup="true"
 					:width-separator="false"
 				>
-					<bt-form-item :title="t('New folder name')" :width-separator="false">
+					<bt-form-item
+						:title="t('New folder name')"
+						:description="t('new_folder_name_tooltip')"
+						:width-separator="false"
+					>
 						<bt-edit-view
 							style="width: 200px"
 							v-model="dirName"
@@ -215,7 +224,7 @@ import BtList from 'src/components/settings/base/BtList.vue';
 import { useDeviceStore } from 'src/stores/settings/device';
 import { useBackupStore } from 'src/stores/settings/backup';
 import { BtNotify, NotifyDefinedType } from '@bytetrade/ui';
-import { base64ToString } from '@didvault/sdk/src/core';
+import { base64ToString } from 'src/utils/encode';
 import { useRoute, useRouter } from 'vue-router';
 import { FilePath } from 'src/stores/files';
 import { computed, ref, watch } from 'vue';
@@ -260,6 +269,19 @@ const restoreTitle = computed(() => {
 			return t('from_aws_s3_url');
 		case BackupLocationType.tencentCloud:
 			return t('from_tencent_cos_url');
+		default:
+			return '';
+	}
+});
+
+const backupUrlTooltip = computed(() => {
+	switch (restoreType) {
+		case BackupLocationType.space:
+			return t('backup_url_space_tooltip');
+		case BackupLocationType.awsS3:
+			return t('backup_url_aws_tooltip');
+		case BackupLocationType.tencentCloud:
+			return t('backup_url_cos_tooltip');
 		default:
 			return '';
 	}

@@ -20,10 +20,13 @@ export interface TerminusPorts {
 	protocol: string;
 }
 
+export type CloneFrom = 'template' | 'app';
 export interface TerminusApp {
 	id: string;
 	icon: string;
+	clonedFrom?: CloneFrom;
 	isClusterScoped: boolean;
+	isShared?: boolean;
 	isSysApp: boolean;
 	name: string;
 	rawAppName: string;

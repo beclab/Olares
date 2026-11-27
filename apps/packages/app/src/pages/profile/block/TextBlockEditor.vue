@@ -16,7 +16,7 @@
 			v-model="blockRef.title"
 		/>
 		<div class="edit-label full-width q-mt-lg">
-			{{ t('blocks.add_text') }}
+			{{ t('blocks.text') }}
 		</div>
 		<edit-view
 			v-if="userStore.user"

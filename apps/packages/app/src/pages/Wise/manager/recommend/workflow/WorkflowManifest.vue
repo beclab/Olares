@@ -77,24 +77,6 @@ onMounted(async () => {
 	entry.value = props.workflow.spec.templates.find(
 		(te) => te.name == props.workflow.spec.entrypoint
 	);
-	// const ids = props.nodeStatus.id.split('-');
-	// const url =
-	//   //'/api/v1/stream/events/' +
-	//   '/api/v1/workflows/' +
-	//   argoStore.namespace +
-	//   '/' +
-	//   props.workflow.metadata.name +
-	//   '/log' +
-	//   //'?listOptions.fieldSelector=involvedObject.kind=Pod,involvedObject.name=' +
-	//   '?logOptions.container=main&grep=&logOptions.follow=true&podName=' +
-	//   props.workflow.metadata.name +
-	//   '-' +
-	//   props.nodeStatus.templateName +
-	//   '-' +
-	//   ids[ids.length - 1];
-	// log.value = await axios.get(url, {
-	//   headers: { responseType: 'stream', accept: 'text/event-stream' },
-	// });
 });
 </script>
 <style lang="scss">

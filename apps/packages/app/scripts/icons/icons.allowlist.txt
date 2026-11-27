@@ -1,0 +1,35 @@
+# Dynamic icon allowlist for the Material Symbols subset.
+#
+# The subset script (scripts/icons/subset-icons.mjs) statically scans src for
+# `sym_r_<name>` usages. Icons whose names are built at runtime -- e.g.
+# `:name="`sym_r_${icon}`"` -- cannot be discovered statically, so list the
+# concrete icon names (without the `sym_r_` prefix) here, one per line.
+#
+# Every name listed here is also validated against the font, so a typo or a
+# non-existent icon will still fail `npm run icons:check`.
+#
+# Lines starting with `#` and blank lines are ignored.
+
+# Biometric unlock icons (src/.../unlock/*.vue, SecurityPage.vue) -> `sym_r_${biometricIcon}`
+ar_on_you
+fingerprint
+motion_sensor_active
+
+# User connection/status icons (src/stores/termipass.ts `totalStatus.icon`)
+# rendered via `sym_r_${totalStatus?.icon}` in TerminusUserStatus*.vue.
+wifi_tethering_error
+account_circle_off
+signal_wifi_0_bar
+vpn_lock
+
+# Account setup operation icon (SetupAccount.vue) rendered by AccountOperations
+# via `image-name` -> `sym_r_${imageName}`.
+place_item
+
+# Wise view icons returned by /knowledge/filter (not guaranteed to occur in source).
+library_books
+video_library
+music_cast
+picture_as_pdf
+book_2
+filter

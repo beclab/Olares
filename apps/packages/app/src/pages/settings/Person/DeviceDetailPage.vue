@@ -22,32 +22,22 @@
 		<!-- {{ device?.id }} -->
 
 		<BtList>
-			<!--			todo 不确定是不是这个值 -->
 			<bt-form-item :title="t('Software type')" :data="device?.platform" />
-			<!--			todo 没有 临时用lastSeenTime代替 但是下面有 重复了 -->
 			<bt-form-item
 				:title="t('Last active time')"
 				:data="date.formatDate(device?.lastSeenTime, 'YYYY-MM-DD HH:mm:ss')"
 				:width-separator="false"
 			/>
-			<!--			todo 没有 -->
 			<!-- <bt-form-item :title="t('Location')" data="" :width-separator="false" /> -->
 		</BtList>
 
 		<BtList class="q-mb-lg">
-			<!--			todo 没有 -->
 			<!-- <bt-form-item :title="t('Status')" data="" /> -->
-			<!--			todo 没有 -->
 			<!-- <bt-form-item :title="t('Connection type')" data="" /> -->
 			<bt-form-item
-				:title="t('created_at')"
+				:title="t('first_login')"
 				:data="date.formatDate(device?.createTime, 'YYYY-MM-DD HH:mm:ss')"
 			/>
-			<bt-form-item
-				:title="t('Last seen')"
-				:data="date.formatDate(device?.lastSeenTime, 'YYYY-MM-DD HH:mm:ss')"
-			/>
-			<!--			todo 接口没有值 但是core中有字段 -->
 			<!-- <bt-form-item :title="t('Last IP')" :data="device?.lastIpLocation" /> -->
 			<bt-form-item
 				:title="t('Tailscale')"
@@ -69,7 +59,7 @@ import PageTitleComponent from 'src/components/settings/PageTitleComponent.vue';
 import BtFormItem from 'src/components/settings/base/BtFormItem.vue';
 import BtList from 'src/components/settings/base/BtList.vue';
 import { getDeviceIconName } from 'src/constant/constants';
-import { useAdminStore } from 'src/stores/settings/admin';
+import { useDevicesStore } from 'src/stores/settings/devices';
 import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 import { computed } from 'vue';
@@ -79,14 +69,14 @@ import { Encoder } from '@bytetrade/core';
 const route = useRoute();
 const { t } = useI18n();
 const id = route.params.deviceId;
-const adminStore = useAdminStore();
+const devicesStore = useDevicesStore();
 
 const device = computed(() => {
-	return adminStore.devices.find((device) => device.id === id);
+	return devicesStore.devices.find((device) => device.id === id);
 });
 
 const sso = computed(() => {
-	const device = adminStore.devices.find((device) => device.id === id);
+	const device = devicesStore.devices.find((device) => device.id === id);
 
 	if (
 		!device ||
@@ -103,7 +93,7 @@ const sso = computed(() => {
 
 	return {
 		exp: date.formatDate(sso.exp * 1000, 'YYYY-MM-DD HH:mm:ss'),
-		isMfa: sso.mfa == 1 ? 'Yes' : 'No'
+		isMfa: sso.mfa == 1 ? t('YES') : t('NO')
 	};
 });
 </script>

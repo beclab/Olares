@@ -27,6 +27,7 @@ export interface MarketSource {
 	is_active: boolean;
 	priority: number;
 	updated_at: string;
+	title?: string;
 }
 
 export enum MARKET_SOURCE_TYPE {
@@ -132,6 +133,10 @@ export interface AppSimpleInfo {
 	app_labels: string[];
 	categories: string[];
 	support_arch: string;
+	apiVersion: string;
+	allowMultipleInstall?: boolean;
+	templateOnly?: boolean;
+	shared?: boolean;
 }
 
 export interface AppInfoAggregation {
@@ -238,6 +243,7 @@ export interface AppStatusInfo {
 	progress: string;
 	statusTime: string;
 	rawAppName: string;
+	owner?: string;
 	title?: string;
 	updateTime: string;
 	reason?: string;
@@ -333,6 +339,24 @@ export interface Page {
 	updated_at: string;
 }
 
+export type AppAcceleratorStatus =
+	| 'installable'
+	| 'insufficient-resources'
+	| 'no-matching-node';
+
+export interface AppAcceleratorRequirement {
+	mode: string;
+	requiredCpu?: string;
+	requiredMemory?: string;
+	requiredDisk?: string;
+	requiredGPUMemory?: string;
+	limitedCpu?: string;
+	limitedMemory?: string;
+	limitedDisk?: string;
+	limitedGPUMemory?: string;
+	status?: AppAcceleratorStatus;
+}
+
 export interface AppEntry {
 	appID: string;
 	categories: string[];
@@ -371,6 +395,8 @@ export interface AppEntry {
 	};
 	requiredGPU: string;
 	requiredCPU: string;
+	supportMultiCards?: boolean;
+	supportMultiNodes?: boolean;
 	rating: number;
 	target: string;
 	namespace: string;
@@ -430,6 +456,7 @@ export interface AppEntry {
 	appLabels: string[];
 	source: string;
 	modelSize: string;
+	accelerator?: AppAcceleratorRequirement[];
 }
 
 export interface Middleware {
@@ -450,15 +477,20 @@ export interface Port {
 	addToTailscaleAcl: boolean;
 }
 
-export function isCSV2(fullInfo: AppFullInfoLatest) {
-	return (
-		fullInfo &&
-		fullInfo.app_info &&
-		fullInfo.app_info.app_entry &&
-		fullInfo.app_info.app_entry.subCharts &&
-		fullInfo.app_info.app_entry.subCharts.length > 0 &&
-		fullInfo.app_info.app_entry.apiVersion === 'v2'
-	);
+export function isCSV2(simple: AppSimpleInfoLatest | undefined): boolean {
+	return simple?.app_simple_info?.apiVersion === 'v2';
+}
+
+export function isSharedV3(simple: AppSimpleInfoLatest | undefined): boolean {
+	return !!simple?.app_simple_info?.shared;
+}
+
+export function isCsOrSharedApp(
+	simple: AppSimpleInfoLatest | undefined
+): boolean {
+	const v = simple?.app_simple_info?.apiVersion;
+	const shared = simple?.app_simple_info?.shared;
+	return v === 'v2' || !!shared;
 }
 
 export interface Conflict {
@@ -726,6 +758,8 @@ export interface AppStatusChange {
 	source: string;
 	app_name: string;
 	notify_type: string;
+	message?: string;
+	reason?: string;
 }
 
 export interface MarketSystemChange {
@@ -808,7 +842,7 @@ export function getDeviceIconName(device: TermiPassDeviceInfo): string {
 			case 'iOS':
 				name = 'iPhone';
 				break;
-			case 'chrome extends':
+			case 'chrome extends': // i18n-ignore: device-type identifier, not user-visible text
 				name = 'chrome';
 				break;
 			case 'MacOS':

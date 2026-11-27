@@ -26,6 +26,8 @@ export function formatUrltoDriveType(href: string): DriveType | undefined {
 		return DriveType.Sync;
 	} else if (href.startsWith('/Data')) {
 		return DriveType.Data;
+	} else if (href.startsWith('/Common')) {
+		return DriveType.Common;
 	} else if (href.startsWith('/Cache')) {
 		return DriveType.Cache;
 	} else if (href.startsWith('/Drive/google')) {
@@ -82,6 +84,12 @@ export function formatUrltoActiveMenu(href: string): ActiveMenuType {
 			label: MenuItem.DATA,
 			id: MenuItem.DATA,
 			driveType: DriveType.Data
+		};
+	} else if (href.startsWith('/Common')) {
+		return {
+			label: MenuItem.COMMON,
+			id: MenuItem.COMMON,
+			driveType: DriveType.Common
 		};
 	} else if (href.startsWith('/Cache')) {
 		return {
@@ -166,6 +174,8 @@ export const driveTypeBySearchPath = (url: string): DriveType | undefined => {
 		return DriveType.External;
 	} else if (lowerUrl.startsWith('data') || lowerUrl.startsWith('/data')) {
 		return DriveType.Data;
+	} else if (lowerUrl.startsWith('common') || lowerUrl.startsWith('/common')) {
+		return DriveType.Common;
 	} else if (lowerUrl.startsWith('cache') || lowerUrl.startsWith('/cache')) {
 		return DriveType.Cache;
 	} else {
@@ -182,6 +192,8 @@ export const driveTypeBySearchPathV2 = (path: string): DriveType => {
 		return DriveType.Drive;
 	} else if (path.startsWith('drive/Data')) {
 		return DriveType.Data;
+	} else if (path.startsWith('drive/Common')) {
+		return DriveType.Common;
 	} else if (path.startsWith('cache/')) {
 		return DriveType.Cache;
 	} else if (path.startsWith('share')) {
@@ -204,6 +216,9 @@ export const driveTypeByFileTypeAndFileExtend = (
 		if (fileExtend == 'Data') {
 			return DriveType.Data;
 		}
+		if (fileExtend == 'Common') {
+			return DriveType.Common;
+		}
 		return DriveType.Drive;
 	}
 	return fileType as DriveType;
@@ -222,6 +237,8 @@ export const driveTypeBySearchMeta = (meta?: {
 			return DriveType.Drive;
 		} else if (meta.fileExtend == 'Data') {
 			return DriveType.Data;
+		} else if (meta.fileExtend == 'Common') {
+			return DriveType.Common;
 		}
 	} else if (meta.fileType == 'external') {
 		return DriveType.External;

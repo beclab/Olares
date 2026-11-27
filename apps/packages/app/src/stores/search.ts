@@ -74,7 +74,7 @@ export const useSearchStore = defineStore('search', {
 			conversationId: null,
 			chatList: [],
 			filesV2SearchItem: {
-				name: 'Files Search',
+				name: 'Files search',
 				title: 'Drive',
 				icon: './app-icon/drive.svg',
 				type: 'Command',
@@ -82,7 +82,7 @@ export const useSearchStore = defineStore('search', {
 				serviceType: ServiceType.FilesV2
 			},
 			wiseSearchItem: {
-				name: 'Wise Search',
+				name: 'Wise search', // i18n-ignore: resolved via t(item.name) in consumers
 				title: 'Wise',
 				icon: './app-icon/wise.svg',
 				type: 'Command',
@@ -154,7 +154,7 @@ export const useSearchStore = defineStore('search', {
 			let res = [...this.searchList];
 			if (seachOSVersionLargeThan12_3()) {
 				res.push({
-					name: 'Files Search',
+					name: 'Files search',
 					title: 'Sync',
 					icon: './app-icon/sync.svg',
 					type: SearchCategory.Command,
@@ -192,7 +192,7 @@ export const useSearchStore = defineStore('search', {
 
 				for (let i = 0; i < data.data.data.length; i++) {
 					const app = data.data.data[i];
-					if (uninstalledAppState(app.state)) {
+					if (uninstalledAppState(app.state, true)) {
 						continue;
 					}
 					if (!app.entrances || app.entrances.length == 0) {

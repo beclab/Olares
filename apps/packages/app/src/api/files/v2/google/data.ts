@@ -1,5 +1,5 @@
 import { DriveDataAPI } from './../index';
-import { getFileIcon } from '@bytetrade/core';
+import { getFileIcon, getFilePreviewType, PreviewType } from '@bytetrade/core';
 import { format } from './filesFormat';
 import { DriveMenuType, GoogleDriveFileItem } from './type';
 import { useOperateinStore, CopyStoragesType } from 'src/stores/operation';
@@ -307,7 +307,7 @@ export default class GoogleDataAPI extends DriveDataAPI {
 	}
 
 	async formatFileContent(file: FileItem): Promise<FileItem> {
-		if (!['text', 'txt', 'textImmutable', 'pdf'].includes(file.type)) {
+		if (getFilePreviewType(file.name) !== PreviewType.TXT) {
 			return file;
 		}
 		try {

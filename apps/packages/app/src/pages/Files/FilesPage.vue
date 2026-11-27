@@ -115,14 +115,17 @@ onBeforeRouteUpdate((_to, from, next) => {
 .container {
 	width: 100%;
 	height: 100%;
+	background-color: $background-1;
 
 	display: flex;
 	flex-direction: column;
 	overflow: hidden;
 
 	header,
-	footer {
+	footer,
+	main {
 		flex: 0 0 auto;
+		background-color: $background-1;
 	}
 
 	main {

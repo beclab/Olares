@@ -48,7 +48,7 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
 import TerminusQrCode from 'src/components/settings/TerminusQrCode.vue';
-import { useAdminStore } from 'src/stores/settings/admin';
+import { useTerminusStore } from 'src/stores/terminus';
 import { useAccountStore } from 'src/stores/settings/account';
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { Encoder, MessageTopic } from '@bytetrade/core';
@@ -63,7 +63,7 @@ export interface TokenData {
 }
 
 const { t } = useI18n();
-const adminStore = useAdminStore();
+const terminusStore = useTerminusStore();
 const accountStore = useAccountStore();
 const secret = ref<string>('');
 const loginUrl = ref<string>('');
@@ -83,7 +83,7 @@ onBeforeUnmount(() => {
 });
 
 watch(
-	() => adminStore.terminus.did,
+	() => terminusStore.terminusInfo.did,
 	async () => {
 		resetDID();
 	}
@@ -108,19 +108,12 @@ async function updateInfo() {
 		if (user_info_interval) {
 			clearInterval(user_info_interval);
 		}
-		// const saveData: SpaceSaveData = {
-		// 	email: '',
-		// 	token: token.token,
-		// 	userid: token.userid,
-		// 	expired: token.expired
-		// };
-
-		await accountStore.createAccount(adminStore.olaresId, {
+		await accountStore.createAccount(terminusStore.olaresId, {
 			refresh_token: token.token,
 			access_token: token.token,
 			expires_in: 60 * 30 * 1000,
 			expires_at: token.expired,
-			userid: adminStore.terminus.did
+			userid: terminusStore.terminusInfo.did
 		});
 
 		await accountStore.listSecret();
@@ -146,14 +139,14 @@ function resetDID() {
 				message: {
 					id: '1',
 					data: {
-						did: adminStore.terminus.did,
+						did: terminusStore.terminusInfo.did,
 						secret: secret.value,
 						time
 					},
 					sign: {
 						callback_url: accountStore.space.url + '/v2/user/login',
 						sign_body: {
-							did: adminStore.terminus.did,
+							did: terminusStore.terminusInfo.did,
 							secret: secret.value,
 							time
 						}

@@ -48,7 +48,7 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
 import TerminusQrCode from './TerminusQrCode.vue';
-import { useAdminStore } from '../../stores/settings/admin';
+import { useTerminusStore } from '../../stores/terminus';
 import { onBeforeUnmount, onMounted, ref } from 'vue';
 import { Encoder, MessageTopic } from '@bytetrade/core';
 import { QR_STATUS } from '../../constant/index';
@@ -83,7 +83,7 @@ export interface TokenData {
 }
 
 const { t } = useI18n();
-const adminStore = useAdminStore();
+const terminusStore = useTerminusStore();
 const secret = ref<string>('');
 const loginUrl = ref<string>('');
 const tokenStore = useTokenStore();
@@ -124,15 +124,15 @@ function resetDID() {
 				message: {
 					id: '1',
 					data: {
-						did: adminStore.terminus.did,
+						did: terminusStore.terminusInfo.did,
 						secret: secret.value,
 						time
 					},
 					sign: {
 						callback_url: callback_url,
 						sign_body: {
-							did: adminStore.terminus.did,
-							name: adminStore.olaresId,
+							did: terminusStore.terminusInfo.did,
+							name: terminusStore.olaresId,
 							time: `${time}`,
 							domain: domain,
 							challenge: 'challenge',

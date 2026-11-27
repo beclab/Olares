@@ -5,7 +5,7 @@
 				:show="true"
 				:show-title="showShadow"
 				:title="t('detail.version_history')"
-				@onReturn="router.back()"
+				@onReturn="handleMarketBack(router, route)"
 				:shadow="showShadow"
 			/>
 		</template>
@@ -53,6 +53,7 @@ import { useAppStore } from '../../../stores/market/appStore';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { computed, ref } from 'vue';
+import { handleMarketBack } from '../../../utils/marketBack';
 
 const { t } = useI18n();
 const router = useRouter();

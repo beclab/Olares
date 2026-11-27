@@ -36,6 +36,11 @@ export enum ErrorGroupHandler {
 	G019 = 'G019',
 	G020 = 'G020',
 	G021 = 'G021',
+	G022 = 'G022',
+	G023 = 'G023',
+	G024 = 'G024',
+	G025 = 'G025',
+	G026 = 'G026',
 	G012_SG001 = 'G012-SG001',
 	G012_SG002 = 'G012-SG002',
 	G018_SG001 = 'G018-SG001',
@@ -65,7 +70,12 @@ const level1Map = new Map<ErrorGroupHandler, string>([
 	[ErrorGroupHandler.G018, 'error.cluster_not_support_platform'],
 	[ErrorGroupHandler.G019, 'error.app_install_conflict'],
 	[ErrorGroupHandler.G020, 'error.source_conflict'],
-	[ErrorGroupHandler.G021, 'error.the_dependent_app_must_be_installed_first']
+	[ErrorGroupHandler.G021, 'error.the_dependent_app_must_be_installed_first'],
+	[ErrorGroupHandler.G022, 'error.csv2_install_blocked'],
+	[ErrorGroupHandler.G023, 'error.csv2_upgrade_blocked'],
+	[ErrorGroupHandler.G024, 'error.sharedv3_subuser_install_blocked'],
+	[ErrorGroupHandler.G025, 'error.sharedv3_subuser_operation_blocked'],
+	[ErrorGroupHandler.G026, 'error.template_install_blocked']
 ]);
 
 const level2Map = new Map<ErrorGroupHandler, string>([
@@ -79,6 +89,10 @@ const level2Map = new Map<ErrorGroupHandler, string>([
 	[ErrorGroupHandler.G019_SG001, 'error.app_install_conflict_details'],
 	[ErrorGroupHandler.G021_SG001, 'error.app_not_install_details']
 ]);
+
+export function level1TitleKey(code: ErrorGroupHandler): string | undefined {
+	return level1Map.get(code);
+}
 
 export function findLevel1Error(
 	code: string,
@@ -126,10 +140,10 @@ export function errorsToStructuredText(errorGroups: ErrorGroup[]): string {
 	const lines: string[] = [];
 
 	errorGroups.forEach((group) => {
-		lines.push(`• ${i18n.global.t(group.title, group.variables || {})}`);
+		lines.push(`${i18n.global.t(group.title, group.variables || {})}`);
 
 		group.subGroups.forEach((sub) => {
-			lines.push(`• ${i18n.global.t(sub.title, sub.variables || {})}`);
+			lines.push(`${i18n.global.t(sub.title, sub.variables || {})}`);
 		});
 	});
 

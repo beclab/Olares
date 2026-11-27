@@ -66,7 +66,7 @@
 			<account-item
 				v-for="(item, index) in integrationStore.backupAccounts"
 				:key="`${item.type}_${item.name}`"
-				:title="item.type"
+				:title="getAccountTypeName(item.type)"
 				:available="item.available"
 				:detail="item.name"
 				class="integration-account-item"
@@ -188,6 +188,19 @@ const addAccount = () => {
 				backup: true
 			}
 		}).onOk(() => {});
+	}
+};
+
+const getAccountTypeName = (type: string) => {
+	switch (type.toLowerCase()) {
+		case 'space':
+			return t('olares_space');
+		case 'awss3':
+			return t('server_location.aws_s3');
+		case 'tencent':
+			return t('server_location.tencent_cos');
+		default:
+			return type;
 	}
 };
 </script>

@@ -21,12 +21,15 @@
 			<bt-list>
 				<q-item style="padding: 0" class="item-margin-left q-my-sm">
 					<div class="terminus-info row items-center justify-between">
-						<div class="row items-center">
+						<div class="row items-center" style="flex: 1">
 							<setting-avatar :size="56" style="margin-left: 8px" />
-							<div class="column justify-between" style="margin-left: 8px">
-								<div class="row items-center">
+							<div
+								class="column justify-between"
+								style="margin-left: 8px; max-width: calc(100% - 72px)"
+							>
+								<div class="row items-center full-width">
 									<div class="text-h4 person-name q-mr-sm">
-										{{ adminStore.user.name }}
+										{{ meStore.user.name }}
 									</div>
 									<div
 										v-if="integrationStore.plan"
@@ -37,16 +40,30 @@
 									</div>
 								</div>
 								<div class="text-body3 person-id q-mt-xs">
-									{{ adminStore.terminus.terminusName }}
+									{{ terminusStore.olaresId }}
 								</div>
 							</div>
 						</div>
 						<div class="row items-center item-margin-right">
-							<list-bottom-func-btn
-								:title="t('Go to Olares Space')"
-								:height="32"
-								@funcClick="goSpace"
-							/>
+							<adaptive-layout>
+								<template #mobile>
+									<q-btn
+										class="q-ml-sm"
+										dense
+										round
+										icon="sym_r_chevron_right"
+										textColor="ink-3"
+										@click="goSpace"
+									/>
+								</template>
+								<template #pc>
+									<list-bottom-func-btn
+										:title="t('Go to Olares Space')"
+										:height="32"
+										@funcClick="goSpace"
+									/>
+								</template>
+							</adaptive-layout>
 						</div>
 					</div>
 				</q-item>
@@ -58,9 +75,7 @@
 							{{ t('Reverse proxy') }}
 							<q-btn dense>
 								<q-icon name="sym_r_help" size="16px" color="ink-3"></q-icon>
-								<q-tooltip>{{
-									t('Forwards requests to backend servers.')
-								}}</q-tooltip>
+								<q-tooltip>{{ t('reverse_proxy_tooltip') }}</q-tooltip>
 							</q-btn>
 						</span>
 					</template>
@@ -84,7 +99,7 @@
 							)
 						})
 					"
-					:tip="t('Forwards requests to backend servers.')"
+					:tip="t('backup_usage_tooltip')"
 					:total="integrationStore.backupPlan?.totalSize"
 					:used="integrationStore.backupPlan?.usageSize"
 					:overage="0"
@@ -102,7 +117,7 @@
 							)
 						})
 					"
-					:tip="t('Forwards requests to backend servers.')"
+					:tip="t('traffic_usage_tooltip')"
 					:total="integrationStore.trafficPlan?.totalSize"
 					:used="integrationStore.trafficPlan?.usedSize"
 					:overage="0"
@@ -130,14 +145,17 @@ import { useIntegrationStore } from 'src/stores/settings/integration';
 import { ReverseProxyMode, reverseProxyOptions } from 'src/constant';
 import { useNetworkStore } from 'src/stores/settings/network';
 import { getSuitableValue } from 'src/utils/monitoring';
-import { useAdminStore } from 'src/stores/settings/admin';
+import { useMeStore } from 'src/stores/settings/me';
+import { useTerminusStore } from 'src/stores/terminus';
 import { computed, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useQuasar } from 'quasar';
+import AdaptiveLayout from 'src/components/settings/AdaptiveLayout.vue';
 
 const { t } = useI18n();
 const integrationStore = useIntegrationStore();
-const adminStore = useAdminStore();
+const meStore = useMeStore();
+const terminusStore = useTerminusStore();
 const networkStore = useNetworkStore();
 const $q = useQuasar();
 
@@ -192,12 +210,8 @@ const deleteAction = async () => {
 	$q.dialog({
 		component: ReminderDialogComponent,
 		componentProps: {
-			title: t('delete_item', {
-				item: t('account')
-			}),
-			message: t('are_you_sure_you_want_to_delete_item', {
-				item: accountData.name
-			}),
+			title: t('log_out_olares_space'),
+			message: t('log_out_olares_space_message'),
 			useCancel: true
 		}
 	}).onOk(async () => {

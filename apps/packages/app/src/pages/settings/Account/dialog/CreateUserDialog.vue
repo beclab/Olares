@@ -3,7 +3,7 @@
 		ref="CustomRef"
 		:title="t('create_account')"
 		:skip="false"
-		:ok="t('save')"
+		:ok="t('add')"
 		:cancel="t('cancel')"
 		size="medium"
 		:platform="deviceStore.platform"
@@ -20,6 +20,9 @@
 				:is-error="userName.length > 0 && usernameRule(userName).length > 0"
 				:error-message="usernameRule(userName)"
 			/>
+			<div class="text-body3 text-ink-3 q-mt-xs">
+				{{ t('add_user_olares_id_desc') }}
+			</div>
 			<div class="text-body3 text-ink-3 q-mt-md">
 				{{ t('roles') }}
 			</div>
@@ -32,7 +35,7 @@
 
 			<terminus-edit
 				v-model="cpuLimit"
-				label="CPU"
+				:label="t('cpu')"
 				:show-password-img="false"
 				class="q-mt-md"
 				:is-error="cpuLimit.length > 0 && cpuLimitRule(cpuLimit).length > 0"
@@ -45,7 +48,7 @@
 
 			<terminus-edit
 				v-model="memoryLimit"
-				label="Memory"
+				:label="t('memory')"
 				:show-password-img="false"
 				class="q-mt-md"
 				:is-error="
@@ -54,7 +57,7 @@
 				:error-message="memoryLimitRule(memoryLimit)"
 			>
 				<template v-slot:right>
-					<edit-number-right-slot v-model="memoryLimit" label="GB" />
+					<edit-number-right-slot v-model="memoryLimit" label="GiB" />
 				</template>
 			</terminus-edit>
 		</div>
@@ -65,7 +68,7 @@
 import { useQuasar, Loading } from 'quasar';
 import { ref, onUnmounted, computed } from 'vue';
 import ReminderDialogComponent from 'src/components/settings/ReminderDialogComponent.vue';
-import { useUserStore } from 'src/stores/settings/user';
+import { useUsersStore } from 'src/stores/settings/users';
 import { useDIDStore } from 'src/stores/settings/did';
 import TerminusEdit from 'src/components/settings/base/TerminusEdit.vue';
 import EditNumberRightSlot from 'src/components/settings/EditNumberRightSlot.vue';
@@ -75,11 +78,13 @@ import { AccountModifyStatus, AccountStatus } from 'src/constant/global';
 import { generatePasword } from '../utils';
 import { useI18n } from 'vue-i18n';
 import { passwordAddSort } from 'src/utils/account';
-import { useAdminStore } from 'src/stores/settings/admin';
+import { useMeStore } from 'src/stores/settings/me';
+import { useTerminusStore } from 'src/stores/terminus';
 import { OLARES_ROLE, SelectorProps } from 'src/constant';
 import BtSelect from 'src/components/base/BtSelect.vue';
 import { getApplication } from 'src/application/base';
 import { useWebsocketManager2Store } from 'src/stores/websocketManager2';
+import { useClusterQuotaLimit } from 'src/pages/settings/Account/useClusterQuotaLimit';
 
 const { t } = useI18n();
 
@@ -95,29 +100,30 @@ const userName = ref('');
 const cpuLimit = ref('1');
 const memoryLimit = ref('4');
 
-const accountStore = useUserStore();
+const accountStore = useUsersStore();
 const didStore = useDIDStore();
-const adminStore = useAdminStore();
+const meStore = useMeStore();
+const terminusStore = useTerminusStore();
 
 const quasar = useQuasar();
 const deviceStore = useDeviceStore();
 const newRole = ref();
 const roleOptions = computed(() => {
-	if (adminStore.user.owner_role === OLARES_ROLE.OWNER) {
+	if (meStore.user.owner_role === OLARES_ROLE.OWNER) {
 		return [
 			{
 				label: t('admin'),
 				value: OLARES_ROLE.ADMIN
 			},
 			{
-				label: t('members'),
+				label: t('member'),
 				value: OLARES_ROLE.NORMAL
 			}
 		];
 	} else {
 		return [
 			{
-				label: t('members'),
+				label: t('member'),
 				value: OLARES_ROLE.NORMAL
 			}
 		] as SelectorProps[];
@@ -127,6 +133,7 @@ const roleOptions = computed(() => {
 let password = '';
 
 const CustomRef = ref();
+const { canSave, cpuMaxError, memoryMaxError } = useClusterQuotaLimit();
 
 let checkAccountCreateProgress: any = null;
 
@@ -143,7 +150,7 @@ const createUserName = async () => {
 		return;
 	}
 
-	const adminDomain = adminStore.olaresId.split('@')[1];
+	const adminDomain = terminusStore.olaresId.split('@')[1];
 
 	let splitUserName = userName.value.split('@');
 
@@ -172,7 +179,7 @@ const createUserName = async () => {
 			currentUserName = currentUserName + '@' + adminDomain;
 		}
 
-		if (adminStore.olaresd) {
+		if (terminusStore.olaresd) {
 			const data = await didStore.resolve_name(currentUserName);
 			if (!data) {
 				Loading.hide();
@@ -190,7 +197,10 @@ const createUserName = async () => {
 			await accountStore.create_account({
 				name: userName.value,
 				owner_role: newRole.value,
-				password: passwordAddSort(password, adminStore.terminus.osVersion),
+				password: passwordAddSort(
+					password,
+					terminusStore.terminusInfo.osVersion
+				),
 				cpu_limit: '' + cpuLimit.value,
 				memory_limit: '' + memoryLimit.value + 'G'
 			});
@@ -212,7 +222,7 @@ const createUserName = async () => {
 				componentProps: {
 					title: t('Low resources allocation'),
 					message: t(
-						'The resources allocation is low. We recommend at least 1 CPU core and 3 GB of RAM. Lower settings may lead to poor experience. Are you sure you want to proceed?'
+						'The resources allocation is low. We recommend at least 1 CPU core and 3 GiB of RAM. Lower settings may lead to poor experience. Are you sure you want to proceed?'
 					),
 					cancelText: t('cancel'),
 					confirmText: t('confirm')
@@ -253,19 +263,13 @@ async function checkAccountCreate(username: string) {
 				checkAccountCreateProgress = null;
 			}
 
-			const message =
-				t('olares_ID') +
-				':' +
-				userName.value +
-				'<br>' +
-				t('original_password') +
-				':' +
-				password +
-				'<br>' +
-				t('wizard_url') +
-				':' +
-				'https://' +
-				data.address.wizard;
+			CustomRef.value.onDialogOK();
+
+			const message = t('user_had_been_created_message', {
+				olaresID: userName.value,
+				password,
+				wizard: `https://${data.address.wizard}`
+			});
 
 			quasar
 				.dialog({
@@ -341,7 +345,7 @@ const cpuLimitRule = (val: string) => {
 	if (!rule.test(val)) {
 		return t('errors.only_valid_numbers_can_be_entered');
 	}
-	return '';
+	return cpuMaxError(val);
 };
 
 const memoryLimitRule = (val: string) => {
@@ -352,11 +356,12 @@ const memoryLimitRule = (val: string) => {
 	if (!rule.test(val)) {
 		return t('errors.only_valid_numbers_can_be_entered');
 	}
-	return '';
+	return memoryMaxError(val);
 };
 
 const enableCreate = computed(() => {
 	return (
+		canSave.value &&
 		usernameRule(userName.value).length == 0 &&
 		// emailRule(email.value).length == 0 &&
 		cpuLimitRule(cpuLimit.value).length == 0 &&

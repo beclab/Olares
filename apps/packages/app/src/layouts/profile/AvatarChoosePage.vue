@@ -5,7 +5,10 @@
 				{{ t('profile.profile_picture') }}
 			</div>
 
-			<bt-scroll-area class="full-width" style="height: calc(100vh - 157px)">
+			<bt-scroll-area
+				class="full-width"
+				:style="{ height: ['calc(100vh - 157px)', 'calc(100dvh - 157px)'] }"
+			>
 				<div class="column full-width full-height">
 					<div class="row justify-center items-center">
 						<bt-tab-item
@@ -62,7 +65,7 @@
 
 			<div class="bottom-button row justify-between items-center">
 				<bio-button
-					width="161px"
+					width="100%"
 					height="48px"
 					:default-selected="false"
 					class="text-subtitle2"
@@ -70,7 +73,7 @@
 					@click="router.back"
 				/>
 				<bio-button
-					width="161px"
+					width="100%"
 					height="48px"
 					class="text-subtitle2"
 					:label="t('base.confirm')"
@@ -89,7 +92,7 @@ import NFTAvatar from '@apps/profile/src/components/profile/avatar/NFTAvatar.vue
 import BtTabItem from '@apps/profile/src/components/profile/base/BtTabItem.vue';
 import BioButton from '@apps/profile/src/components/profile/base/BioButton.vue';
 import { onMounted, onUnmounted, ref } from 'vue';
-import { useUserStore } from '@apps/profile/src/stores/user';
+import { useUserStore } from '@apps/profile/src/stores/profileUser';
 import { useRouter } from 'vue-router';
 import { bus } from '@apps/profile/src/utils/bus';
 import { useI18n } from 'vue-i18n';
@@ -163,6 +166,13 @@ onUnmounted(() => {
 		width: 100%;
 		background: $background-1;
 		bottom: 20px;
+		gap: 12px;
+
+		:deep(.bio-button),
+		:deep(.bio-selected-button) {
+			flex: 1 1 0;
+			min-width: 0;
+		}
 	}
 }
 </style>

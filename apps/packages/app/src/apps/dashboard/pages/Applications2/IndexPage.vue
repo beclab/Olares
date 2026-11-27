@@ -79,13 +79,13 @@
 						>
 							<div class="row items-center">
 								<q-skeleton v-if="viewLoading" type="text" width="80px" />
-								<span v-else> {{ item.currentEntrance.title }}</span>
+								<span v-else>{{ item.title }}</span>
 								<div
-									v-if="authLevelFilter(item.currentEntrance.authLevel)"
+									v-if="authLevelFilter(getEntranceAuthLevel(item))"
 									class="q-px-md q-py-xs bg-background-3 rounded-borders-lg q-ml-lg"
 								>
 									<div class="text-subtitle3 text-positive">
-										{{ authLevelFilter(item.currentEntrance.authLevel) }}
+										{{ authLevelFilter(getEntranceAuthLevel(item)) }}
 									</div>
 								</div>
 							</div>
@@ -156,7 +156,6 @@ import {
 } from './config';
 import { useAppList } from '@apps/dashboard/src/stores/AppList';
 import BtSelect from '@apps/control-panel-common/src/components/Select.vue';
-import { OLARES_APP } from '@apps/control-panel-common/src/constant/user';
 import { Locker } from '../../types/main';
 import QButtonStyle from '@apps/control-panel-common/components/QButtonStyle.vue';
 import {
@@ -220,23 +219,13 @@ const isRunning = ref(true);
 const monitoringData = ref(loadingData);
 const fullSortedNamesRef = ref<string[]>([]);
 
-const mapMetricRows = (target: any[]) => {
-	return target.map((item) => {
-		const isOlaresApp = item.name === OLARES_APP;
-		const firstEntrance = get(item, 'entrances[0]', {});
-		const firstEntranceFormat = isOlaresApp
-			? { ...firstEntrance, title: item.title, icon: item.icon }
-			: firstEntrance;
-		return {
-			...item,
-			entrances: isOlaresApp
-				? [{ ...firstEntrance, icon: item.icon }]
-				: item.entrances,
-			currentEntrance: item.currentEntrance
-				? item.currentEntrance
-				: firstEntranceFormat
-		};
-	});
+const getEntranceAuthLevel = (item: {
+	entrances?: { invisible?: boolean; authLevel?: string }[];
+}) => {
+	const entrance =
+		(item.entrances || []).find((entry) => !entry.invisible) ||
+		item.entrances?.[0];
+	return entrance?.authLevel;
 };
 
 const fullSortedRows = computed(() => {
@@ -245,7 +234,7 @@ const fullSortedRows = computed(() => {
 		`${selected.value.sortBy}`,
 		[]
 	) as any[];
-	return mapMetricRows(Array.isArray(target) ? target : []);
+	return Array.isArray(target) ? target : [];
 });
 
 const displaySortedRows = computed(() =>
@@ -346,17 +335,11 @@ const currentAppNames = computed(() =>
 
 const prevAppsNamesRef = ref<string[]>([]);
 
-const matchesSearchQuery = (row: {
-	name?: string;
-	title?: string;
-	currentEntrance?: { title?: string };
-}) => {
+const matchesSearchQuery = (row: { name?: string; title?: string }) => {
 	const q = trim(toLower(name.value || ''));
 	if (!q) return true;
 	const byName = toLower(row.name || '').includes(q);
-	const byTitle = toLower(
-		row.title || row.currentEntrance?.title || ''
-	).includes(q);
+	const byTitle = toLower(row.title || '').includes(q);
 	return byName || byTitle;
 };
 
@@ -549,7 +532,7 @@ const sortHandler = (value: string) => {
 	resortMonitoringDataLocally();
 };
 
-const authLevelFilter = (state: EntranceState) => {
+const authLevelFilter = (state?: string) => {
 	return state === EntranceState.Public ? capitalize(state) : '';
 };
 let locker: Locker = undefined;
@@ -741,9 +724,6 @@ onBeforeUnmount(() => {
 	position: absolute;
 	right: 0;
 	top: 60px;
-}
-.avatar-image {
-	margin-left: -20px;
 }
 .applications2-grid {
 	min-height: 120px;

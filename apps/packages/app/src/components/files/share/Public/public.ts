@@ -14,9 +14,9 @@ import { useDataStore } from 'src/stores/data';
 import { getApplication } from 'src/application/base';
 
 export enum DiskUnitMode {
-	T = 'Ti',
-	G = 'Gi',
-	M = 'Mi'
+	T = 'TiB',
+	G = 'GiB',
+	M = 'MiB'
 }
 
 export const diskUnitOptions = () => {
@@ -77,11 +77,11 @@ export function usePublicShare(origin_id: number) {
 		if (includePassword) {
 			copyTxt =
 				i18n.global.t('Link') +
-				':' +
+				': ' +
 				getShareLink.value +
 				'<br>' +
 				i18n.global.t('password') +
-				':' +
+				': ' +
 				publicPassword.value;
 		}
 

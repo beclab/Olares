@@ -3,25 +3,20 @@ const CssMinimizerPlugin = require('css-minimizer-webpack-plugin');
 const TerserPlugin = require('terser-webpack-plugin');
 const path = require('path');
 const proxyDefault = require('./proxyDefault');
+const { splitStyleChunks } = require('../build/webpack/styleChunks');
 
 let config = undefined;
 
 const httpsApplications = [
 	'WISE',
 	'FILES',
-	'LAREPASS',
-	'LOGIN',
 	'WIZARD',
 	'EDITOR',
-	'PREVIEW',
 	'MARKET',
 	'SETTINGS',
 	'DESKTOP',
 	'DASHBOARD',
-	'CONTROL_HUB',
-	'STUDIO',
-	'SHARE',
-	'VAULT'
+	'CONTROL_HUB'
 ];
 
 const aliasKeys = [
@@ -51,25 +46,37 @@ const appsAlias = (appName, fileName) => {
 	return obj;
 };
 
+// Webpack entry chunks that must not be injected into the main BEX index.html.
+// Overlay pages (button/list/bar) ship their own HTML; content scripts are
+// loaded via manifest.json. Including their CSS (e.g. list.css sets html
+// font-size: 10px) would break Side Panel typography.
+const BEX_INDEX_EXCLUDE_CHUNKS = [
+	'translate-content',
+	'TermiPassProvider',
+	'rssContentScript',
+	'sidePanelContentScript',
+	'content/trigger-autofill-script-injection',
+	'content/bootstrap-autofill',
+	'content/bootstrap-autofill-overlay',
+	'content/autofiller',
+	'content/notificationBar',
+	'button',
+	'list',
+	'bar'
+];
+
 const initConfig = (ctx) => {
 	if (process.env.APPLICATION === 'WISE') {
 		config = require('./wise').getConfig(ctx);
 	} else if (process.env.APPLICATION === 'SETTINGS') {
 		config = require('./settings').getConfig(ctx);
-	} else if (process.env.APPLICATION === 'LAREPASS') {
-		config = require('./LarePass').getConfig(ctx);
+
 	} else if (process.env.APPLICATION === 'FILES') {
 		config = require('./files').getConfig(ctx);
-	} else if (process.env.APPLICATION === 'VAULT') {
-		config = require('./vault').getConfig(ctx);
-	} else if (process.env.APPLICATION === 'LOGIN') {
-		config = require('./login').getConfig(ctx);
 	} else if (process.env.APPLICATION === 'WIZARD') {
 		config = require('./wizard').getConfig(ctx);
 	} else if (process.env.APPLICATION === 'EDITOR') {
 		config = require('./editor').getConfig(ctx);
-	} else if (process.env.APPLICATION === 'PREVIEW') {
-		config = require('./preview').getConfig(ctx);
 	} else if (process.env.APPLICATION === 'MARKET') {
 		config = require('./market').getConfig(ctx);
 	} else if (process.env.APPLICATION === 'DESKTOP') {
@@ -78,10 +85,6 @@ const initConfig = (ctx) => {
 		config = require('./dashboard').getConfig(ctx);
 	} else if (process.env.APPLICATION === 'CONTROL_HUB') {
 		config = require('./control-hub').getConfig(ctx);
-	} else if (process.env.APPLICATION === 'STUDIO') {
-		config = require('./studio.js').getConfig(ctx);
-	} else if (process.env.APPLICATION === 'SHARE') {
-		config = require('./share').getConfig(ctx);
 	} else {
 		throw new Error('APPLICATION environment variable is not set or invalid');
 	}
@@ -95,8 +98,10 @@ const extendWebpack = (ctx, cfg) => {
 		);
 		if (htmlPlugin) {
 			htmlPlugin.options.excludeChunks = [
-				...(htmlPlugin.options.excludeChunks || []),
-				'translate-content'
+				...new Set([
+					...(htmlPlugin.options.excludeChunks || []),
+					...BEX_INDEX_EXCLUDE_CHUNKS
+				])
 			];
 		}
 	}
@@ -131,7 +136,6 @@ const extendWebpack = (ctx, cfg) => {
 		...appsAlias('dashboard', 'dashboard'),
 		...appsAlias('control-hub', 'controlHub'),
 		...appsAlias('control-panel-common', 'controlPanelCommon'),
-		...appsAlias('studio', 'studio'),
 		'@apps/control-panel-common/src': path.resolve(
 			__dirname,
 			'../src/apps/controlPanelCommon'
@@ -172,7 +176,7 @@ const chainWebpack = (ctx, chain, { isClient }) => {
 		]);
 
 		if (!ctx.dev) {
-			chain.plugin('terser').use(TerserPlugin, [
+			chain.optimization.minimizer('terser').use(TerserPlugin, [
 				{
 					terserOptions: {
 						// parallel: true,
@@ -192,27 +196,19 @@ const chainWebpack = (ctx, chain, { isClient }) => {
 			]);
 		}
 
-		// chain.optimization.minimizer('terser').use(TerserPlugin, [
-		// 	{
-		// 		terserOptions: {
-		// 			parallel: true,
-		// 			sourceMap: true,
-		// 			extractComments: false,
-		// 			compress: {
-		// 				drop_console: true,
-		// 				drop_debugger: true,
-		// 				pure_funcs: ['console.log']
-		// 			},
-		// 			output: {
-		// 				comments: false,
-		// 				ascii_only: true
-		// 			}
-		// 		}
-		// 	}
-		// ]);
-
 		chain.optimization.splitChunks({
-			chunks: 'all', // The type of chunk that requires code segmentation
+			// Use a function instead of 'all': non-worker chunks behave exactly like
+			// 'all', but the shared websocket worker chunk is excluded from splitting so
+			// it stays self-contained. Otherwise its vendor deps (e.g. util) get hoisted
+			// into separate chunks that the worker must importScripts() at startup, which
+			// throws "Failed to execute 'importScripts'" when that request fails.
+			// The worker chunk is given the stable name "sharedWebsocketWorker" via a
+			// webpackEntryOptions magic comment at its `new SharedWorker(new URL(...))`
+			// call site; without that name webpack exposes it here with name===undefined
+			// and it cannot be matched.
+			chunks(chunk) {
+				return !/sharedWebsocketWorker/i.test(chunk.name || '');
+			},
 			minSize: 20000, // Minimum split file size
 			minRemainingSize: 0, // Minimum remaining file size after segmentation
 			minChunks: 1, // The number of times it has been referenced before it is split
@@ -233,6 +229,18 @@ const chainWebpack = (ctx, chain, { isClient }) => {
 				}
 			}
 		});
+		if (ctx.prod) {
+			if (process.env.PLATFORM === 'MOBILE') {
+				// Mobile routes can contain the same CSS modules in different orders.
+				// Keep those route chunks distinct; merging them reintroduces CSS order
+				// conflicts before splitChunks shares their JavaScript dependencies.
+				// This duplicates some route CSS; vendor styles remain shared.
+				chain.optimization.mergeDuplicateChunks(false);
+			}
+			chain.optimization.splitChunks(
+				splitStyleChunks(chain.optimization.get('splitChunks'))
+			);
+		}
 	}
 	if (config && config.build.chainWebpack) {
 		config.build.chainWebpack(ctx, chain, { isClient });

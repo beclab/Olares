@@ -24,7 +24,7 @@
 					class="application_install_btn"
 					outline
 					no-caps
-					label="Install"
+					:label="$t('app.install')"
 					@click="appStore.installApp(item, false, $q)"
 				/>
 			</div>
@@ -37,7 +37,7 @@
 					class="application_install_btn"
 					outline
 					no-caps
-					label="Open"
+					:label="$t('app.open')"
 				/>
 			</div>
 			<div v-else />

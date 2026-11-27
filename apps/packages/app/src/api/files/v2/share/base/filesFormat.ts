@@ -4,6 +4,7 @@ import { getextension } from 'src/utils/utils';
 import { i18n } from 'src/boot/i18n';
 import { DriveType } from 'src/utils/interface/files';
 import { displayPath, displaySharePath } from './utils';
+import { getArchiveFileTypeI18nKey } from 'src/utils/interface/archive';
 
 export function formatShareListData(data, driveType: DriveType, origin_id) {
 	const filesStore = useFilesStore();
@@ -74,9 +75,10 @@ export function formatDrive(
 		el.driveType = driveType;
 		el.extension = extension;
 		el.modified = new Date(el.modified).getTime();
+		const archiveTypeKey = getArchiveFileTypeI18nKey(el.name);
 		el.type = isDir
 			? i18n.global.t('files.folders')
-			: i18n.global.t(getFileTypeI18nKey(el.name));
+			: i18n.global.t(archiveTypeKey || getFileTypeI18nKey(el.name));
 	});
 
 	data.items = curItems;

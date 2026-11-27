@@ -1,6 +1,7 @@
 <template>
 	<VueDragResize
 		:isActive="true"
+		:preventActiveBehavior="true"
 		:key="value"
 		:w="value.width"
 		:h="value.height"
@@ -28,9 +29,32 @@
 		<iframe
 			class="iframe-window"
 			allow="web-share; clipboard-read; clipboard-write"
-			:src="value.pathto ? value.url + '?pathto=' + value.pathto : value.url"
+			:src="iframeSrc"
+			:sandbox="
+				isBookmarkMode
+					? 'allow-scripts allow-popups allow-forms allow-same-origin'
+					: undefined
+			"
+			:referrerpolicy="isBookmarkMode ? 'no-referrer' : undefined"
 			ref="iframeRef"
 		/>
+
+		<div v-if="iframeBlocked" class="iframe-blocked-overlay">
+			<div class="iframe-blocked-message text-ink-2">
+				<div class="text-subtitle2 q-mb-sm">
+					{{ t('desktop_settings.iframe_blocked_title') }}
+				</div>
+				<div class="text-body2 q-mb-md">
+					{{ t('desktop_settings.iframe_blocked_msg') }}
+				</div>
+				<q-btn
+					color="primary"
+					unelevated
+					:label="t('desktop_settings.open_in_new_tab')"
+					@click="openInNewTab"
+				/>
+			</div>
+		</div>
 
 		<div class="title" style="width: 100%; height: 40px; padding: 0 12px">
 			<q-img
@@ -56,7 +80,7 @@
 				round
 				size="xs"
 				class="window_btn"
-				@click="onMini"
+				@click.stop="onMini"
 				@mouseover="h_min = true"
 				@mouseleave="h_min = false"
 			>
@@ -69,7 +93,7 @@
 				round
 				size="xs"
 				class="window_btn"
-				@click="onFull"
+				@click.stop="onFull"
 				@mouseover="h_full = true"
 				@mouseleave="h_full = false"
 			>
@@ -82,7 +106,7 @@
 				round
 				size="xs"
 				class="window_btn"
-				@click="onNew"
+				@click.stop="onNew"
 				@mouseover="h_new = true"
 				@mouseleave="h_new = false"
 			>
@@ -102,7 +126,7 @@
 				flat
 				round
 				size="xs"
-				@click="onClose"
+				@click.stop="onClose"
 				class="window_btn"
 				@mouseover="h_close = true"
 				@mouseleave="h_close = false"
@@ -131,7 +155,14 @@
 </template>
 
 <script lang="ts">
-import { ref, defineComponent, onMounted, nextTick, onUnmounted } from 'vue';
+import {
+	ref,
+	computed,
+	defineComponent,
+	onMounted,
+	nextTick,
+	onUnmounted
+} from 'vue';
 import { useQuasar } from 'quasar';
 import { useI18n } from 'vue-i18n';
 import {
@@ -169,6 +200,10 @@ export default defineComponent({
 					active: true
 				};
 			}
+		},
+		mode: {
+			type: String,
+			default: 'app'
 		}
 	},
 
@@ -188,7 +223,23 @@ export default defineComponent({
 		const isFull = ref(false);
 		const clickNew = ref(false);
 		const iframeLoadStartAt = ref(0);
+		const iframeBlocked = ref(false);
 		let iframeLoadTimeout: ReturnType<typeof setTimeout> | null = null;
+		let iframeBlockedTimeout: ReturnType<typeof setTimeout> | null = null;
+		const isBookmarkMode = computed(() => props.mode === 'bookmark-iframe');
+		const iframeSrc = computed(() => {
+			if (isBookmarkMode.value) {
+				return value.value.url;
+			}
+
+			return value.value.pathto
+				? value.value.url + '?pathto=' + encodeURIComponent(value.value.pathto)
+				: value.value.url;
+		});
+		const openInNewTab = () => {
+			const href = value.value.url;
+			window.open(href, '_blank', 'noopener,noreferrer');
+		};
 		const $q = useQuasar();
 		const traceWindow = createDesktopWindowTracer(() =>
 			DESKTOP_WINDOW_TRACE_SCOPE.window(value.value.id)
@@ -252,7 +303,11 @@ export default defineComponent({
 
 			const href = value.value.redirectUrl || value.value.url;
 
-			window.open(href);
+			if (isBookmarkMode.value) {
+				window.open(href, '_blank', 'noopener,noreferrer');
+			} else {
+				window.open(href);
+			}
 		};
 
 		let onTop = () => {
@@ -313,7 +368,9 @@ export default defineComponent({
 			traceWindow(DESKTOP_WINDOW_TRACE_TAG.IFRAME_MOUNT, {
 				title: value.value.title,
 				url: value.value.pathto
-					? value.value.url + '?pathto=' + value.value.pathto
+					? value.value.url +
+					  '?pathto=' +
+					  encodeURIComponent(value.value.pathto)
 					: value.value.url
 			});
 			iframeLoadTimeout = setTimeout(() => {
@@ -351,6 +408,11 @@ export default defineComponent({
 					// IE
 					iframeRef.value.attachEvent('onload', () => {
 						iframeLoad.value = false;
+						iframeBlocked.value = false;
+						if (iframeBlockedTimeout) {
+							clearTimeout(iframeBlockedTimeout);
+							iframeBlockedTimeout = null;
+						}
 						traceWindow(DESKTOP_WINDOW_TRACE_TAG.IFRAME_LOAD_SUCCESS, {
 							elapsedMs: Date.now() - iframeLoadStartAt.value,
 							url: iframeRef.value?.src || value.value.url
@@ -360,6 +422,11 @@ export default defineComponent({
 					// not IE
 					iframeRef.value.onload = function () {
 						iframeLoad.value = false;
+						iframeBlocked.value = false;
+						if (iframeBlockedTimeout) {
+							clearTimeout(iframeBlockedTimeout);
+							iframeBlockedTimeout = null;
+						}
 						traceWindow(DESKTOP_WINDOW_TRACE_TAG.IFRAME_LOAD_SUCCESS, {
 							elapsedMs: Date.now() - iframeLoadStartAt.value,
 							url: iframeRef.value?.src || value.value.url
@@ -373,9 +440,23 @@ export default defineComponent({
 							url: iframeRef.value?.src || value.value.url,
 							err
 						});
+						if (isBookmarkMode.value) {
+							iframeBlocked.value = true;
+						}
 					};
 				}
 			});
+			// X-Frame-Options blocking does not fire onerror; iframe goes blank.
+			// For bookmark-iframe mode we add a probe: if the iframe is still
+			// loading after 8s OR loaded but cross-origin/unreachable, surface
+			// the "cannot embed" UI so the user can fall back to a new tab.
+			if (isBookmarkMode.value) {
+				iframeBlockedTimeout = setTimeout(() => {
+					if (iframeLoad.value) {
+						iframeBlocked.value = true;
+					}
+				}, 8000);
+			}
 		});
 
 		onUnmounted(() => {
@@ -383,6 +464,10 @@ export default defineComponent({
 			if (iframeLoadTimeout) {
 				clearTimeout(iframeLoadTimeout);
 				iframeLoadTimeout = null;
+			}
+			if (iframeBlockedTimeout) {
+				clearTimeout(iframeBlockedTimeout);
+				iframeBlockedTimeout = null;
 			}
 		});
 
@@ -401,6 +486,10 @@ export default defineComponent({
 			iframeRef,
 			dragRef,
 			isFull,
+			iframeBlocked,
+			isBookmarkMode,
+			iframeSrc,
+			openInNewTab,
 			dragging,
 			dragStop,
 			resizing,
@@ -504,5 +593,25 @@ export default defineComponent({
 	background: transparent;
 	margin-top: 30px;
 	/*display: none;*/
+}
+
+.iframe-blocked-overlay {
+	position: absolute;
+	top: 40px;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: $background-1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 50;
+	border-bottom-left-radius: 10px;
+	border-bottom-right-radius: 10px;
+	.iframe-blocked-message {
+		max-width: 360px;
+		text-align: center;
+		padding: 24px;
+	}
 }
 </style>

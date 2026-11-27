@@ -150,11 +150,15 @@ const editFolder = () => {
 		componentProps: {
 			folder: videoStore.transcodingSettings.cranscodingTempPath.value
 		}
-	}).onOk((folder: string) => {
-		videoStore.transcodingSettings.cranscodingTempPath.value = folder;
-		VideoService.updateInitDataProps({
-			TranscodingTempPath: folder
-		});
+	}).onOk(async (folder: string) => {
+		try {
+			await VideoService.updateInitDataProps({
+				TranscodingTempPath: folder
+			});
+			videoStore.transcodingSettings.cranscodingTempPath.value = folder;
+		} catch (error) {
+			console.log(error);
+		}
 	});
 };
 

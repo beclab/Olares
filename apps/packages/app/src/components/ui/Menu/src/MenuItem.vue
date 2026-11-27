@@ -35,7 +35,8 @@
 		></ItemLabel>
 		<q-item-section
 			:style="{
-				opacity: !data.defaultHide || data.key === mouseItemKey ? 1 : 0
+				opacity:
+					!data.defaultHide || data.key === mouseItemKey || isTouch ? 1 : 0
 			}"
 			side
 			@click.stop
@@ -49,9 +50,17 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
+import { useQuasar } from 'quasar';
 import { defaultSize, Item, Size } from './Menu';
 import ItemLabel from './ItemLabel.vue';
 import AvatarIcon from './AvatarIcon.vue';
+
+const $q = useQuasar();
+// On touch devices there is no hover, so any hover-gated extra (e.g. the
+// per-item "more" button) must be shown up-front. Otherwise iOS treats the
+// first tap as a hover that reveals the button and swallows the click,
+// forcing users to tap twice to actually select the item.
+const isTouch = $q.platform.has.touch;
 
 interface Props {
 	data: Item;

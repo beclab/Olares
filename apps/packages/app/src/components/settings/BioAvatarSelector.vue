@@ -19,7 +19,7 @@
 				class="text-caption row items-center justify-center bound-status"
 				v-if="bound"
 			>
-				{{ $t('bound') }}
+				{{ $t('linked_nft_avatar') }}
 			</div>
 		</div>
 	</div>

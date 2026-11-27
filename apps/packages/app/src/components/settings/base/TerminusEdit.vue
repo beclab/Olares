@@ -39,6 +39,7 @@
 			<q-input
 				:model-value="modelValue"
 				:type="inputTypeRef"
+				:inputmode="inputmode || undefined"
 				class="text-body3 terminus-edit__bg__input"
 				:style="isTextarea ? '' : 'margin-top: -6px;'"
 				bg-color="transparent"
@@ -167,6 +168,11 @@ const props = defineProps({
 	isNumber: {
 		type: Boolean,
 		default: false,
+		required: false
+	},
+	inputmode: {
+		type: String,
+		default: '',
 		required: false
 	},
 	isTextarea: {

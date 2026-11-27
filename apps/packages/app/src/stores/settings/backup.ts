@@ -43,7 +43,7 @@ import {
 } from 'src/api/settings/snapshot';
 import { binaryInsert, CompareBackup } from 'src/utils/rss-utils';
 import logger from 'electron-log';
-import { stringToBase64 } from '@didvault/sdk/src/core';
+import { stringToBase64 } from 'src/utils/encode';
 import axios from 'axios';
 import { useIntegrationStore } from './integration';
 import { useApplicationStore } from 'src/stores/settings/application';

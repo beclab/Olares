@@ -3,6 +3,9 @@
 </template>
 
 <script setup>
+import '@fontsource/inter/400.css';
+import '@fontsource/inter/500.css';
+import '@fontsource/inter/700.css';
 import { computed } from 'vue';
 import { DeviceType } from '@bytetrade/core';
 import PcHome from './IndexPage.vue';
@@ -19,6 +22,8 @@ const currentComponent = computed(() => {
 		} else {
 			return LandscapeScreenIndex;
 		}
+	} else if (tokenStore.deviceInfo.device === DeviceType.TABLET) {
+		return MobileHome;
 	} else {
 		return PcHome;
 	}

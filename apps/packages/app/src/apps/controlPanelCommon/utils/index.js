@@ -37,6 +37,7 @@ import {
 import moment from 'moment-mini';
 
 import { Base64 } from 'js-base64';
+import { ACRONYMS } from '@apps/control-panel-common/src/constant';
 import { PATTERN_LABEL, MODULE_KIND_MAP } from './constants';
 /**
  * format size, output the value with unit
@@ -44,7 +45,16 @@ import { PATTERN_LABEL, MODULE_KIND_MAP } from './constants';
  */
 
 export const _capitalize = (value) => {
-	return capitalize(value).replaceAll('_', ' ');
+	if (!value) return '';
+	const tokens = value
+		.split(/[_\s]+/)
+		.map((t) =>
+			ACRONYMS.has(t.toUpperCase()) ? t.toUpperCase() : t.toLowerCase()
+		);
+	if (!ACRONYMS.has(tokens[0])) {
+		tokens[0] = tokens[0].charAt(0).toUpperCase() + tokens[0].slice(1);
+	}
+	return tokens.join(' ');
 };
 
 export const formatSize = (size) => {
@@ -529,11 +539,13 @@ export const isMemberClusterPage = (path = location.pathname, message) => {
 		'1',
 		'host'
 	);
+	// i18n-ignore-start: server-side JWT rejection tokens, matched literally
 	const rules = [
 		'token used before issued',
 		'signature is invalid',
 		'token not found in cache'
 	];
+	// i18n-ignore-end
 	const lowerMessage = message.toLowerCase();
 
 	let isTokenOut = true;

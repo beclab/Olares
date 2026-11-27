@@ -16,7 +16,7 @@
 		<q-table
 			flat
 			bordered
-			title="Sender"
+			:title="$t('sender')"
 			:rows="senderTemplates"
 			:columns="columns"
 			row-key="id"

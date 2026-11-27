@@ -19,7 +19,7 @@
 					</div>
 				</div>
 				<div class="text-body3 text-ink-2 q-pb-xs">
-					{{ t('System version') + ':' + machine.status.terminusVersion }}
+					{{ t('System version') + ': ' + machine.status.terminusVersion }}
 				</div>
 				<div class="text-body3 text-ink-2">
 					{{ `${t('IP')}: ${machine.status.hostIp || '--'}` }}

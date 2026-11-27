@@ -3,33 +3,18 @@
 		<template v-slot:pc>
 			<page-container :title-height="56">
 				<template v-slot:title>
-					<title-bar :show="true" @onReturn="router.back()" />
+					<title-bar :show="true" @onReturn="handleMarketBack(router, route)" />
 				</template>
 				<template v-slot:page>
 					<div class="log-scroll" :style="{ '--paddingX': '44px' }">
 						<app-store-body :title="t('logs')" :title-separator="true">
 							<template v-slot:right>
-								<div class="row justify-end items-center">
-									<bt-label
-										name="sym_r_page_info"
-										:label="t('View Processing Workflow')"
-										@click="
-											openNewLink('app-store/api/v2/runtime/dashboard-app')
-										"
-									/>
-									<bt-label
-										class="q-ml-lg"
-										name="sym_r_space_dashboard"
-										:label="t('View Dashboard')"
-										@click="openNewLink('app-store/api/v2/runtime/dashboard')"
-									/>
-									<bt-label
-										class="q-ml-lg"
-										name="sym_r_download"
-										:label="t('Download Raw Log')"
-										@click="downloadLogs"
-									/>
-								</div>
+								<bt-label
+									class="q-ml-lg"
+									name="sym_r_download"
+									:label="t('Download Raw Log')"
+									@click="downloadLogs"
+								/>
 							</template>
 							<template v-slot:body>
 								<q-table
@@ -131,28 +116,15 @@
 						:title="t('logs')"
 						:show="true"
 						:offset="48"
-						@onReturn="router.back()"
+						@onReturn="handleMarketBack(router, route)"
 					>
 						<template v-slot:right>
-							<div class="row justify-end items-center">
-								<bt-label
-									name="sym_r_page_info"
-									label=""
-									@click="openNewLink('app-store/api/v2/runtime/dashboard-app')"
-								/>
-								<bt-label
-									class="q-ml-xs"
-									name="sym_r_space_dashboard"
-									label=""
-									@click="openNewLink('app-store/api/v2/runtime/dashboard')"
-								/>
-								<bt-label
-									class="q-ml-xs"
-									name="sym_r_download"
-									label=""
-									@click="downloadLogs"
-								/>
-							</div>
+							<bt-label
+								class="q-ml-xs"
+								name="sym_r_download"
+								label=""
+								@click="downloadLogs"
+							/>
 						</template>
 					</title-bar>
 				</template>
@@ -208,16 +180,11 @@
 							}}</pre>
 						</div>
 
-						<app-store-body :title="t('logs')" :title-separator="true">
-							<template v-slot:right>
-								<bt-label
-									name="sym_r_download"
-									:label="deviceStore.isMobile ? '' : t('Download Raw Log')"
-									@click="downloadLogs"
-								/>
-							</template>
-							<template v-slot:body> </template>
-						</app-store-body>
+						<empty-view
+							v-if="rows.length === 0 && !loading"
+							:label="t('my.no_logs')"
+							class="empty-view"
+						/>
 					</div>
 				</template>
 			</page-container>
@@ -233,18 +200,18 @@ import EmptyView from '../../../components/base/EmptyView.vue';
 import TitleBar from '../../../components/base/TitleBar.vue';
 import BtLabel from '../../../components/base/BtLabel.vue';
 import { marketLogs } from '../../../api/market/private/operations';
-import { useDeviceStore } from '../../../stores/settings/device';
 import { useTerminusStore } from '../../../stores/terminus';
 import { onMounted, ref, computed } from 'vue';
 import { bus } from '../../../utils/bus';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import { saveAs } from 'file-saver';
 import { useI18n } from 'vue-i18n';
 import { date } from 'quasar';
+import { handleMarketBack } from '../../../utils/marketBack';
 
 const { t } = useI18n();
 const router = useRouter();
-const deviceStore = useDeviceStore();
+const route = useRoute();
 
 const columns: any = [
 	{
@@ -383,10 +350,6 @@ const downloadLogs = async () => {
 		.catch((err) => {
 			bus.emit('app_backend_error', err.message || `get logs failure ${err}`);
 		});
-};
-
-const openNewLink = (url: string) => {
-	window.open(url, '_blank');
 };
 </script>
 

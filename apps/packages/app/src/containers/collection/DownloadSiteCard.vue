@@ -452,15 +452,15 @@ const fileIcon = (item: any, highlight = false) => {
 };
 
 const fileAvatar = (name: any) => {
-	let src = '/img/file-';
-	let folderSrc = '/img/file-other.svg';
+	let src = '/img/files/file-';
+	let folderSrc = '/img/files/file-other.svg';
 
 	if (process.env.PLATFORM == 'BEX') {
-		src = '/www/img/file-';
-		folderSrc = '/www/img/file-other.svg';
+		src = '/www/img/files/file-';
+		folderSrc = '/www/img/files/file-other.svg';
 	} else if (process.env.PLATFORM == 'DESKTOP') {
-		src = './img/file-';
-		folderSrc = './img/file-other.svg';
+		src = './img/files/file-';
+		folderSrc = './img/files/file-other.svg';
 	}
 
 	if (name?.split('.')?.length > 1) {

@@ -51,7 +51,7 @@
 		<q-table
 			flat
 			bordered
-			title="Template Content"
+			:title="$t('template_content')"
 			:rows="templateContent"
 			:columns="columns"
 			row-key="id"

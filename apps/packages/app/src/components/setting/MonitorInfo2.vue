@@ -1,24 +1,29 @@
 <template>
 	<div class="terminus-bind__system-info monitor-wrapper monitor-wrapper-gap">
-		<div
-			class="info-item q-pt-md no-wrap"
-			v-for="(item, index) in monitorStore.usages"
-			:key="`d` + index"
-		>
-			<div class="row items-center justify-between">
-				<div class="text-overline text-ink-2">
-					{{ item.name }}
+		<template v-if="monitorStore.usages && monitorStore.usages.length > 0">
+			<div
+				class="info-item q-pt-md no-wrap"
+				v-for="(item, index) in monitorStore.usages"
+				:key="`d` + index"
+			>
+				<div class="row items-center justify-between">
+					<div class="text-overline text-ink-2">
+						{{ item.name }}
+					</div>
+					<div class="text-caption text-ink-3">{{ item.ratio }}%</div>
 				</div>
-				<div class="text-caption text-ink-3">{{ item.ratio }}%</div>
+				<q-linear-progress
+					rounded
+					class="q-mt-sm"
+					size="4px"
+					:value="item.ratio / 100"
+					:color="item.color"
+					track-color="separator"
+				/>
 			</div>
-			<q-linear-progress
-				rounded
-				class="q-mt-sm"
-				size="4px"
-				:value="item.ratio / 100"
-				:color="item.color"
-				track-color="separator"
-			/>
+		</template>
+		<div v-else class="monitor-empty text-ink-3 text-caption">
+			{{ $t('no_data') }}
 		</div>
 	</div>
 </template>
@@ -59,6 +64,12 @@ const monitorStore = useMonitorStore();
 	display: grid;
 	grid-template-columns: repeat(3, 1fr);
 	grid-gap: 20px;
+}
+
+.monitor-empty {
+	grid-column: 1 / -1;
+	text-align: center;
+	padding: 16px 0;
 }
 @media (width < 400px) {
 	.monitor-wrapper-gap {

@@ -66,14 +66,15 @@
 			>
 				<template v-for="window_info in window_infos" :key="window_info.id">
 					<BasicWindow
-						v-if="window_info.is_show"
 						:modelValue="window_info"
+						:mode="window_info.mode || 'app'"
 						@update:modelValue="onWindowUpdate"
 						@close="onWindowClose"
 						@mini="onWindowMiniSize"
 						@onTop="onWindowRequestOnTop"
 						@full="onWindowFullSize"
 						:style="`z-index:${window_info.z};`"
+						:class="{ 'basic-window-hidden': !window_info.is_show }"
 					/>
 				</template>
 			</div>
@@ -114,6 +115,8 @@ import {
 import { WindowInfo, AppClickInfo, MessageData } from './type/types';
 import { bus } from '../../utils/bus';
 import { useApplicationStore } from '../../stores/desktop/app';
+import { useBookmarkStore } from '../../stores/desktop/bookmark';
+import { BOOKMARK_RAW_PREFIX } from '../../types/desktop-layout';
 import { useTokenStore } from '../../stores/desktop/token';
 import { useUpgradeStore } from '../../stores/desktop/upgrade';
 import { expiresStorage } from '../../utils/desktop/location';
@@ -124,6 +127,7 @@ import Search from '../../components/search/Desktop/IndexPage.vue';
 import DailyDescription from './DailyDescription.vue';
 import BasicWindow from './components/BasicWindow.vue';
 import UpgradeComponent from './components/UpgradeComponent.vue';
+import { useI18n } from 'vue-i18n';
 import { useNotificationStore } from 'src/stores/desktop/notification';
 import { IMG_CONTENT_MODE } from 'src/constant';
 import { getApplication } from 'src/application/base';
@@ -136,6 +140,7 @@ import { BtNotify, NotifyDefinedType } from '@bytetrade/ui';
 import { notifyMessage } from 'src/utils/settings/btNotify';
 
 const appStore = useApplicationStore();
+const bookmarkStore = useBookmarkStore();
 const tokenStore = useTokenStore();
 const upgradeStore = useUpgradeStore();
 const window_parent = ref<HTMLElement>();
@@ -149,6 +154,18 @@ const showSearchDialog = ref(false);
 const screenWidth = ref(window.innerWidth);
 const widthDiff = ref(0);
 const notificationStore = useNotificationStore();
+const { t } = useI18n();
+const desktopMenuShow = ref(false);
+
+const onDesktopContextMenu = (e: MouseEvent) => {
+	const target = e.target as HTMLElement | null;
+	// Skip when right-clicking on the dock or an app window; only the empty
+	// desktop area should open the settings menu.
+	if (target && target.closest('.desktop_app_box, .iframe-box')) {
+		return;
+	}
+	desktopMenuShow.value = true;
+};
 
 let need_save_window = false;
 const traceDesktop = createDesktopWindowTracer(
@@ -188,8 +205,10 @@ const onWindowMiniSize = (window_info: WindowInfo) => {
 	window_infos.value.map((info: WindowInfo) => {
 		if (window_info.id === info.id) {
 			info.is_show = false;
+			info.active = false;
 		}
 	});
+	dockRef.value?.ensureDotVisible(window_info.id);
 	need_save_window = true;
 };
 
@@ -197,15 +216,21 @@ const onWindowRequestOnTop = (window_info: WindowInfo) => {
 	let w = window_infos.value.find((window) => window.id == window_info.id);
 
 	if (w) {
+		const wasMinimized = !w.is_show;
 		w.is_show = true;
 		for (let i = 0; i < window_infos.value.length; ++i) {
 			if (window_infos.value[i].z > w.z) {
 				window_infos.value[i].z--;
+			}
+			if (window_infos.value[i].id !== w.id) {
 				window_infos.value[i].active = false;
 			}
 		}
 		w.z = window_infos.value.length;
 		w.active = true;
+		if (wasMinimized) {
+			dockRef.value?.ensureDotVisible(w.id);
+		}
 	}
 
 	need_save_window = true;
@@ -347,6 +372,9 @@ const __beforeunload = (event: any) => {
 		);
 		if (hasMessage) {
 			window_infos_parse[i].url = hasMessage.message;
+		} else if (window_infos_parse[i].redirectUrl) {
+			window_infos_parse[i].url = window_infos_parse[i].redirectUrl;
+			window_infos_parse[i].pathto = '';
 		}
 	}
 	const window_infos_string = JSON.stringify(window_infos_parse);
@@ -498,11 +526,24 @@ const onAppClick = async (click: AppClickInfo) => {
 		return;
 	}
 
+	if (isShowLaunchPad.value && appStore.launchpadShakeMode) {
+		appStore.launchpadShakeMode = false;
+		return;
+	}
+
 	if (isShowLaunchPad.value) {
 		isShowLaunchPad.value = false;
 	}
 
-	let app = appStore.myApps.find((app: any) => app.id == rid);
+	// Bookmarks are first-class desktop items. They open either in a new
+	// browser tab ('window' mode) or inside a desktop window via BasicWindow's
+	// 'bookmark-iframe' mode ('iframe' mode).
+	if (rid.startsWith(BOOKMARK_RAW_PREFIX)) {
+		openBookmark(rid.slice(BOOKMARK_RAW_PREFIX.length));
+		return;
+	}
+
+	let app = appStore.resolveAppForOpen(rid);
 	if (rid == 'home') {
 		app = {
 			id: rid,
@@ -575,12 +616,18 @@ const onAppClick = async (click: AppClickInfo) => {
 				windowId: w.id,
 				url: w.url
 			});
+			const wasMinimized = !w.is_show;
 			w.is_show = true;
 			for (let i = 0; i < window_infos.value.length; ++i) {
 				if (window_infos.value[i].z > w.z) {
 					window_infos.value[i].z--;
+				}
+				if (window_infos.value[i].id !== w.id) {
 					window_infos.value[i].active = false;
 				}
+			}
+			if (wasMinimized) {
+				dockRef.value?.ensureDotVisible(w.id);
 			}
 			// if (w.url == '//' + url) {
 			// 	if (url?.includes('?')) {
@@ -679,6 +726,89 @@ const onAppClick = async (click: AppClickInfo) => {
 	}
 };
 
+const openBookmark = (bookmarkId: string) => {
+	const bm = bookmarkStore.byId[bookmarkId];
+	if (!bm) {
+		BtNotify.show({
+			type: NotifyDefinedType.FAILED,
+			message: bookmarkId
+		});
+		return;
+	}
+
+	const isMobileDevice = [DeviceType.MOBILE, DeviceType.TABLET].includes(
+		tokenStore.deviceInfo.device
+	);
+	if (bm.openMode === 'window' || isMobileDevice) {
+		window.open(bm.url, '_blank', 'noopener,noreferrer');
+		return;
+	}
+
+	const winId = BOOKMARK_RAW_PREFIX + bm.id;
+	let w = window_infos.value.find((window) => window.id === winId);
+
+	if (w) {
+		const wasMinimized = !w.is_show;
+		w.is_show = true;
+		for (let i = 0; i < window_infos.value.length; ++i) {
+			if (window_infos.value[i].z > w.z) {
+				window_infos.value[i].z--;
+			}
+			if (window_infos.value[i].id !== w.id) {
+				window_infos.value[i].active = false;
+			}
+		}
+		w.z = window_infos.value.length;
+		w.active = true;
+		if (wasMinimized) {
+			dockRef.value?.ensureDotVisible(w.id);
+		}
+		return;
+	}
+
+	const width = window_parent.value?.offsetWidth
+		? window_parent.value?.offsetWidth * 0.9 - 108
+		: 800;
+	const height = window_parent.value?.offsetHeight
+		? window_parent.value?.offsetHeight * 0.9
+		: 600;
+	const left = window_parent.value?.offsetWidth
+		? (window_parent.value?.offsetWidth - width) / 2 + 54
+		: 0;
+	const top = window_parent.value?.offsetHeight
+		? (window_parent.value?.offsetHeight - height) / 2
+		: 0;
+
+	const obj: WindowInfo = {
+		width,
+		height,
+		max_height: getWindowParentInfo().height,
+		max_width: getWindowParentInfo().width,
+		min_width: 400,
+		min_height: 200,
+		left: left + screenWidth.value + window_infos.value.length * 25,
+		top: top + window_infos.value.length * 25,
+		id: winId,
+		// Bookmark URLs are absolute external URLs; BasicWindow's
+		// 'bookmark-iframe' mode uses value.url verbatim (no '//' prefixing).
+		url: bm.url,
+		ssl_type: 'http',
+		title: bm.name,
+		is_show: true,
+		z: window_infos.value.length,
+		icon: bm.icon || '',
+		active: true,
+		isResizable: true,
+		mode: 'bookmark-iframe'
+	};
+
+	window_infos.value.push(obj);
+	for (let i = 0; i < window_infos.value.length - 1; ++i) {
+		window_infos.value[i].active = false;
+	}
+	dockRef.value?.handleOpenApp(winId);
+};
+
 const onDockerClick = async (click: AppClickInfo) => {
 	onAppClick(click);
 };
@@ -691,13 +821,13 @@ const onLaunchPadAppClick = async (click: AppClickInfo) => {
 
 const onFileSearchClick = async (click: AppClickInfo) => {
 	const path = click.data.path || '/';
-	let app = appStore.myApps.find((app: any) => app.id == click.appid);
+	let app = appStore.resolveAppForOpen(click.appid);
 	if (!app) {
 		return;
 	}
 	let url = app.url + path;
 	if (tokenStore.islocal) {
-		url = tokenStore.getAppLocalUrl(app.id);
+		url = tokenStore.getAppLocalUrl(app.id) + path;
 	}
 	if (tokenStore.islocal) {
 		url = 'http://' + url;
@@ -847,5 +977,15 @@ const bgSrc = computed(() => {
 	height: 100vh;
 	z-index: 1000;
 	background-color: rgba($color: #000000, $alpha: 0.5);
+}
+.basic-window-hidden {
+	height: 0px !important;
+	overflow: hidden !important;
+}
+.desktop-menu-anchor {
+	position: fixed;
+	width: 0;
+	height: 0;
+	z-index: 6000;
 }
 </style>

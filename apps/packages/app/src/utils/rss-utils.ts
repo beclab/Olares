@@ -60,34 +60,47 @@ export const utcToStamp = (utc_datetime: string) => {
 };
 
 export const getPastTime = (stamp1: Date, stamp2: Date) => {
+	// const { t } = useI18n();
+	const { t } = i18n.global;
+
 	const time = stamp1.getTime() - stamp2.getTime();
 	const second = time / 1000;
 	const minute = second / 60;
 	if (minute < 1) {
-		return 'just now';
+		return t('just_now');
 	}
 	if (minute < 60) {
-		return `${minute.toFixed(0)} minutes ago`;
+		return t('minutes_ago', {
+			count: Number(minute.toFixed(0))
+		});
 	}
 
 	const hour = minute / 60;
 	if (hour < 24) {
-		return `${hour.toFixed(0)} hours ago`;
+		return t('hours_ago', {
+			count: Number(hour.toFixed(0))
+		});
 	}
 
 	const day = hour / 24;
 	if (day < 30) {
-		return `${day.toFixed(0)} days ago`;
+		return t('days_ago', {
+			count: Number(day.toFixed(0))
+		});
 	}
 
 	const month = day / 30;
 
 	if (month < 12) {
-		return `${month.toFixed(0)} months ago`;
+		return t('months_ago', {
+			count: Number(month.toFixed(0))
+		});
 	}
 
 	const year = month / 12;
-	return `${year.toFixed(0)} years ago`;
+	return t('years_ago', {
+		count: Number(year.toFixed(0))
+	});
 };
 
 export function calculateTimeDifference(
@@ -184,7 +197,7 @@ export function extractHtml(entry: Entry): string {
 	}
 	if (entry?.full_content) {
 		let data = '';
-		const startIndex = entry?.full_content.indexOf('<div id="js_content"');
+		const startIndex = entry?.full_content.indexOf('<div id="js_content"'); // i18n-ignore: HTML selector parsing token
 		let content = entry?.full_content;
 		if (startIndex !== -1) {
 			content = entry?.full_content.substring(startIndex);

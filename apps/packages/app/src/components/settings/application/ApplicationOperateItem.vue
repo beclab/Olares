@@ -5,14 +5,15 @@
 		:status="app.state"
 		:app-name="app.name"
 		:raw-app-name="app.rawAppName"
-		:cs-app="app.isClusterScoped"
+		:shared-app="app.isClusterScoped || app.isShared"
+		:cloned-from="app.clonedFrom"
 		:hide-status="false"
 		:width-separator="false"
 		:end-icon="false"
 		:margin-top="false"
 	>
 		<template v-slot>
-			<div v-if="(adminStore.isAdmin || !isDemo) && !app.isSysApp">
+			<div v-if="(meStore.isAdmin || !isDemo) && !app.isSysApp">
 				<div
 					v-if="
 						app?.state !== APP_STATUS.STOP.COMPLETED &&
@@ -39,9 +40,9 @@ import ApplicationItem from './ApplicationItem.vue';
 import { useApplicationStore } from 'src/stores/settings/application';
 import { canResumeState, canStopState } from 'src/constant/config';
 import { notifyFailed } from 'src/utils/settings/btNotify';
-import { useAdminStore } from 'src/stores/settings/admin';
+import { useMeStore } from 'src/stores/settings/me';
 import { useAppStore } from 'src/stores/market/appStore';
-import { AppService } from 'src/stores/market/appService';
+import { AppService } from 'src/services/market/appOperation/appService';
 import { APP_STATUS } from 'src/constant/constants';
 import { computed, PropType } from 'vue';
 import { TerminusApp } from '@bytetrade/core';
@@ -50,7 +51,7 @@ import { useI18n } from 'vue-i18n';
 
 const $q = useQuasar();
 const applicationStore = useApplicationStore();
-const adminStore = useAdminStore();
+const meStore = useMeStore();
 const appStore = useAppStore();
 const { t } = useI18n();
 const isDemo = computed(() => {
@@ -88,7 +89,7 @@ async function handleStop() {
 					$q
 				);
 			} else {
-				notifyFailed('Failed to retrieve app information');
+				notifyFailed(t('error.app_info_get_failure'));
 			}
 		}
 		await applicationStore.status(props.app.name);
@@ -105,7 +106,6 @@ async function handleResume() {
 		notifyFailed(t('app_operation_not_allowed'));
 		return;
 	}
-	$q.loading.show();
 
 	try {
 		if (canResumeState(props.app?.state)) {
@@ -120,14 +120,12 @@ async function handleResume() {
 					$q
 				);
 			} else {
-				notifyFailed('Failed to retrieve app information');
+				notifyFailed(t('error.app_info_get_failure'));
 			}
 		}
 		await applicationStore.status(props.app.name);
 	} catch (e) {
 		/* empty */
-	} finally {
-		$q.loading.hide();
 	}
 }
 </script>

@@ -12,8 +12,8 @@
 			/>
 			<app-intro-item
 				class="q-mt-lg"
-				:title="t('detail.app_version')"
-				:content="appEntry?.versionName"
+				:title="t('detail.chart_version')"
+				:content="appEntry?.version"
 			/>
 			<app-intro-item
 				class="q-mt-lg"
@@ -39,7 +39,7 @@
 				class="q-mt-lg"
 				:title="t('base.language')"
 				:content-array="
-					appEntry.locale ? convertLanguageCodesToNames(appEntry.locale) : ''
+					appEntry.locale ? convertLanguageCodesToNames(appEntry.locale) : []
 				"
 			/>
 			<app-intro-item
@@ -55,36 +55,23 @@
 			<app-intro-item
 				class="q-mt-lg"
 				:title="t('detail.legal')"
-				:link-array="
-					appEntry.legal && appEntry.legal.length > 0 && appEntry.legal[0]
-						? [appEntry.legal[0]]
-						: []
-				"
+				:link-array="legalLinks"
 			/>
 			<app-intro-item
 				class="q-mt-lg"
 				:title="t('detail.license')"
-				:link-array="
-					appEntry.license && appEntry.license.length > 0 && appEntry.license[0]
-						? [appEntry?.license[0]]
-						: []
-				"
+				:link-array="licenseLinks"
 			/>
 			<app-intro-item
 				v-if="appEntry?.sourceCode"
 				class="q-mt-lg"
 				:title="t('detail.source_code')"
-				:link-array="[
-					{
-						text: t('detail.public'),
-						url: appEntry?.sourceCode
-					}
-				]"
+				:link-array="sourceCodeLinks"
 			/>
 			<app-intro-item
 				class="q-mt-lg"
-				:title="t('detail.chart_version')"
-				:content="appEntry?.version"
+				:title="t('detail.app_version')"
+				:content="appVersionLabel"
 			/>
 			<app-intro-item
 				v-if="appEntry.versionHistory && appEntry.versionHistory.length > 0"
@@ -103,7 +90,10 @@ import AppIntroCard from '../../../../components/appintro/AppIntroCard.vue';
 import { computed, PropType } from 'vue';
 import { useI18n } from 'vue-i18n';
 import {
+	AppEntry,
 	DEPENDENCIES_TYPE,
+	Dependency,
+	License,
 	TRANSACTION_PAGE
 } from '../../../../constant/constants';
 import {
@@ -112,10 +102,11 @@ import {
 } from '../../../../utils/utils';
 import { useRouter } from 'vue-router';
 import { useMenuStore } from '../../../../stores/market/menu';
+import { pushWithParent } from '../../../../utils/marketBack';
 
 const props = defineProps({
 	appEntry: {
-		type: Object as PropType<any>,
+		type: Object as PropType<AppEntry>,
 		require: true
 	},
 	appName: {
@@ -133,18 +124,29 @@ const router = useRouter();
 const menuStore = useMenuStore();
 
 const compatible = computed(() => {
-	const appItem = props.appEntry?.options.dependencies.find((appInfo) => {
-		return appInfo.type === DEPENDENCIES_TYPE.system;
-	});
+	const appItem = props.appEntry?.options.dependencies.find(
+		(appInfo: Dependency) => {
+			return appInfo.type === DEPENDENCIES_TYPE.system;
+		}
+	);
 	if (appItem) {
 		return `${capitalizeFirstLetter(appItem.name)} ${appItem.version}`;
 	}
 	return '';
 });
 
-const createLink = (field: string, text?: string) =>
-	computed(() => {
-		const value = props.appEntry?.[field];
+const appVersionLabel = computed(
+	() => props.appEntry?.versionName || props.appEntry?.version || ''
+);
+
+type IntroLink = {
+	text: string;
+	url: string;
+};
+
+const createTextLink = (getValue: () => string | undefined, text?: string) =>
+	computed<IntroLink[]>(() => {
+		const value = getValue();
 		if (!value) return [];
 
 		const displayText =
@@ -160,11 +162,33 @@ const createLink = (field: string, text?: string) =>
 		return [{ text: displayText, url: value }];
 	});
 
-const getDocuments = createLink('doc', t('base.documents'));
-const getWebsite = createLink('website');
+const getDocuments = createTextLink(
+	() => props.appEntry?.doc,
+	t('base.documents')
+);
+const getWebsite = createTextLink(() => props.appEntry?.website);
+const legalLinks = computed<IntroLink[]>(() => {
+	const legal = props.appEntry?.legal as unknown;
+	if (!Array.isArray(legal) || legal.length === 0) return [];
+	return legal[0] ? [legal[0] as IntroLink] : [];
+});
+const licenseLinks = computed<License[]>(() => {
+	const license = props.appEntry?.license;
+	return license && license.length > 0 && license[0] ? [license[0]] : [];
+});
+const sourceCodeLinks = computed<IntroLink[]>(() => {
+	const sourceCode = props.appEntry?.sourceCode;
+	if (!sourceCode) return [];
+	return [
+		{
+			text: t('detail.public'),
+			url: sourceCode
+		}
+	];
+});
 
 const goVersionHistory = () => {
-	router.push({
+	pushWithParent(router, {
 		name: TRANSACTION_PAGE.Version,
 		params: {
 			appName: props.appName,

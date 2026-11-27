@@ -16,7 +16,7 @@
 				<q-icon name="sym_r_language" size="24px" color="white" />
 			</div>
 			<div class="connect-content">
-				<div class="text-ink-1 text-body2">Connecting</div>
+				<div class="text-ink-1 text-body2">{{ $t('Connecting') }}</div>
 				<div class="text-ink-1 text-body2">{{ smb_url }}</div>
 			</div>
 		</div>
@@ -76,7 +76,7 @@ import { ref, reactive } from 'vue';
 import { useRoute } from 'vue-router';
 import { CommonFetch } from '../../../api';
 import { useDataStore } from '../../../stores/data';
-import { useFilesStore } from '../../../stores/files';
+import { useFilesStore, ExternalType } from '../../../stores/files';
 
 const props = defineProps({
 	origin_id: {
@@ -90,6 +90,10 @@ const props = defineProps({
 	hasFavorite: {
 		type: Boolean,
 		default: false
+	},
+	externalType: {
+		type: String,
+		default: ExternalType.SMB
 	}
 });
 
@@ -105,7 +109,8 @@ const loading = ref(false);
 const connectData = reactive({
 	url: props.smb_url,
 	username: '',
-	password: ''
+	password: '',
+	externalType: props.externalType as ExternalType
 });
 
 const saveSmbHistory = async (extend: string) => {
@@ -116,7 +121,7 @@ const submit = async () => {
 	loading.value = true;
 
 	try {
-		const res = await filesStore.mountSmbInExternal(connectData);
+		const res = await filesStore.mountServerInExternal(connectData);
 
 		if (props.hasFavorite) {
 			saveSmbHistory(filesStore.currentNode[props.origin_id].name);
@@ -129,7 +134,7 @@ const submit = async () => {
 			});
 		}
 
-		CustomRef.value.onDialogOK();
+		CustomRef.value.onDialogOK({});
 		filesStore.setBrowserUrl(
 			route.fullPath,
 			filesStore.activeMenu(props.origin_id).driveType

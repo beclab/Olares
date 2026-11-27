@@ -9,15 +9,15 @@ import {
 import {
 	LocalUserVault,
 	UserItem,
-	MnemonicItem,
-	base64ToString,
-	uuid
-} from '@didvault/sdk/src/core';
+	MnemonicItem
+} from '../account/localUserVault';
+import { base64ToString } from '../utils/encode';
+import { v4 as uuidv4 } from 'uuid';
 import { getDID, getPrivateJWK } from '../did/did-key';
 import { GeneralJwsSigner } from '../jose/jws/general/signer';
 import { i18n } from '../boot/i18n';
 import { SupportLanguageType } from '../i18n';
-import { app, setSenderUrl } from '../globals';
+import { app } from '../globals';
 import { axiosInstanceProxy } from '../platform/httpProxy';
 import { useScaleStore } from './scale';
 import {
@@ -27,9 +27,8 @@ import {
 import { refresh_token, SSOTokenRaw } from '../utils/account';
 import { NetworkUpdateMode, busEmit } from 'src/utils/bus';
 import { useMonitorStore } from './monitor';
-import { unlockUserFirstBusiness } from 'src/utils/BindTerminusBusiness';
 import { useIntegrationStore } from './integration';
-import { unlockByPwd } from '../utils/UnlockBusiness';
+import { unlockByPwd, unlockUserFirstBusiness } from '../utils/UnlockBusiness';
 import { useFilesStore, FilesIdType } from './files';
 import { DefaultDomainValueType } from '../utils/contact';
 import { useLarepassWebsocketManagerStore } from './larepassWebsocketManager';
@@ -124,7 +123,6 @@ export const useUserStore = defineStore('user', {
 			backupList: [],
 			reactivation: false,
 			SSOInvalid: false,
-			srpInvalid: false,
 			isLocal: false,
 			checkRequestError: false,
 			checkRequestCount: 0,
@@ -304,25 +302,6 @@ export const useUserStore = defineStore('user', {
 				if (this.current_id) {
 					await app.load(this.current_id);
 					this.current_user!.isLocal = false;
-					if (this.current_user?.setup_finished) {
-						let isWebPlatform = false;
-						if (process.env.APPLICATION == 'VAULT') {
-							isWebPlatform = true;
-						}
-						let baseUrl = this.current_user.vault_url;
-						if (isWebPlatform) {
-							if (process.env.NODE_ENV === 'development') {
-								baseUrl = '/server';
-							} else {
-								baseUrl =
-									process.env.PL_SERVER_URL ||
-									window.location.origin + '/server';
-							}
-						}
-						setSenderUrl({
-							url: baseUrl
-						});
-					}
 				}
 			}
 		},
@@ -363,7 +342,7 @@ export const useUserStore = defineStore('user', {
 			}
 
 			this.users = new LocalUserVault();
-			this.users.id = await uuid();
+			this.users.id = uuidv4();
 			this.users.name = 'LocalUserVault';
 			this.users.created = new Date();
 			this.users.updated = new Date();
@@ -539,14 +518,6 @@ export const useUserStore = defineStore('user', {
 				}
 			}
 		},
-		// async temporaryCreateUser(did: string, name: string, mnemonic: string) {
-		// 	const user1 = new UserItem();
-		// 	user1.name = name;
-		// 	user1.id = did;
-		// 	user1.mnemonic = mnemonic;
-
-		// 	return user1;
-		// },
 		async importTemporaryUser(user: UserItem) {
 			const unlocked = await this.unlockFirst();
 			if (!unlocked) {
@@ -581,7 +552,6 @@ export const useUserStore = defineStore('user', {
 			const user1 = new UserItem();
 			user1.name = name;
 			user1.id = did;
-			//user1.mnemonic = mnemonic;
 
 			const m = new MnemonicItem();
 			m.id = did;
@@ -596,7 +566,7 @@ export const useUserStore = defineStore('user', {
 			if (!this.users) {
 				return {
 					status: false,
-					message: 'Empty users'
+					message: 'Empty users' // i18n-ignore: internal status code, not user-visible
 				};
 			}
 			if (!(await this.unlockFirst())) {
@@ -716,7 +686,9 @@ export const useUserStore = defineStore('user', {
 				!response.data ||
 				response.data.code != 0
 			) {
-				throw Error('Network error, please try again later');
+				throw Error(
+					i18n.global.t('errors.network_error_please_try_again_later')
+				);
 			}
 		},
 		resetCurrentUserData() {
@@ -793,7 +765,7 @@ export const useUserStore = defineStore('user', {
 						session_id: ''
 					},
 					newToken: undefined,
-					message: 'user not setup_finished'
+					message: 'user not setup_finished' // i18n-ignore: internal status code, not user-visible
 				};
 			}
 			const user = this.current_user;
@@ -808,9 +780,15 @@ export const useUserStore = defineStore('user', {
 						session_id: ''
 					},
 					newToken: undefined,
-					message: 'user not has access_token'
+					message: 'user not has access_token' // i18n-ignore: internal status code, not user-visible
 				};
 			}
+			// Whether the access_token is still well within its validity window
+			// (not within the ~1h proactive-refresh window). Used in catch: a
+			// forced refresh (e.g. local/remote switch or a transient server
+			// rejection right after activation) that fails should NOT surface
+			// "need login" while the token itself is still usable for ~a day.
+			let tokenStillValid = false;
 			try {
 				const access_token = user.access_token.split('.')[1];
 
@@ -820,7 +798,9 @@ export const useUserStore = defineStore('user', {
 
 				const refreshTime = new Date().getTime() / 1000 + 3600 * 23;
 
-				if (!forceRefresh && exp > refreshTime) {
+				tokenStillValid = exp > refreshTime;
+
+				if (!forceRefresh && tokenStillValid) {
 					return {
 						status: false,
 						refreshError: false,
@@ -830,7 +810,7 @@ export const useUserStore = defineStore('user', {
 							session_id: ''
 						},
 						newToken: undefined,
-						message: 'access_token not expired'
+						message: 'access_token not expired' // i18n-ignore: internal status code, not user-visible
 					};
 				}
 
@@ -860,7 +840,8 @@ export const useUserStore = defineStore('user', {
 					await this.updateLockUserToken(
 						token.access_token,
 						token.session_id,
-						user.id
+						user.id,
+						user.refresh_token
 					);
 				}
 
@@ -884,19 +865,32 @@ export const useUserStore = defineStore('user', {
 						refresh_token: user.refresh_token,
 						session_id: user.session_id
 					},
-					message: 'access_token refresh success'
+					message: 'access_token refresh success' // i18n-ignore: internal status code, not user-visible
 				};
-			} catch (error) {
+			} catch (error: any) {
+				const status = error?.response?.status;
+				// Only treat genuine refresh rejections as a refresh failure; network /
+				// gateway-unreachable errors must NOT invalidate the refresh token,
+				// otherwise a transient connectivity issue forces a re-login.
+				const isAuthRejected = status === 401 || status === 403;
+				const isRefreshRejected = error?.message === 'refresh token error'; // i18n-ignore
+				// Only network/gateway errors are treated as transient.
+				// Explicit auth rejection (401/403) or backend-declared refresh
+				// rejection means the current token pair is no longer trusted (e.g.
+				// Olares reinstalled and old refresh token invalid), so this must be
+				// surfaced as a refresh failure even if the access_token has not yet
+				// reached its exp window.
+				const refreshError = isAuthRejected || isRefreshRejected;
 				return {
 					status: false,
-					refreshError: true,
+					refreshError,
 					oldToken: {
 						access_token: user.access_token,
 						refresh_token: user.refresh_token,
 						session_id: user.session_id
 					},
 					newToken: undefined,
-					message: 'access_token refresh failed:' + error.message
+					message: 'access_token refresh failed:' + (error?.message ?? '') // i18n-ignore: internal status code, not user-visible
 				};
 			}
 		},
@@ -994,8 +988,11 @@ export const useUserStore = defineStore('user', {
 						notifyFailed(
 							i18n.global.t(
 								'Password entered incorrectly multiple times. Account locked for {minutes} minutes. Please try again later.',
+								lockStatus.leftTimes,
 								{
-									minutes: lockStatus.leftTimes
+									named: {
+										minutes: lockStatus.leftTimes
+									}
 								}
 							)
 						);
@@ -1116,12 +1113,20 @@ export const useUserStore = defineStore('user', {
 		async updateLockUserToken(
 			access_token: string,
 			session_id: string,
-			userID: string
+			userID: string,
+			refresh_token?: string
 		) {
 			const users:
 				| {
 						items: {
-							items: [{ id: string; access_token: string; session_id: string }];
+							items: [
+								{
+									id: string;
+									access_token: string;
+									session_id: string;
+									refresh_token: string;
+								}
+							];
 						};
 				  }
 				| undefined = await userModeGetItem('users');
@@ -1137,6 +1142,13 @@ export const useUserStore = defineStore('user', {
 
 			item.access_token = access_token;
 			item.session_id = session_id;
+			// Persist the rotated refresh_token too; otherwise a refresh performed
+			// while the app is locked keeps the new token only in memory and the
+			// stale (server-invalidated) one is reloaded on cold start, breaking the
+			// next refresh.
+			if (refresh_token && refresh_token.length > 0) {
+				item.refresh_token = refresh_token;
+			}
 			await userModeSetItem('users', users);
 		},
 		async tryLockCurrentUser() {

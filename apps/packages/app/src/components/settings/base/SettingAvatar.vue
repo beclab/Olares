@@ -1,11 +1,11 @@
 <template>
 	<q-avatar :size="`${size}px`">
-		<TerminusAvatar :info="adminStore.terminus" :size="size" />
+		<TerminusAvatar :info="terminusStore.terminusInfo" :size="size" />
 	</q-avatar>
 </template>
 
 <script lang="ts" setup>
-import { useAdminStore } from 'src/stores/settings/admin';
+import { useTerminusStore } from 'src/stores/terminus';
 
 defineProps({
 	size: {
@@ -14,5 +14,5 @@ defineProps({
 	}
 });
 
-const adminStore = useAdminStore();
+const terminusStore = useTerminusStore();
 </script>

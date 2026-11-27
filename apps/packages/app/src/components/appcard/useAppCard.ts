@@ -1,11 +1,21 @@
-import { getI18nValue, TRANSACTION_PAGE } from 'src/constant/constants';
-import { getRawAppTitle, uninstalledApp } from 'src/constant/config';
+import {
+	getI18nValue,
+	isCsOrSharedApp,
+	TRANSACTION_PAGE
+} from 'src/constant/constants';
+import {
+	getRawAppTitle,
+	isCloneApp,
+	isTemplateApp,
+	uninstalledApp
+} from 'src/constant/config';
 import { useAppStore } from 'src/stores/market/appStore';
 import { useMenuStore } from 'src/stores/market/menu';
 import { useColor } from '@bytetrade/ui';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { computed } from 'vue';
+import { pushWithParent } from 'src/utils/marketBack';
 
 export default function useAppCard(props: any) {
 	const appStore = useAppStore();
@@ -17,10 +27,16 @@ export default function useAppCard(props: any) {
 	});
 	const { color: separatorColor } = useColor('separator');
 
-	const clusterScopedApp = computed(
+	const isCsOrShared = computed(() =>
+		isCsOrSharedApp(appAggregation.value?.app_simple_latest)
+	);
+
+	// Template body only (its icon gets the template badge). Clone instances
+	// inherit templateOnly from the chart, so exclude them via the clone check.
+	const isTemplate = computed(
 		() =>
-			appAggregation.value?.app_full_info?.app_info?.app_entry?.options
-				?.appScope?.clusterScoped ?? false
+			isTemplateApp(appAggregation.value?.app_simple_latest?.app_simple_info) &&
+			!isCloneApp(appAggregation.value?.app_status_latest?.status)
 	);
 
 	const appIcon = computed(
@@ -70,7 +86,7 @@ export default function useAppCard(props: any) {
 		if (props.disabled) {
 			return;
 		}
-		router.push({
+		pushWithParent(router, {
 			name: TRANSACTION_PAGE.App,
 			params: {
 				appName: props.appName,
@@ -95,7 +111,8 @@ export default function useAppCard(props: any) {
 	return {
 		separatorColor,
 		appAggregation,
-		clusterScopedApp,
+		isCsOrShared,
+		isTemplate,
 		appIcon,
 		appTitle,
 		appDesc,

@@ -1,6 +1,5 @@
 import { PushNotificationSchema } from '@capacitor/push-notifications';
 import { AppPlatform } from '../platform';
-import { BiometricKeyStore } from '@didvault/sdk/src/core';
 import { AvailableResult } from '@capgo/capacitor-native-biometric';
 import { ConnectionStatus } from '@capacitor/network';
 import { NativeScanQRProtocol, NativeSignProtocol } from './protocols';
@@ -11,7 +10,10 @@ import { QVueGlobals } from 'quasar';
 import { Router } from 'vue-router';
 import { ScanQRCodeOptions } from './types';
 
-export interface NativeAppBiometricKeyStore extends BiometricKeyStore {
+export interface NativeAppBiometricKeyStore {
+	isSupported(): Promise<boolean>;
+	getKey(id: string): Promise<Uint8Array>;
+	storeKey(id: string, key: Uint8Array): Promise<void>;
 	deleteKey(id: string): Promise<void>;
 	isSupportedWithData(): Promise<AvailableResult>;
 }

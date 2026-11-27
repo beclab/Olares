@@ -35,11 +35,7 @@
 			style="height: 40px"
 		/>
 		<div class="text-body1 text-ink-3 q-mt-xs">
-			{{
-				t(label, {
-					number: link ? getLinksLength() : getCookiesLength()
-				})
-			}}
+			{{ t(label, itemCount, { named: { number: itemCount } }) }}
 		</div>
 		<q-input
 			dense
@@ -87,7 +83,7 @@ const modelValue = ref(0);
 const okDisabled = computed(
 	() => !input.value && cookieStore.getCookieCount(input.value).length > 0
 );
-const options = [
+const options = computed(() => [
 	{
 		label: 'Netscape',
 		value: 0
@@ -97,12 +93,15 @@ const options = [
 		value: 1
 	},
 	{
-		label: 'Header String',
+		label: t('Cookie header'),
 		value: 2
 	}
-];
+]);
 const rssStore = useRssStore();
 const cookieStore = useCookieStore();
+const itemCount = computed(() =>
+	props.link ? getLinksLength() : getCookiesLength()
+);
 const updateModelValue = (item: number) => {
 	modelValue.value = item;
 };

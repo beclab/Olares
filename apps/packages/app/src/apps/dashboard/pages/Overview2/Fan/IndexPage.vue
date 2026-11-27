@@ -43,7 +43,12 @@
 									:style="{ opacity: child.opacity }"
 								>
 									<span>{{ child.value }}</span>
-									<span class="q-ml-xs">{{ child.unit }}</span>
+									<span
+										:class="
+											['°C', '%', '℃'].includes(child.unit) ? '' : 'q-ml-xs'
+										"
+										>{{ child.unit }}</span
+									>
 								</div>
 							</div>
 						</div>

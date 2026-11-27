@@ -16,7 +16,13 @@
 				width: resolvedWidth,
 				maxWidth: resizable ? 'none' : resolvedWidth,
 				height: resolvedHeight,
-				...(resizable ? { resize: 'both', overflow: 'hidden' } : {})
+				...(resizable
+					? {
+							resize: 'both',
+							overflow: 'hidden',
+							maxHeight: ['90vh', '90dvh']
+					  }
+					: {})
 			}"
 		>
 			<template v-if="$slots.header">
@@ -311,7 +317,7 @@ export default defineComponent({
 			flex: 1;
 			margin: 20px 0 32px;
 			width: 100%;
-			max-height: calc(100vh * 0.75);
+			max-height: calc(100dvh * 0.75);
 			overflow: scroll;
 
 			&::-webkit-scrollbar {
@@ -347,6 +353,7 @@ export default defineComponent({
 	.card-container.resizable {
 		.dialog-content {
 			flex: 1;
+			min-height: 0;
 			max-height: none;
 			overflow: hidden;
 		}

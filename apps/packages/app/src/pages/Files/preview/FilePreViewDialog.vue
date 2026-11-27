@@ -44,8 +44,14 @@
 						<action
 							:disabled="store.loading"
 							v-if="currentPermission === 'rw' && store.preview.isEditEnable"
-							:icon="store.preview.isEditing ? 'save' : 'edit_square'"
-							:label="$t('buttons.edit')"
+							:icon="
+								store.preview.isEditing ? 'sym_r_save' : 'sym_r_edit_square'
+							"
+							:label="
+								store.preview.isEditing
+									? $t('buttons.save')
+									: $t('buttons.edit')
+							"
 							style="-webkit-app-region: no-drag; margin-right: 4px"
 							@action="showOperation"
 						/>
@@ -53,7 +59,7 @@
 						<action
 							:disabled="store.loading"
 							v-if="currentPermission === 'rw' && store.user?.perm?.delete"
-							icon="delete"
+							icon="sym_r_delete"
 							:label="$t('buttons.delete')"
 							style="-webkit-app-region: no-drag; margin-right: 4px"
 							@action="deleteFile"
@@ -62,7 +68,7 @@
 						<action
 							:disabled="store.loading"
 							v-if="store.user?.perm?.download"
-							icon="browser_updated"
+							icon="sym_r_download"
 							:label="$t('buttons.download')"
 							style="-webkit-app-region: no-drag; margin-right: 4px"
 							@action="download"
@@ -70,7 +76,7 @@
 
 						<action
 							:disabled="store.loading"
-							icon="close"
+							icon="sym_r_close"
 							:label="$t('buttons.close')"
 							style="-webkit-app-region: no-drag"
 							@action="close"
@@ -130,27 +136,34 @@ import FileEditor from '../common-files/FileEditor.vue';
 import FileEpubPreview from '../common-files/FileEpubPreview.vue';
 import FileUnavailable from '../common-files/FileUnavailable.vue';
 import FilePDFPreview from '../common-files/FilePDFPreview.vue';
+import UnsavedChangesDialog from '../../../components/files/prompts/UnsavedChangesDialog.vue';
+import ArchivePreviewDialog from '../../../components/files/archive/ArchivePreviewDialog.vue';
 
 import { onMounted, onUnmounted, ref, onBeforeMount } from 'vue';
 import { useQuasar } from 'quasar';
 import { computed } from 'vue';
 import { watch } from 'vue';
-import { nextTick } from 'process';
+import { nextTick } from 'vue';
 // import { dataAPIs } from '../../../api';
-import { common } from './../../../api';
+import { common, isArchiveEnable } from './../../../api';
 import { getAppPlatform } from '../../../application/platform';
 import { useRoute } from 'vue-router';
 import { useOperateinStore } from './../../../stores/operation';
 import { OPERATE_ACTION } from '../../../utils/contact';
-import { dataAPIs } from '../../../api';
 import { format } from '../../../utils/format';
 import { notifySuccess } from 'src/utils/notifyRedefinedUtil';
 import { useI18n } from 'vue-i18n';
 import HotkeyManager from 'src/directives/hotkeyManager';
 import { FILES_HOTKEY } from 'src/api/files/hotKeys';
-
-import { getFileIcon, txtReadonlyTypes } from '@bytetrade/core';
-
+import {
+	isArchivePreviewSupported,
+	isArchiveDriveTypeSupported
+} from '../../../utils/interface/archive';
+import {
+	getPreviewPermission,
+	isImagePreviewItem,
+	resolveFilePreview
+} from '../common-files/previewResolver';
 const props = defineProps({
 	origin_id: {
 		type: Number,
@@ -173,42 +186,45 @@ const title = ref(filesStore.previewItem[props.origin_id]?.name);
 const currentView = ref();
 const reloadFinished = ref(true);
 const currentPermission = ref('rw');
+const archivePreviewOpening = ref(false);
 
 const { t } = useI18n();
 
 const $q = useQuasar();
 
+// Navigation is only available while previewing images, and it only
+// switches between images (other file types are skipped).
+const imageItems = computed(() =>
+	(filesStore.currentFileList[props.origin_id]?.items || []).filter(
+		isImagePreviewItem
+	)
+);
+
+const currentImageIndex = computed(() =>
+	imageItems.value.findIndex(
+		(e) => e.name == filesStore.previewItem[props.origin_id]?.name
+	)
+);
+
 const hasPrevious = computed(function () {
-	if ((filesStore.currentFileList[props.origin_id]?.items?.length || 0) <= 1) {
+	if (store.preview.isEditing) {
 		return false;
 	}
-	const items = filesStore.currentFileList[props.origin_id]?.items.filter(
-		(e) => !e.isDir
-	);
-	const index = items?.findIndex(
-		(e) => e.name == filesStore.previewItem[props.origin_id]?.name
-	);
-
-	return index && index > 0;
+	if (!isImagePreviewItem(filesStore.previewItem[props.origin_id])) {
+		return false;
+	}
+	return currentImageIndex.value > 0;
 });
 
 const hasNext = computed(function () {
-	if ((filesStore.currentFileList[props.origin_id]?.items.length || 0) <= 1) {
+	if (store.preview.isEditing) {
 		return false;
 	}
-
-	const items = filesStore.currentFileList[props.origin_id]?.items.filter(
-		(e) => !e.isDir
-	);
-
-	if (!items) {
+	if (!isImagePreviewItem(filesStore.previewItem[props.origin_id])) {
 		return false;
 	}
-
-	const index = items.findIndex(
-		(e) => e.name == filesStore.previewItem[props.origin_id]?.name
-	);
-	return index >= 0 && index < items.length - 1;
+	const index = currentImageIndex.value;
+	return index >= 0 && index < imageItems.value.length - 1;
 });
 
 const deleteFile = () => {
@@ -221,37 +237,19 @@ const deleteFile = () => {
 };
 
 const prev = async () => {
-	const items = filesStore.currentFileList[props.origin_id]?.items.filter(
-		(e) => !e.isDir
-	);
-	const index = items?.findIndex(
-		(e) => e.name == filesStore.previewItem[props.origin_id]?.name
-	);
-	if (!index || !items || index < 1) {
+	if (!hasPrevious.value) {
 		return;
 	}
-
-	let preItem = items[index - 1];
+	const preItem = imageItems.value[currentImageIndex.value - 1];
 	filesStore.previewItem[props.origin_id] = preItem;
 	await open(preItem);
 };
 
 const next = async () => {
-	const items = filesStore.currentFileList[props.origin_id]?.items.filter(
-		(e) => !e.isDir
-	);
-	if (!items) {
+	if (!hasNext.value) {
 		return;
 	}
-	const index = items.findIndex(
-		(e) => e.name == filesStore.previewItem[props.origin_id]?.name
-	);
-
-	if (index < 0 || index + 1 >= items.length) {
-		return;
-	}
-
-	let nextItem = items[index + 1];
+	const nextItem = imageItems.value[currentImageIndex.value + 1];
 	filesStore.previewItem[props.origin_id] = nextItem;
 	await open(nextItem);
 };
@@ -268,57 +266,39 @@ watch(
 		}
 
 		if (newVal.permission) {
-			if (typeof newVal.permission == 'string') {
-				currentPermission.value = newVal.permission;
-			} else if (typeof newVal.permission == 'number') {
-				currentPermission.value = newVal.permission >= 3 ? 'rw' : 'r';
+			const permission = getPreviewPermission(newVal.permission);
+			if (permission) {
+				currentPermission.value = permission;
 			}
 		}
 
 		title.value = filesStore.previewItem[props.origin_id]?.name;
+		if (newVal.name) {
+			title.value = newVal.name as string;
+		}
+		if (
+			isArchivePreviewSupported(newVal) &&
+			isArchiveEnable() &&
+			isArchiveDriveTypeSupported(newVal.driveType)
+		) {
+			openArchivePreview(newVal);
+			return;
+		}
 		currentView.value = undefined;
 		reloadFinished.value = false;
-		const dataAPI = dataAPIs(filesStore.previewItem[props.origin_id].driveType);
-		if (
-			newVal.type.toLowerCase() === 'text' ||
-			newVal.type.toLowerCase() === 'txt' ||
-			newVal.type.toLowerCase() === 'blob' ||
-			newVal.type.toLowerCase() === 'textImmutable'
-		) {
-			store.preview.isEditEnable =
-				dataAPI.fileEditEnable &&
-				newVal.size <= dataAPI.fileEditLimitSize &&
-				!txtReadonlyTypes.includes(newVal.extension.replace('.', ''));
-			currentView.value = FileEditor;
-		} else if (newVal.type.toLowerCase() === 'epub') {
-			currentView.value = FileEpubPreview;
-		} else {
-			store.preview.isEditEnable = false;
-
-			if (newVal.name) {
-				title.value = newVal.name as string;
-			}
-
-			if (
-				newVal.type == 'image' ||
-				newVal.type == 'audio' ||
-				newVal.type.toLowerCase() == 'pdf' ||
-				(newVal.type.toLowerCase() == 'word' &&
-					getSuffix(newVal.name) === 'docx') ||
-				(newVal.type.toLowerCase() == 'excel' &&
-					getSuffix(newVal.name) === 'xlsx')
-			) {
-				if (getAppPlatform().isPad && newVal.type.toLowerCase() == 'pdf') {
-					currentView.value = FilePDFPreview;
-				} else if (!dataAPI.audioPlayEnable && newVal.type == 'audio') {
-					currentView.value = FileUnavailable;
-				} else {
-					currentView.value = FilePreview;
-				}
-			} else {
-				currentView.value = FileUnavailable;
-			}
-		}
+		const preview = resolveFilePreview(
+			filesStore.previewItem[props.origin_id],
+			{
+				text: FileEditor,
+				ebook: FileEpubPreview,
+				pdf: FilePDFPreview,
+				media: FilePreview,
+				unavailable: FileUnavailable
+			},
+			{ usePdfComponent: getAppPlatform().isPad }
+		);
+		store.preview.isEditEnable = preview.isEditEnable;
+		currentView.value = preview.component;
 		nextTick(() => {
 			reloadFinished.value = true;
 		});
@@ -327,6 +307,26 @@ watch(
 		deep: true
 	}
 );
+
+const openArchivePreview = (item) => {
+	if (archivePreviewOpening.value) {
+		return;
+	}
+	archivePreviewOpening.value = true;
+	dialog.value = false;
+	$q.dialog({
+		component: ArchivePreviewDialog,
+		componentProps: {
+			item,
+			origin_id: props.origin_id,
+			driveType: item.driveType
+		}
+	}).onDismiss(() => {
+		filesStore.previewItem[props.origin_id] = {};
+		filesStore.isInPreview[props.origin_id] = '';
+		archivePreviewOpening.value = false;
+	});
+};
 
 const getSuffix = (fileName: string) => {
 	let suffix = '';
@@ -355,13 +355,47 @@ const download = async (e: any) => {
 	);
 };
 
-const close = () => {
+const pendingClose = ref(false);
+
+const doClose = () => {
 	dialog.value = false;
 	filesStore.previewItem[props.origin_id] = {};
 	setTimeout(() => {
 		filesStore.isInPreview[props.origin_id] = '';
 	}, 500);
 };
+
+const close = () => {
+	if (store.preview.isEditing && store.preview.isDirty) {
+		$q.dialog({
+			component: UnsavedChangesDialog
+		}).onOk(({ action }: { action: 'save' | 'discard' }) => {
+			if (action === 'save') {
+				pendingClose.value = true;
+				store.preview.isSaving = true;
+			} else if (action === 'discard') {
+				store.preview.isDirty = false;
+				store.preview.isEditing = false;
+				doClose();
+			}
+		});
+		return;
+	}
+	doClose();
+};
+
+watch(
+	() => store.preview.isSaving,
+	(saving, prevSaving) => {
+		if (!pendingClose.value) return;
+		if (prevSaving && !saving) {
+			if (!store.preview.isDirty) {
+				doClose();
+			}
+			pendingClose.value = false;
+		}
+	}
+);
 
 const showOperation = () => {
 	if (store.preview.isEditEnable) {
@@ -436,7 +470,7 @@ onUnmounted(() => {
 }
 
 .android-pad-height {
-	height: calc(100vh - 30px);
+	height: calc(100dvh - 30px);
 	margin-top: 30px;
 }
 

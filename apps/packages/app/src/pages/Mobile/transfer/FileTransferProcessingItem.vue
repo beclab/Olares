@@ -85,13 +85,14 @@
 				</div>
 				<div
 					v-else-if="
-						(transferStore.transferMap[file].status ===
+						!transferStore.transferMap[file].pauseDisable &&
+						((transferStore.transferMap[file].status ===
 							TransferStatus.Running &&
 							!transferStore.transferMap[file].networkOfflinePaused &&
 							!transferStore.transferMap[file].onlyWifiPaused) ||
-						(transferStore.transferMap[file].status ===
-							TransferStatus.Pending &&
-							transferStore.transferMap[file].isPaused)
+							(transferStore.transferMap[file].status ===
+								TransferStatus.Pending &&
+								transferStore.transferMap[file].isPaused))
 					"
 					class="row items-center justify-center item-action"
 					@click="pauseOrResume(file)"

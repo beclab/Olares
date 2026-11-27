@@ -29,7 +29,6 @@
 						map-options
 						option-value="email"
 						option-label="name"
-						placeholder="Select User"
 						color="yellow"
 						dropdown-icon="sym_r_expand_more"
 						:style="{ width: '200px' }"

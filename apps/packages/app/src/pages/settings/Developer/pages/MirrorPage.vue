@@ -210,7 +210,7 @@ const columns: any = [
 	{
 		name: 'actions',
 		align: 'right',
-		label: t('action'),
+		label: t('actions'),
 		sortable: false
 	}
 ];

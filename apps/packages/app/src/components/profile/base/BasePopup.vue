@@ -18,7 +18,7 @@ defineProps({
 <style lang="scss">
 .q-menu {
 	border-radius: 8px !important;
-	background-color: #ffffff !important;
+	background-color: $background-1 !important;
 	box-shadow: 0 4px 10px 0 #00000033 !important;
 }
 
