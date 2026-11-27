@@ -183,6 +183,58 @@ spec:
     - group: policy.linkerd.io
       kind: MeshTLSAuthentication
       name: market-provider-{{ $tenant }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: market-model-directory-{{ $tenant }}
+  namespace: os-framework
+spec:
+  parentRefs:
+    - group: policy.linkerd.io
+      kind: Server
+      name: market-backend
+  rules:
+    - matches:
+        {{- range $path := list "/app-store/api/v2/llm-providers" "/app-store/api/v2/installed-apps" }}
+        - path:
+            type: Exact
+            value: {{ $path }}
+          method: GET
+          headers:
+            - name: X-Bfl-User
+              type: Exact
+              value: {{ $tenant | quote }}
+        {{- end }}
+---
+apiVersion: policy.linkerd.io/v1alpha1
+kind: MeshTLSAuthentication
+metadata:
+  name: market-model-directory-{{ $tenant }}
+  namespace: os-framework
+spec:
+  identityRefs:
+    - kind: ServiceAccount
+      name: provider-sa
+      namespace: os-framework
+    - kind: ServiceAccount
+      name: bytetrade-sys-ops
+      namespace: user-system-{{ $tenant }}
+---
+apiVersion: policy.linkerd.io/v1alpha1
+kind: AuthorizationPolicy
+metadata:
+  name: market-model-directory-{{ $tenant }}
+  namespace: os-framework
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: market-model-directory-{{ $tenant }}
+  requiredAuthenticationRefs:
+    - group: policy.linkerd.io
+      kind: MeshTLSAuthentication
+      name: market-model-directory-{{ $tenant }}
 {{- end }}
 ---
 apiVersion: admissionregistration.k8s.io/v1

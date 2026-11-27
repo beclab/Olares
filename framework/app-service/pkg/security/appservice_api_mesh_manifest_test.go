@@ -451,6 +451,29 @@ func TestMarketMeshRequiresEnrollmentAndMatchingTenant(t *testing.T) {
 			if !reflect.DeepEqual(authz, wantPolicy) {
 				t.Fatalf("incorrect authorization policy: %v", authz)
 			}
+
+			directoryName := "market-model-directory-" + tenant
+			directory := resources["HTTPRoute/"+directoryName]["spec"].(map[string]any)
+			var directoryMatches []any
+			for _, path := range []string{"/app-store/api/v2/llm-providers", "/app-store/api/v2/installed-apps"} {
+				directoryMatches = append(directoryMatches, appServiceTenantMatch(tenant, "GET", "Exact", path))
+			}
+			if !reflect.DeepEqual(directory["parentRefs"], route["parentRefs"]) ||
+				!reflect.DeepEqual(directory["rules"], []any{map[string]any{"matches": directoryMatches}}) {
+				t.Fatalf("wrong model directory scope: %v", directory)
+			}
+			directoryAuthn := resources["MeshTLSAuthentication/"+directoryName]["spec"].(map[string]any)
+			provider := map[string]any{"kind": "ServiceAccount", "name": "provider-sa", "namespace": "os-framework"}
+			if !reflect.DeepEqual(directoryAuthn, map[string]any{"identityRefs": []any{provider, wantIdentity}}) {
+				t.Fatalf("wrong model directory identities: %v", directoryAuthn)
+			}
+			directoryAuthz := resources["AuthorizationPolicy/"+directoryName]["spec"].(map[string]any)
+			if !reflect.DeepEqual(directoryAuthz, map[string]any{
+				"targetRef":                  map[string]any{"group": "gateway.networking.k8s.io", "kind": "HTTPRoute", "name": directoryName},
+				"requiredAuthenticationRefs": []any{map[string]any{"group": "policy.linkerd.io", "kind": "MeshTLSAuthentication", "name": directoryName}},
+			}) {
+				t.Fatalf("wrong model directory authorization: %v", directoryAuthz)
+			}
 		}
 		if frontend := resources["Server/market-frontend"]["spec"].(map[string]any); frontend["port"] != 90 || frontend["accessPolicy"] != "deny" {
 			t.Fatalf("incorrect frontend boundary: %v", frontend)
