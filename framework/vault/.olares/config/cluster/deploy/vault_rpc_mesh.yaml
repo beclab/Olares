@@ -1,0 +1,71 @@
+---
+apiVersion: policy.linkerd.io/v1beta3
+kind: Server
+metadata:
+  name: vault-public-rpc
+  namespace: os-framework
+spec:
+  podSelector:
+    matchLabels:
+      app: vault-server
+  port: 3000
+  proxyProtocol: HTTP/1
+  accessPolicy: deny
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: vault-public-rpc
+  namespace: os-framework
+spec:
+  parentRefs:
+    - group: policy.linkerd.io
+      kind: Server
+      name: vault-public-rpc
+  rules:
+    - matches:
+        - path:
+            type: Exact
+            value: /server
+        - path:
+            type: Exact
+            value: /server/
+# Keep access for existing tenant proxies when os-framework upgrades before the launchers.
+# New tenants receive the same capability from their launcher release.
+{{- range $ns := (lookup "v1" "Namespace" "" "").items }}
+{{- if and (hasPrefix "user-system-" $ns.metadata.name) (not $ns.metadata.deletionTimestamp) }}
+{{- $tenant := trimPrefix "user-system-" $ns.metadata.name }}
+{{- if and (le (len $tenant) 51) (regexMatch "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$" $tenant) }}
+{{- $proxy := lookup "apps/v1" "Deployment" $ns.metadata.name "system-server" }}
+{{- $enrolled := lookup "policy.linkerd.io/v1alpha1" "AuthorizationPolicy" "os-framework" (printf "vault-rpc-%s" $tenant) }}
+{{- if and $proxy (eq $proxy.spec.template.spec.serviceAccountName "bytetrade-sys-ops") (not $enrolled) }}
+---
+apiVersion: policy.linkerd.io/v1alpha1
+kind: MeshTLSAuthentication
+metadata:
+  name: vault-rpc-existing-{{ $tenant }}
+  namespace: os-framework
+spec:
+  identityRefs:
+    - kind: ServiceAccount
+      name: bytetrade-sys-ops
+      namespace: {{ $ns.metadata.name }}
+---
+apiVersion: policy.linkerd.io/v1alpha1
+kind: AuthorizationPolicy
+metadata:
+  name: vault-rpc-existing-{{ $tenant }}
+  namespace: os-framework
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: vault-public-rpc
+  requiredAuthenticationRefs:
+    - group: policy.linkerd.io
+      kind: MeshTLSAuthentication
+      name: vault-rpc-existing-{{ $tenant }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

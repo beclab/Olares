@@ -180,6 +180,11 @@ func (i *InstallApps) Execute(runtime connector.Runtime) error {
 		}
 	}
 
+	if _, err := os.Stat(path.Join(appPath, "systemserver", "templates", "activation-mesh.yaml")); err == nil {
+		return utils.WaitForTenantActivationPolicies(ctx, config, ns)
+	} else if !os.IsNotExist(err) {
+		return err
+	}
 	return nil
 }
 

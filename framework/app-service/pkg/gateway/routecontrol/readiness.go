@@ -353,11 +353,20 @@ func endpointInboundPolicyReady(ctx context.Context, c client.Client, pod *corev
 		return fmt.Errorf("get Linkerd Server %s: %w", key, err)
 	}
 	access, _, _ := unstructured.NestedString(server.Object, "spec", "accessPolicy")
+	protocol, _, _ := unstructured.NestedString(server.Object, "spec", "proxyProtocol")
 	selector, _, _ := unstructured.NestedMap(server.Object, "spec", "podSelector")
 	port, _, _ := unstructured.NestedInt64(server.Object, "spec", "port")
-	if !server.GetDeletionTimestamp().IsZero() || access != mesh.InboundPolicyClusterAuthenticated ||
+	if !server.GetDeletionTimestamp().IsZero() || (access != mesh.InboundPolicyClusterAuthenticated && access != "deny") ||
 		port != int64(targetPort) || !reflect.DeepEqual(selector, map[string]any{"matchLabels": map[string]any{"app": "systemserver"}}) {
 		return fmt.Errorf("Linkerd Server %s does not enforce the expected system-server policy on port %d", key, targetPort)
+	}
+	if access == "deny" {
+		if protocol != "HTTP/1" {
+			return fmt.Errorf("Linkerd Server %s must use HTTP/1 for tenant Auth", key)
+		}
+		if err := strictAuthProxyPolicyReady(ctx, c, key); err != nil {
+			return err
+		}
 	}
 	for _, containers := range [][]corev1.Container{pod.Spec.Containers, pod.Spec.InitContainers} {
 		for _, container := range containers {
@@ -369,6 +378,93 @@ func endpointInboundPolicyReady(ctx context.Context, c client.Client, pod *corev
 		}
 	}
 	return fmt.Errorf("Linkerd Server %s targets an undeclared TCP port %d", key, targetPort)
+}
+
+// A strict listener is available only when its own Linkerd route was accepted
+// and the gateway's credential is attached to that route.
+func strictAuthProxyPolicyReady(ctx context.Context, c client.Client, server client.ObjectKey) error {
+	const routeName = "activation-login"
+	get := func(group, version, kind string) (*unstructured.Unstructured, error) {
+		obj := &unstructured.Unstructured{}
+		obj.SetGroupVersionKind(schema.GroupVersionKind{Group: group, Version: version, Kind: kind})
+		key := client.ObjectKey{Namespace: server.Namespace, Name: routeName}
+		if err := c.Get(ctx, key, obj); err != nil {
+			return nil, fmt.Errorf("get Linkerd %s %s: %w", kind, key, err)
+		}
+		if obj.GetDeletionTimestamp() != nil {
+			return nil, fmt.Errorf("Linkerd %s %s is being deleted", kind, key)
+		}
+		return obj, nil
+	}
+	route, err := get("gateway.networking.k8s.io", "v1", "HTTPRoute")
+	if err != nil {
+		return err
+	}
+	rules, _, _ := unstructured.NestedSlice(route.Object, "spec", "rules")
+	if !reflect.DeepEqual(rules, []any{map[string]any{"matches": []any{map[string]any{
+		"path": map[string]any{"type": "PathPrefix", "value": "/api"},
+	}}}}) {
+		return fmt.Errorf("Linkerd Auth route does not cover the expected API on Server %s", server)
+	}
+	parents, _, _ := unstructured.NestedSlice(route.Object, "status", "parents")
+	accepted := false
+	for _, raw := range parents {
+		parent, ok := raw.(map[string]any)
+		if !ok || parent["controllerName"] != "linkerd.io/policy-controller" {
+			continue
+		}
+		ref, _, _ := unstructured.NestedMap(parent, "parentRef")
+		if ref["group"] != "policy.linkerd.io" || ref["kind"] != "Server" || ref["name"] != server.Name ||
+			(ref["namespace"] != nil && ref["namespace"] != server.Namespace) {
+			continue
+		}
+		conditions, _, _ := unstructured.NestedSlice(parent, "conditions")
+		for _, raw := range conditions {
+			condition, ok := raw.(map[string]any)
+			if ok && condition["type"] == "Accepted" && condition["status"] == "True" &&
+				(condition["observedGeneration"] == nil || condition["observedGeneration"] == route.GetGeneration()) {
+				accepted = true
+				break
+			}
+		}
+	}
+	if !accepted {
+		return fmt.Errorf("Linkerd has not accepted the tenant Auth route on Server %s", server)
+	}
+	policy, err := get("policy.linkerd.io", "v1alpha1", "AuthorizationPolicy")
+	if err != nil {
+		return err
+	}
+	target, _, _ := unstructured.NestedMap(policy.Object, "spec", "targetRef")
+	refs, _, _ := unstructured.NestedSlice(policy.Object, "spec", "requiredAuthenticationRefs")
+	if !reflect.DeepEqual(target, map[string]any{"group": "gateway.networking.k8s.io", "kind": "HTTPRoute", "name": routeName}) ||
+		!reflect.DeepEqual(refs, []any{map[string]any{"group": "policy.linkerd.io", "kind": "MeshTLSAuthentication", "name": routeName}}) {
+		return fmt.Errorf("tenant Auth route lacks the expected mTLS authorization on Server %s", server)
+	}
+	authn, err := get("policy.linkerd.io", "v1alpha1", "MeshTLSAuthentication")
+	if err != nil {
+		return err
+	}
+	space := "user-space-" + strings.TrimPrefix(server.Namespace, "user-system-")
+	expected := map[string]string{
+		"envoy-os-gateway-app-gateway-f5ccc039": "os-gateway",
+		"bfl-login":                             space, "system-frontend": space, "bfl-wizard": space,
+	}
+	identities, _, _ := unstructured.NestedSlice(authn.Object, "spec", "identityRefs")
+	wildcards, _, _ := unstructured.NestedSlice(authn.Object, "spec", "identities")
+	if len(wildcards) != 0 || len(identities) != len(expected) {
+		return fmt.Errorf("tenant Auth route has unexpected mTLS identities on Server %s", server)
+	}
+	for _, raw := range identities {
+		ref, ok := raw.(map[string]any)
+		name, _ := ref["name"].(string)
+		if !ok || expected[name] == "" || ref["kind"] != "ServiceAccount" || ref["namespace"] != expected[name] ||
+			(ref["group"] != nil && ref["group"] != "") {
+			return fmt.Errorf("tenant Auth route has unexpected mTLS identities on Server %s", server)
+		}
+		delete(expected, name)
+	}
+	return nil
 }
 
 func hasInterceptedHTTPPort(ports []discoveryv1.EndpointPort, portName string, entryPort int32) bool {

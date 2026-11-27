@@ -88,9 +88,18 @@ func InstallCharts(ctx context.Context, actionConfig *action.Configuration, sett
 // UpgradeCharts upgrades helm chart using action config and environment settings.
 func UpgradeCharts(ctx context.Context, actionConfig *action.Configuration, settings *cli.EnvSettings,
 	appName, chartName, repoURL, namespace string, vals map[string]interface{}, reuseValue bool) error {
+	return upgradeCharts(ctx, actionConfig, settings, appName, chartName, repoURL, namespace, vals, reuseValue, false)
+}
+
+func upgradeCharts(ctx context.Context, actionConfig *action.Configuration, settings *cli.EnvSettings,
+	appName, chartName, repoURL, namespace string, vals map[string]interface{}, reuseValue, waitReady bool) error {
 	client := action.NewUpgrade(actionConfig)
+	client.Wait = waitReady
 	client.Namespace = namespace
 	client.Timeout = 300 * time.Second
+	if waitReady {
+		client.Timeout = 120 * time.Second
+	}
 	client.MaxHistory = 10
 	if reuseValue {
 		client.ReuseValues = true
@@ -111,22 +120,41 @@ func UpgradeCharts(ctx context.Context, actionConfig *action.Configuration, sett
 
 // UpgradeBFLLauncher creates the tenant policies in a separate Helm revision
 // before rolling the BFL workload onto the strict Server selector.
-func UpgradeBFLLauncher(ctx context.Context, cfg *action.Configuration, settings *cli.EnvSettings,
+func UpgradeBFLLauncher(ctx context.Context, config *rest.Config, cfg *action.Configuration, settings *cli.EnvSettings,
 	name, path, namespace string, values map[string]interface{}, reuseValues bool) error {
 	bfl, ok := values["bfl"].(map[string]interface{})
 	if !ok {
 		return fmt.Errorf("launcher values are missing bfl settings")
 	}
-	prepared := false
-	if deployed, err := cfg.Releases.Deployed(name); err == nil {
-		previous, _ := deployed.Config["bfl"].(map[string]interface{})
-		prepared = previous["prepareAPIMesh"] == true || previous["enforceAPIMesh"] == true
-	} else if !errors.Is(err, driver.ErrNoDeployedReleases) && !errors.Is(err, driver.ErrReleaseNotFound) {
+	if err := RecoverLauncherUpgrade(ctx, cfg, name); err != nil {
 		return err
 	}
-
-	return stageBFLLauncherMesh(bfl, prepared, reuseValues, func(reuse bool) error {
-		return UpgradeCharts(ctx, cfg, settings, name, path, "", namespace, values, reuse)
+	enforced := false
+	previousRelease, err := cfg.Releases.Deployed(name)
+	if errors.Is(err, driver.ErrNoDeployedReleases) || errors.Is(err, driver.ErrReleaseNotFound) {
+		previousRelease, err = cfg.Releases.Last(name)
+		if err == nil && previousRelease.Info.Status != release.StatusFailed {
+			return fmt.Errorf("launcher %s has no usable deployed revision", name)
+		}
+	}
+	if err != nil && !errors.Is(err, driver.ErrReleaseNotFound) {
+		return err
+	}
+	if previousRelease != nil {
+		previous, _ := previousRelease.Config["bfl"].(map[string]interface{})
+		enforced = previous["enforceAPIMesh"] == true
+		reuseValues = true
+		// Bootstrap retries must retain the credentials already stored by Helm.
+		for _, key := range []string{"appKey", "appSecret"} {
+			if _, ok := previous[key]; ok {
+				delete(bfl, key)
+			}
+		}
+	}
+	return stageBFLLauncherMesh(bfl, enforced, reuseValues, func(reuse, waitReady bool) error {
+		return upgradeCharts(ctx, cfg, settings, name, path, "", namespace, values, reuse, waitReady)
+	}, func() error {
+		return WaitForLauncherPolicies(ctx, config, namespace)
 	})
 }
 

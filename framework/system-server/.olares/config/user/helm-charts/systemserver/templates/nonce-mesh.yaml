@@ -98,7 +98,7 @@ spec:
     - group: policy.linkerd.io
       kind: MeshTLSAuthentication
       name: systemserver-api-existing
-{{- range $port := list 28080 6379 27017 5432 4222 9091 3010 4568 8080 3000 }}
+{{- range $port := list 6379 27017 5432 4222 3010 4568 8080 }}
 ---
 # Other listeners retain the previous cluster-authenticated transport boundary.
 apiVersion: policy.linkerd.io/v1beta3

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	natsevent "github.com/beclab/Olares/framework/app-service/pkg/event"
+	"github.com/beclab/Olares/framework/app-service/pkg/helm"
 	"github.com/beclab/Olares/framework/app-service/pkg/users"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/activeusers"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace/v1"
@@ -348,6 +349,9 @@ func (r *UserController) handleUserCreation(ctx context.Context, user *iamv1alph
 
 	// Create user resources
 	err = r.createUserResources(ctx, user)
+	if errors.Is(err, helm.ErrLauncherPending) {
+		return ctrl.Result{}, err
+	}
 	if err != nil {
 		klog.Errorf("failed to create user resource %v", err)
 		updateErr := r.updateUserStatus(ctx, user, "Failed", fmt.Sprintf("Failed to create user resources: %v", err))

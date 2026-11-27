@@ -128,6 +128,24 @@ func UpgradeCharts(ctx context.Context, actionConfig *action.Configuration, sett
 	return nil
 }
 
+// UpgradeLauncher applies tenant launcher values, waiting for workloads only
+// after the policy preparation stage.
+func UpgradeLauncher(ctx context.Context, cfg *action.Configuration, settings *cli.EnvSettings,
+	name, path, namespace string, values map[string]interface{}, ready bool) error {
+	client := action.NewUpgrade(cfg)
+	client.Namespace = namespace
+	client.Timeout = 120 * time.Second
+	client.MaxHistory = 10
+	client.ReuseValues = true
+	client.Wait = ready
+	r, err := runUpgrade(ctx, []string{name, path}, client, settings, values)
+	if err != nil {
+		return err
+	}
+	logReleaseUpgrade(r)
+	return nil
+}
+
 // UpgradeReleaseCharts applies values to an existing release using the chart
 // stored in that release. Unlike UpgradeCharts, it never reads a chart from
 // disk or a repository.

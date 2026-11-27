@@ -1,0 +1,88 @@
+{{- $tenant := .Values.bfl.username -}}
+{{- $space := printf "user-space-%s" $tenant -}}
+{{- $system := printf "user-system-%s" $tenant -}}
+{{- if or (gt (len $tenant) 51) (not (regexMatch "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$" $tenant)) (ne .Release.Namespace $space) -}}
+{{- fail "activation policies require the tenant launcher namespace" -}}
+{{- end -}}
+{{- range $port := list 28080 9091 3000 }}
+---
+apiVersion: policy.linkerd.io/v1beta3
+kind: Server
+metadata:
+  name: systemserver-existing-{{ $port }}
+  namespace: {{ $system }}
+spec:
+  podSelector:
+    matchLabels:
+      app: systemserver
+  port: {{ $port }}
+  proxyProtocol: HTTP/1
+  accessPolicy: deny
+{{- end }}
+{{- /* Envoy Gateway v1.8.0 generates this account for the chart's os-gateway/app-gateway Gateway. */ -}}
+{{- $gateway := dict "name" "envoy-os-gateway-app-gateway-f5ccc039" "namespace" "os-gateway" -}}
+{{- $login := dict "name" "bfl-login" "namespace" $space -}}
+{{- $desktop := dict "name" "system-frontend" "namespace" $space -}}
+{{- $wizard := dict "name" "bfl-wizard" "namespace" $space -}}
+{{- $bfl := dict "name" "bytetrade-controller" "namespace" $space -}}
+{{- /* The existing provider listener serves enrolled user apps through application-level RBAC. */ -}}
+{{- range $rule := list
+    (dict "name" "activation-password" "port" 28080 "path" (printf "/api/reset/%s/password" $tenant) "type" "Exact" "method" "POST" "accounts" (list $bfl))
+    (dict "name" "activation-password-deny" "port" 28080 "path" "/api/reset")
+    (dict "name" "activation-provider" "port" 28080 "path" "/" "provider" true)
+    (dict "name" "activation-login" "port" 9091 "path" "/api" "accounts" (list $gateway $login $desktop $wizard))
+    (dict "name" "activation-vault" "port" 3000 "path" "/server" "accounts" (list $wizard $desktop)) }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ $rule.name }}
+  namespace: {{ $system }}
+spec:
+  parentRefs:
+    - group: policy.linkerd.io
+      kind: Server
+      name: systemserver-existing-{{ $rule.port }}
+  rules:
+    - matches:
+        - path:
+            type: {{ default "PathPrefix" $rule.type }}
+            value: {{ $rule.path | quote }}
+          {{- with $rule.method }}
+          method: {{ . }}
+          {{- end }}
+{{- if or $rule.accounts $rule.provider }}
+---
+apiVersion: policy.linkerd.io/v1alpha1
+kind: MeshTLSAuthentication
+metadata:
+  name: {{ $rule.name }}
+  namespace: {{ $system }}
+spec:
+  {{- if $rule.provider }}
+  identities: ["*.serviceaccount.identity.os-mesh.cluster.local"]
+  {{- else }}
+  identityRefs:
+    {{- range $sa := $rule.accounts }}
+    - kind: ServiceAccount
+      name: {{ $sa.name }}
+      namespace: {{ $sa.namespace }}
+    {{- end }}
+  {{- end }}
+---
+apiVersion: policy.linkerd.io/v1alpha1
+kind: AuthorizationPolicy
+metadata:
+  name: {{ $rule.name }}
+  namespace: {{ $system }}
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: {{ $rule.name }}
+  requiredAuthenticationRefs:
+    - group: policy.linkerd.io
+      kind: MeshTLSAuthentication
+      name: {{ $rule.name }}
+{{- end }}
+{{- end }}

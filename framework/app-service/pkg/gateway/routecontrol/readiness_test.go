@@ -482,3 +482,65 @@ func TestWizardReadinessRequiresOwnMeshedAuthProxy(t *testing.T) {
 	}
 	check("bob", true)
 }
+
+func TestStrictAuthProxyRequiresAcceptedRouteAndTenantIdentity(t *testing.T) {
+	for _, tenant := range []string{"alice", "bob"} {
+		t.Run(tenant, func(t *testing.T) {
+			ns, space := "user-system-"+tenant, "user-space-"+tenant
+			const name, server = "activation-login", "systemserver-existing-9091"
+			objects := meshedServiceObjects(&corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: AutheliaBackendServiceName},
+				Spec: corev1.ServiceSpec{Selector: map[string]string{"app": "systemserver"},
+					Ports: []corev1.ServicePort{{Name: "http", Port: 9091, TargetPort: intstr.FromInt32(9091)}}},
+			})
+			srv := defaultDenyAuthProxyFixture(objects, ns)
+			srv.Object["spec"].(map[string]any)["accessPolicy"] = "deny"
+			srv.Object["spec"].(map[string]any)["proxyProtocol"] = "HTTP/1"
+			newResource := func(version, kind string, spec map[string]any) *unstructured.Unstructured {
+				return &unstructured.Unstructured{Object: map[string]any{
+					"apiVersion": version, "kind": kind, "metadata": map[string]any{"name": name, "namespace": ns}, "spec": spec,
+				}}
+			}
+			route := newResource("gateway.networking.k8s.io/v1", "HTTPRoute", map[string]any{
+				"rules": []any{map[string]any{"matches": []any{map[string]any{
+					"path": map[string]any{"type": "PathPrefix", "value": "/api"},
+				}}}},
+			})
+			route.Object["status"] = map[string]any{"parents": []any{map[string]any{
+				"controllerName": "linkerd.io/policy-controller",
+				"parentRef":      map[string]any{"group": "policy.linkerd.io", "kind": "Server", "name": server},
+				"conditions":     []any{map[string]any{"type": "Accepted", "status": "True"}},
+			}}}
+			authorization := newResource("policy.linkerd.io/v1alpha1", "AuthorizationPolicy", map[string]any{
+				"targetRef":                  map[string]any{"group": "gateway.networking.k8s.io", "kind": "HTTPRoute", "name": name},
+				"requiredAuthenticationRefs": []any{map[string]any{"group": "policy.linkerd.io", "kind": "MeshTLSAuthentication", "name": name}},
+			})
+			authn := newResource("policy.linkerd.io/v1alpha1", "MeshTLSAuthentication", map[string]any{
+				"identityRefs": []any{
+					map[string]any{"kind": "ServiceAccount", "namespace": "os-gateway", "name": "envoy-os-gateway-app-gateway-f5ccc039"},
+					map[string]any{"kind": "ServiceAccount", "namespace": space, "name": "bfl-login"},
+					map[string]any{"kind": "ServiceAccount", "namespace": space, "name": "system-frontend"},
+					map[string]any{"kind": "ServiceAccount", "namespace": space, "name": "bfl-wizard"},
+				},
+			})
+			upstream := srrv1alpha1.UpstreamRef{ServiceName: AutheliaBackendServiceName, Port: 9091}
+			check := func(want bool, policies ...client.Object) {
+				t.Helper()
+				c := fake.NewClientBuilder().WithScheme(testScheme(t)).WithObjects(append(append([]client.Object{}, objects...), policies...)...).Build()
+				if err := meshedReadyEndpoints(t.Context(), c, ns, upstream); (err == nil) != want {
+					t.Fatalf("readiness=%v, want accepted=%v", err, want)
+				}
+			}
+			check(false, srv)
+			check(false, srv, route)
+			check(false, srv, route, authorization)
+			check(true, srv, route, authorization, authn)
+			badIdentity := authn.DeepCopy()
+			badIdentity.Object["spec"].(map[string]any)["identityRefs"].([]any)[3].(map[string]any)["namespace"] = "user-space-foreign"
+			check(false, srv, route, authorization, badIdentity)
+			unaccepted := route.DeepCopy()
+			delete(unaccepted.Object, "status")
+			check(false, srv, unaccepted, authorization, authn)
+		})
+	}
+}

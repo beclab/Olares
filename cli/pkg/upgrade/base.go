@@ -348,7 +348,7 @@ func (u *upgradeUserComponents) Execute(runtime connector.Runtime) error {
 	for _, user := range users {
 		logger.Infof("upgrading for user: %s", user.Name)
 		ns := fmt.Sprintf("user-space-%s", user.Name)
-		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 		defer cancel()
 		sts, err := client.AppsV1().StatefulSets(ns).Get(ctx, "bfl", metav1.GetOptions{})
 		if err != nil {
@@ -369,6 +369,12 @@ func (u *upgradeUserComponents) Execute(runtime connector.Runtime) error {
 			"dbdata_pv", "dbdata_pvc"} {
 			bflInnerVals[key] = sts.Annotations[key]
 		}
+		for _, container := range sts.Spec.Template.Spec.Containers {
+			if container.Name == "api" {
+				bflInnerVals["image"] = container.Image
+				break
+			}
+		}
 		bflVals["bfl"] = bflInnerVals
 
 		actionConfig, settings, err := utils.InitConfig(config, ns)
@@ -376,7 +382,7 @@ func (u *upgradeUserComponents) Execute(runtime connector.Runtime) error {
 			return err
 		}
 		var bflReleaseName = fmt.Sprintf("launcher-%s", user.Name)
-		if err := utils.UpgradeBFLLauncher(ctx, actionConfig, settings, bflReleaseName, bflChartPath, ns, bflVals, true); err != nil {
+		if err := utils.UpgradeBFLLauncher(ctx, config, actionConfig, settings, bflReleaseName, bflChartPath, ns, bflVals, true); err != nil {
 			return fmt.Errorf("failed to upgrade launcher: %v", err)
 		}
 
@@ -401,6 +407,13 @@ func (u *upgradeUserComponents) Execute(runtime connector.Runtime) error {
 			}
 		}
 
+		if _, err := os.Stat(path.Join(appsChartDir, "systemserver", "templates", "activation-mesh.yaml")); err == nil {
+			if err := utils.WaitForTenantActivationPolicies(ctx, config, ns); err != nil {
+				return fmt.Errorf("wait for %s activation policies: %w", user.Name, err)
+			}
+		} else if !os.IsNotExist(err) {
+			return err
+		}
 	}
 	return nil
 }

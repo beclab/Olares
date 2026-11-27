@@ -145,7 +145,7 @@ func TestNonceMeshIdentityAndTenantBinding(t *testing.T) {
 			}}}) {
 				t.Fatal("a fallback route can authorize nonce when its policy is missing")
 			}
-			for _, port := range []string{"28080", "6379", "27017", "5432", "4222", "9091", "3010", "4568", "8080", "3000"} {
+			for _, port := range []string{"6379", "27017", "5432", "4222", "3010", "4568", "8080"} {
 				server := docs["Server/systemserver-existing-"+port]["spec"].(map[string]any)
 				if server["accessPolicy"] != "cluster-authenticated" {
 					t.Fatal("other listener compatibility lost")

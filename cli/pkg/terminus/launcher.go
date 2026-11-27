@@ -43,7 +43,7 @@ func (t *InstallBFL) Execute(runtime connector.Runtime) error {
 		return err
 	}
 
-	var ctx, cancel = context.WithTimeout(context.Background(), 3*time.Minute)
+	var ctx, cancel = context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
 	var r = utils.Random()
@@ -64,7 +64,7 @@ func (t *InstallBFL) Execute(runtime connector.Runtime) error {
 	}
 	vals[common.HelmValuesKeyOlaresRootFSPath] = storage.OlaresRootDir
 
-	if err := utils.UpgradeBFLLauncher(ctx, actionConfig, settings, launchName, launchPath, ns, vals, false); err != nil {
+	if err := utils.UpgradeBFLLauncher(ctx, config, actionConfig, settings, launchName, launchPath, ns, vals, false); err != nil {
 		return err
 	}
 
