@@ -94,6 +94,55 @@ func TestAppServiceMeshScopedWrites(t *testing.T) {
 	}
 }
 
+func TestAppServiceRemoteOptionsRequiresSameTenantProxy(t *testing.T) {
+	resources, err := renderAppServiceMeshManifests(t, map[string]any{
+		"appServiceAPIMesh": map[string]any{"prepare": true, "tenants": []string{"alice", "bob"}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	const path = "/app-service/v1/appenv/remote-options-proxy"
+	for _, tenant := range []string{"alice", "bob"} {
+		checkAppServiceCapability(t, resources, "app-env-remote-options-"+tenant, "user-system-"+tenant, "bytetrade-sys-ops",
+			[]any{appServiceTenantMatch(tenant, "POST", "Exact", path)})
+	}
+	if server := resources["Server/app-service-api"]["spec"].(map[string]any); server["accessPolicy"] != "deny" {
+		t.Fatal("app-service API does not deny unmatched requests")
+	}
+	for _, kind := range []string{"HTTPRoute", "MeshTLSAuthentication", "AuthorizationPolicy"} {
+		if resources[kind+"/app-env-remote-options-unregistered"] != nil {
+			t.Fatalf("unregistered tenant received %s", kind)
+		}
+	}
+	for _, tc := range []struct {
+		name, route, header, namespace, account, method, path string
+		allowed                                               bool
+	}{
+		{"same tenant", "alice", "alice", "user-system-alice", "bytetrade-sys-ops", "POST", path, true},
+		{"other tenant uses its own route", "bob", "bob", "user-system-bob", "bytetrade-sys-ops", "POST", path, true},
+		{"wrong identity", "alice", "alice", "user-system-alice", "default", "POST", path, false},
+		{"market identity", "alice", "alice", "os-framework", "market-sa", "POST", path, false},
+		{"cross tenant proxy", "alice", "alice", "user-system-bob", "bytetrade-sys-ops", "POST", path, false},
+		{"cross tenant header", "alice", "bob", "user-system-alice", "bytetrade-sys-ops", "POST", path, false},
+		{"missing identity", "alice", "alice", "", "", "POST", path, false},
+		{"wrong method", "alice", "alice", "user-system-alice", "bytetrade-sys-ops", "GET", path, false},
+		{"wrong path", "alice", "alice", "user-system-alice", "bytetrade-sys-ops", "POST", path + "/other", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			name := "app-env-remote-options-" + tc.route
+			route := resources["HTTPRoute/"+name]["spec"].(map[string]any)
+			match := route["rules"].([]any)[0].(map[string]any)["matches"].([]any)[0]
+			authn := resources["MeshTLSAuthentication/"+name]["spec"].(map[string]any)
+			identity := map[string]any{"kind": "ServiceAccount", "namespace": tc.namespace, "name": tc.account}
+			allowed := reflect.DeepEqual(match, appServiceTenantMatch(tc.header, tc.method, "Exact", tc.path)) &&
+				reflect.DeepEqual(authn["identityRefs"], []any{identity})
+			if allowed != tc.allowed {
+				t.Fatalf("allowed = %t, want %t", allowed, tc.allowed)
+			}
+		})
+	}
+}
+
 func TestAppServiceAppStatusMeshAccess(t *testing.T) {
 	const statusPath = `^/app-service/v1/apps/[a-z0-9]([a-z0-9-]*[a-z0-9])?/status$`
 	for _, mode := range []struct {

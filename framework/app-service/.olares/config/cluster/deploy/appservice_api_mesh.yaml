@@ -69,6 +69,8 @@
 {{- range $read := $settingsReads -}}
 {{- $routes = append $routes (dict "name" (printf "%s-%s" $read.name $tenant) "namespace" (printf "user-system-%s" $tenant) "account" "bytetrade-sys-ops" "method" "GET" "path" $read.path "pathType" (default "Exact" $read.pathType) "userHeader" $tenant) -}}
 {{- end -}}
+{{- /* The tenant frontend resolves manifest option lists through its system-server proxy. */ -}}
+{{- $routes = append $routes (dict "name" (printf "app-env-remote-options-%s" $tenant) "namespace" (printf "user-system-%s" $tenant) "account" "bytetrade-sys-ops" "method" "POST" "path" "/app-service/v1/appenv/remote-options-proxy" "userHeader" $tenant) -}}
 {{- /* Keep this write opt-in until the Settings and app-service logs redact environment values. The handler checks the caller's current administrator role. */ -}}
 {{- if $mesh.systemEnvWrites -}}
 {{- $routes = append $routes (dict "name" (printf "settings-system-envs-save-%s" $tenant) "namespace" (printf "user-system-%s" $tenant) "account" "bytetrade-sys-ops" "method" "PUT" "path" "/app-service/v1/systemenvs" "userHeader" $tenant) -}}
