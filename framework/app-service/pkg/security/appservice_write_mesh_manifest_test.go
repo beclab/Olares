@@ -35,6 +35,13 @@ func TestAppServiceMeshScopedWrites(t *testing.T) {
 		"method": "GET",
 		"path":   map[string]any{"type": "Exact", "value": "/app-service/v1/users/admins"},
 	}})
+	checkAppServiceCapability(t, active, "market-chart-values", "os-framework", "market-sa", []any{map[string]any{
+		"method": "GET",
+		"path":   map[string]any{"type": "Exact", "value": "/app-service/v1/apps/oamvalues"},
+	}})
+	if prepared["AuthorizationPolicy/market-chart-values"] != nil {
+		t.Fatal("preparation granted Market its chart-values capability")
+	}
 	for _, tenant := range tenants {
 		t.Run(tenant, func(t *testing.T) {
 			lifecycle := "market-lifecycle-" + tenant
@@ -61,6 +68,8 @@ func TestAppServiceMeshScopedWrites(t *testing.T) {
 				query          []any
 			}{
 				{method: "POST", action: "install"},
+				{method: "POST", action: "upgrade"},
+				{method: "POST", action: "uninstall"},
 				{method: "POST", action: "cancel", query: []any{map[string]any{"type": "Exact", "name": "type", "value": "operate"}}},
 			}
 			var matches []any
@@ -72,7 +81,7 @@ func TestAppServiceMeshScopedWrites(t *testing.T) {
 						t.Fatalf("%s route misses app %s", operation.action, name)
 					}
 				}
-				for _, invalid := range []string{"a/uninstall", "a-/" + operation.action, "a%2fb/" + operation.action, "a/" + operation.action + "/extra", "a/../b/" + operation.action} {
+				for _, invalid := range []string{"a/unrelated-operation", "a-/" + operation.action, "a%2fb/" + operation.action, "a/" + operation.action + "/extra", "a/../b/" + operation.action} {
 					if path.MatchString("/app-service/v1/apps/" + invalid) {
 						t.Fatalf("%s route admits unrelated path %s", operation.action, invalid)
 					}
@@ -230,4 +239,27 @@ func checkAppServiceCapability(t *testing.T, resources map[string]map[string]any
 		!reflect.DeepEqual(authorization["requiredAuthenticationRefs"], []any{map[string]any{"group": "policy.linkerd.io", "kind": "MeshTLSAuthentication", "name": name}}) {
 		t.Fatalf("wrong authorization for %s: %v", name, authorization)
 	}
+}
+
+func TestAppServiceEnrollmentDoesNotExpandExistingWrites(t *testing.T) {
+	tenants := []string{"alice", "bob"}
+	docs, err := renderAppServiceMeshManifests(t, map[string]any{
+		"appServiceAPIMesh": map[string]any{"prepare": true, "activate": true, "tenants": tenants,
+			"marketLifecycle": true, "marketLifecycleTenants": []string{"alice"},
+			"systemEnvWrites": true, "systemEnvWriterTenants": []string{"alice"},
+		},
+		"marketBackendMTLS": map[string]any{"prepare": true, "activate": true, "tenants": tenants},
+		"marketLinkerd":     true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, capability := range []string{"market-lifecycle", "market-runtime", "settings-system-envs-save"} {
+		if docs["AuthorizationPolicy/"+capability+"-alice"] == nil || docs["AuthorizationPolicy/"+capability+"-bob"] != nil {
+			t.Fatalf("enrollment modified the approved cohort for %s", capability)
+		}
+	}
+	const status = "^/app-service/v1/apps/[a-z0-9]([a-z0-9-]*[a-z0-9])?/status$"
+	checkAppServiceCapability(t, docs, "market-app-progress-bob", "user-system-bob", "bytetrade-sys-ops",
+		[]any{appServiceTenantMatch("bob", "GET", "RegularExpression", status)})
 }

@@ -80,7 +80,17 @@ func (t *InstallOsSystem) Execute(runtime connector.Runtime) error {
 	ctx, cancel = context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancel()
 	var frameworkPath = path.Join(runtime.GetInstallerDir(), "wizard", "config", "os-framework")
-	if err := utils.UpgradeCharts(ctx, actionConfig, settings, common.ChartNameOSFramework, frameworkPath, "", common.NamespaceOsFramework, vals, false); err != nil {
+	staged, err := utils.AppServiceAPIPolicyChartExists(frameworkPath)
+	if err != nil {
+		return err
+	}
+	if staged {
+		tenants := []utils.AppServiceAPITenant{{Name: t.KubeConf.Arg.User.UserName, Role: "owner"}}
+		if err := utils.PrepareAppServiceAPIValues(actionConfig, common.ChartNameOSFramework, vals, tenants); err != nil {
+			return err
+		}
+	}
+	if err := utils.UpgradeCharts(ctx, actionConfig, settings, common.ChartNameOSFramework, frameworkPath, "", common.NamespaceOsFramework, vals, staged); err != nil {
 		return err
 	}
 
@@ -376,6 +386,13 @@ func (m *InstallOsSystemModule) Init() {
 		Delay:  10 * time.Second,
 	}
 
+	checkAppServicePolicies := &task.LocalTask{
+		Name:   "CheckAppServiceAPIPolicies",
+		Action: new(CheckAppServiceAPIPolicies),
+		Retry:  3,
+		Delay:  10 * time.Second,
+	}
+
 	patchOs := &task.LocalTask{
 		Name:   "PatchOs",
 		Action: &Patch{},
@@ -392,8 +409,27 @@ func (m *InstallOsSystemModule) Init() {
 		createBackupConfigMap,
 		checkSystemService,
 		checkLinkerdControlPlane,
+		checkAppServicePolicies,
 		patchOs,
 	}
+}
+
+type CheckAppServiceAPIPolicies struct {
+	common.KubeAction
+}
+
+func (t *CheckAppServiceAPIPolicies) Execute(runtime connector.Runtime) error {
+	chart := path.Join(runtime.GetInstallerDir(), "wizard", "config", "os-framework")
+	staged, err := utils.AppServiceAPIPolicyChartExists(chart)
+	if err != nil || !staged {
+		return err
+	}
+	config, err := ctrl.GetConfig()
+	if err != nil {
+		return err
+	}
+	return utils.WaitForPreparedAppServiceAPI(context.Background(), config,
+		[]utils.AppServiceAPITenant{{Name: t.KubeConf.Arg.User.UserName, Role: "owner"}})
 }
 
 func getGpuType(gpuEnable bool) (gpuType string) {

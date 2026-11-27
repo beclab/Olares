@@ -41,7 +41,7 @@ func WaitForTenantActivationPolicies(ctx context.Context, config *rest.Config, s
 
 // WaitForLauncherPolicies waits for the Linkerd controller to attach the routes
 // before the launcher can select the strict BFL Server.
-func WaitForLauncherPolicies(ctx context.Context, config *rest.Config, space string) error {
+func WaitForLauncherPolicies(ctx context.Context, config *rest.Config, space string, tenantAPI bool) error {
 	client, err := dynamic.NewForConfig(config)
 	if err != nil {
 		return err
@@ -51,14 +51,16 @@ func WaitForLauncherPolicies(ctx context.Context, config *rest.Config, space str
 		{space, "bfl-api-frontend-apps", "bfl-api"},
 		{space, "bfl-api-login-password", "bfl-api"},
 		{"os-framework", "vault-public-rpc", "vault-public-rpc"},
-		{"os-framework", "bfl-list-" + tenant, "app-service-api"},
 	}
 	// Full app-service API enforcement has its own enrollment prerequisites.
 	// Keep compatibility for installers that have not enabled that profile.
 	server := schema.GroupVersionResource{Group: "policy.linkerd.io", Version: "v1beta3", Resource: "servers"}
-	if _, err := client.Resource(server).Namespace("os-framework").Get(ctx, "app-service-api", metav1.GetOptions{}); apierrors.IsNotFound(err) {
-		routes = routes[:len(routes)-1]
-	} else if err != nil {
+	if _, err := client.Resource(server).Namespace("os-framework").Get(ctx, "app-service-api", metav1.GetOptions{}); err == nil {
+		routes = append(routes, launcherRoute{"os-framework", "bfl-list-" + tenant, "app-service-api"})
+		if tenantAPI {
+			routes = append(routes, launcherRoute{"os-framework", "launcher-api-" + tenant, "app-service-api"})
+		}
+	} else if !apierrors.IsNotFound(err) {
 		return err
 	}
 	return waitForLauncherRoutes(ctx, client, routes)

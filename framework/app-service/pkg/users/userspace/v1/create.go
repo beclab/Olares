@@ -381,7 +381,8 @@ func (c *Creator) installLauncher(ctx context.Context, userspace, chartRoot stri
 		}
 	}
 	if staged {
-		if err := helm.WaitForLauncherPolicies(ctx, c.k8sConfig, userspace); err != nil {
+		tenantAPI := chart.Metadata.Annotations["traffic.olares.io/app-service-tenant-api-mesh"] == "true"
+		if err := helm.WaitForLauncherPolicies(ctx, c.k8sConfig, userspace, tenantAPI); err != nil {
 			return "", err
 		}
 		if !enforced {

@@ -468,11 +468,30 @@ func (u *upgradeSystemComponents) Execute(runtime connector.Runtime) error {
 	ctx, cancelFramework := context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancelFramework()
 	frameworkChartPath := path.Join(runtime.GetInstallerDir(), "wizard", "config", "os-framework")
-	if err := utils.UpgradeCharts(ctx, actionConfig, settings, common.ChartNameOSFramework, frameworkChartPath, "", common.NamespaceOsFramework, nil, true); err != nil {
+	staged, err := utils.AppServiceAPIPolicyChartExists(frameworkChartPath)
+	if err != nil {
+		return err
+	}
+	if !staged {
+		return utils.UpgradeCharts(ctx, actionConfig, settings, common.ChartNameOSFramework, frameworkChartPath, "", common.NamespaceOsFramework, nil, true)
+	}
+	users, _, err := listUsersToUpgrade()
+	if err != nil {
+		return err
+	}
+	tenants := make([]utils.AppServiceAPITenant, 0, len(users))
+	for _, user := range users {
+		tenants = append(tenants, utils.AppServiceAPITenant{Name: user.Name, Role: user.Annotations["bytetrade.io/owner-role"]})
+	}
+	values := map[string]any{}
+	if err := utils.PrepareAppServiceAPIValues(actionConfig, common.ChartNameOSFramework, values, tenants); err != nil {
+		return err
+	}
+	if err := utils.UpgradeCharts(ctx, actionConfig, settings, common.ChartNameOSFramework, frameworkChartPath, "", common.NamespaceOsFramework, values, true); err != nil {
 		return err
 	}
 
-	return nil
+	return utils.WaitForPreparedAppServiceAPI(ctx, config, tenants)
 }
 
 type updateOlaresVersion struct {

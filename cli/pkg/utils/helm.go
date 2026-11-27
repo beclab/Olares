@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
 	"helm.sh/helm/v3/pkg/storage/driver"
@@ -151,10 +152,14 @@ func UpgradeBFLLauncher(ctx context.Context, config *rest.Config, cfg *action.Co
 			}
 		}
 	}
+	_, tenantAPIErr := os.Stat(filepath.Join(path, "templates", "bfl-tenant-api-mtls.yaml"))
+	if tenantAPIErr != nil && !os.IsNotExist(tenantAPIErr) {
+		return tenantAPIErr
+	}
 	return stageBFLLauncherMesh(bfl, enforced, reuseValues, func(reuse, waitReady bool) error {
 		return upgradeCharts(ctx, cfg, settings, name, path, "", namespace, values, reuse, waitReady)
 	}, func() error {
-		return WaitForLauncherPolicies(ctx, config, namespace)
+		return WaitForLauncherPolicies(ctx, config, namespace, tenantAPIErr == nil)
 	})
 }
 
