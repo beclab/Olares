@@ -3,6 +3,10 @@ kind: NetworkPolicy
 metadata:
   name: app-gateway-caller-jwt-jwks-egress
   namespace: os-gateway
+  labels:
+    app.kubernetes.io/managed-by: app-service
+    app.kubernetes.io/component: linkerd-mesh
+    app.kubernetes.io/name: app-gateway
 spec:
   podSelector:
     matchLabels:

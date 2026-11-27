@@ -110,6 +110,10 @@ func TestJWKSPoliciesAllowOnlyMeshedAppGatewayOnBackendPort(t *testing.T) {
 	if err := yaml.UnmarshalStrict(data, &egress); err != nil {
 		t.Fatal(err)
 	}
+	if egress.Labels["app.kubernetes.io/managed-by"] != "app-service" ||
+		egress.Labels["app.kubernetes.io/component"] != "linkerd-mesh" {
+		t.Fatal("namespace policy cleanup would remove the JWKS egress policy")
+	}
 	ingress := desiredJWKSIngressNP(8444)
 	if len(egress.Spec.PolicyTypes) != 1 || egress.Spec.PolicyTypes[0] != networkingv1.PolicyTypeEgress ||
 		len(egress.Spec.Egress) != 1 || len(egress.Spec.Egress[0].To) != 1 ||
