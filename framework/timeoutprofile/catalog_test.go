@@ -23,8 +23,13 @@ func TestDefaultValuesPinned(t *testing.T) {
 		want time.Duration
 	}{
 		{"edge route timeout", c.Edge.RouteTimeout, 0},
+		{"edge route idle", c.Edge.RouteIdle, 0},
 		{"edge request headers", c.Edge.RequestHeaders, 10 * time.Second},
-		{"edge stream idle fallback", c.Edge.StreamIdleFallback, 300 * time.Second},
+		{"edge stream idle", c.Edge.StreamIdle, 1800 * time.Second},
+		{"edge upstream pool idle", c.Edge.UpstreamPoolIdle, 10 * time.Second},
+		{"edge tcp idle", c.Edge.TCPIdle, time.Hour},
+		{"edge tcp keepalive time", c.Edge.TCPKeepaliveTime, 60 * time.Second},
+		{"edge tcp keepalive interval", c.Edge.TCPKeepaliveInterval, 15 * time.Second},
 		{"edge max stream duration", c.Edge.MaxStreamDuration, 24 * time.Hour},
 		{"edge connect", c.Edge.Connect, 5 * time.Second},
 		{"edge files idle", c.Edge.FilesIdle, 1800 * time.Second},
@@ -54,8 +59,11 @@ func TestDefaultValuesPinned(t *testing.T) {
 	if c.Edge.AuthFailureStatus != 503 {
 		t.Errorf("edge auth failure status = %d, want 503", c.Edge.AuthFailureStatus)
 	}
-	if c.Edge.ConnectionBufferBytes != 32*1024 {
-		t.Errorf("edge connection buffer = %d, want %d", c.Edge.ConnectionBufferBytes, 32*1024)
+	if c.Edge.ConnectionBufferBytes != 1<<20 {
+		t.Errorf("edge connection buffer = %d, want %d", c.Edge.ConnectionBufferBytes, 1<<20)
+	}
+	if c.Edge.TCPKeepaliveProbes != 4 {
+		t.Errorf("edge tcp keepalive probes = %d, want 4", c.Edge.TCPKeepaliveProbes)
 	}
 	if c.Version != CatalogVersion {
 		t.Errorf("version = %q, want %q", c.Version, CatalogVersion)
@@ -111,9 +119,34 @@ func TestValidateRejectsInversions(t *testing.T) {
 			wantErr: "auth failure status must be a 5xx",
 		},
 		{
-			name:    "stream idle fallback above interactive idle",
-			mutate:  func(c *Catalog) { c.Edge.StreamIdleFallback = time.Hour },
-			wantErr: "stream idle fallback",
+			name:    "stream idle above idle max",
+			mutate:  func(c *Catalog) { c.Edge.StreamIdle = 2 * time.Hour },
+			wantErr: "edge stream idle",
+		},
+		{
+			name:    "stream idle unset",
+			mutate:  func(c *Catalog) { c.Edge.StreamIdle = 0 },
+			wantErr: "edge stream idle",
+		},
+		{
+			name:    "route idle outside bounds",
+			mutate:  func(c *Catalog) { c.Edge.RouteIdle = 10 * time.Second },
+			wantErr: "edge route idle",
+		},
+		{
+			name:    "upstream pool idle unset",
+			mutate:  func(c *Catalog) { c.Edge.UpstreamPoolIdle = 0 },
+			wantErr: "edge upstream pool idle",
+		},
+		{
+			name:    "tcp idle unset",
+			mutate:  func(c *Catalog) { c.Edge.TCPIdle = 0 },
+			wantErr: "edge tcp idle",
+		},
+		{
+			name:    "tcp keepalive probes zero",
+			mutate:  func(c *Catalog) { c.Edge.TCPKeepaliveProbes = 0 },
+			wantErr: "edge tcp keepalive",
 		},
 		{
 			name:    "files idle below transfer idle",

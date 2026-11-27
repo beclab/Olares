@@ -44,15 +44,23 @@ const (
 
 func main() {
 	klog.InitFlags(nil)
-	tcpIdleTimeout := flag.Duration("xds-tcp-idle-timeout", time.Hour, "tcp proxy idle timeout")
-	httpStreamIdleTimeout := flag.Duration("xds-http-stream-idle-timeout", 30*time.Minute, "http stream idle timeout")
-	connectTimeout := flag.Duration("xds-connect-timeout", 5*time.Second, "upstream connect timeout")
-	routeTimeout := flag.Duration("xds-route-timeout", 5*time.Minute, "route timeout")
-	clusterIdleTimeout := flag.Duration("xds-cluster-idle-timeout", 10*time.Second, "upstream HTTP connection idle timeout (CommonHttpProtocolOptions.IdleTimeout); set below the backend keep-alive limit to avoid stale-connection resets")
+	xdsOpts := xdstranslator.DefaultOptions()
+	flag.DurationVar(&xdsOpts.TCPIdleTimeout, "xds-tcp-idle-timeout", xdsOpts.TCPIdleTimeout, "tcp proxy idle timeout")
+	flag.DurationVar(&xdsOpts.HTTPStreamIdleTimeout, "xds-http-stream-idle-timeout", xdsOpts.HTTPStreamIdleTimeout, "http stream idle timeout")
+	flag.DurationVar(&xdsOpts.ConnectTimeout, "xds-connect-timeout", xdsOpts.ConnectTimeout, "upstream connect timeout")
+	flag.DurationVar(&xdsOpts.RouteTimeout, "xds-route-timeout", xdsOpts.RouteTimeout, "absolute per-request route timeout; 0 disables it so slow LLM upstreams (long TTFT/decode) are not cut off")
+	flag.DurationVar(&xdsOpts.RouteIdleTimeout, "xds-route-idle-timeout", xdsOpts.RouteIdleTimeout, "per-request idle timeout (RouteAction.idle_timeout): reset a request when no bytes flow in either direction for this long; 0 inherits -xds-http-stream-idle-timeout")
+	flag.DurationVar(&xdsOpts.ClusterIdleTimeout, "xds-cluster-idle-timeout", xdsOpts.ClusterIdleTimeout, "upstream HTTP connection idle timeout (CommonHttpProtocolOptions.IdleTimeout); set below the backend keep-alive limit to avoid stale-connection resets")
+	flag.DurationVar(&xdsOpts.TCPKeepaliveTime, "xds-tcp-keepalive-time", xdsOpts.TCPKeepaliveTime, "idle time before the first TCP keepalive probe on downstream and upstream connections")
+	flag.DurationVar(&xdsOpts.TCPKeepaliveInterval, "xds-tcp-keepalive-interval", xdsOpts.TCPKeepaliveInterval, "interval between TCP keepalive probes")
+	tcpKeepaliveProbes := flag.Uint("xds-tcp-keepalive-probes", uint(xdsOpts.TCPKeepaliveProbes), "unanswered TCP keepalive probes before the connection is dropped")
+	httpsBufferLimit := flag.Uint("xds-https-buffer-limit-bytes", uint(xdsOpts.HTTPSBufferLimitBytes), "HTTPS listener per-connection buffer limit; HTML responses rewritten by the Lua filter must fit in it")
 
 	flag.Parse()
 	defer klog.Flush()
-	xdstranslator.SetTimeouts(*tcpIdleTimeout, *httpStreamIdleTimeout, *connectTimeout, *routeTimeout, *clusterIdleTimeout)
+	xdsOpts.TCPKeepaliveProbes = uint32(*tcpKeepaliveProbes)
+	xdsOpts.HTTPSBufferLimitBytes = uint32(*httpsBufferLimit)
+	xdstranslator.SetOptions(xdsOpts)
 
 	ctrl.SetLogger(klog.NewKlogr())
 

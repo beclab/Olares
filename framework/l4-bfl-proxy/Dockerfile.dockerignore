@@ -1,0 +1,7 @@
+*
+!l4-bfl-proxy/go.mod
+!l4-bfl-proxy/go.sum
+!l4-bfl-proxy/cmd/
+!l4-bfl-proxy/internal/
+!timeoutprofile/
+timeoutprofile/*_test.go

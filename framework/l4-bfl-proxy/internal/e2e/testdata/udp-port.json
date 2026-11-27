@@ -25,6 +25,13 @@
       },
       "commonHttpProtocolOptions": {
         "idleTimeout": "10s"
+      },
+      "upstreamConnectionOptions": {
+        "tcpKeepalive": {
+          "keepaliveProbes": 4,
+          "keepaliveTime": 60,
+          "keepaliveInterval": 15
+        }
       }
     },
     {
@@ -52,6 +59,13 @@
       },
       "commonHttpProtocolOptions": {
         "idleTimeout": "10s"
+      },
+      "upstreamConnectionOptions": {
+        "tcpKeepalive": {
+          "keepaliveProbes": 4,
+          "keepaliveTime": 60,
+          "keepaliveInterval": 15
+        }
       }
     },
     {
@@ -79,6 +93,13 @@
       },
       "commonHttpProtocolOptions": {
         "idleTimeout": "10s"
+      },
+      "upstreamConnectionOptions": {
+        "tcpKeepalive": {
+          "keepaliveProbes": 4,
+          "keepaliveTime": 60,
+          "keepaliveInterval": 15
+        }
       }
     },
     {
@@ -106,6 +127,13 @@
       },
       "commonHttpProtocolOptions": {
         "idleTimeout": "10s"
+      },
+      "upstreamConnectionOptions": {
+        "tcpKeepalive": {
+          "keepaliveProbes": 4,
+          "keepaliveTime": 60,
+          "keepaliveInterval": 15
+        }
       }
     },
     {
@@ -133,6 +161,13 @@
       },
       "commonHttpProtocolOptions": {
         "idleTimeout": "10s"
+      },
+      "upstreamConnectionOptions": {
+        "tcpKeepalive": {
+          "keepaliveProbes": 4,
+          "keepaliveTime": 60,
+          "keepaliveInterval": 15
+        }
       }
     },
     {
@@ -160,6 +195,13 @@
       },
       "commonHttpProtocolOptions": {
         "idleTimeout": "10s"
+      },
+      "upstreamConnectionOptions": {
+        "tcpKeepalive": {
+          "keepaliveProbes": 4,
+          "keepaliveTime": 60,
+          "keepaliveInterval": 15
+        }
       }
     },
     {
@@ -187,6 +229,13 @@
       },
       "commonHttpProtocolOptions": {
         "idleTimeout": "10s"
+      },
+      "upstreamConnectionOptions": {
+        "tcpKeepalive": {
+          "keepaliveProbes": 4,
+          "keepaliveTime": 60,
+          "keepaliveInterval": 15
+        }
       }
     }
   ],
@@ -500,13 +549,39 @@
           "name": "https_443_alice_alice_snowinning_com"
         }
       ],
-      "perConnectionBufferLimitBytes": 32768,
+      "perConnectionBufferLimitBytes": 1048576,
       "listenerFilters": [
         {
           "name": "envoy.filters.listener.tls_inspector",
           "typedConfig": {
             "@type": "type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector"
           }
+        }
+      ],
+      "socketOptions": [
+        {
+          "description": "SO_KEEPALIVE",
+          "level": "1",
+          "name": "9",
+          "intValue": "1"
+        },
+        {
+          "description": "TCP_KEEPIDLE",
+          "level": "6",
+          "name": "4",
+          "intValue": "60"
+        },
+        {
+          "description": "TCP_KEEPINTVL",
+          "level": "6",
+          "name": "5",
+          "intValue": "15"
+        },
+        {
+          "description": "TCP_KEEPCNT",
+          "level": "6",
+          "name": "6",
+          "intValue": "4"
         }
       ]
     },
@@ -766,7 +841,7 @@
           "name": "https_444_alice_alice_snowinning_com"
         }
       ],
-      "perConnectionBufferLimitBytes": 32768,
+      "perConnectionBufferLimitBytes": 1048576,
       "listenerFilters": [
         {
           "name": "envoy.filters.listener.proxy_protocol",
@@ -779,6 +854,32 @@
           "typedConfig": {
             "@type": "type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector"
           }
+        }
+      ],
+      "socketOptions": [
+        {
+          "description": "SO_KEEPALIVE",
+          "level": "1",
+          "name": "9",
+          "intValue": "1"
+        },
+        {
+          "description": "TCP_KEEPIDLE",
+          "level": "6",
+          "name": "4",
+          "intValue": "60"
+        },
+        {
+          "description": "TCP_KEEPINTVL",
+          "level": "6",
+          "name": "5",
+          "intValue": "15"
+        },
+        {
+          "description": "TCP_KEEPCNT",
+          "level": "6",
+          "name": "6",
+          "intValue": "4"
         }
       ]
     },
@@ -822,7 +923,7 @@
               },
               "route": {
                 "cluster": "profile_service_alice",
-                "timeout": "300s"
+                "timeout": "0s"
               },
               "typedPerFilterConfig": {
                 "envoy.filters.http.ext_authz": {
@@ -853,7 +954,7 @@
               },
               "route": {
                 "cluster": "app_alice_wireguard_wg",
-                "timeout": "300s",
+                "timeout": "0s",
                 "upgradeConfigs": [
                   {
                     "upgradeType": "websocket"
@@ -892,7 +993,7 @@
               },
               "route": {
                 "cluster": "nonapp_auth_alice",
-                "timeout": "300s",
+                "timeout": "0s",
                 "upgradeConfigs": [
                   {
                     "upgradeType": "websocket"
@@ -934,7 +1035,7 @@
               },
               "route": {
                 "cluster": "nonapp_desktop_alice",
-                "timeout": "300s",
+                "timeout": "0s",
                 "upgradeConfigs": [
                   {
                     "upgradeType": "websocket"
@@ -973,7 +1074,7 @@
               },
               "route": {
                 "cluster": "nonapp_wizard_alice",
-                "timeout": "300s",
+                "timeout": "0s",
                 "upgradeConfigs": [
                   {
                     "upgradeType": "websocket"
@@ -1132,7 +1233,7 @@
               },
               "route": {
                 "cluster": "profile_service_alice",
-                "timeout": "300s"
+                "timeout": "0s"
               },
               "typedPerFilterConfig": {
                 "envoy.filters.http.ext_authz": {
@@ -1163,7 +1264,7 @@
               },
               "route": {
                 "cluster": "app_alice_wireguard_wg",
-                "timeout": "300s",
+                "timeout": "0s",
                 "upgradeConfigs": [
                   {
                     "upgradeType": "websocket"
@@ -1202,7 +1303,7 @@
               },
               "route": {
                 "cluster": "nonapp_auth_alice",
-                "timeout": "300s",
+                "timeout": "0s",
                 "upgradeConfigs": [
                   {
                     "upgradeType": "websocket"
@@ -1244,7 +1345,7 @@
               },
               "route": {
                 "cluster": "nonapp_desktop_alice",
-                "timeout": "300s",
+                "timeout": "0s",
                 "upgradeConfigs": [
                   {
                     "upgradeType": "websocket"
@@ -1283,7 +1384,7 @@
               },
               "route": {
                 "cluster": "nonapp_wizard_alice",
-                "timeout": "300s",
+                "timeout": "0s",
                 "upgradeConfigs": [
                   {
                     "upgradeType": "websocket"

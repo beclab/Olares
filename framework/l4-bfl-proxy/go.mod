@@ -1,8 +1,9 @@
 module github.com/beclab/l4-bfl-proxy
 
-go 1.24.11
+go 1.25.0
 
 require (
+	github.com/beclab/Olares/framework/timeoutprofile v0.0.0
 	github.com/beclab/api v0.0.24
 	github.com/envoyproxy/go-control-plane v0.14.0
 	github.com/envoyproxy/go-control-plane/envoy v1.36.0
@@ -80,3 +81,5 @@ require (
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.2 // indirect
 )
+
+replace github.com/beclab/Olares/framework/timeoutprofile => ../timeoutprofile
