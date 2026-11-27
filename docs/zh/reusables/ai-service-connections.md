@@ -17,7 +17,7 @@
 
    ![在 Router 的 Engine args 中查看 llama.cpp 的精确上下文大小](/images/manual/use-cases/router-model-card-context.png#bordered)
 
-请以自己模型实例中的配置为准。`104448` 只是本例的值，并非所有安装的固定值。`-c` 是 llama.cpp 的参数，其他引擎使用不同的上下文参数。
-
-客户端填写的上下文大小不能超过引擎的实际配置。只增大客户端的设置不会扩大引擎的上下文容量。更换 `default-chat` 指向的模型后，也要检查客户端的上下文设置。
+:::tip 同步客户端上下文设置
+客户端的上下文长度应设为模型实例中 **Engine args** 配置的值或更小。更换 `default-chat` 指向的模型后，同步检查该值。不同引擎使用各自的上下文参数，例如 llama.cpp 使用 `-c`。
+:::
 <!-- #endregion model-context-window -->

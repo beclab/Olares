@@ -36,7 +36,7 @@ Use Olares 1.12.7 or later. For Olares 1.12.6, select the older guide at the top
 
 ## Step 1: Choose a local LLM inference engine {#locate-engine-base-apps}
 
-Start with the model's source and format. For vLLM or SGLang, also check that the model supports that engine.
+Choose an Engine Base app based on the model's file format and your workload.
 
 | Model source or need | Engine Base app |
 | --- | --- |
@@ -45,6 +45,10 @@ Start with the model's source and format. For vLLM or SGLang, also check that th
 | Hugging Face `.safetensors` weights, serving multiple concurrent requests | vLLM Engine Base |
 | Hugging Face `.safetensors` weights, structured generation or reasoning optimizations | SGLang Engine Base |
 | Run large MoE models such as Hy4-Flash on a consumer GPU by using system RAM and SSD storage alongside GPU memory | Strata Engine Base |
+
+:::info Choosing vLLM or SGLang
+The engine needs to support the model architecture and quantization method. Check the deployment instructions on the Hugging Face model page for a recommended engine and version. For example, an AWQ model requires support for that model's AWQ implementation.
+:::
 
 1. Open Market and search for "Engine Base".
 2. Find your chosen engine in the results.
@@ -57,8 +61,7 @@ Start with the model's source and format. For vLLM or SGLang, also check that th
 
    ![Create a model instance](/images/manual/olares/llm-base-apps-create-instance2.png#bordered)
 
-2. Select the hardware accelerator for the instance, then click **Confirm**.
-3. Enter the instance names. These examples use Qwen3.6-27B MTP:
+2. Enter the instance names. These examples use Qwen3.6-27B MTP:
 
    | Field | What to enter | Where it appears |
    | --- | --- | --- |
@@ -67,7 +70,11 @@ Start with the model's source and format. For vLLM or SGLang, also check that th
 
    Strata also provides **Shortcut name for [strataui]** for naming its Strata UI shortcut.
 
-4. Click **Create** to open **Configure environment variables for [New-app-name]**.
+3. Click **Create** to open **Configure environment variables for [New-app-name]**.
+
+:::info Hardware accelerator selection
+Market prompts you to choose when several hardware acceleration modes are available on your device. With one available mode, Olares selects it automatically and continues to instance configuration.
+:::
 
 <a id="configure-engine-environment-variables"></a>
 
@@ -81,7 +88,7 @@ Fill in the fields for your chosen engine below. Expand an example to see a comp
 
 Choose a GGUF file from Hugging Face. `<repo>` includes the user or organization and repository name. `<quantization>` is the quantization type, with one type per instance.
 
-| Field | Format |
+| Field | Format and purpose |
 | --- | --- |
 | **MODEL_SOURCE** | `hf://<repo> --include <file>.gguf` |
 | **MODEL_NAME** | `<repo>:<quantization>` |
@@ -125,6 +132,8 @@ unsloth/Qwen3.6-27B-MTP-GGUF:UD-Q4_K_XL
 -c 131072 -ngl all -fa on -ctk q8_0 -ctv q8_0 --jinja -np 1 --spec-type draft-mtp --spec-draft-n-max 2
 ```
 
+This model includes MTP weights. `--spec-type draft-mtp` enables MTP speculative decoding, and `--spec-draft-n-max 2` caps each draft at two tokens.
+
 - **LOG_LEVEL**: `Info`
 - **LLAMACPP_REQUIRED_GPU_MEMORY**: `23Gi`
 
@@ -162,6 +171,8 @@ Jackrong/Qwopus3.6-27B-v2-MTP-GGUF:Q4_K_M
 -c 131072 -ngl all -fa on -ctk q8_0 -ctv q8_0 --jinja -np 1 --spec-type draft-mtp --spec-draft-n-max 2
 ```
 
+This model includes MTP weights. `--spec-type draft-mtp` enables MTP speculative decoding, and `--spec-draft-n-max 2` caps each draft at two tokens.
+
 - **LOG_LEVEL**: `Info`
 - **LLAMACPP_REQUIRED_GPU_MEMORY**: `23Gi`
 
@@ -169,9 +180,9 @@ Jackrong/Qwopus3.6-27B-v2-MTP-GGUF:Q4_K_M
 
 ### Configure models with Ollama {#ollama}
 
-Choose a model and tag from the Ollama library.
+Choose a model and tag from the Ollama library. `<model>` is the model name, and `<tag>` identifies its version or quantization.
 
-| Field | Format |
+| Field | Format and purpose |
 | --- | --- |
 | **MODEL_SOURCE** | `ollama://<model>:<tag>` |
 | **MODEL_NAME** | `<model>:<tag>` |
@@ -179,6 +190,7 @@ Choose a model and tag from the Ollama library.
 | **MODEL_MODE** | **Chat** for chat models or **Embedding** for embedding models |
 | **MODEL_SUPPORTS** | Select supported capabilities: **Vision** for images, **Tools** for tool calling, or **Thinking** for reasoning. Use **None** for embedding models |
 | **OLLAMA_REQUIRED_GPU_MEMORY** | Minimum GPU memory needed to start, in MB or Gi, such as `23Gi` |
+| **LOG_LEVEL** | Logging level, such as `Info` |
 
 <details>
 <summary>Example: Gemma 4 26B</summary>
@@ -214,7 +226,7 @@ OLLAMA_KEEP_ALIVE=-1 OLLAMA_CONTEXT_LENGTH=131072 OLLAMA_FLASH_ATTENTION=1 OLLAM
 
 Choose a Hugging Face repository with `.safetensors` weights supported by SGLang. `<repo>` includes the user or organization and repository name.
 
-| Field | Format |
+| Field | Format and purpose |
 | --- | --- |
 | **MODEL_SOURCE** | `hf://<repo>` |
 | **MODEL_NAME** | `<repo>` |
@@ -250,6 +262,8 @@ cyankiwi/Qwen3.5-9B-AWQ-4bit
 --context-length 65536 --mem-fraction-static 0.85 --chunked-prefill-size 4096 --reasoning-parser qwen3 --tool-call-parser qwen3_coder
 ```
 
+This example uses `--reasoning-parser qwen3` to extract reasoning and `--tool-call-parser qwen3_coder` to parse tool calls. When changing model families, choose parsers from the new model's deployment instructions.
+
 - **LOG_LEVEL**: `Info`
 - **SGLANG_REQUIRED_GPU_MEMORY**: `23Gi`
 
@@ -259,7 +273,7 @@ cyankiwi/Qwen3.5-9B-AWQ-4bit
 
 Choose a Hugging Face repository with `.safetensors` weights supported by vLLM. `<repo>` includes the user or organization and repository name.
 
-| Field | Format |
+| Field | Format and purpose |
 | --- | --- |
 | **MODEL_SOURCE** | `hf://<repo>` |
 | **MODEL_NAME** | `<repo>` |
@@ -295,6 +309,8 @@ cyankiwi/gemma-4-12B-it-AWQ-INT4
 --max-model-len 65536 --gpu-memory-utilization 0.9 --tensor-parallel-size 1 --max-num-batched-tokens 8192 --tool-call-parser gemma4 --reasoning-parser gemma4 --enable-prefix-caching --enable-auto-tool-choice
 ```
 
+This example uses `gemma4` for both reasoning and tool-call parsing. `--enable-auto-tool-choice` lets the model choose tool calls. When changing model families, update the parsers using the new model's deployment instructions.
+
 - **LOG_LEVEL**: `Info`
 - **VLLM_REQUIRED_GPU_MEMORY**: `23Gi`
 
@@ -302,30 +318,36 @@ cyankiwi/gemma-4-12B-it-AWQ-INT4
 
 ### Configure models with Strata {#strata}
 
-Strata is useful when a large mixture-of-experts (MoE) model does not fit in your GPU memory. It distributes model data across GPU memory, system RAM, and SSD storage. For example, you can run Hy4-Flash locally for text conversations, reasoning, and tool calling on a single consumer GPU with sufficient RAM and a fast SSD.
+Choose a Strata-supported model pack and its companion files from Hugging Face. `<repo>` includes the user or organization and repository name. `<file>` is the filename, and `<model-name>` is a custom name for the model service.
 
-This section uses Hy4-Flash `.strata` files from Hugging Face. `<repo>` includes the user or organization and repository name. Separate multiple download entries with commas.
+:::info Strata configuration fields
+Use `MODEL_SOURCE`, `MODEL_NAME`, and `MODEL_SUPPORTS` to configure the model and its capabilities. Olares allocates GPU resources based on the app's supported hardware and the resources available on your device. The base app generates model paths and service addresses. Use `ENGINE_ARGS` for inference options.
+:::
 
 | Field | Format and purpose |
 | --- | --- |
 | **MODEL_SOURCE** | `hf://<repo> --include <file>`. Include the model pack and its required companion files |
-| **MODEL_NAME** | Model service name, such as `hy4-flash-sq-64` |
-| **MODEL_SUPPORTS** | Select **Tools** for tool calling and **Thinking** for reasoning when supported by the model |
-| **ENGINE_ARGS** | Space-separated setup and engine options, such as `--context 131072 --draft off`. See [Strata startup parameters](#strata-tuning) for model-family options |
-| **STRATA_CPU_REQUEST** | CPU cores required for scheduling, such as `12` |
-| **STRATA_MEMORY_REQUEST** | System memory required for scheduling, such as `48Gi` |
+| **MODEL_NAME** | `<model-name>`, which identifies the model service |
+| **ENGINE_ARGS** | Include `--context <tokens>` for context length in tokens. Separate arguments with spaces. See [Strata startup parameters](#strata-tuning) for common options |
+| **MODEL_MODE** | Select **Chat** |
+| **MODEL_SUPPORTS** | Select supported capabilities: **Vision** for images, **Tools** for tool calling, or **Thinking** for reasoning. Use **None** for a model with no additional capabilities |
 | **STRATA_CPU_LIMIT** | Maximum CPU cores the container can use, such as `19` |
 | **STRATA_MEMORY_LIMIT** | Container system memory limit, such as `56Gi`. Exceeding it can terminate and restart the container due to an out-of-memory error |
-| **STRATA_REQUIRED_GPU_MEMORY** | GPU memory required for scheduling, such as `23Gi`, accounted for separately from system memory |
+| **STRATA_REQUIRED_GPU_MEMORY** | Minimum GPU memory needed to start, in MB or Gi, such as `23Gi` |
+| **LOG_LEVEL** | Logging level, such as `Info` |
 
-Set resource requests to fit the CPU, RAM, and GPU memory available on your device, with room for model loading and inference.
+Separate complete `hf://... --include ...` entries with commas. Include the model pack and companion files for the same model version.
+
+Set CPU and RAM limits and the GPU memory requirement to suit your device, with room for model loading and inference.
 
 <details>
 <summary>Example: Hy4-Flash SQ-64</summary>
 
 Model: [strata-engine/Hy4-Flash-Strata](https://huggingface.co/strata-engine/Hy4-Flash-Strata), using the SQ-64 pack. The model pack and required Engram file occupy about 130 GB of disk space together.
 
-The resource budget below is an estimated starting point for a device with 64 GiB of system RAM, 24 GiB of GPU memory, and at least 19 allocatable CPU cores, using a 128K context for text inference. It has not been validated in an Olares runtime test.
+:::info Example resource budget
+These values are estimates for a device with 64 GiB of system RAM, 24 GiB of GPU memory, and 19 available CPU cores, using a 128K text context. Adjust the limits using memory measurements during model loading and long-prompt processing.
+:::
 
 **MODEL_SOURCE**
 
@@ -347,15 +369,24 @@ hy4-flash-sq-64
 --context 131072
 ```
 
+This configuration keeps the default DFly2 drafter. Use these options to adjust this model:
+
+| Goal | What to enter |
+| --- | --- |
+| Disable speculative decoding | `--context 131072 --draft off` |
+| Use Q8 KV caching to reduce cache memory | `--context 131072 -- --kv q8` |
+| Use FP16 KV caching | `--context 131072 -- --kv fp16` |
+| Set GPU and system RAM budgets for expert data | Add `--vram-experts-gb <GiB>` and `--ram-experts-gb <GiB>` to `ENGINE_ARGS`, with headroom for other model components and buffers |
+
+The standalone `--` passes the following KV options directly to the Hy4-Flash engine. `--kv` also accepts `auto` to keep the engine default. Expert budgets control model placement. The resource fields below set container limits and the GPU memory requirement.
+
 | Resource field | Example value | Purpose |
 | --- | --- | --- |
-| **STRATA_CPU_REQUEST** | `12` | Reserve 12 CPU cores for this instance |
-| **STRATA_MEMORY_REQUEST** | `48Gi` | Budget for the SQ-64 model data in RAM, caches, and inference buffers |
 | **STRATA_CPU_LIMIT** | `19` | Allow up to 19 CPU cores on this example device |
 | **STRATA_MEMORY_LIMIT** | `56Gi` | Allow memory growth while leaving 8 GiB of the device RAM for Olares and other services |
 | **STRATA_REQUIRED_GPU_MEMORY** | `23Gi` | Schedule on a GPU with at least 23 GiB available |
 
-The RAM budget is informed by Strata's [Hy4 memory planner](https://github.com/Niko1221/Strata/blob/main/terminal/strata_control/hy4_fit.py). CPU allocations and the GPU scheduling requirement depend on the device. SQ-64 does not prescribe a fixed CPU count or require 23 GiB of GPU memory. With less GPU memory, more model data stays in RAM or is read from the SSD. Adjust the budget for your device and check memory use after loading the model and during long prompts.
+The budget is informed by Strata's [Hy4 memory planner](https://github.com/Niko1221/Strata/blob/main/terminal/strata_control/hy4_fit.py). Adjust the CPU limit and GPU memory requirement for your device. With less GPU memory, Strata keeps more model data in RAM or reads it from the SSD.
 
 </details>
 
@@ -419,15 +450,15 @@ If your client asks for a context length, check the actual setting in Router. Th
 1. On Router's **LLM** page, find the model and click its information icon to open **Model card**.
 2. Click **Edit** and update the engine arguments. For example, llama.cpp uses `-c` for context length, and vLLM uses `--gpu-memory-utilization` for GPU memory fraction. For other engines, see [Inference engine startup parameters](#engine-tuning-arguments) below.
 3. Save your changes. This restarts the engine. Wait for the model to become available before sending requests.
-4. If you changed the context length, check that the client's setting does not exceed the new engine setting.
+4. If you changed the context length, set the client's value to the engine's configured length or lower.
 
 ## Inference engine startup parameters {#engine-tuning-arguments}
 
-Use `ENGINE_ARGS` to control context length, memory use, concurrency, and model-specific features. The tables below list common options. The linked engine references contain the full lists. Example values are separate choices, not a preset to combine unchanged.
+Use `ENGINE_ARGS` to adjust context length, memory use, and concurrency. The tables below cover common tuning options. Model-specific settings are explained in the deployment examples above.
 
 ### llama.cpp {#llama-cpp-tuning}
 
-Enter space-separated flags, such as `-c 65536 -np 1 -ngl all -fa on`. The base app also accepts `LLAMA_ARG_*=value` environment settings.
+Enter space-separated flags, such as `-c 65536 -np 1 -ngl all -fa on`. The base app also accepts `LLAMA_ARG_*=value` environment settings. See the [llama.cpp official reference](https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md) for the full parameter list and supported configurations.
 
 | Argument | Purpose | Example value |
 | --- | --- | --- |
@@ -438,14 +469,10 @@ Enter space-separated flags, such as `-c 65536 -np 1 -ngl all -fa on`. The base 
 | `-ctk` / `-ctv` | K and V cache data types. Quantized caches use less memory. Supported combinations depend on the model and backend. | `q8_0` |
 | `-t` / `--threads` | CPU threads used during generation. | `8` |
 | `--jinja` | Enables Jinja chat templates, including templates used for tool calling. | Flag only |
-| `--spec-type` | Speculative decoding method. `draft-mtp` requires compatible MTP weights. | `draft-mtp` |
-| `--spec-draft-n-max` | Maximum draft tokens per speculative decoding step. | `2` |
-
-See the [llama.cpp server reference](https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md).
 
 ### Ollama {#Ollama-tuning}
 
-Enter space-separated environment assignments, such as `OLLAMA_CONTEXT_LENGTH=8192 OLLAMA_NUM_PARALLEL=1`. These configure the Ollama server. Request options such as `temperature` belong in the client or API request.
+Enter space-separated environment assignments, such as `OLLAMA_CONTEXT_LENGTH=8192 OLLAMA_NUM_PARALLEL=1`. These configure the Ollama server. Request options such as `temperature` belong in the client or API request. See the [Ollama official reference](https://docs.ollama.com/faq) for the full parameter list and supported configurations.
 
 | Setting | Purpose | Example value |
 | --- | --- | --- |
@@ -454,14 +481,15 @@ Enter space-separated environment assignments, such as `OLLAMA_CONTEXT_LENGTH=81
 | `OLLAMA_FLASH_ATTENTION` | Enables Flash Attention, required for KV cache quantization. | `1` |
 | `OLLAMA_KV_CACHE_TYPE` | KV cache precision. Lower precision reduces memory use and can affect output quality. | `f16`, `q8_0`, or `q4_0` |
 | `OLLAMA_NUM_PARALLEL` | Requests processed concurrently per model. More parallel requests require more context memory. | `1` |
-| `OLLAMA_MAX_LOADED_MODELS` | Maximum models loaded at once. | `1` |
 | `OLLAMA_MAX_QUEUE` | Maximum queued requests before the server rejects additional work. | `64` |
-
-See the [Ollama configuration reference](https://docs.ollama.com/faq).
 
 ### SGLang {#SGLang-tuning}
 
-Enter space-separated flags, such as `--context-length 65536 --mem-fraction-static 0.85`. Choose reasoning and tool-call parsers for the model family you deploy.
+Enter space-separated flags, such as `--context-length 65536 --mem-fraction-static 0.85`. See the [SGLang official reference](https://docs.sglang.io/docs/advanced_features/server_arguments) for the full parameter list and supported configurations.
+
+:::warning SGLang 0.5.23 parameter change
+This version removes `--speculative-skip-dp-mlp-sync`. Older configurations containing this flag cause startup to fail.
+:::
 
 | Argument | Purpose | Example value |
 | --- | --- | --- |
@@ -471,15 +499,14 @@ Enter space-separated flags, such as `--context-length 65536 --mem-fraction-stat
 | `--max-running-requests` | Maximum requests running concurrently. | `4` |
 | `--tp-size` | Number of GPUs used for tensor parallelism. | `1` |
 | `--kv-cache-dtype` | KV cache data type, subject to model and GPU support. | `auto` or `fp8_e4m3` |
-| `--reasoning-parser` | Extracts reasoning from model output. | `qwen3` for compatible Qwen models |
-| `--tool-call-parser` | Converts model tool-call output into structured API tool calls. | `qwen25` for compatible Qwen models |
-| `--attention-backend` | Selects the attention implementation for the model and hardware. | `flashinfer` |
-
-For SGLang 0.5.23, remove `--speculative-skip-dp-mlp-sync` from older configurations. This flag now causes startup to fail. See the [SGLang server reference](https://docs.sglang.io/docs/advanced_features/server_arguments) for supported backends, parsers, and speculative decoding options.
 
 ### vLLM {#vLLM-tuning}
 
-Enter space-separated flags, such as `--max-model-len 65536 --gpu-memory-utilization 0.9`. GPU utilization is relative to the memory visible to the engine. On Olares, `VLLM_REQUIRED_GPU_MEMORY` sets that GPU memory budget.
+Enter space-separated flags, such as `--max-model-len 65536 --gpu-memory-utilization 0.9`. GPU utilization is relative to the memory visible to the engine. On Olares, `VLLM_REQUIRED_GPU_MEMORY` sets that GPU memory budget. See the [vLLM official reference](https://docs.vllm.ai/en/latest/configuration/engine_args/) for the full parameter list and supported configurations.
+
+:::tip Leave GPU memory headroom for vLLM
+The base app using vLLM 0.34.0 enables extensible KV caching and defaults GPU utilization to `1.0`. A lower `--gpu-memory-utilization` value, such as `0.9`, leaves headroom within the allocated GPU budget.
+:::
 
 | Argument | Purpose | Example value |
 | --- | --- | --- |
@@ -490,32 +517,17 @@ Enter space-separated flags, such as `--max-model-len 65536 --gpu-memory-utiliza
 | `--max-num-batched-tokens` | Maximum tokens processed in one iteration. Tune with concurrency and prefill chunking to balance throughput and latency. | `8192` |
 | `--enable-prefix-caching` | Reuses cached KV data for shared prompt prefixes. | Flag only |
 | `--kv-cache-dtype` | KV cache data type, subject to model and GPU support. | `auto` or `fp8` |
-| `--reasoning-parser` | Extracts reasoning using the model's output format. | `qwen3` for compatible Qwen models |
-| `--enable-auto-tool-choice` | Lets the model choose tool calls. Configure a matching tool-call parser. | Flag only |
-| `--tool-call-parser` | Parses the model's tool-call format. | `qwen3_xml` for compatible Qwen models |
-| `--enforce-eager` | Uses eager execution instead of CUDA graphs. Useful when troubleshooting graph capture or its memory overhead. | Flag only |
-| `--no-enable-extensible-kv-cache` | Disables extensible KV caching in vLLM 0.34.0. | Flag only |
-
-The base app using vLLM 0.34.0 enables extensible KV caching and defaults GPU utilization to `1.0`. Set an explicit utilization value when you need headroom within the allocated GPU budget. See the [vLLM engine reference](https://docs.vllm.ai/en/latest/configuration/engine_args/).
 
 ### Strata {#strata-tuning}
 
-Enter space-separated flags. Strata accepts setup options and options for the selected model engine. The base app routes them to the appropriate component. Options after a standalone `--` go directly to the engine. Supported values depend on the model family.
+Separate arguments with spaces. Drafter, KV cache, and expert-loading options depend on the model family. See the [Strata model family guide](https://github.com/Niko1221/Strata/blob/main/docs/MODELS.md) for available models, memory requirements, and configuration options by family. For launch argument usage, see the [Strata launch reference](https://github.com/Niko1221/Strata/blob/main/docs/TERMINAL_LAUNCH.md).
 
 | Argument | Purpose and scope | Example value |
 | --- | --- | --- |
 | `--context` | Context length in tokens. The base app also accepts `--max-context` and `--ctx` as aliases. | `131072` |
-| `--draft` | Selects speculative decoding: Qwen3.8 uses MTP or DFlash2, Hy4-Flash uses DFly2, and Inkling-2-Mini uses DSpark. `off` disables drafting. | `dfly2` for Hy4-Flash |
-| `--kv` | KV cache precision. For the Qwen engine, options include `int8`, `q4_0`, `k8v4`, and `fp16`. Other families have different cache implementations. | `int8` for Qwen |
-| `--parallel` | Concurrent decoding slots on engines that support them, such as Qwen. Each slot consumes additional memory. | `1` |
-| `--low-ram` | Qwen expert-loading policy: automatic selection, RAM residency, or file-backed loading. | `auto`, `resident`, or `mmap` |
-| `--resident-budget-gib` | RAM budget for resident experts in supported Qwen UD-Q4_K_XL and UD-IQ4_XS packs, in GiB. | `40` |
-| `--vram-reserve-mib` | GPU memory to leave outside the Qwen expert cache, in MiB. | `1024` |
-| `--vram-experts-gb` / `--ram-experts-gb` | Hy4-Flash expert-placement budgets in GPU memory and RAM, in GB. These exclude other model components and buffers. | `12` / `40` |
-| `--spec-k` | Draft length on engines that expose this option. Tune for the selected drafter. | `4` |
+| `--draft` | Controls speculative decoding. `off` disables drafting. Choose an enabled drafter for the model family. | `off` |
 
-For Hy4-Flash SQ-64, `--context 131072` keeps the default DFly2 drafter. Add `--draft off` to disable it. Expert-placement budgets control model placement. The `STRATA_*_REQUEST`, `STRATA_*_LIMIT`, and `STRATA_REQUIRED_GPU_MEMORY` fields control container resources.
+## Learn more
 
-The base app manages model selection, file paths, networking, GPU selection, and vision. It rejects overrides such as `--family`, `--model`, `--host`, `--port`, `--gpu`, and `--vision` in `ENGINE_ARGS`.
-
-See the [Strata launch reference](https://github.com/Niko1221/Strata/blob/main/docs/TERMINAL_LAUNCH.md) for model-family options.
+- [Connect AI apps through Olares Router](olares-router.md#get-connection-details-from-router)
+- [Troubleshoot model or engine readiness](/manual/help/ts-model-engine-not-ready.md)

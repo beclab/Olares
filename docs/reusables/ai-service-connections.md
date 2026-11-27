@@ -17,7 +17,7 @@ Copy the Router address from your browser. Keep only the protocol and domain, th
 
    ![Read the exact llama.cpp context size in Router Engine args](/images/manual/use-cases/router-model-card-context.png#bordered)
 
-Use the value shown for your own model instance. `104448` is an example, not a fixed value for every installation. The `-c` parameter is specific to llama.cpp. Other engines use different context parameters.
-
-The client's context setting must not exceed the engine's configured context size. Increasing the client setting alone does not increase the engine's capacity. If you change the model behind `default-chat`, review the client's context setting as well.
+:::tip Match the client's context setting
+Set the client's context length to the value configured in your model instance's **Engine args**, or lower. Review this value when changing the model behind `default-chat`. Each engine uses its own context parameter, such as `-c` for llama.cpp.
+:::
 <!-- #endregion model-context-window -->

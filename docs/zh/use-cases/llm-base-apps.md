@@ -38,9 +38,9 @@ Olares 版本需为 1.12.7 或更高版本。使用 1.12.6 时，请切换到页
 [升级到最新 Olares 版本](/zh/manual/olares/settings/update.md)，可获得更多预构建模型应用。
 :::
 
-## Step 1: 选择本地大模型推理引擎 {#找到引擎基座应用}
+## 步骤 1：选择本地大模型推理引擎 {#找到引擎基座应用}
 
-先看模型来源和格式，再选择基座。使用 vLLM 或 SGLang 前，还需确认模型支持该引擎。
+根据模型文件格式和使用需求选择引擎基座。
 
 | 模型来源或需求 | 选择的基座 |
 | --- | --- |
@@ -50,19 +50,22 @@ Olares 版本需为 1.12.7 或更高版本。使用 1.12.6 时，请切换到页
 | Hugging Face 上的 `.safetensors` 权重，需要结构化生成或推理优化 | SGLang 引擎基座 |
 | 结合系统内存、SSD 和显存，在消费级显卡上运行 Hy4-Flash 等大型 MoE 模型 | Strata 引擎基座 |
 
+:::info 选择 vLLM 或 SGLang
+这两种引擎加载模型时，需要支持模型的架构和量化方式。可查看 Hugging Face 模型页的部署说明，选择其中推荐的引擎及版本。例如，AWQ 模型需要引擎支持该模型的 AWQ 量化实现。
+:::
+
 1. 打开 Market，搜索“引擎基座”。
 2. 在搜索结果中找到所选引擎。
 
    ![Market 中的引擎基座应用](/images/manual/olares/llm-base-apps1.png#bordered)
 
-## Step 2: 创建并配置本地模型 {#创建新的模型实例}
+## 步骤 2：创建并配置本地模型 {#创建新的模型实例}
 
 1. 在所选引擎基座上点击 **View**，然后点击 **Create**。
 
    ![创建模型实例](/images/manual/olares/llm-base-apps-create-instance2.png#bordered)
 
-2. 选择实例使用的硬件加速器，点击 **Confirm**。
-3. 填写名称。以下以 Qwen3.6-27B MTP 为例：
+2. 填写名称。以下以 Qwen3.6-27B MTP 为例：
 
    | 字段 | 填写内容 | 显示位置 |
    | --- | --- | --- |
@@ -71,7 +74,11 @@ Olares 版本需为 1.12.7 或更高版本。使用 1.12.6 时，请切换到页
 
    Strata 还提供 **Shortcut name for [strataui]**，用于命名 Strata UI 快捷方式。
 
-4. 点击 **Create**，进入 **Configure environment variables for [New-app-name]** 窗口。
+3. 点击 **Create**，进入 **Configure environment variables for [New-app-name]** 窗口。
+
+:::info 硬件加速器选择
+当设备上有多种可用的硬件加速方式时，Market 会提示选择。只有一种可用方式时，Olares 会自动采用该方式，继续进入实例配置。
+:::
 
 <a id="配置引擎环境变量"></a>
 
@@ -85,7 +92,7 @@ Olares 版本需为 1.12.7 或更高版本。使用 1.12.6 时，请切换到页
 
 选择 Hugging Face 上的 GGUF 文件。`<repo>` 包含用户或组织名及仓库名，`<quantization>` 为量化类型，每个实例使用一种量化。
 
-| 字段 | 格式 |
+| 字段 | 格式与用途 |
 | --- | --- |
 | **MODEL_SOURCE** | `hf://<repo> --include <file>.gguf` |
 | **MODEL_NAME** | `<repo>:<quantization>` |
@@ -129,6 +136,8 @@ unsloth/Qwen3.6-27B-MTP-GGUF:UD-Q4_K_XL
 -c 131072 -ngl all -fa on -ctk q8_0 -ctv q8_0 --jinja -np 1 --spec-type draft-mtp --spec-draft-n-max 2
 ```
 
+此模型使用 MTP 权重。`--spec-type draft-mtp` 启用 MTP 推测解码，`--spec-draft-n-max 2` 将每轮草稿长度设为最多 2 个 token。
+
 - **LOG_LEVEL**：`Info`
 - **LLAMACPP_REQUIRED_GPU_MEMORY**：`23Gi`
 
@@ -166,6 +175,8 @@ Jackrong/Qwopus3.6-27B-v2-MTP-GGUF:Q4_K_M
 -c 131072 -ngl all -fa on -ctk q8_0 -ctv q8_0 --jinja -np 1 --spec-type draft-mtp --spec-draft-n-max 2
 ```
 
+此模型使用 MTP 权重。`--spec-type draft-mtp` 启用 MTP 推测解码，`--spec-draft-n-max 2` 将每轮草稿长度设为最多 2 个 token。
+
 - **LOG_LEVEL**：`Info`
 - **LLAMACPP_REQUIRED_GPU_MEMORY**：`23Gi`
 
@@ -173,9 +184,9 @@ Jackrong/Qwopus3.6-27B-v2-MTP-GGUF:Q4_K_M
 
 ### 使用 Ollama 配置模型 {#ollama}
 
-从 Ollama 模型库选择模型及标签。
+从 Ollama 模型库选择模型及标签。`<model>` 为模型名称，`<tag>` 指定模型版本或量化类型。
 
-| 字段 | 格式 |
+| 字段 | 格式与用途 |
 | --- | --- |
 | **MODEL_SOURCE** | `ollama://<model>:<tag>` |
 | **MODEL_NAME** | `<model>:<tag>` |
@@ -183,6 +194,7 @@ Jackrong/Qwopus3.6-27B-v2-MTP-GGUF:Q4_K_M
 | **MODEL_MODE** | 聊天模型选 **Chat**，嵌入模型选 **Embedding** |
 | **MODEL_SUPPORTS** | 按模型能力选择 **Vision**（图片理解）、**Tools**（工具调用）或 **Thinking**（推理）。嵌入模型选 **None** |
 | **OLLAMA_REQUIRED_GPU_MEMORY** | 实例启动所需的最小 GPU 显存，单位为 MB 或 Gi，例如 `23Gi` |
+| **LOG_LEVEL** | 日志级别，例如 `Info` |
 
 <details>
 <summary>示例：Gemma 4 26B</summary>
@@ -218,7 +230,7 @@ OLLAMA_KEEP_ALIVE=-1 OLLAMA_CONTEXT_LENGTH=131072 OLLAMA_FLASH_ATTENTION=1 OLLAM
 
 选择 SGLang 支持的 Hugging Face 模型仓库，其中需包含 `.safetensors` 权重。`<repo>` 包含用户或组织名及仓库名。
 
-| 字段 | 格式 |
+| 字段 | 格式与用途 |
 | --- | --- |
 | **MODEL_SOURCE** | `hf://<repo>` |
 | **MODEL_NAME** | `<repo>` |
@@ -254,6 +266,8 @@ cyankiwi/Qwen3.5-9B-AWQ-4bit
 --context-length 65536 --mem-fraction-static 0.85 --chunked-prefill-size 4096 --reasoning-parser qwen3 --tool-call-parser qwen3_coder
 ```
 
+此示例使用 `--reasoning-parser qwen3` 提取推理内容，使用 `--tool-call-parser qwen3_coder` 解析工具调用。更换模型家族时，按新模型的部署说明选择解析器。
+
 - **LOG_LEVEL**：`Info`
 - **SGLANG_REQUIRED_GPU_MEMORY**：`23Gi`
 
@@ -263,7 +277,7 @@ cyankiwi/Qwen3.5-9B-AWQ-4bit
 
 选择 vLLM 支持的 Hugging Face 模型仓库，其中需包含 `.safetensors` 权重。`<repo>` 包含用户或组织名及仓库名。
 
-| 字段 | 格式 |
+| 字段 | 格式与用途 |
 | --- | --- |
 | **MODEL_SOURCE** | `hf://<repo>` |
 | **MODEL_NAME** | `<repo>` |
@@ -299,6 +313,8 @@ cyankiwi/gemma-4-12B-it-AWQ-INT4
 --max-model-len 65536 --gpu-memory-utilization 0.9 --tensor-parallel-size 1 --max-num-batched-tokens 8192 --tool-call-parser gemma4 --reasoning-parser gemma4 --enable-prefix-caching --enable-auto-tool-choice
 ```
 
+此示例的推理和工具调用解析器均使用 `gemma4`。`--enable-auto-tool-choice` 允许模型自行选择工具调用。更换模型家族时，按新模型的部署说明调整解析器。
+
 - **LOG_LEVEL**：`Info`
 - **VLLM_REQUIRED_GPU_MEMORY**：`23Gi`
 
@@ -306,30 +322,36 @@ cyankiwi/gemma-4-12B-it-AWQ-INT4
 
 ### 使用 Strata 配置模型 {#strata}
 
-当大型混合专家（MoE）模型无法完全装入显存时，可以选择 Strata。它将模型数据分配到显存、系统内存和 SSD 中。例如，搭配足够的内存和高速 SSD，可以在单张消费级显卡上运行 Hy4-Flash，用于本地文本问答、推理和工具调用。
+从 Hugging Face 选择 Strata 支持的模型包及配套文件。`<repo>` 包含用户或组织名及仓库名，`<file>` 为文件名，`<model-name>` 为自定义的模型服务名称。
 
-以下以 Hy4-Flash 为例，从 Hugging Face 下载 `.strata` 文件。`<repo>` 包含用户或组织名及仓库名，多个下载项用逗号分隔。
+:::info Strata 配置入口
+模型来源和能力通过 `MODEL_SOURCE`、`MODEL_NAME` 和 `MODEL_SUPPORTS` 配置。GPU 由 Olares 按应用的硬件支持情况和设备资源分配。基座负责生成模型路径和服务地址。`ENGINE_ARGS` 用于推理参数。
+:::
 
 | 字段 | 格式与用途 |
 | --- | --- |
 | **MODEL_SOURCE** | `hf://<repo> --include <file>`。包含主模型及其必需的附加文件 |
-| **MODEL_NAME** | 模型服务名称，例如 `hy4-flash-sq-64` |
-| **MODEL_SUPPORTS** | 按模型能力选择 **Tools**（工具调用）和 **Thinking**（推理） |
-| **ENGINE_ARGS** | 空格分隔的初始化和引擎参数，例如 `--context 131072 --draft off`。各模型家族的选项见 [Strata 启动参数](#strata-tuning) |
-| **STRATA_CPU_REQUEST** | 调度所需的 CPU 核数，例如 `12` |
-| **STRATA_MEMORY_REQUEST** | 调度所需的系统内存，例如 `48Gi` |
+| **MODEL_NAME** | `<model-name>`，用于标识模型服务 |
+| **ENGINE_ARGS** | 包含 `--context <tokens>`，设置上下文 token 数。多个参数用空格分隔。常用调优项见 [Strata 启动参数](#strata-tuning) |
+| **MODEL_MODE** | 选择 **Chat** |
+| **MODEL_SUPPORTS** | 按模型能力选择 **Vision**（图片理解）、**Tools**（工具调用）或 **Thinking**（推理）。无额外能力时选 **None** |
 | **STRATA_CPU_LIMIT** | 容器最多可使用的 CPU 核数，例如 `19` |
 | **STRATA_MEMORY_LIMIT** | 容器的系统内存上限，例如 `56Gi`。超过上限可能导致容器因内存不足被终止并重启 |
-| **STRATA_REQUIRED_GPU_MEMORY** | 调度所需的 GPU 显存，例如 `23Gi`，与系统内存分别计算 |
+| **STRATA_REQUIRED_GPU_MEMORY** | 实例启动所需的最小 GPU 显存，单位为 MB 或 Gi，例如 `23Gi` |
+| **LOG_LEVEL** | 日志级别，例如 `Info` |
 
-根据设备可分配的 CPU、内存和显存设置资源需求，并为模型加载与推理预留空间。
+多个下载项用逗号分隔，每项填写完整的 `hf://... --include ...`。模型包和配套文件应属于同一模型版本。
+
+根据设备资源设置 CPU 和内存上限、GPU 显存需求，并为模型加载与推理预留空间。
 
 <details>
 <summary>示例：Hy4-Flash SQ-64</summary>
 
 模型：[strata-engine/Hy4-Flash-Strata](https://huggingface.co/strata-engine/Hy4-Flash-Strata)，使用 SQ-64 模型包。主模型和必需的 Engram 文件合计约占 130 GB 磁盘空间。
 
-以下资源预算面向配备 64 GiB 系统内存、24 GiB 显存、至少 19 个可分配 CPU 核的设备，用于 128K 上下文的文本推理。这是一组估算的起始配置，尚未经过 Olares 实机验证。
+:::info 示例资源预算
+以下配置按 64 GiB 系统内存、24 GiB 显存、19 个可用 CPU 核和 128K 文本上下文估算。部署时可根据模型加载和长提示词处理期间的内存占用调整上限。
+:::
 
 **MODEL_SOURCE**
 
@@ -351,26 +373,35 @@ hy4-flash-sq-64
 --context 131072
 ```
 
+此配置保留默认的 DFly2 草稿模型。需要调整时，可选择以下参数：
+
+| 调整目标 | 填写方式 |
+| --- | --- |
+| 关闭推测解码 | `--context 131072 --draft off` |
+| 使用 Q8 KV 缓存以降低缓存占用 | `--context 131072 -- --kv q8` |
+| 使用 FP16 KV 缓存 | `--context 131072 -- --kv fp16` |
+| 指定专家数据的显存和系统内存预算 | 在 `ENGINE_ARGS` 中添加 `--vram-experts-gb <GiB>` 和 `--ram-experts-gb <GiB>`，并为其他模型组件和缓冲区留出空间 |
+
+独立的 `--` 将后面的 KV 参数直接传给 Hy4-Flash 引擎。`--kv` 也接受 `auto`，沿用引擎默认设置。专家数据预算决定模型如何分配，下方资源字段决定容器的资源上限和显存需求。
+
 | 资源字段 | 示例值 | 用途 |
 | --- | --- | --- |
-| **STRATA_CPU_REQUEST** | `12` | 为实例预留 12 个 CPU 核 |
-| **STRATA_MEMORY_REQUEST** | `48Gi` | 为 SQ-64 在系统内存中的模型数据、缓存和推理缓冲区预留空间 |
 | **STRATA_CPU_LIMIT** | `19` | 在示例设备上最多使用 19 个 CPU 核 |
 | **STRATA_MEMORY_LIMIT** | `56Gi` | 为内存增长留出余量，并为 Olares 和其他服务留下 8 GiB 系统内存 |
 | **STRATA_REQUIRED_GPU_MEMORY** | `23Gi` | 调度到至少有 23 GiB 可用显存的 GPU |
 
-内存预算参考了 Strata 的 [Hy4 内存规划逻辑](https://github.com/Niko1221/Strata/blob/main/terminal/strata_control/hy4_fit.py)。CPU 分配和显存调度要求取决于设备。SQ-64 没有固定的 CPU 核数要求，也不要求必须具备 23 GiB 显存。显存越少，留在系统内存中或需要从 SSD 读取的模型数据就越多。请按设备调整预算，并检查模型加载后和处理长提示词时的内存占用。
+预算参考了 Strata 的 [Hy4 内存规划逻辑](https://github.com/Niko1221/Strata/blob/main/terminal/strata_control/hy4_fit.py)。CPU 上限和显存需求可按设备调整。显存较少时，Strata 会将更多模型数据放在系统内存中，或从 SSD 读取。
 
 </details>
 
-## Step 3: 安装模型应用
+## 步骤 3：安装模型应用 {#step-3-安装模型应用}
 
 1. 填完所选引擎的配置后，点击 **Confirm** 保存并开始安装。
 2. 在右侧 **Instances** 面板中查看安装进度，等待按钮变为 **Open**。
 
    ![模型实例安装完成](/images/manual/olares/llm-base-model-instance-installed1.png#bordered)
 
-## Step 4: 检查模型下载和引擎状态 {#监控部署并配置模型服务}
+## 步骤 4：检查模型下载和引擎状态 {#监控部署并配置模型服务}
 
 安装完成后，打开模型应用查看下载进度和引擎启动状态。
 
@@ -414,7 +445,7 @@ vLLM 和 SGLang 加载模型可能需要较长时间。如果任一状态一直�
 
 ### 查看引擎的上下文长度 {#在-router-中查看模型详情}
 
-客户端需要填写上下文长度时，从 Router 查看实际配置。以下截图使用 Qwen3.8-27B (llama.cpp)，请以你创建的实例为准。
+客户端需要填写上下文长度时，从 Router 查看模型实例的配置。以下以 Qwen3.8-27B (llama.cpp) 为例。
 
 <!--@include: ../reusables/ai-service-connections.md#model-context-window-->
 
@@ -423,15 +454,15 @@ vLLM 和 SGLang 加载模型可能需要较长时间。如果任一状态一直�
 1. 在 Router 的 **LLM** 页面找到模型，点击信息图标，打开 **Model card**。
 2. 点击 **Edit**，修改引擎参数。例如，llama.cpp 使用 `-c` 设置上下文长度，vLLM 使用 `--gpu-memory-utilization` 设置显存比例。其他引擎的参数见下方[推理引擎启动参数参考](#引擎调优参数)。
 3. 保存修改。引擎会重新启动，等待模型恢复可用后再发送请求。
-4. 如果调整了上下文长度，同步检查客户端配置，确保不超过引擎设置的值。
+4. 如果调整了上下文长度，将客户端的值设为引擎配置的长度或更小。
 
 ## 推理引擎启动参数 {#引擎调优参数}
 
-通过 `ENGINE_ARGS` 调整上下文长度、内存占用、并发数和模型特有功能。下表列出常用参数，完整列表见各引擎的参考文档。示例值用于说明单个参数，不是一组需要原样组合的配置。
+通过 `ENGINE_ARGS` 调整上下文长度、内存占用和并发数。下表保留常用调优项，模型专用设置在上方部署示例中说明。
 
 ### llama.cpp {#llama-cpp-tuning}
 
-参数之间用空格分隔，例如 `-c 65536 -np 1 -ngl all -fa on`。基座也接受 `LLAMA_ARG_*=value` 格式的环境变量。
+参数之间用空格分隔，例如 `-c 65536 -np 1 -ngl all -fa on`。基座也接受 `LLAMA_ARG_*=value` 格式的环境变量。完整参数和适用范围见 [llama.cpp 官方文档](https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md)。
 
 | 参数 | 用途 | 示例值 |
 | --- | --- | --- |
@@ -442,14 +473,10 @@ vLLM 和 SGLang 加载模型可能需要较长时间。如果任一状态一直�
 | `-ctk` / `-ctv` | K 和 V 缓存的数据类型。量化缓存可节省内存，支持的组合取决于模型和后端。 | `q8_0` |
 | `-t` / `--threads` | 生成时使用的 CPU 线程数。 | `8` |
 | `--jinja` | 启用 Jinja 对话模板，包括工具调用所需的模板。 | 无需填值 |
-| `--spec-type` | 推测解码方式。`draft-mtp` 需要兼容的 MTP 权重。 | `draft-mtp` |
-| `--spec-draft-n-max` | 每轮推测解码最多生成的草稿 token 数。 | `2` |
-
-完整参数见 [llama.cpp 服务参考文档](https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md)。
 
 ### Ollama {#Ollama-tuning}
 
-使用空格分隔的环境变量赋值，例如 `OLLAMA_CONTEXT_LENGTH=8192 OLLAMA_NUM_PARALLEL=1`。这些参数配置 Ollama 服务。`temperature` 等请求参数在客户端或 API 请求中设置。
+使用空格分隔的环境变量赋值，例如 `OLLAMA_CONTEXT_LENGTH=8192 OLLAMA_NUM_PARALLEL=1`。这些参数配置 Ollama 服务。`temperature` 等请求参数在客户端或 API 请求中设置。完整参数和适用范围见 [Ollama 官方文档](https://docs.ollama.com/faq)。
 
 | 参数 | 用途 | 示例值 |
 | --- | --- | --- |
@@ -458,14 +485,15 @@ vLLM 和 SGLang 加载模型可能需要较长时间。如果任一状态一直�
 | `OLLAMA_FLASH_ATTENTION` | 启用 Flash Attention。量化 KV 缓存时需要开启。 | `1` |
 | `OLLAMA_KV_CACHE_TYPE` | KV 缓存精度。降低精度可减少内存占用，也可能影响输出质量。 | `f16`、`q8_0` 或 `q4_0` |
 | `OLLAMA_NUM_PARALLEL` | 每个模型同时处理的请求数。并发越高，上下文所需内存越多。 | `1` |
-| `OLLAMA_MAX_LOADED_MODELS` | 同时加载的模型数量上限。 | `1` |
 | `OLLAMA_MAX_QUEUE` | 排队请求数上限，超出后拒绝新请求。 | `64` |
-
-完整参数见 [Ollama 配置参考文档](https://docs.ollama.com/faq)。
 
 ### SGLang {#SGLang-tuning}
 
-参数之间用空格分隔，例如 `--context-length 65536 --mem-fraction-static 0.85`。推理和工具调用解析器需要与所部署的模型家族匹配。
+参数之间用空格分隔，例如 `--context-length 65536 --mem-fraction-static 0.85`。完整参数和适用范围见 [SGLang 官方文档](https://docs.sglang.io/docs/advanced_features/server_arguments)。
+
+:::warning SGLang 0.5.23 参数变更
+该版本已移除 `--speculative-skip-dp-mlp-sync`。旧配置中保留此参数会导致启动失败。
+:::
 
 | 参数 | 用途 | 示例值 |
 | --- | --- | --- |
@@ -475,15 +503,14 @@ vLLM 和 SGLang 加载模型可能需要较长时间。如果任一状态一直�
 | `--max-running-requests` | 同时运行的请求数上限。 | `4` |
 | `--tp-size` | 张量并行使用的 GPU 数量。 | `1` |
 | `--kv-cache-dtype` | KV 缓存数据类型，需模型和 GPU 支持。 | `auto` 或 `fp8_e4m3` |
-| `--reasoning-parser` | 从模型输出中提取推理内容。 | 兼容的 Qwen 模型可用 `qwen3` |
-| `--tool-call-parser` | 将模型的工具调用输出解析为 API 的结构化工具调用。 | 兼容的 Qwen 模型可用 `qwen25` |
-| `--attention-backend` | 为模型和硬件选择注意力计算实现。 | `flashinfer` |
-
-使用 SGLang 0.5.23 时，应从旧配置中移除 `--speculative-skip-dp-mlp-sync`，该参数会导致启动失败。支持的后端、解析器和推测解码选项见 [SGLang 服务参考文档](https://docs.sglang.io/docs/advanced_features/server_arguments)。
 
 ### vLLM {#vLLM-tuning}
 
-参数之间用空格分隔，例如 `--max-model-len 65536 --gpu-memory-utilization 0.9`。显存利用率以引擎可见的显存为基准。在 Olares 上，`VLLM_REQUIRED_GPU_MEMORY` 决定这部分显存预算。
+参数之间用空格分隔，例如 `--max-model-len 65536 --gpu-memory-utilization 0.9`。显存利用率以引擎可见的显存为基准。在 Olares 上，`VLLM_REQUIRED_GPU_MEMORY` 决定这部分显存预算。完整参数和适用范围见 [vLLM 官方文档](https://docs.vllm.ai/en/latest/configuration/engine_args/)。
+
+:::tip 为 vLLM 留出显存余量
+使用 vLLM 0.34.0 的基座默认启用可扩展 KV 缓存，显存利用率默认值为 `1.0`。设置较低的 `--gpu-memory-utilization`（如 `0.9`），可在已分配的显存预算内留出余量。
+:::
 
 | 参数 | 用途 | 示例值 |
 | --- | --- | --- |
@@ -494,32 +521,17 @@ vLLM 和 SGLang 加载模型可能需要较长时间。如果任一状态一直�
 | `--max-num-batched-tokens` | 每轮处理的 token 数上限。结合并发数和分块预填充设置，在吞吐与延迟之间取舍。 | `8192` |
 | `--enable-prefix-caching` | 复用相同提示词前缀的 KV 缓存。 | 无需填值 |
 | `--kv-cache-dtype` | KV 缓存数据类型，需模型和 GPU 支持。 | `auto` 或 `fp8` |
-| `--reasoning-parser` | 按模型的输出格式提取推理内容。 | 兼容的 Qwen 模型可用 `qwen3` |
-| `--enable-auto-tool-choice` | 允许模型自行选择工具调用，需配置匹配的工具调用解析器。 | 无需填值 |
-| `--tool-call-parser` | 解析模型的工具调用格式。 | 兼容的 Qwen 模型可用 `qwen3_xml` |
-| `--enforce-eager` | 使用即时执行，关闭 CUDA Graph。可用于排查图捕获问题或其内存开销。 | 无需填值 |
-| `--no-enable-extensible-kv-cache` | 关闭 vLLM 0.34.0 的可扩展 KV 缓存。 | 无需填值 |
-
-使用 vLLM 0.34.0 的基座默认启用可扩展 KV 缓存，显存利用率默认值为 `1.0`。需要在已分配的显存预算内留出余量时，应显式设置利用率。完整参数见 [vLLM 引擎参考文档](https://docs.vllm.ai/en/latest/configuration/engine_args/)。
 
 ### Strata {#strata-tuning}
 
-参数之间用空格分隔。Strata 接受初始化参数和所选模型引擎的参数，基座会将它们交给对应组件。单独的 `--` 之后的参数直接传给引擎。支持的值取决于模型家族。
+参数之间用空格分隔。草稿模型、KV 缓存和专家数据加载方式由所选模型家族决定。按模型家族查看可用模型、内存需求和配置选项，请参阅 [Strata 模型家族指南](https://github.com/Niko1221/Strata/blob/main/docs/MODELS.md)。启动参数的用法见 [Strata 启动参数参考](https://github.com/Niko1221/Strata/blob/main/docs/TERMINAL_LAUNCH.md)。
 
 | 参数 | 用途和适用范围 | 示例值 |
 | --- | --- | --- |
 | `--context` | 上下文长度，单位为 token。基座也接受 `--max-context` 和 `--ctx` 两个别名。 | `131072` |
-| `--draft` | 选择推测解码草稿模型：Qwen3.8 使用 MTP 或 DFlash2，Hy4-Flash 使用 DFly2，Inkling-2-Mini 使用 DSpark。`off` 表示关闭。 | Hy4-Flash 可用 `dfly2` |
-| `--kv` | KV 缓存精度。Qwen 引擎可选 `int8`、`q4_0`、`k8v4`、`fp16`。其他家族的缓存实现不同。 | Qwen 可用 `int8` |
-| `--parallel` | 支持并发解码的引擎（如 Qwen）的槽位数。增加槽位会增加内存开销。 | `1` |
-| `--low-ram` | Qwen 专家数据的加载方式：自动选择、驻留内存或从文件加载。 | `auto`、`resident` 或 `mmap` |
-| `--resident-budget-gib` | 支持的 Qwen UD-Q4_K_XL 和 UD-IQ4_XS 模型包中，驻留内存的专家数据预算，单位为 GiB。 | `40` |
-| `--vram-reserve-mib` | 在 Qwen 专家缓存之外预留的显存，单位为 MiB。 | `1024` |
-| `--vram-experts-gb` / `--ram-experts-gb` | Hy4-Flash 在显存和系统内存中存放专家数据的预算，单位为 GB，不含其他模型组件和缓冲区。 | `12` / `40` |
-| `--spec-k` | 提供该选项的引擎使用的草稿长度，需要结合所选草稿模型调整。 | `4` |
+| `--draft` | 控制推测解码。`off` 关闭草稿模型，启用时按模型家族选择。 | `off` |
 
-Hy4-Flash SQ-64 使用 `--context 131072` 时保留默认的 DFly2 草稿模型，添加 `--draft off` 可关闭。专家数据预算决定模型如何分配。`STRATA_*_REQUEST`、`STRATA_*_LIMIT` 和 `STRATA_REQUIRED_GPU_MEMORY` 决定容器资源。
+## 了解更多
 
-模型选择、文件路径、网络、GPU 选择和视觉功能由基座管理。在 `ENGINE_ARGS` 中填写 `--family`、`--model`、`--host`、`--port`、`--gpu`、`--vision` 等覆盖参数会被拒绝。
-
-各模型家族的选项见 [Strata 启动参考文档](https://github.com/Niko1221/Strata/blob/main/docs/TERMINAL_LAUNCH.md)。
+- [通过 Olares Router 连接 AI 应用](olares-router.md#从-router-获取连接信息)
+- [排查模型或引擎未就绪](/zh/manual/help/ts-model-engine-not-ready.md)
