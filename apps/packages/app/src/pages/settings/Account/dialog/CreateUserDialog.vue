@@ -72,7 +72,7 @@ import EditNumberRightSlot from 'src/components/settings/EditNumberRightSlot.vue
 import { notifyFailed, notifySuccess } from 'src/utils/settings/btNotify';
 import { useDeviceStore } from 'src/stores/settings/device';
 import { AccountModifyStatus, AccountStatus } from 'src/constant/global';
-import { generatePasword } from '../utils';
+import { generatePasword, wizardActivationURL } from '../utils';
 import { useI18n } from 'vue-i18n';
 import { passwordAddSort } from 'src/utils/account';
 import { useAdminStore } from 'src/stores/settings/admin';
@@ -240,7 +240,11 @@ async function checkAccountCreate(username: string) {
 			username
 		);
 
-		if (data.status == AccountStatus.Created) {
+		const wizardURL = wizardActivationURL(
+			data.address?.wizard,
+			data.address?.wizard_local
+		);
+		if (data.status === AccountStatus.Created && wizardURL) {
 			Loading.hide();
 			refreshUserListAsync();
 			const socketStore = useWebsocketManager2Store();
@@ -264,8 +268,7 @@ async function checkAccountCreate(username: string) {
 				'<br>' +
 				t('wizard_url') +
 				':' +
-				'https://' +
-				data.address.wizard;
+				wizardURL;
 
 			quasar
 				.dialog({

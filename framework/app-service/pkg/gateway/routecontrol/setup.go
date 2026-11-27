@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway"
 	srrv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/gateway/v1alpha1"
 )
 
@@ -69,6 +70,10 @@ func (r *SharedRouteReconciler) Reconcile(ctx context.Context, req reconcile.Req
 			if isSystemDesktopRoute(srr) {
 				res.Reason = ReasonDesktopEntryAuthorizationReady
 				res.Message = "Entry anonymous authorization probes and current mesh endpoints are ready"
+			}
+			if gateway.IsSystemWizardRoute(srr) {
+				res.Reason = gateway.WizardEntryReadyReason
+				res.Message = "Wizard Entry and tenant authentication endpoints are ready"
 			}
 			// Endpoint changes need not modify the owned Route.
 			retry = 30 * time.Second

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strings"
 	"time"
 
 	"github.com/beclab/Olares/cli/pkg/core/logger"
@@ -212,15 +213,26 @@ func (c *CopyAppServiceHelmFiles) Execute(runtime connector.Runtime) error {
 		return err
 	}
 
-	kubeclt, _ := util.GetCommand(common.CommandKubectl)
-	for _, app := range []string{"launcher", "apps"} {
-		var cmd = fmt.Sprintf("%s cp %s/wizard/config/%s os-framework/%s:/userapps -c app-service", kubeclt, runtime.GetInstallerDir(), app, appServiceName)
-		if _, err = runtime.GetRunner().SudoCmd(cmd, false, true); err != nil {
-			return errors.Wrap(errors.WithStack(err), "copy files failed")
-		}
+	kubectl, err := util.GetCommand(common.CommandKubectl)
+	if err != nil {
+		return err
 	}
-
-	return nil
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+	runner := runtime.GetRunner()
+	run := func(args ...string) (string, error) {
+		cmd := []string{kubectl, "-n", common.NamespaceOsFramework}
+		cmd = append(cmd, args...)
+		for i, arg := range cmd {
+			cmd[i] = "'" + strings.ReplaceAll(arg, "'", "'\\''") + "'"
+		}
+		command := strings.Join(cmd, " ")
+		if runner.Host.GetUser() != "root" {
+			command = "sudo -E -- " + command
+		}
+		return runner.CmdContext(ctx, command, false, false)
+	}
+	return publishUserChartBundle(configDir, appServiceName, run)
 }
 
 func getAppServiceName(client clientset.Client) (string, error) {

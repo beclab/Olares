@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"path/filepath"
 	"time"
 
-	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/helm"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace"
 	"github.com/beclab/Olares/framework/app-service/pkg/users/userspace/templates"
@@ -229,7 +229,11 @@ func (d *Deleter) uninstallUserApps(ctx context.Context) error {
 }
 
 func (d *Deleter) uninstallSysApps(ctx context.Context) error {
-	sysApps, err := userspace.GetAppsFromDirectory(constants.UserChartsPath + "/apps")
+	root, err := userspace.UserChartRoot()
+	if err != nil {
+		return err
+	}
+	sysApps, err := userspace.GetAppsFromDirectory(filepath.Join(root, "apps"))
 	if err != nil {
 		return err
 	}

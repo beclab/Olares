@@ -426,3 +426,59 @@ func TestAuthProxyMeshReadinessChecksEndpointPort(t *testing.T) {
 		})
 	}
 }
+func TestWizardReadinessRequiresOwnMeshedAuthProxy(t *testing.T) {
+	ctx := t.Context()
+	c := fake.NewClientBuilder().WithScheme(testScheme(t)).Build()
+	for _, tenant := range []string{"alice", "bob"} {
+		if err := gateway.EnsureSystemPlaneRoutes(ctx, c, tenant, "owner.olares.com", "user-space-"+tenant, true); err != nil {
+			t.Fatal(err)
+		}
+	}
+	create := func(ns, name, app string, port int32, contextVersion bool) {
+		t.Helper()
+		svc := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: name},
+			Spec: corev1.ServiceSpec{Selector: map[string]string{"app": app}, Ports: []corev1.ServicePort{{Port: port}}}}
+		for _, obj := range meshedServiceObjects(svc) {
+			if pod, ok := obj.(*corev1.Pod); ok && contextVersion {
+				pod.Annotations["traffic.olares.io/auth-proxy-context-version"] = "1"
+			}
+			if err := c.Create(ctx, obj); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	create("os-framework", "authelia-backend", "authelia-backend", 9091, false)
+	create("user-system-alice", "authelia-backend", "systemserver", 9091, true)
+	create("user-space-alice", "wizard", "wizard", 80, false)
+	create("user-space-bob", "wizard", "wizard", 80, false)
+	check := func(tenant string, wantReady bool) {
+		t.Helper()
+		var route srrv1alpha1.SharedRouteRegistry
+		if err := c.Get(ctx, client.ObjectKey{Namespace: "user-space-" + tenant, Name: "sys-wizard"}, &route); err != nil {
+			t.Fatal(err)
+		}
+		if err := httpRouteMeshDependenciesReady(ctx, c, route.Namespace, &route); (err == nil) != wantReady {
+			t.Fatalf("wizard readiness for %s = %v; want ready=%t", tenant, err, wantReady)
+		}
+	}
+	check("alice", true)
+	check("bob", false)
+	create("user-system-bob", "authelia-backend", "systemserver", 9091, false)
+	check("bob", false)
+	var pod corev1.Pod
+	if err := c.Get(ctx, client.ObjectKey{Namespace: "user-system-bob", Name: "authelia-backend"}, &pod); err != nil {
+		t.Fatal(err)
+	}
+	pod.Annotations["traffic.olares.io/auth-proxy-context-version"] = "1"
+	init := pod.Spec.InitContainers
+	pod.Spec.InitContainers = nil
+	if err := c.Update(ctx, &pod); err != nil {
+		t.Fatal(err)
+	}
+	check("bob", false)
+	pod.Spec.InitContainers = init
+	if err := c.Update(ctx, &pod); err != nil {
+		t.Fatal(err)
+	}
+	check("bob", true)
+}

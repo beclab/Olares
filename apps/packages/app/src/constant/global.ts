@@ -13,6 +13,8 @@ export interface UserInfo {
 	owner_role: string;
 	terminusName: string;
 	wizard_complete: boolean;
+	wizard_address?: string;
+	wizard_local_address?: string;
 	zone: string;
 
 	imgContentMode: 'fill' | undefined;
@@ -68,6 +70,7 @@ export enum AccountStatus {
 
 export interface AccountAddress {
 	wizard: string;
+	wizard_local?: string;
 	doc: string;
 }
 

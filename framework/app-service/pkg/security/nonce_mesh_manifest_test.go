@@ -77,6 +77,9 @@ func TestNonceMeshIdentityAndTenantBinding(t *testing.T) {
 			if ann["config.linkerd.io/default-inbound-policy"] != "deny" || ann["config.linkerd.io/proxy-enable-native-sidecar"] != "true" {
 				t.Fatal("system-server deployment can fail open")
 			}
+			if ann["linkerd.io/inject"] != "enabled" || ann["traffic.olares.io/auth-proxy-context-version"] != "1" {
+				t.Fatal("fresh tenant would not enroll its tenant-bound Auth proxy")
+			}
 			declared := map[any]bool{}
 			for _, container := range pod["spec"].(map[string]any)["containers"].([]any) {
 				c := container.(map[string]any)
@@ -84,6 +87,9 @@ func TestNonceMeshIdentityAndTenantBinding(t *testing.T) {
 					declared[port.(map[string]any)["containerPort"]] = true
 				}
 				if c["name"] == "system-server" {
+					if c["image"] == "beclab/system-server:0.1.37" || !strings.Contains(c["image"].(string), "@sha256:") {
+						t.Fatal("fresh tenant would use the legacy nonce handler or a mutable image tag")
+					}
 					enrolled := false
 					for _, env := range c["env"].([]any) {
 						e := env.(map[string]any)

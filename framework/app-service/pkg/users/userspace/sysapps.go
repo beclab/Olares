@@ -1,8 +1,12 @@
 package userspace
 
 import (
+	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
+
+	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 )
 
 // GetSysApps get all system apps from env
@@ -48,6 +52,35 @@ func IsGeneratedApp(name string) bool {
 		}
 	}
 	return false
+}
+
+// UserChartRoot pins the published snapshot for a Helm operation. The legacy
+// layout remains readable until the installer publishes the first snapshot.
+func UserChartRoot() (string, error) {
+	return userChartRoot(constants.UserChartsPath)
+}
+
+func userChartRoot(root string) (string, error) {
+	target, err := os.Readlink(filepath.Join(root, "current"))
+	if os.IsNotExist(err) {
+		return root, nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("read current user chart bundle: %w", err)
+	}
+	if filepath.Base(target) != target || !strings.HasPrefix(target, ".bundle.") ||
+		len(target) != len(".bundle.XXXXXXXX") {
+		return "", fmt.Errorf("invalid current user chart bundle")
+	}
+	snapshot := filepath.Join(root, target)
+	info, err := os.Lstat(snapshot)
+	if err != nil {
+		return "", fmt.Errorf("read user chart bundle: %w", err)
+	}
+	if !info.IsDir() {
+		return "", fmt.Errorf("current user chart bundle is not a directory")
+	}
+	return snapshot, nil
 }
 
 // GetAppsFromDirectory returns all system applications.

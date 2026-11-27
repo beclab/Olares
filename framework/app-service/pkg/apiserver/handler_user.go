@@ -8,6 +8,7 @@ import (
 
 	"github.com/beclab/Olares/framework/app-service/pkg/apiserver/api"
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway"
 	"github.com/beclab/Olares/framework/app-service/pkg/prometheus"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/users"
@@ -309,29 +310,52 @@ func (h *Handler) userStatus(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	isEphemeral, zone, err := h.getUserDomainType(&user)
+	address, pending, err := h.wizardActivationAddress(req.Request.Context(), &user)
 	if err != nil {
 		api.HandleError(resp, req, err)
 		return
 	}
-	var address string
-	if isEphemeral {
-		address = fmt.Sprintf("wizard-%s.%s", username, zone)
+	status := user.Status.State
+	if pending {
+		// Older clients display the address as soon as they observe Created.
+		status = "Creating"
 	}
 
 	resp.WriteAsJson(map[string]interface{}{
 		"code": 200,
 		"data": map[string]interface{}{
 			"name":    username,
-			"status":  user.Status.State,
+			"status":  status,
 			"message": user.Status.Reason,
-			"address": map[string]string{
-				"wizard": address,
-			},
+			"address": address,
 		},
 		"message": user.Status.Reason,
 	})
 	return
+}
+
+type wizardAddress struct {
+	Wizard      string `json:"wizard"`
+	WizardLocal string `json:"wizard_local,omitempty"`
+}
+
+func (h *Handler) wizardActivationAddress(ctx context.Context, user *iamv1alpha2.User) (wizardAddress, bool, error) {
+	if user.Status.State != "Created" || !user.DeletionTimestamp.IsZero() || getWizardComplete(user) {
+		return wizardAddress{}, false, nil
+	}
+	ephemeral, zone, err := h.getUserDomainType(user)
+	if err != nil || !ephemeral {
+		return wizardAddress{}, false, err
+	}
+	hosts, err := gateway.ReadyWizardHosts(ctx, h.ctrlClient, user.Name, zone)
+	if err != nil || len(hosts) == 0 {
+		return wizardAddress{}, err == nil, err
+	}
+	address := wizardAddress{Wizard: hosts[0]}
+	if len(hosts) > 1 {
+		address.WizardLocal = hosts[1]
+	}
+	return address, false, nil
 }
 
 func (h *Handler) getUserDomainType(user *iamv1alpha2.User) (bool, string, error) {
@@ -530,6 +554,11 @@ func (h *Handler) handleUser(req *restful.Request, resp *restful.Response) {
 	u.Roles = roles
 
 	u.WizardComplete = getWizardComplete(&user)
+	address, _, err := h.wizardActivationAddress(req.Request.Context(), &user)
+	if err != nil {
+		klog.Warningf("resolve Wizard activation address for %s: %v", user.Name, err)
+	}
+	u.WizardAddress, u.WizardLocalAddress = address.Wizard, address.WizardLocal
 	resp.WriteAsJson(map[string]interface{}{
 		"code": 200,
 		"data": u,
@@ -580,8 +609,10 @@ type UserInfo struct {
 	Avatar            string `json:"avatar"`
 	Zone              string `json:"zone"`
 
-	TerminusName   string `json:"terminusName"`
-	WizardComplete bool   `json:"wizard_complete"`
+	TerminusName       string `json:"terminusName"`
+	WizardComplete     bool   `json:"wizard_complete"`
+	WizardAddress      string `json:"wizard_address,omitempty"`
+	WizardLocalAddress string `json:"wizard_local_address,omitempty"`
 
 	Roles []string `json:"roles"`
 

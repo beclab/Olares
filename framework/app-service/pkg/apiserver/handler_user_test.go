@@ -10,6 +10,8 @@ import (
 	"testing"
 
 	"github.com/beclab/Olares/framework/app-service/pkg/constants"
+	"github.com/beclab/Olares/framework/app-service/pkg/gateway"
+	srrv1alpha1 "github.com/beclab/Olares/framework/app-service/pkg/gateway/v1alpha1"
 	"github.com/beclab/Olares/framework/app-service/pkg/users"
 	iamv1alpha2 "github.com/beclab/api/iam/v1alpha2"
 	"github.com/emicklei/go-restful/v3"
@@ -220,4 +222,77 @@ func TestUserStatusReportsDeletionWithoutActivationMetadata(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestUserActivationStatusAndDetailWaitForOwnWizard(t *testing.T) {
+	scheme := runtime.NewScheme()
+	for _, register := range []func(*runtime.Scheme) error{iamv1alpha2.AddToScheme, srrv1alpha1.AddToScheme} {
+		if err := register(scheme); err != nil {
+			t.Fatal(err)
+		}
+	}
+	const zone = "owner.olares.com"
+	owner := &iamv1alpha2.User{ObjectMeta: metav1.ObjectMeta{Name: "owner", Annotations: map[string]string{users.UserAnnotationZoneKey: zone}}}
+	tenant := func(name string) *iamv1alpha2.User {
+		return &iamv1alpha2.User{
+			ObjectMeta: metav1.ObjectMeta{Name: name, Annotations: map[string]string{users.AnnotationUserCreator: owner.Name}},
+			Status:     iamv1alpha2.UserStatus{State: "Created"},
+		}
+	}
+	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(owner, tenant("alice"), tenant("bob")).
+		WithStatusSubresource(&srrv1alpha1.SharedRouteRegistry{}).Build()
+	for _, name := range []string{"alice", "bob"} {
+		if err := gateway.EnsureSystemPlaneRoutes(t.Context(), c, name, zone, "user-space-"+name, true); err != nil {
+			t.Fatal(err)
+		}
+	}
+	markReady := func(name string) {
+		t.Helper()
+		var r srrv1alpha1.SharedRouteRegistry
+		if err := c.Get(t.Context(), client.ObjectKey{Namespace: "user-space-" + name, Name: "sys-wizard"}, &r); err != nil {
+			t.Fatal(err)
+		}
+		r.Status.HTTPRouteName = r.Name
+		r.Status.Conditions = []metav1.Condition{{Type: "Ready", Status: metav1.ConditionTrue, Reason: gateway.WizardEntryReadyReason, ObservedGeneration: r.Generation}}
+		if err := c.Status().Update(t.Context(), &r); err != nil {
+			t.Fatal(err)
+		}
+	}
+	h := &Handler{ctrlClient: c}
+	ws := new(restful.WebService).Path("/app-service/v1").Produces(restful.MIME_JSON)
+	ws.Filter(h.authenticate)
+	ws.Route(ws.GET("/users/{user}/status").To(h.userStatus))
+	ws.Route(ws.GET("/users/{" + ParamUserName + "}").To(h.handleUser))
+	container := restful.NewContainer().Add(ws)
+	get := func(path string, dst any) {
+		t.Helper()
+		req := httptest.NewRequest(http.MethodGet, "/app-service/v1/users/"+path, nil)
+		req.Header.Set(constants.BflUserKey, owner.Name)
+		resp := httptest.NewRecorder()
+		container.ServeHTTP(resp, req)
+		if resp.Code != http.StatusOK || json.Unmarshal(resp.Body.Bytes(), dst) != nil {
+			t.Fatalf("%s returned HTTP %d: %s", path, resp.Code, resp.Body)
+		}
+	}
+	check := func(name, status, host, local string) {
+		t.Helper()
+		var progress struct {
+			Data struct {
+				Status  string
+				Address wizardAddress
+			}
+		}
+		var detail struct{ Data UserInfo }
+		get(name+"/status", &progress)
+		get(name, &detail)
+		if progress.Data.Status != status || progress.Data.Address.Wizard != host || progress.Data.Address.WizardLocal != local ||
+			detail.Data.WizardAddress != host || detail.Data.WizardLocalAddress != local {
+			t.Fatalf("unexpected activation response for %s: %+v, %+v", name, progress.Data, detail.Data)
+		}
+	}
+	markReady("alice")
+	check("alice", "Created", "wizard-alice.owner.olares.com", "wizard-alice.owner.olares.local")
+	check("bob", "Creating", "", "")
+	markReady("bob")
+	check("bob", "Created", "wizard-bob.owner.olares.com", "wizard-bob.owner.olares.local")
 }

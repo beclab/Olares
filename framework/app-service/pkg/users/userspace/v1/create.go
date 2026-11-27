@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -17,7 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 
-	"github.com/beclab/Olares/framework/app-service/pkg/constants"
 	"github.com/beclab/Olares/framework/app-service/pkg/helm"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -114,6 +114,10 @@ func (c *Creator) CreateUserApps(ctx context.Context) (int32, int32, error) {
 	//
 	//}()
 
+	chartRoot, err := userspace.UserChartRoot()
+	if err != nil {
+		return 0, 0, err
+	}
 	actionCfg, settings, err := helm.InitConfig(c.k8sConfig, userspaceNs)
 	if err != nil {
 		return 0, 0, err
@@ -121,7 +125,7 @@ func (c *Creator) CreateUserApps(ctx context.Context) (int32, int32, error) {
 	c.helmCfg.ActionCfg = actionCfg
 	c.helmCfg.Settings = settings
 
-	_, err = c.installLauncher(ctx, userspaceNs)
+	_, err = c.installLauncher(ctx, userspaceNs, chartRoot)
 	if err != nil {
 		klog.Errorf("failed to install launcher in ns %s, %v", userspaceNs, err)
 		return 0, 0, err
@@ -136,7 +140,7 @@ func (c *Creator) CreateUserApps(ctx context.Context) (int32, int32, error) {
 	klog.Infof("userspaceNs: %s", userspaceNs)
 
 	klog.Infof("bflname: %s,namespace: %s", bfl.Name, bfl.Namespace)
-	err = c.installSysApps(ctx, bfl)
+	err = c.installSysApps(ctx, bfl, chartRoot)
 	if err != nil {
 		klog.Errorf("failed to install sys apps %v", err)
 		return 0, 0, err
@@ -198,7 +202,7 @@ func (c *Creator) createNamespace(ctx context.Context) error {
 	return nil
 }
 
-func (c *Creator) installSysApps(ctx context.Context, bflPod *corev1.Pod) error {
+func (c *Creator) installSysApps(ctx context.Context, bflPod *corev1.Pod, chartRoot string) error {
 	vals := make(map[string]interface{})
 
 	vals["bfl"] = map[string]interface{}{
@@ -286,7 +290,8 @@ func (c *Creator) installSysApps(ctx context.Context, bflPod *corev1.Pod) error 
 	vals["tailscaleUserIndex"] = userIndex
 	vals["tailscaleUserSubnet"] = userSubnet
 
-	sysApps, err := userspace.GetAppsFromDirectory(constants.UserChartsPath + "/apps")
+	appsDir := filepath.Join(chartRoot, "apps")
+	sysApps, err := userspace.GetAppsFromDirectory(appsDir)
 	if err != nil {
 		return err
 	}
@@ -296,7 +301,7 @@ func (c *Creator) installSysApps(ctx context.Context, bflPod *corev1.Pod) error 
 		if err != nil {
 			if errors.Is(err, driver.ErrReleaseNotFound) {
 				installErr := helm.InstallCharts(ctx, c.helmCfg.ActionCfg, c.helmCfg.Settings,
-					name, constants.UserChartsPath+"/apps/"+appname, "", bflPod.Namespace, vals)
+					name, filepath.Join(appsDir, appname), "", bflPod.Namespace, vals)
 				if installErr != nil && !errors.Is(installErr, driver.ErrReleaseExists) {
 					klog.Errorf("failed to install sys app:%s, %v", name, installErr)
 					return installErr
@@ -311,7 +316,7 @@ func (c *Creator) installSysApps(ctx context.Context, bflPod *corev1.Pod) error 
 	return nil
 }
 
-func (c *Creator) installLauncher(ctx context.Context, userspace string) (string, error) {
+func (c *Creator) installLauncher(ctx context.Context, userspace, chartRoot string) (string, error) {
 	vals := make(map[string]interface{})
 
 	k, s := c.genAppkeyAndSecret("bfl")
@@ -329,7 +334,7 @@ func (c *Creator) installLauncher(ctx context.Context, userspace string) (string
 	_, err := c.helmCfg.ActionCfg.Releases.Last(name)
 	if err != nil {
 		if errors.Is(err, driver.ErrReleaseNotFound) {
-			installErr := helm.InstallCharts(ctx, c.helmCfg.ActionCfg, c.helmCfg.Settings, name, constants.UserChartsPath+"/launcher", "", userspace, vals)
+			installErr := helm.InstallCharts(ctx, c.helmCfg.ActionCfg, c.helmCfg.Settings, name, filepath.Join(chartRoot, "launcher"), "", userspace, vals)
 			if installErr != nil && !errors.Is(installErr, driver.ErrReleaseExists) {
 				klog.Errorf("failed to install launcher %v", err)
 				return "", installErr

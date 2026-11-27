@@ -3,9 +3,11 @@ package gateway
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -23,17 +25,53 @@ type SystemPlaneService struct {
 	ApexHost   bool   // profile uses zone apex, not <name>.<zone>
 }
 
+var wizardService = SystemPlaneService{Name: "wizard", Service: "wizard", Port: 80, AuthMode: AuthModeNone, StampOwner: true}
+
+const WizardEntryReadyReason = "WizardEntryReady"
+
 // SystemPlaneServices mirrors l4-bfl-proxy systemServices + profile.
 var SystemPlaneServices = []SystemPlaneService{
 	{Name: "auth", Service: "authelia-svc", Port: 80, AuthMode: AuthModeNone, StampOwner: true},
 	{Name: "desktop", Service: "edge-desktop", Port: 80, AuthMode: AuthModeExtAuth},
-	{Name: "wizard", Service: "wizard", Port: 80, AuthMode: AuthModeNone, StampOwner: true},
+	wizardService,
 	{Name: "profile", Service: "profile-service", Port: 3000, AuthMode: AuthModeExtAuth, ApexHost: true},
 }
 
 // SystemPlaneSRRName returns the SRR object name for a system plane service.
 func SystemPlaneSRRName(svcName string) string {
 	return "sys-" + strings.ToLower(strings.TrimSpace(svcName))
+}
+
+func IsSystemWizardRoute(srr *srrv1alpha1.SharedRouteRegistry) bool {
+	owner := srr.Annotations[AnnotationExtAuthUser]
+	return owner != "" && srr.Namespace == "user-space-"+owner &&
+		srr.Name == SystemPlaneSRRName(wizardService.Name) &&
+		srr.Labels[LabelSystemPlane] == LabelSystemPlaneValue &&
+		srr.Labels["app.kubernetes.io/managed-by"] == "app-service" &&
+		srr.Labels["app.kubernetes.io/instance"] == SystemPlaneInstance &&
+		srr.Annotations[AnnotationAuthMode] == AuthModeNone &&
+		srr.Spec.RouteMode == srrv1alpha1.RouteModeGateway &&
+		srr.Spec.EntranceClass == srrv1alpha1.EntranceClassApplication &&
+		srr.Spec.Upstream.ServiceNamespace == "" && srr.Spec.Upstream.ServiceName == wizardService.Service &&
+		srr.Spec.Upstream.Port == wizardService.Port
+}
+
+// ReadyWizardHosts exposes the exact hosts published by the current route.
+func ReadyWizardHosts(ctx context.Context, c client.Client, user, zone string) ([]string, error) {
+	var srr srrv1alpha1.SharedRouteRegistry
+	key := client.ObjectKey{Namespace: "user-space-" + user, Name: SystemPlaneSRRName(wizardService.Name)}
+	if err := c.Get(ctx, key, &srr); err != nil {
+		return nil, client.IgnoreNotFound(err)
+	}
+	hosts := SystemPlaneHostPatterns(wizardService, zone, user, true)
+	ready := meta.FindStatusCondition(srr.Status.Conditions, "Ready")
+	if !IsSystemWizardRoute(&srr) || !srr.DeletionTimestamp.IsZero() ||
+		srr.Status.HTTPRouteName != key.Name || !slices.Equal(srr.Spec.HostPatterns, hosts) ||
+		ready == nil || ready.Status != metav1.ConditionTrue || ready.Reason != WizardEntryReadyReason ||
+		ready.ObservedGeneration != srr.Generation {
+		return nil, nil
+	}
+	return hosts, nil
 }
 
 // SystemPlaneHostPatterns builds exact hostnames for a user zone (and local alias).

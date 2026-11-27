@@ -139,26 +139,20 @@
 			/>
 		</bt-list>
 
-		<bt-list
-			v-if="
-				userInfo.state !== AccountStatus.Failed && !userInfo?.wizard_complete
-			"
-		>
+		<bt-list v-if="!userInfo?.wizard_complete && activationURL">
 			<AdaptiveLayout>
 				<template v-slot:pc>
 					<bt-form-item
 						:title="t('wizard_url')"
 						:width-separator="false"
-						:data="`https://wizard-${userInfo?.name}.${url_domain}`"
+						:data="activationURL"
 					/>
 				</template>
 				<template v-slot:mobile>
 					<bt-form-item :title="t('wizard_url')" :width-separator="false">
 						<div
 							class="row items-center justify-end"
-							@click="
-								setCopyInfo(`https://wizard-${userInfo?.name}.${url_domain}`)
-							"
+							@click="setCopyInfo(activationURL)"
 						>
 							<div
 								style="
@@ -169,7 +163,7 @@
 								"
 								class="text-body-3 text-ink-3"
 							>
-								{{ `https://wizard-${userInfo?.name}.${url_domain}` }}
+								{{ activationURL }}
 							</div>
 							<q-icon name="sym_r_content_copy" size="24px" />
 						</div>
@@ -242,12 +236,11 @@ import {
 import { isAxiosError } from 'axios';
 import { useDeviceStore } from 'src/stores/settings/device';
 import { useAdminStore } from 'src/stores/settings/admin';
-import { useTokenStore } from 'src/stores/settings/token';
 import { getLocalTime } from 'src/utils/settings/utils';
 import { getRoleName, OLARES_ROLE } from 'src/constant';
 import { passwordAddSort } from 'src/utils/account';
 import { useRoute, useRouter } from 'vue-router';
-import { generatePasword } from '../utils';
+import { generatePasword, wizardActivationURL } from '../utils';
 import { useI18n } from 'vue-i18n';
 import { AccountInfo, AccountStatus } from 'src/constant/global';
 import {
@@ -259,14 +252,9 @@ import {
 import { useWebsocketManager2Store } from 'src/stores/websocketManager2';
 
 const userStore = useUserStore();
-const tokenStore = useTokenStore();
 const adminStore = useAdminStore();
 const deviceStore = useDeviceStore();
 const { t } = useI18n();
-
-const url_domain = computed(() => {
-	return tokenStore.url?.split('.').slice(1).join('.');
-});
 
 const quasar = useQuasar();
 const Route = useRoute();
@@ -274,6 +262,12 @@ const router = useRouter();
 
 const userInfo = ref<AccountInfo | undefined>(
 	userStore.getUserByName(Route.params.name as string)
+);
+const activationURL = computed(() =>
+	wizardActivationURL(
+		userInfo.value?.wizard_address,
+		userInfo.value?.wizard_local_address
+	)
 );
 
 console.log(userInfo.value);

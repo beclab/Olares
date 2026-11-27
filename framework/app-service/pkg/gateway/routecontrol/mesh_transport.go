@@ -233,7 +233,8 @@ func authTransportPair(ctx context.Context, c client.Client, labels map[string]s
 // systemLoginTransport runs before the frontend readiness check. The login
 // frontend needs this hop to finish its own HTTP health check.
 func systemLoginTransport(ctx context.Context, c client.Client, srr *srrv1alpha1.SharedRouteRegistry) ([]netv1.NetworkPolicy, error) {
-	if !isSystemLoginRoute(srr) {
+	wizard := gateway.IsSystemWizardRoute(srr)
+	if !wizard && !isSystemLoginRoute(srr) {
 		return nil, nil
 	}
 	authNS := autheliaNSForSRR(srr)
@@ -254,7 +255,7 @@ func systemLoginTransport(ctx context.Context, c client.Client, srr *srrv1alpha1
 		if svc.Spec.Type != corev1.ServiceTypeClusterIP || !maps.Equal(svc.Spec.Selector, target.selector) {
 			return nil, fmt.Errorf("login dependency %s/%s has an unexpected Service configuration", svc.Namespace, svc.Name)
 		}
-		if err := meshedReadyEndpoints(ctx, c, target.namespace, ref); err != nil {
+		if err := checkMeshEndpoints(ctx, c, target.namespace, ref, wizard && target.namespace == authNS); err != nil {
 			return nil, err
 		}
 		backend, err := transportBackend(ctx, c, &svc, ref.Port)

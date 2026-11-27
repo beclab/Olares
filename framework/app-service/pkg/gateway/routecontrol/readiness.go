@@ -127,7 +127,8 @@ func httpRouteMeshDependenciesReady(ctx context.Context, c client.Client, backen
 	if err := meshedReadyEndpoints(ctx, c, backendNS, srr.Spec.Upstream); err != nil {
 		return err
 	}
-	if !isSystemLoginRoute(srr) && (!isApplicationSRR(srr) || srrAuthMode(srr) == gateway.AuthModeNone) {
+	wizard := gateway.IsSystemWizardRoute(srr)
+	if !wizard && !isSystemLoginRoute(srr) && (!isApplicationSRR(srr) || srrAuthMode(srr) == gateway.AuthModeNone) {
 		return nil
 	}
 	authNS := autheliaNSForSRR(srr)
@@ -135,7 +136,7 @@ func httpRouteMeshDependenciesReady(ctx context.Context, c client.Client, backen
 		return fmt.Errorf("Authelia ExtAuth has no bound user namespace")
 	}
 	ref := srrv1alpha1.UpstreamRef{ServiceName: AutheliaBackendServiceName, Port: AutheliaBackendPort}
-	if err := meshedReadyEndpoints(ctx, c, authNS, ref); err != nil {
+	if err := checkMeshEndpoints(ctx, c, authNS, ref, wizard); err != nil {
 		return fmt.Errorf("Authelia proxy: %w", err)
 	}
 	if err := meshedReadyEndpoints(ctx, c, "os-framework", ref); err != nil {
@@ -248,6 +249,10 @@ func conditionReady(conditions []any, generation int64, kind string) bool {
 }
 
 func meshedReadyEndpoints(ctx context.Context, c client.Client, ns string, upstream srrv1alpha1.UpstreamRef) error {
+	return checkMeshEndpoints(ctx, c, ns, upstream, false)
+}
+
+func checkMeshEndpoints(ctx context.Context, c client.Client, ns string, upstream srrv1alpha1.UpstreamRef, requireAuthContext bool) error {
 	serviceName := upstream.ServiceName
 	var service corev1.Service
 	if err := c.Get(ctx, client.ObjectKey{Namespace: ns, Name: serviceName}, &service); err != nil {
@@ -305,6 +310,9 @@ func meshedReadyEndpoints(ctx context.Context, c client.Client, ns string, upstr
 			}
 			if err := endpointInboundPolicyReady(ctx, c, &pod, serviceName, targetPort); err != nil {
 				return fmt.Errorf("%s/%s has a serving endpoint without an enforced Linkerd mesh posture: %w", ns, serviceName, err)
+			}
+			if requireAuthContext && pod.Annotations["traffic.olares.io/auth-proxy-context-version"] != "1" {
+				return fmt.Errorf("%s/%s has a serving endpoint without the tenant Auth proxy configuration", ns, serviceName)
 			}
 			if len(endpoint.Addresses) == 0 {
 				return fmt.Errorf("%s/%s has a serving endpoint without an address", ns, serviceName)
