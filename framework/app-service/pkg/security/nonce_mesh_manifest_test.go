@@ -87,8 +87,8 @@ func TestNonceMeshIdentityAndTenantBinding(t *testing.T) {
 					declared[port.(map[string]any)["containerPort"]] = true
 				}
 				if c["name"] == "system-server" {
-					if c["image"] == "beclab/system-server:0.1.37" || !strings.Contains(c["image"].(string), "@sha256:") {
-						t.Fatal("fresh tenant would use the legacy nonce handler or a mutable image tag")
+					if c["image"] != "beclab/system-server:0.1.37" {
+						t.Fatalf("mesh enrollment must preserve the platform system-server image, got %v", c["image"])
 					}
 					enrolled := false
 					for _, env := range c["env"].([]any) {

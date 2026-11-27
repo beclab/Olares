@@ -89,8 +89,7 @@ spec:
       priorityClassName: "system-cluster-critical"
       containers:
       - name: system-server
-        # This release includes nonce authorization at the mesh boundary.
-        image: beclab/system-server@sha256:b898ad3621187c2d57761f2b26987a6058e619b2e5b5c9c416ea3bcce185cc8d
+        image: beclab/system-server:0.1.37
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80
