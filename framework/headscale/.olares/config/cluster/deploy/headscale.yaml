@@ -97,11 +97,12 @@ metadata:
   labels:
     app: headscale
 rules:
-  # Olares User objects are cluster-scoped. The DNS renderer lists their zones,
-  # while the API wrapper gets one User to enforce owner-only operations.
+  # Olares User objects are cluster-scoped. The API wrapper gets individual
+  # Users for owner-only operations and lists/watches their zones to publish
+  # the split DNS JSON file.
   - apiGroups: ["iam.kubesphere.io"]
     resources: ["users"]
-    verbs: ["get", "list"]
+    verbs: ["get", "list", "watch"]
   # The API wrapper authenticates Tailscale bootstrap requests with TokenReview.
   - apiGroups: ["authentication.k8s.io"]
     resources: ["tokenreviews"]
@@ -255,18 +256,20 @@ data:
     policy:
       mode: database
 
-    # The actual shared-node address is rendered by the Headscale container at
-    # startup. A liveness check restarts the container when the Tailscale
-    # postStart hook publishes a new IPv4 address.
+    # The wrapper publishes User zones and the shared-node IPv4 as JSON.
+    # The Headscale fork hot-loads it without restarting the container.
     dns:
       magic_dns: false
       base_domain: olares.internal
       override_local_dns: false
       nameservers:
         global: []
-        __TAILSCALE_DNS_SPLIT__
+        split: {}
       search_domains: []
       extra_records: []
+      # Requires the Headscale fork with split DNS file watching. This must
+      # match the API wrapper's SPLIT_DNS_RESOLVERS_FILE below.
+      split_resolvers_path: /var/lib/headscale/bootstrap/split-resolvers.json
 
     unix_socket: /var/run/headscale/headscale.sock
     unix_socket_permission: "0770"
@@ -326,8 +329,8 @@ data:
         cache 5
         reload 2s
 
-        # Headscale sends only the exact Olares split zones rendered at Pod
-        # startup. Every query that reaches this resolver therefore belongs to
+        # Headscale sends the Olares split zones maintained by the wrapper
+        # and hot-loaded from JSON. Every query that reaches this resolver therefore belongs to
         # this Olares instance and resolves to its shared ingress node. The L4
         # proxy selects the actual user/application using SNI or Host.
         template IN A {
@@ -549,115 +552,48 @@ spec:
         fsGroup: 1000
       initContainers:
         - name: render-dns-config
-          image: alpine/kubectl:1.33.4
+          image: busybox:1.28
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
             - -ec
           args:
             - |
-              raw_zones=/etc/headscale-runtime/user-zones.raw
-              zones=/etc/headscale-runtime/user-zones
-              split=/etc/headscale-runtime/dns-split.yaml
               rendered=/etc/headscale-runtime/config.yaml.tpl
-              kube_api=https://kubernetes.default.svc:443
-              kube_ca=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
-              kube_token_file=/var/run/secrets/kubernetes.io/serviceaccount/token
               headscale_server_url=https://headscale-server-svc.os-network.svc.cluster.local
-
-              kube() {
-                kubectl \
-                  --server="${kube_api}" \
-                  --certificate-authority="${kube_ca}" \
-                  --token="$(cat "${kube_token_file}")" \
-                  "$@"
-              }
-
-              : > "${zones}"
-
+              # Global zone only selects server_url; wrapper owns split DNS.
               valid_zone() {
-                zone="$(printf '%s' "$1" | tr 'A-Z' 'a-z')"
-                case "${zone}" in
-                  ""|.*|*.|*..*|*[^a-z0-9.-]*) return 1 ;;
-                esac
-                case "${zone}" in
-                  *.*) printf '%s\n' "${zone}" ;;
-                  *) return 1 ;;
-                esac
+                zone="$(printf '%s' "$1" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//' | tr 'A-Z' 'a-z')"
+                test "${#zone}" -le 253 || return 1
+                label='[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?'
+                printf '%s\n' "${zone}" | grep -Eqx "${label}(\.${label})+" || return 1
+                printf '%s\n' "${zone}"
               }
-
               if test -n "${OLARES_DNS_ZONE}"; then
-                # Comma-separated; the first zone names the Headscale URL.
-                printf '%s\n' "${OLARES_DNS_ZONE}" | tr ',' '\n' \
-                  | sed 's/^[[:space:]]*//; s/[[:space:]]*$//' > "${raw_zones}"
+                raw_zones=/etc/headscale-runtime/server-url-zones
+                trap 'rm -f "${raw_zones}"' EXIT
+                printf '%s\n' "${OLARES_DNS_ZONE}" | tr ',' '\n' > "${raw_zones}"
                 primary_zone=""
                 while IFS= read -r zone; do
+                  zone="$(printf '%s' "$zone" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')"
                   test -n "${zone}" || continue
                   if ! normalized_zone="$(valid_zone "${zone}")"; then
                     echo "invalid Olares DNS zone annotation: ${OLARES_DNS_ZONE}" >&2
                     exit 1
                   fi
-                  printf '%s\n' "${normalized_zone}" >> "${zones}"
                   test -n "${primary_zone}" || primary_zone="${normalized_zone}"
                 done < "${raw_zones}"
-                if test -z "${primary_zone}"; then
-                  echo "invalid Olares DNS zone annotation: ${OLARES_DNS_ZONE}" >&2
-                  exit 1
-                fi
-                echo "using global Olares split DNS zones, primary: ${primary_zone}"
+                test -n "${primary_zone}" || { echo "empty Olares DNS zone annotation" >&2; exit 1; }
                 headscale_server_url="https://headscale.${primary_zone}"
-              else
-                echo "global Olares DNS zone is absent; using per-user DNS zones"
-
-                # Compatibility path for current multi-domain Olares. Only the
-                # zone consumed by CoreDNS proves that binding has completed.
-                kube get users.iam.kubesphere.io \
-                  --request-timeout=30s \
-                  -o jsonpath='{range .items[*]}{.metadata.annotations.bytetrade\.io/zone}{"\n"}{end}' \
-                  > "${raw_zones}"
-
-                while IFS= read -r zone; do
-                  if normalized_zone="$(valid_zone "${zone}")"; then
-                    printf '%s\n' "${normalized_zone}" >> "${zones}"
-                  fi
-                done < "${raw_zones}"
               fi
-              sort -u -o "${zones}" "${zones}"
-
-              if test -s "${zones}"; then
-                echo "rendering Headscale split DNS zones:"
-                sed 's/^/  - /' "${zones}"
-                printf '    split:\n' > "${split}"
-                while IFS= read -r zone; do
-                  printf '      %s:\n' "${zone}" >> "${split}"
-                  printf '        - __TAILSCALE_DNS_IP__\n' >> "${split}"
-                done < "${zones}"
-              else
-                # A fresh installation may start before the first Olares user
-                # has completed domain binding. A later Pod restart re-renders
-                # the routes after the user exists.
-                echo "no Olares user DNS zones found; rendering empty split DNS"
-                printf '    split: {}\n' > "${split}"
-              fi
-
-              sed \
-                -e "s|__HEADSCALE_SERVER_URL__|${headscale_server_url}|g" \
-                -e '/^[[:space:]]*__TAILSCALE_DNS_SPLIT__[[:space:]]*$/ {' \
-                -e 'r /etc/headscale-runtime/dns-split.yaml' \
-                -e 'd' \
-                -e '}' \
-                /etc/headscale-template/config.yaml.tpl \
-                > "${rendered}.tmp"
+              sed "s|__HEADSCALE_SERVER_URL__|${headscale_server_url}|g" \
+                /etc/headscale-template/config.yaml.tpl > "${rendered}.tmp"
               mv "${rendered}.tmp" "${rendered}"
-
-              rm -f "${raw_zones}" "${zones}" "${split}"
           env:
             - name: OLARES_DNS_ZONE
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.annotations['bytetrade.io/zone']
-            - name: HOME
-              value: /etc/headscale-runtime
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
@@ -752,27 +688,14 @@ spec:
               mountPath: /var/run/headscale
       containers:
         - name: headscale
-          image: headscale/headscale:0.29.7-debug
+          image: beclab/headscale:v0.29.7-olares.1-debug
           imagePullPolicy: IfNotPresent
           command: [/busybox/sh, -ec]
           args:
             - |
-              chmod 0770 /var/lib/headscale/bootstrap
-              dns_ip="$(cat /var/lib/headscale/bootstrap/tailscale.ip 2>/dev/null || true)"
-              if test -z "${dns_ip}"; then
-                # Headscale must start once before Tailscale can register and get
-                # its real address. With a fresh database and sequential
-                # allocation, the shared node is expected to register first.
-                dns_ip=100.64.0.1
-              fi
               rm -f /var/run/headscale/policy.ready
-              sed "s/__TAILSCALE_DNS_IP__/${dns_ip}/g" \
-                /etc/headscale/config.yaml.tpl \
-                > /etc/headscale/config.yaml.tmp
-              mv /etc/headscale/config.yaml.tmp \
-                /etc/headscale/config.yaml
-              printf '%s\n' "${dns_ip}" \
-                > /var/lib/headscale/bootstrap/headscale-dns.applied
+              cp /etc/headscale/config.yaml.tpl /etc/headscale/config.yaml.tmp
+              mv /etc/headscale/config.yaml.tmp /etc/headscale/config.yaml
               exec /ko-app/headscale serve
           env:
             - name: HEADSCALE_CONFIG
@@ -800,7 +723,27 @@ spec:
                       # PostgreSQL is the policy source of truth. Seed a fresh
                       # database exactly once; Pod restarts and chart upgrades
                       # must never overwrite policy updated through the API.
-                      if /ko-app/headscale policy get >/dev/null 2>&1; then
+                      policy_state=unknown
+                      for attempt in 1 2 3 4 5; do
+                        if policy_error="$(/busybox/timeout 10 /ko-app/headscale policy get 2>&1 >/dev/null)"; then
+                          policy_state=exists
+                          break
+                        fi
+                        # Match the terminal missing-policy cause, independent of
+                        # gRPC/HTTP wrappers, and only after a failed query.
+                        # Transport/DB errors must never reset ACLs.
+                        if printf '%s\n' "$policy_error" | /busybox/grep -Eq '(^|:[[:space:]]*)acl policy not found$'; then
+                          policy_state=missing
+                          break
+                        fi
+                        echo "Headscale policy query failed (attempt $attempt/5); refusing to initialize policy: $policy_error" >&2
+                        if test "$attempt" -lt 5; then sleep 2; fi
+                      done
+                      if test "$policy_state" = unknown; then
+                        echo "cannot determine Headscale policy state; leaving existing policy unchanged" >&2
+                        exit 1
+                      fi
+                      if test "$policy_state" = exists; then
                         echo "Headscale database policy already exists"
                       else
                         echo "initializing Headscale database policy"
@@ -877,18 +820,18 @@ spec:
                       fi
                       touch /var/run/headscale/policy.ready
 
-                      # This is a per-Pod runtime credential. Always create a
-                      # fresh key and publish it atomically for the API wrapper.
-                      # Any failure must fail the postStart hook instead of
-                      # leaving Headscale running without a usable wrapper.
-                      umask 077
-                      rm -f /var/run/headscale-auth/headscale.apikey.tmp
-                      /ko-app/headscale apikeys create \
-                        --expiration 87600h \
-                        > /var/run/headscale-auth/headscale.apikey.tmp
-                      test -s /var/run/headscale-auth/headscale.apikey.tmp
-                      mv /var/run/headscale-auth/headscale.apikey.tmp \
-                        /var/run/headscale-auth/headscale.apikey
+                      # Reuse the per-Pod key across container restarts.
+                      # Invalid credentials are recovered by recreating the Pod.
+                      runtime_key=/var/run/headscale-auth/headscale.apikey
+                      if ! test -s "$runtime_key"; then
+                        umask 077
+                        rm -f "${runtime_key}.tmp"
+                        /busybox/timeout 10 /ko-app/headscale apikeys create \
+                          --expiration 87600h > "${runtime_key}.tmp"
+                        test -s "${runtime_key}.tmp"
+                        chmod 0600 "${runtime_key}.tmp"
+                        mv "${runtime_key}.tmp" "$runtime_key"
+                      fi
 
                     ) > /var/lib/headscale/bootstrap/bootstrap.log 2>&1
           ports:
@@ -906,9 +849,6 @@ spec:
                 - |
                   test -S /var/run/headscale/headscale.sock
                   test -f /var/run/headscale/policy.ready
-                  desired="$(cat /var/lib/headscale/bootstrap/tailscale.ip 2>/dev/null || true)"
-                  applied="$(cat /var/lib/headscale/bootstrap/headscale-dns.applied 2>/dev/null || true)"
-                  test -z "${desired}" || test "${desired}" = "${applied}"
             initialDelaySeconds: 2
             periodSeconds: 5
           livenessProbe:
@@ -918,12 +858,9 @@ spec:
                 - -ec
                 - |
                   test -S /var/run/headscale/headscale.sock
-                  desired="$(cat /var/lib/headscale/bootstrap/tailscale.ip 2>/dev/null || true)"
-                  applied="$(cat /var/lib/headscale/bootstrap/headscale-dns.applied 2>/dev/null || true)"
-                  test -z "${desired}" || test "${desired}" = "${applied}"
             initialDelaySeconds: 10
             periodSeconds: 5
-            failureThreshold: 1
+            failureThreshold: 3
           securityContext:
             allowPrivilegeEscalation: false
             runAsNonRoot: true
@@ -962,16 +899,17 @@ spec:
               mountPath: /etc/nginx/conf.d
               readOnly: true
         - name: headscale-api-wrapper
-          image: beclab/headscale-api-wrapper:v0.2.6
+          image: beclab/headscale-api-wrapper:v0.2.7
           imagePullPolicy: IfNotPresent
           command: [/bin/sh, -ec]
           args:
             - |
-              until test -s /var/run/headscale-auth/headscale.apikey; do
+              key_file=/var/run/headscale-auth/headscale.apikey
+              until test -s "$key_file"; do
                 echo "waiting for the Headscale API-wrapper key"
                 sleep 2
               done
-              APIKEY="$(cat /var/run/headscale-auth/headscale.apikey)"
+              APIKEY="$(cat "$key_file")"
               export APIKEY
               exec /headscale-api-wrapper \
                 --host 127.0.0.1 \
@@ -1009,6 +947,12 @@ spec:
               value: headscale-users
             - name: SUBNET_ROUTES_FILE
               value: /var/lib/headscale/bootstrap/subnet-routes
+            # Requires the wrapper image with JSON split DNS publication.
+            # Both containers map this directory to the same hostPath.
+            - name: SPLIT_DNS_RESOLVERS_FILE
+              value: /var/lib/headscale/bootstrap/split-resolvers.json
+            - name: TAILSCALE_IP_FILE
+              value: /var/lib/headscale/bootstrap/tailscale.ip
             # Keep these aligned with the fixed Linux installation defaults.
             - name: OLARES_CLUSTER_CIDRS
               value: "10.233.64.0/18,10.233.0.0/18"
@@ -1139,37 +1083,6 @@ spec:
                   app: headscale
               topologyKey: kubernetes.io/hostname
       initContainers:
-        - name: init-dns-config
-          image: busybox:1.28
-          imagePullPolicy: IfNotPresent
-          command:
-            - sh
-            - -ec
-            - |
-              # Seed the expected first allocation. The Tailscale postStart hook
-              # replaces it with the address reported by tailscaled.
-              # Replace the root-owned Corefile left by a previous start.
-              corefile_tmp=$(mktemp /etc/coredns-runtime/Corefile.XXXXXX)
-              trap 'rm -f "${corefile_tmp}"' EXIT
-              sed 's/__TAILSCALE_DNS_IP__/100.64.0.1/g' \
-                /etc/coredns-template/Corefile \
-                > "${corefile_tmp}"
-              chmod 0644 "${corefile_tmp}"
-              mv -f "${corefile_tmp}" /etc/coredns-runtime/Corefile
-              trap - EXIT
-          securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop: [ALL]
-            readOnlyRootFilesystem: true
-            runAsNonRoot: true
-            runAsUser: 1000
-          volumeMounts:
-            - name: dns-template
-              mountPath: /etc/coredns-template
-              readOnly: true
-            - name: dns-runtime
-              mountPath: /etc/coredns-runtime
         # Sidecar so dns-proxy is not started until ts-olares exists. CoreDNS
         # resolves `bind` once, at process start, and exits if the interface
         # is missing. restartPolicy Always keeps tailscaled running after the
@@ -1216,52 +1129,6 @@ spec:
               fi
               unset authkey
               exec /usr/local/bin/containerboot
-          lifecycle:
-            postStart:
-              exec:
-                command:
-                  - /bin/sh
-                  - -ec
-                  - |
-                    dns_ip=""
-                    # Covers key retrieval (up to 120s) plus containerboot login (up to 60s).
-                    deadline=$(( $(date +%s) + 240 ))
-                    while test "$(date +%s)" -lt "${deadline}"; do
-                      if status="$(tailscale status --json 2>/dev/null)" &&
-                        printf '%s\n' "${status}" | grep -q '"BackendState"[[:space:]]*:[[:space:]]*"Running"'; then
-                        rm -f /var/run/tailscale-auth/authkey
-                        dns_ip="$(tailscale ip -4 2>/dev/null | head -n 1 || true)"
-                        test -n "${dns_ip}" && break
-                      fi
-                      sleep 1
-                    done
-                    test -n "${dns_ip}"
-
-                    # TS_AUTH_ONCE keeps the persisted node login across Pod
-                    # replacements, so TS_EXTRA_ARGS is not reapplied on every
-                    # boot. Enforce exit-node advertisement through the local
-                    # API after tailscaled is online; this is idempotent for
-                    # both fresh installs and upgrades.
-                    tailscale set \
-                      --advertise-exit-node=true
-
-                    sed "s/__TAILSCALE_DNS_IP__/${dns_ip}/g" \
-                      /etc/coredns-template/Corefile \
-                      > /etc/coredns-runtime/Corefile.tmp
-                    mv /etc/coredns-runtime/Corefile.tmp \
-                      /etc/coredns-runtime/Corefile
-
-                    # CoreDNS reloads every two seconds. Publish the new
-                    # split-DNS target after the resolver has reloaded.
-                    sleep 3
-                    printf '%s\n' "${dns_ip}" \
-                      > /etc/headscale-bootstrap/tailscale.ip.tmp
-                    mv /etc/headscale-bootstrap/tailscale.ip.tmp \
-                      /etc/headscale-bootstrap/tailscale.ip
-                    # This container's uid is 0. Headscale runs as uid 1000 and
-                    # has to be able to read the address on its next start.
-                    chmod 0644 /etc/headscale-bootstrap/tailscale.ip
-                    echo "synchronized shared Tailscale DNS address: ${dns_ip}"
           env:
             - name: TS_DISABLE_TAILDROP
               value: "true"
@@ -1304,19 +1171,12 @@ spec:
               readOnly: true
             - name: bootstrap-authkey
               mountPath: /var/run/tailscale-auth
-            - name: headscale-bootstrap
-              mountPath: /etc/headscale-bootstrap
             - name: tailscale-data
               mountPath: /var/lib/tailscale
             - name: tailscale-run
               mountPath: /var/run/tailscale
             - name: tun
               mountPath: /dev/net/tun
-            - name: dns-template
-              mountPath: /etc/coredns-template
-              readOnly: true
-            - name: dns-runtime
-              mountPath: /etc/coredns-runtime
             - name: tls-cert
               mountPath: /certs
               readOnly: true
@@ -1340,16 +1200,43 @@ spec:
             initialDelaySeconds: 5
             periodSeconds: 5
             timeoutSeconds: 5
-      containers:
-        - name: subnet-router-sync
+        # Sidecar so dns-proxy starts only after the Corefile carries the
+        # actual Tailnet address. This loop is the only Corefile writer, and
+        # dns-runtime starts empty in every Pod.
+        - name: tailscale-sync
+          restartPolicy: Always
           image: tailscale/tailscale:v1.104.4
           imagePullPolicy: IfNotPresent
           command: [/bin/sh, -ec]
           args:
             - |
+              # This shell is PID 1. Handle termination explicitly so shutdown
+              # can proceed to the tailscale sidecar without exhausting the
+              # Pod grace period. In-flight CLI calls have bounded timeouts.
+              trap 'exit 0' TERM INT
               failures=0
               read_failures=0
               prefs_failures=0
+              exit_node_configured=false
+              exit_node_failures=0
+              sync_exit_node() {
+                # AuthOnce does not reapply TS_EXTRA_ARGS for persisted identities.
+                # Retry independently of DNS and subnet-file failures; configure
+                # once per sync-container lifetime without blocking Pod startup.
+                if test "$exit_node_configured" = true; then return 0; fi
+                if exit_output=$(timeout 5 tailscale set --advertise-exit-node=true 2>&1); then
+                  exit_node_configured=true
+                  exit_node_failures=0
+                  echo "enabled shared Tailscale exit-node advertisement"
+                else
+                  exit_status=$?
+                  exit_node_failures=$((exit_node_failures + 1))
+                  if test "$exit_node_failures" -eq 1 || test "$((exit_node_failures % 150))" -eq 0; then
+                    echo "failed to enable exit-node advertisement (exit $exit_status); will retry: $exit_output" >&2
+                  fi
+                fi
+                return 0
+              }
               routes_file=/etc/headscale-bootstrap/subnet-routes
               # Read only the CIDR array from the CLI's JSON, without requiring jq.
               actual_routes() {
@@ -1372,7 +1259,113 @@ spec:
                   }
                 '
               }
-              while true; do
+              tailscale_is_running() (
+                if status=$(timeout 5 tailscale status --json); then
+                  if ! printf '%s\n' "$status" | grep -q '"BackendState"[[:space:]]*:[[:space:]]*"Running"'; then
+                    echo "Tailscale is not Running yet" >&2
+                    return 1
+                  fi
+                else
+                  status_exit=$?
+                  echo "cannot query Tailscale state (exit $status_exit)" >&2
+                  return 1
+                fi
+              )
+              authkey_failures=0
+              cleanup_authkey() {
+                if ! test -e /var/run/tailscale-auth/authkey; then
+                  authkey_failures=0
+                  return 0
+                fi
+                # Only query status while a key remains. Keep credentials until
+                # login completes, including after a tailscale-only restart.
+                if ! tailscale_is_running 2>/dev/null; then
+                  return 0
+                fi
+                if rm -f /var/run/tailscale-auth/authkey 2>/dev/null; then
+                  authkey_failures=0
+                else
+                  authkey_failures=$((authkey_failures + 1))
+                  if test "$authkey_failures" -eq 1 || test "$((authkey_failures % 150))" -eq 0; then
+                    echo "cannot remove temporary Tailscale authkey; will retry" >&2
+                  fi
+                fi
+                return 0
+              }
+              dns_failures=0
+              sync_dns() (
+                core_tmp=""
+                ip_tmp=""
+                trap 'rm -f "${core_tmp}" "${ip_tmp}"' EXIT
+                tailscale_is_running || return 1
+                dns_ip=$(timeout 5 tailscale ip -4) || {
+                  echo "cannot query Tailscale IPv4 address" >&2
+                  return 1
+                }
+                printf '%s\n' "$dns_ip" | awk -F. '
+                  NF != 4 { exit 1 }
+                  { for (i=1;i<=4;i++) if ($i !~ /^[0-9]+$/ || $i > 255) exit 1 }
+                  END { if (NR != 1) exit 1 }
+                ' || {
+                  echo "Tailscale IPv4 address is empty or invalid" >&2
+                  return 1
+                }
+                # A sentinel preserves trailing newlines in shell substitutions.
+                # Compare actual disk contents, not the previous loop's result.
+                expected=$(sed "s/__TAILSCALE_DNS_IP__/${dns_ip}/g" /etc/coredns-template/Corefile && printf '.') || return 1
+                current=""
+                if test -e /etc/coredns-runtime/Corefile || test -L /etc/coredns-runtime/Corefile; then
+                  current=$(cat /etc/coredns-runtime/Corefile && printf '.') || return 1
+                fi
+                if test "$current" != "$expected"; then
+                  core_tmp=$(mktemp /etc/coredns-runtime/Corefile.XXXXXX) || return 1
+                  printf '%s' "${expected%.}" > "$core_tmp" || return 1
+                  chmod 0644 "$core_tmp" && mv -f "$core_tmp" /etc/coredns-runtime/Corefile || return 1
+                fi
+                # Corefile existence releases startupProbe so dns-proxy can
+                # start independently. Do not publish an address until that
+                # resolver actually serves the expected A record. Bound each
+                # attempt so a DNS failure cannot stall subnet reconciliation.
+                dns_query=dns-sync.olares.internal
+                if ! dns_answer=$(timeout 2 nslookup -type=A "${dns_query}." "$dns_ip" 2>&1); then
+                  echo "DNS resolver $dns_ip is not ready" >&2
+                  return 1
+                fi
+                # BusyBox prints the resolver address before the answer.
+                # Only accept Address lines under the matching Name section;
+                # the Server/Address header alone must never pass this check.
+                if ! printf '%s\n' "$dns_answer" | awk -v query="$dns_query" -v expected="$dns_ip" '
+                  /^Name:[[:space:]]*/ {
+                    name = $2
+                    sub(/\.$/, "", name)
+                    in_answer = (name == query)
+                    next
+                  }
+                  in_answer && /^Address([[:space:]]+[0-9]+)?:[[:space:]]*/ {
+                    address = $0
+                    sub(/^Address([[:space:]]+[0-9]+)?:[[:space:]]*/, "", address)
+                    sub(/[[:space:]]+$/, "", address)
+                    if (address == expected) found = 1
+                    else invalid = 1
+                  }
+                  END { exit !(found && !invalid) }
+                '; then
+                  echo "DNS resolver $dns_ip did not return the expected A record" >&2
+                  return 1
+                fi
+                expected=$(printf '%s\n.' "$dns_ip")
+                current=""
+                if test -e /etc/headscale-bootstrap/tailscale.ip || test -L /etc/headscale-bootstrap/tailscale.ip; then
+                  current=$(cat /etc/headscale-bootstrap/tailscale.ip && printf '.') || return 1
+                fi
+                if test "$current" != "$expected"; then
+                  ip_tmp=$(mktemp /etc/headscale-bootstrap/tailscale.ip.XXXXXX) || return 1
+                  printf '%s' "${expected%.}" > "$ip_tmp" || return 1
+                  chmod 0644 "$ip_tmp" && mv -f "$ip_tmp" /etc/headscale-bootstrap/tailscale.ip || return 1
+                  echo "published shared Tailscale DNS address: $dns_ip"
+                fi
+              )
+              sync_routes() {
                 configured=""
                 if test -e "${routes_file}"; then
                   if ! configured="$(cat "${routes_file}" 2>&1)"; then
@@ -1380,8 +1373,7 @@ spec:
                     if test "${read_failures}" -eq 1 || test "$((read_failures % 150))" -eq 0; then
                       echo "cannot read ${routes_file}; keeping current routes: ${configured}" >&2
                     fi
-                    sleep 2
-                    continue
+                    return 0
                   fi
                 fi
                 read_failures=0
@@ -1391,7 +1383,7 @@ spec:
                 if test -n "${configured}"; then
                   desired="${desired},${configured}"
                 fi
-                if prefs="$(tailscale debug prefs 2>/dev/null)" &&
+                if prefs="$(timeout 5 tailscale debug prefs 2>/dev/null)" &&
                   actual="$(printf '%s\n' "${prefs}" | actual_routes)"; then
                   prefs_failures=0
                 else
@@ -1399,17 +1391,15 @@ spec:
                   if test "${prefs_failures}" -eq 1 || test "$((prefs_failures % 150))" -eq 0; then
                     echo "cannot read Tailscale advertised routes; keeping current routes and retrying in 2s" >&2
                   fi
-                  sleep 2
-                  continue
+                  return 0
                 fi
                 expected="$(printf '%s\n' "${desired}" | tr ',' '\n' | LC_ALL=C sort -u)"
                 actual="$(printf '%s\n' "${actual}" | LC_ALL=C sort -u)"
                 if test "${actual}" = "${expected}"; then
                   failures=0
-                  sleep 2
-                  continue
+                  return 0
                 fi
-                if set_output="$(tailscale set \
+                if set_output="$(timeout 5 tailscale set \
                   --advertise-routes="${desired}" 2>&1)"; then
                   failures=0
                 else
@@ -1419,6 +1409,24 @@ spec:
                     echo "failed to publish Olares subnet routes (exit ${set_status}); retrying in 2s: ${set_output}" >&2
                   fi
                 fi
+                return 0
+              }
+              while true; do
+                if dns_result=$(sync_dns 2>&1); then
+                  if test "$dns_failures" -gt 0; then
+                    echo "DNS synchronization recovered"
+                  fi
+                  dns_failures=0
+                  test -z "$dns_result" || echo "$dns_result"
+                else
+                  dns_failures=$((dns_failures + 1))
+                  if test "$dns_failures" -eq 1 || test "$((dns_failures % 150))" -eq 0; then
+                    echo "DNS synchronization pending; will retry: $dns_result" >&2
+                  fi
+                fi
+                cleanup_authkey
+                sync_exit_node
+                sync_routes
                 sleep 2
               done
           securityContext:
@@ -1429,12 +1437,25 @@ spec:
             runAsNonRoot: false
             runAsUser: 0
           volumeMounts:
+            - name: bootstrap-authkey
+              mountPath: /var/run/tailscale-auth
             - name: headscale-bootstrap
               mountPath: /etc/headscale-bootstrap
+            - name: dns-template
+              mountPath: /etc/coredns-template
               readOnly: true
+            - name: dns-runtime
+              mountPath: /etc/coredns-runtime
             - name: tailscale-run
               mountPath: /var/run/tailscale
               readOnly: true
+          startupProbe:
+            exec:
+              command: ["test", "-s", "/etc/coredns-runtime/Corefile"]
+            periodSeconds: 1
+            timeoutSeconds: 1
+            failureThreshold: 300
+      containers:
         - name: dns-proxy
           image: registry.k8s.io/coredns/coredns:v1.11.3
           imagePullPolicy: IfNotPresent
