@@ -1,17 +1,62 @@
-/* Allow table cells in doc content to wrap text at word boundaries */
-.vp-doc table td,
-.vp-doc table th {
+/* Full-width tables with local horizontal scrolling on narrow screens. */
+.vp-doc .doc-table {
+  width: 100%;
+  margin: 24px 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+
+.vp-doc .doc-table:focus-visible {
+  outline: 2px solid var(--vp-c-brand-1);
+  outline-offset: 3px;
+}
+
+.vp-doc .doc-table table {
+  display: table;
+  width: 100%;
+  margin: 0;
+  table-layout: auto;
+}
+
+.vp-doc table th,
+.vp-doc table td {
+  padding: 12px 16px;
+  vertical-align: top;
+  line-height: 1.65;
   white-space: normal;
+  word-break: normal;
   overflow-wrap: break-word;
 }
 
+/* Keep individual flags and values intact. Aliases can wrap between tokens. */
+.vp-doc table :not(pre) > code {
+  white-space: nowrap;
+  word-break: normal;
+  overflow-wrap: normal;
+}
+
+/* Give explanations room in three-column reference tables. */
+.vp-doc .doc-table table:has(th:nth-child(3):last-child) td:nth-child(2) {
+  min-width: 14rem;
+}
+
+.vp-doc .doc-table table:has(th:nth-child(3):last-child) td:last-child {
+  min-width: 7rem;
+}
+
 /* Keep symptom and guide columns balanced in the troubleshooting index. */
-.troubleshooting-guide table {
-  width: 100%;
+.troubleshooting-guide .doc-table table {
   table-layout: fixed;
 }
 
 .troubleshooting-guide th:first-child,
 .troubleshooting-guide td:first-child {
   width: 40%;
+}
+
+@media (max-width: 639px) {
+  .vp-doc table th,
+  .vp-doc table td {
+    padding: 10px 12px;
+  }
 }

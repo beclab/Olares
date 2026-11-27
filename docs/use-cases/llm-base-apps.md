@@ -355,7 +355,7 @@ hy4-flash-sq-64
 | **STRATA_MEMORY_LIMIT** | `56Gi` | Allow memory growth while leaving 8 GiB of the device RAM for Olares and other services |
 | **STRATA_REQUIRED_GPU_MEMORY** | `23Gi` | Schedule on a GPU with at least 23 GiB available |
 
-The RAM budget is informed by Strata's [Hy4 memory planner](https://github.com/Niko1221/Strata/blob/main/terminal/strata_control/hy4_fit.py). CPU allocations and the GPU scheduling requirement depend on the device; SQ-64 does not prescribe a fixed CPU count or require 23 GiB of GPU memory. With less GPU memory, more model data stays in RAM or is read from the SSD. Adjust the budget for your device and check memory use after loading the model and during long prompts.
+The RAM budget is informed by Strata's [Hy4 memory planner](https://github.com/Niko1221/Strata/blob/main/terminal/strata_control/hy4_fit.py). CPU allocations and the GPU scheduling requirement depend on the device. SQ-64 does not prescribe a fixed CPU count or require 23 GiB of GPU memory. With less GPU memory, more model data stays in RAM or is read from the SSD. Adjust the budget for your device and check memory use after loading the model and during long prompts.
 
 </details>
 
@@ -423,7 +423,7 @@ If your client asks for a context length, check the actual setting in Router. Th
 
 ## Inference engine startup parameters {#engine-tuning-arguments}
 
-Use `ENGINE_ARGS` to control context length, memory use, concurrency, and model-specific features. The tables below list common options; the linked engine references contain the full lists. Example values are separate choices, not a preset to combine unchanged.
+Use `ENGINE_ARGS` to control context length, memory use, concurrency, and model-specific features. The tables below list common options. The linked engine references contain the full lists. Example values are separate choices, not a preset to combine unchanged.
 
 ### llama.cpp {#llama-cpp-tuning}
 
@@ -433,9 +433,9 @@ Enter space-separated flags, such as `-c 65536 -np 1 -ngl all -fa on`. The base 
 | --- | --- | --- |
 | `-c` / `--ctx-size` | Context token budget. With multiple slots, check the per-slot context reported by the server. | `65536` |
 | `-np` / `--parallel` | Number of parallel request slots. Use `1` to dedicate the context budget to one request. | `1` |
-| `-ngl` / `--gpu-layers` | Number of layers to offload to the GPU. `all` requests full offload; a smaller count reduces GPU memory use. | `all` |
+| `-ngl` / `--gpu-layers` | Number of layers to offload to the GPU. `all` requests full offload. A smaller count reduces GPU memory use. | `all` |
 | `-fa` / `--flash-attn` | Flash Attention mode. | `on`, `off`, or `auto` |
-| `-ctk` / `-ctv` | K and V cache data types. Quantized caches use less memory; supported combinations depend on the model and backend. | `q8_0` |
+| `-ctk` / `-ctv` | K and V cache data types. Quantized caches use less memory. Supported combinations depend on the model and backend. | `q8_0` |
 | `-t` / `--threads` | CPU threads used during generation. | `8` |
 | `--jinja` | Enables Jinja chat templates, including templates used for tool calling. | Flag only |
 | `--spec-type` | Speculative decoding method. `draft-mtp` requires compatible MTP weights. | `draft-mtp` |
@@ -475,11 +475,11 @@ Enter space-separated flags, such as `--context-length 65536 --mem-fraction-stat
 | `--tool-call-parser` | Converts model tool-call output into structured API tool calls. | `qwen25` for compatible Qwen models |
 | `--attention-backend` | Selects the attention implementation for the model and hardware. | `flashinfer` |
 
-For SGLang 0.5.23, remove `--speculative-skip-dp-mlp-sync` from older configurations; this flag now causes startup to fail. See the [SGLang server reference](https://docs.sglang.io/docs/advanced_features/server_arguments) for supported backends, parsers, and speculative decoding options.
+For SGLang 0.5.23, remove `--speculative-skip-dp-mlp-sync` from older configurations. This flag now causes startup to fail. See the [SGLang server reference](https://docs.sglang.io/docs/advanced_features/server_arguments) for supported backends, parsers, and speculative decoding options.
 
 ### vLLM {#vLLM-tuning}
 
-Enter space-separated flags, such as `--max-model-len 65536 --gpu-memory-utilization 0.9`. GPU utilization is relative to the memory visible to the engine; on Olares, `VLLM_REQUIRED_GPU_MEMORY` sets that GPU memory budget.
+Enter space-separated flags, such as `--max-model-len 65536 --gpu-memory-utilization 0.9`. GPU utilization is relative to the memory visible to the engine. On Olares, `VLLM_REQUIRED_GPU_MEMORY` sets that GPU memory budget.
 
 | Argument | Purpose | Example value |
 | --- | --- | --- |
@@ -491,7 +491,7 @@ Enter space-separated flags, such as `--max-model-len 65536 --gpu-memory-utiliza
 | `--enable-prefix-caching` | Reuses cached KV data for shared prompt prefixes. | Flag only |
 | `--kv-cache-dtype` | KV cache data type, subject to model and GPU support. | `auto` or `fp8` |
 | `--reasoning-parser` | Extracts reasoning using the model's output format. | `qwen3` for compatible Qwen models |
-| `--enable-auto-tool-choice` | Lets the model choose tool calls; configure a matching tool-call parser. | Flag only |
+| `--enable-auto-tool-choice` | Lets the model choose tool calls. Configure a matching tool-call parser. | Flag only |
 | `--tool-call-parser` | Parses the model's tool-call format. | `qwen3_xml` for compatible Qwen models |
 | `--enforce-eager` | Uses eager execution instead of CUDA graphs. Useful when troubleshooting graph capture or its memory overhead. | Flag only |
 | `--no-enable-extensible-kv-cache` | Disables extensible KV caching in vLLM 0.34.0. | Flag only |
@@ -500,13 +500,13 @@ The base app using vLLM 0.34.0 enables extensible KV caching and defaults GPU ut
 
 ### Strata {#strata-tuning}
 
-Enter space-separated flags. Strata accepts setup options and options for the selected model engine. The base app routes them to the appropriate component; options after a standalone `--` go directly to the engine. Supported values depend on the model family.
+Enter space-separated flags. Strata accepts setup options and options for the selected model engine. The base app routes them to the appropriate component. Options after a standalone `--` go directly to the engine. Supported values depend on the model family.
 
 | Argument | Purpose and scope | Example value |
 | --- | --- | --- |
 | `--context` | Context length in tokens. The base app also accepts `--max-context` and `--ctx` as aliases. | `131072` |
 | `--draft` | Selects speculative decoding: Qwen3.8 uses MTP or DFlash2, Hy4-Flash uses DFly2, and Inkling-2-Mini uses DSpark. `off` disables drafting. | `dfly2` for Hy4-Flash |
-| `--kv` | KV cache precision. For the Qwen engine, options include `int8`, `q4_0`, `k8v4`, and `fp16`; other families have different cache implementations. | `int8` for Qwen |
+| `--kv` | KV cache precision. For the Qwen engine, options include `int8`, `q4_0`, `k8v4`, and `fp16`. Other families have different cache implementations. | `int8` for Qwen |
 | `--parallel` | Concurrent decoding slots on engines that support them, such as Qwen. Each slot consumes additional memory. | `1` |
 | `--low-ram` | Qwen expert-loading policy: automatic selection, RAM residency, or file-backed loading. | `auto`, `resident`, or `mmap` |
 | `--resident-budget-gib` | RAM budget for resident experts in supported Qwen UD-Q4_K_XL and UD-IQ4_XS packs, in GiB. | `40` |
@@ -514,7 +514,7 @@ Enter space-separated flags. Strata accepts setup options and options for the se
 | `--vram-experts-gb` / `--ram-experts-gb` | Hy4-Flash expert-placement budgets in GPU memory and RAM, in GB. These exclude other model components and buffers. | `12` / `40` |
 | `--spec-k` | Draft length on engines that expose this option. Tune for the selected drafter. | `4` |
 
-For Hy4-Flash SQ-64, `--context 131072` keeps the default DFly2 drafter. Add `--draft off` to disable it. Expert-placement budgets control model placement; the `STRATA_*_REQUEST`, `STRATA_*_LIMIT`, and `STRATA_REQUIRED_GPU_MEMORY` fields control container resources.
+For Hy4-Flash SQ-64, `--context 131072` keeps the default DFly2 drafter. Add `--draft off` to disable it. Expert-placement budgets control model placement. The `STRATA_*_REQUEST`, `STRATA_*_LIMIT`, and `STRATA_REQUIRED_GPU_MEMORY` fields control container resources.
 
 The base app manages model selection, file paths, networking, GPU selection, and vision. It rejects overrides such as `--family`, `--model`, `--host`, `--port`, `--gpu`, and `--vision` in `ENGINE_ARGS`.
 

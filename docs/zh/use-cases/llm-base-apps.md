@@ -359,7 +359,7 @@ hy4-flash-sq-64
 | **STRATA_MEMORY_LIMIT** | `56Gi` | 为内存增长留出余量，并为 Olares 和其他服务留下 8 GiB 系统内存 |
 | **STRATA_REQUIRED_GPU_MEMORY** | `23Gi` | 调度到至少有 23 GiB 可用显存的 GPU |
 
-内存预算参考了 Strata 的 [Hy4 内存规划逻辑](https://github.com/Niko1221/Strata/blob/main/terminal/strata_control/hy4_fit.py)。CPU 分配和显存调度要求取决于设备；SQ-64 没有固定的 CPU 核数要求，也不要求必须具备 23 GiB 显存。显存越少，留在系统内存中或需要从 SSD 读取的模型数据就越多。请按设备调整预算，并检查模型加载后和处理长提示词时的内存占用。
+内存预算参考了 Strata 的 [Hy4 内存规划逻辑](https://github.com/Niko1221/Strata/blob/main/terminal/strata_control/hy4_fit.py)。CPU 分配和显存调度要求取决于设备。SQ-64 没有固定的 CPU 核数要求，也不要求必须具备 23 GiB 显存。显存越少，留在系统内存中或需要从 SSD 读取的模型数据就越多。请按设备调整预算，并检查模型加载后和处理长提示词时的内存占用。
 
 </details>
 
@@ -437,7 +437,7 @@ vLLM 和 SGLang 加载模型可能需要较长时间。如果任一状态一直�
 | --- | --- | --- |
 | `-c` / `--ctx-size` | 上下文 token 预算。使用多个并发槽位时，需查看服务实际报告的单槽位上下文长度。 | `65536` |
 | `-np` / `--parallel` | 并发请求槽位数。设为 `1` 时，上下文预算供单个请求使用。 | `1` |
-| `-ngl` / `--gpu-layers` | 放到 GPU 上的模型层数。`all` 表示全部层；减小层数可降低显存占用。 | `all` |
+| `-ngl` / `--gpu-layers` | 放到 GPU 上的模型层数。`all` 表示全部层。减小层数可降低显存占用。 | `all` |
 | `-fa` / `--flash-attn` | Flash Attention 模式。 | `on`、`off` 或 `auto` |
 | `-ctk` / `-ctv` | K 和 V 缓存的数据类型。量化缓存可节省内存，支持的组合取决于模型和后端。 | `q8_0` |
 | `-t` / `--threads` | 生成时使用的 CPU 线程数。 | `8` |
@@ -449,13 +449,13 @@ vLLM 和 SGLang 加载模型可能需要较长时间。如果任一状态一直�
 
 ### Ollama {#Ollama-tuning}
 
-使用空格分隔的环境变量赋值，例如 `OLLAMA_CONTEXT_LENGTH=8192 OLLAMA_NUM_PARALLEL=1`。这些参数配置 Ollama 服务；`temperature` 等请求参数在客户端或 API 请求中设置。
+使用空格分隔的环境变量赋值，例如 `OLLAMA_CONTEXT_LENGTH=8192 OLLAMA_NUM_PARALLEL=1`。这些参数配置 Ollama 服务。`temperature` 等请求参数在客户端或 API 请求中设置。
 
 | 参数 | 用途 | 示例值 |
 | --- | --- | --- |
 | `OLLAMA_CONTEXT_LENGTH` | 默认上下文长度，单位为 token。 | `8192` |
 | `OLLAMA_KEEP_ALIVE` | 请求结束后模型保留在内存中的时间。基座默认值为 `-1`，表示一直保留。 | `-1` 或 `5m` |
-| `OLLAMA_FLASH_ATTENTION` | 启用 Flash Attention；量化 KV 缓存时需要开启。 | `1` |
+| `OLLAMA_FLASH_ATTENTION` | 启用 Flash Attention。量化 KV 缓存时需要开启。 | `1` |
 | `OLLAMA_KV_CACHE_TYPE` | KV 缓存精度。降低精度可减少内存占用，也可能影响输出质量。 | `f16`、`q8_0` 或 `q4_0` |
 | `OLLAMA_NUM_PARALLEL` | 每个模型同时处理的请求数。并发越高，上下文所需内存越多。 | `1` |
 | `OLLAMA_MAX_LOADED_MODELS` | 同时加载的模型数量上限。 | `1` |
@@ -483,7 +483,7 @@ vLLM 和 SGLang 加载模型可能需要较长时间。如果任一状态一直�
 
 ### vLLM {#vLLM-tuning}
 
-参数之间用空格分隔，例如 `--max-model-len 65536 --gpu-memory-utilization 0.9`。显存利用率以引擎可见的显存为基准；在 Olares 上，`VLLM_REQUIRED_GPU_MEMORY` 决定这部分显存预算。
+参数之间用空格分隔，例如 `--max-model-len 65536 --gpu-memory-utilization 0.9`。显存利用率以引擎可见的显存为基准。在 Olares 上，`VLLM_REQUIRED_GPU_MEMORY` 决定这部分显存预算。
 
 | 参数 | 用途 | 示例值 |
 | --- | --- | --- |
@@ -510,7 +510,7 @@ vLLM 和 SGLang 加载模型可能需要较长时间。如果任一状态一直�
 | --- | --- | --- |
 | `--context` | 上下文长度，单位为 token。基座也接受 `--max-context` 和 `--ctx` 两个别名。 | `131072` |
 | `--draft` | 选择推测解码草稿模型：Qwen3.8 使用 MTP 或 DFlash2，Hy4-Flash 使用 DFly2，Inkling-2-Mini 使用 DSpark。`off` 表示关闭。 | Hy4-Flash 可用 `dfly2` |
-| `--kv` | KV 缓存精度。Qwen 引擎可选 `int8`、`q4_0`、`k8v4`、`fp16`；其他家族的缓存实现不同。 | Qwen 可用 `int8` |
+| `--kv` | KV 缓存精度。Qwen 引擎可选 `int8`、`q4_0`、`k8v4`、`fp16`。其他家族的缓存实现不同。 | Qwen 可用 `int8` |
 | `--parallel` | 支持并发解码的引擎（如 Qwen）的槽位数。增加槽位会增加内存开销。 | `1` |
 | `--low-ram` | Qwen 专家数据的加载方式：自动选择、驻留内存或从文件加载。 | `auto`、`resident` 或 `mmap` |
 | `--resident-budget-gib` | 支持的 Qwen UD-Q4_K_XL 和 UD-IQ4_XS 模型包中，驻留内存的专家数据预算，单位为 GiB。 | `40` |
@@ -518,7 +518,7 @@ vLLM 和 SGLang 加载模型可能需要较长时间。如果任一状态一直�
 | `--vram-experts-gb` / `--ram-experts-gb` | Hy4-Flash 在显存和系统内存中存放专家数据的预算，单位为 GB，不含其他模型组件和缓冲区。 | `12` / `40` |
 | `--spec-k` | 提供该选项的引擎使用的草稿长度，需要结合所选草稿模型调整。 | `4` |
 
-Hy4-Flash SQ-64 使用 `--context 131072` 时保留默认的 DFly2 草稿模型，添加 `--draft off` 可关闭。专家数据预算决定模型如何分配；`STRATA_*_REQUEST`、`STRATA_*_LIMIT` 和 `STRATA_REQUIRED_GPU_MEMORY` 决定容器资源。
+Hy4-Flash SQ-64 使用 `--context 131072` 时保留默认的 DFly2 草稿模型，添加 `--draft off` 可关闭。专家数据预算决定模型如何分配。`STRATA_*_REQUEST`、`STRATA_*_LIMIT` 和 `STRATA_REQUIRED_GPU_MEMORY` 决定容器资源。
 
 模型选择、文件路径、网络、GPU 选择和视觉功能由基座管理。在 `ENGINE_ARGS` 中填写 `--family`、`--model`、`--host`、`--port`、`--gpu`、`--vision` 等覆盖参数会被拒绝。
 

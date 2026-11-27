@@ -174,6 +174,14 @@ export default defineVersionedConfig2(withMermaid({
   titleTemplate: ":title | Olares Docs",
   description: "Let people own their data again",
   lang: "en",
+  markdown: {
+    config(md) {
+      // Keep the table's native column sizing and scroll its outer container.
+      md.renderer.rules.table_open = (tokens, idx, options, env, self) =>
+        '<div class="doc-table" tabindex="0">\n' + self.renderToken(tokens, idx, options);
+      md.renderer.rules.table_close = () => '</table>\n</div>\n';
+    },
+  },
   locales: {
     root: {
       label: "English",
