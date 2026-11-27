@@ -70,6 +70,7 @@ export const useCases: UseCase[] = [
   { title: "ComfyUI", link: "/use-cases/comfyui", category: "Creative media", description: "Node-based AI image generation", descriptionZh: "节点式 AI 图像生成" },
   { title: "Concat", link: "/use-cases/concat", category: "Creative media", description: "Edit videos in your browser or through MCP", descriptionZh: "在浏览器中剪辑视频，或通过 MCP 对话式编辑" },
   { title: "FlowStudio", link: "/use-cases/flowstudio", category: "Creative media", description: "Generate images and videos with reusable AI workflows", descriptionZh: "使用可复用的 AI 工作流生成图像和视频" },
+  { title: "MiniMax H3", link: "/use-cases/minimax-h3", category: "Creative media", description: "Create videos with sound from text, frames, and references", descriptionZh: "通过文字、首尾帧和参考素材生成有声视频" },
   { title: "Music Studio", link: "/use-cases/music-studio", category: "Creative media", description: "Create songs from lyrics and musical ideas", descriptionZh: "将歌词和音乐灵感变成歌曲" },
   { title: "Open Design", link: "/use-cases/open-design", category: "Creative media", description: "Turn prompts into prototypes, pages, and slide decks", descriptionZh: "将提示词转化为原型、页面和幻灯片" },
   { title: "Qwen Image 2.1", link: "/use-cases/qwen-image-2.1", category: "Creative media", description: "Generate and edit images locally with text and references", descriptionZh: "通过文字和参考图，在本地生成与编辑图片" },
