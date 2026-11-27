@@ -109,6 +109,27 @@ func UpgradeCharts(ctx context.Context, actionConfig *action.Configuration, sett
 	return nil
 }
 
+// UpgradeBFLLauncher creates the tenant policies in a separate Helm revision
+// before rolling the BFL workload onto the strict Server selector.
+func UpgradeBFLLauncher(ctx context.Context, cfg *action.Configuration, settings *cli.EnvSettings,
+	name, path, namespace string, values map[string]interface{}, reuseValues bool) error {
+	bfl, ok := values["bfl"].(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("launcher values are missing bfl settings")
+	}
+	prepared := false
+	if deployed, err := cfg.Releases.Deployed(name); err == nil {
+		previous, _ := deployed.Config["bfl"].(map[string]interface{})
+		prepared = previous["prepareAPIMesh"] == true || previous["enforceAPIMesh"] == true
+	} else if !errors.Is(err, driver.ErrNoDeployedReleases) && !errors.Is(err, driver.ErrReleaseNotFound) {
+		return err
+	}
+
+	return stageBFLLauncherMesh(bfl, prepared, reuseValues, func(reuse bool) error {
+		return UpgradeCharts(ctx, cfg, settings, name, path, "", namespace, values, reuse)
+	})
+}
+
 // UninstallCharts upgrades helm chart using action config.
 func UninstallCharts(cfg *action.Configuration, releaseName string) error {
 	uninstall := action.NewUninstall(cfg)

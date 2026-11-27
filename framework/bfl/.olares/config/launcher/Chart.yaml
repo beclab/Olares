@@ -1,5 +1,7 @@
 apiVersion: v2
 name: launcher
+annotations:
+  traffic.olares.io/staged-bfl-api-mesh: "true"
 description: A Helm chart for Kubernetes
 maintainers:
 - name: bytetrade

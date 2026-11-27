@@ -1,4 +1,4 @@
-{{- if .Values.bfl.enforceAPIMesh }}
+{{- if or .Values.bfl.prepareAPIMesh .Values.bfl.enforceAPIMesh }}
 {{- $ns := .Release.Namespace -}}
 {{- if ne $ns (printf "user-space-%s" .Values.bfl.username) -}}
 {{- fail "BFL API mTLS must be rendered into its tenant user-space namespace" -}}
@@ -32,7 +32,7 @@ spec:
   (dict "name" "user-info" "paths" (list "/bfl/backend/v1/user-info") "methods" (list "GET" "OPTIONS") "accounts" (list $desktop $wizard $authelia))
   (dict "name" "public-info" "paths" (list "/bfl/info/v1/olares-info") "methods" (list "GET" "OPTIONS") "accounts" (list $desktop $wizard $login $vault))
   (dict "name" "login-cluster" "paths" (list "/bfl/monitor/v1alpha1/cluster") "methods" (list "GET" "OPTIONS") "accounts" (list $desktop $wizard $login))
-  (dict "name" "login-password" "paths" (list "/bfl/iam/v1alpha1/users") "type" "PathPrefix" "methods" (list "PUT" "OPTIONS") "accounts" (list $desktop $wizard $login))
+  (dict "name" "login-password" "paths" (list (printf "/bfl/iam/v1alpha1/users/%s/password" .Values.bfl.username)) "methods" (list "PUT" "OPTIONS") "accounts" (list $desktop $wizard $login))
   (dict "name" "vault-binding" "paths" (list "/bfl/settings/v1alpha1/binding-zone") "methods" (list "POST") "accounts" (list $desktop $wizard $vault))
   (dict "name" "tapr-app-policy" "paths" (list "/bfl/settings/v1alpha1/applications") "type" "PathPrefix" "methods" (list "GET" "POST") "accounts" (list $desktop $wizard $tapr))
   (dict "name" "cert-refresh" "paths" (list "/bfl/backend/v1/re-download-cert") "methods" (list "GET") "accounts" (list $refresh)) }}

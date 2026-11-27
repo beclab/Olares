@@ -4,7 +4,10 @@
 {{ $appcache_pv_rootpath := printf "%s%s" .Values.rootPath "/userdata/Cache" }}
 {{ $dbdata_pv_rootpath := printf "%s%s" .Values.rootPath "/userdata/dbdata" }}
 
-{{ $userspace_rand16 := randAlphaNum 16 | lower }}
+{{- /* Two-stage mesh rollout must reuse storage names from the live launcher. */ -}}
+{{ $previous := lookup "apps/v1" "StatefulSet" .Release.Namespace "bfl" }}
+{{ $previousAnnotations := dig "metadata" "annotations" (dict) $previous }}
+{{ $userspace_rand16 := default (randAlphaNum 16 | lower) (get $previousAnnotations "userspace_rand16") }}
 {{ if .Values.bfl.userspace_rand16 }}
 {{ $userspace_rand16 = .Values.bfl.userspace_rand16 }}
 {{ end }}
@@ -13,7 +16,7 @@
 {{ $userspace_sc := printf "juicefs-localpath-userspace-%s" .Values.bfl.username -}}
 {{ $userspace_storage := "50Gi" -}}
 
-{{ $appcache_rand16 := randAlphaNum 16 | lower }}
+{{ $appcache_rand16 := default (randAlphaNum 16 | lower) (get $previousAnnotations "appcache_rand16") }}
 {{ if .Values.bfl.appcache_rand16 }}
 {{ $appcache_rand16 = .Values.bfl.appcache_rand16 }}
 {{ end }}
@@ -22,7 +25,7 @@
 {{ $appcache_sc := printf "hostpath-appcache-%s" .Values.bfl.username }}
 {{ $appcache_storage := "50Gi" -}}
 
-{{ $dbdata_rand16 := randAlphaNum 16 | lower }}
+{{ $dbdata_rand16 := default (randAlphaNum 16 | lower) (get $previousAnnotations "dbdata_rand16") }}
 {{ if .Values.bfl.dbdata_rand16 }}
 {{ $dbdata_rand16 = .Values.bfl.dbdata_rand16 }}
 {{ end }}
@@ -274,7 +277,11 @@ spec:
 
       containers:
       - name: api
+{{- if .Values.bfl.image }}
+        image: {{ .Values.bfl.image | quote }}
+{{- else }}
         image: beclab/bfl:v0.4.54
+{{- end }}
         imagePullPolicy: IfNotPresent
         securityContext:
           runAsUser: 1000
@@ -296,7 +303,7 @@ spec:
           initialDelaySeconds: 3
 {{- if .Values.bfl.enforceAPIMesh }}
           exec:
-            command: ["/bfl-api", "check-local-api"]
+            command: ["/busybox/sh", "-ec", "/busybox/nc -w 2 127.0.0.1 8080 </dev/null"]
 {{- else }}
           tcpSocket:
             port: 8080

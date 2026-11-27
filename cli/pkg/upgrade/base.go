@@ -376,7 +376,7 @@ func (u *upgradeUserComponents) Execute(runtime connector.Runtime) error {
 			return err
 		}
 		var bflReleaseName = fmt.Sprintf("launcher-%s", user.Name)
-		if err := utils.UpgradeCharts(ctx, actionConfig, settings, bflReleaseName, bflChartPath, "", ns, bflVals, true); err != nil {
+		if err := utils.UpgradeBFLLauncher(ctx, actionConfig, settings, bflReleaseName, bflChartPath, ns, bflVals, true); err != nil {
 			return fmt.Errorf("failed to upgrade launcher: %v", err)
 		}
 

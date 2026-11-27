@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/storage/driver"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -320,31 +321,61 @@ func (c *Creator) installLauncher(ctx context.Context, userspace, chartRoot stri
 	vals := make(map[string]interface{})
 
 	k, s := c.genAppkeyAndSecret("bfl")
-	vals["bfl"] = map[string]interface{}{
+	bflValues := map[string]interface{}{
 		"username":  c.user,
 		"appKey":    k,
 		"appSecret": s,
 	}
+	vals["bfl"] = bflValues
 	rootPath := DefaultRootPath
 	if os.Getenv(OlaresRootPath) != "" {
 		rootPath = os.Getenv(OlaresRootPath)
 	}
 	vals["rootPath"] = rootPath
 	name := helm.ReleaseName("launcher", c.user)
-	_, err := c.helmCfg.ActionCfg.Releases.Last(name)
+	chartPath := filepath.Join(chartRoot, "launcher")
+	chart, err := loader.Load(chartPath)
 	if err != nil {
-		if errors.Is(err, driver.ErrReleaseNotFound) {
-			installErr := helm.InstallCharts(ctx, c.helmCfg.ActionCfg, c.helmCfg.Settings, name, filepath.Join(chartRoot, "launcher"), "", userspace, vals)
-			if installErr != nil && !errors.Is(installErr, driver.ErrReleaseExists) {
-				klog.Errorf("failed to install launcher %v", err)
-				return "", installErr
-			}
-		} else {
-			klog.Errorf("failed to get last release for %s", name)
-			return "", err
+		return "", fmt.Errorf("load launcher: %w", err)
+	}
+	cfg, settings := c.helmCfg.ActionCfg, c.helmCfg.Settings
+	last, err := cfg.Releases.Last(name)
+	if err != nil && !errors.Is(err, driver.ErrReleaseNotFound) {
+		return "", fmt.Errorf("read release %s: %w", name, err)
+	}
+	staged := chart.Metadata.Annotations["traffic.olares.io/staged-bfl-api-mesh"] == "true"
+	if last == nil {
+		if staged {
+			bflValues["prepareAPIMesh"] = true
+		}
+		if err := helm.InstallCharts(ctx, cfg, settings, name, chartPath, "", userspace, vals); err != nil {
+			return "", fmt.Errorf("install launcher: %w", err)
 		}
 	}
-
+	if staged {
+		flags := map[string]interface{}{"prepareAPIMesh": true}
+		meshValues := map[string]interface{}{"bfl": flags}
+		if last != nil {
+			deployed, err := cfg.Releases.Deployed(name)
+			if err != nil {
+				return "", fmt.Errorf("read deployed launcher: %w", err)
+			}
+			previous, _ := deployed.Config["bfl"].(map[string]interface{})
+			if previous["enforceAPIMesh"] == true {
+				return name, nil
+			}
+			if previous["prepareAPIMesh"] != true {
+				flags["enforceAPIMesh"] = false
+				if err := helm.UpgradeCharts(ctx, cfg, settings, name, chartPath, "", userspace, meshValues, helm.ReuseValues); err != nil {
+					return "", fmt.Errorf("prepare BFL API policies: %w", err)
+				}
+			}
+		}
+		flags["enforceAPIMesh"] = true
+		if err := helm.UpgradeCharts(ctx, cfg, settings, name, chartPath, "", userspace, meshValues, helm.ReuseValues); err != nil {
+			return "", fmt.Errorf("activate BFL API policies: %w", err)
+		}
+	}
 	return name, nil
 }
 

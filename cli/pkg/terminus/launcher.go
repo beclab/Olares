@@ -64,7 +64,7 @@ func (t *InstallBFL) Execute(runtime connector.Runtime) error {
 	}
 	vals[common.HelmValuesKeyOlaresRootFSPath] = storage.OlaresRootDir
 
-	if err := utils.UpgradeCharts(ctx, actionConfig, settings, launchName, launchPath, "", ns, vals, false); err != nil {
+	if err := utils.UpgradeBFLLauncher(ctx, actionConfig, settings, launchName, launchPath, ns, vals, false); err != nil {
 		return err
 	}
 
