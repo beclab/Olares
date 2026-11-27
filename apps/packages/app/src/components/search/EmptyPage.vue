@@ -9,7 +9,7 @@
 				class="q-mt-xl"
 				color="white"
 				text-color="blue"
-				label="Go Home"
+				:label="$t('go_home')"
 				no-caps
 				@click="goBack"
 			/>

@@ -3,7 +3,7 @@
 		debounce="500"
 		borderless
 		color="orange-9"
-		placeholder="Search"
+		:placeholder="$t('base.search')"
 		class="bt-search"
 		v-model="value"
 		v-bind="$attrs"

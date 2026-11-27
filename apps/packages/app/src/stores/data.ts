@@ -4,9 +4,30 @@ import { baseURL as fileBaseURL } from '../utils/constants';
 import { useFilesStore } from './files';
 import { useMenuStore } from './files-menu';
 import { getApplication } from 'src/application/base';
+import { FileViewMode } from 'src/utils/interface/files';
+
+export type UpdatableUserFields = {
+	id?: string;
+	viewMode?: FileViewMode;
+};
 
 export type DataState = {
-	user: any;
+	user: {
+		id: string;
+		viewMode: FileViewMode;
+		dateFormat: boolean;
+		singleClick: boolean;
+		perm: {
+			admin: boolean;
+			execute: boolean;
+			create: boolean;
+			rename: boolean;
+			modify: boolean;
+			delete: boolean;
+			share: boolean;
+			download: boolean;
+		};
+	};
 	req: any;
 	jwt: string;
 	progress: number;
@@ -20,6 +41,7 @@ export type DataState = {
 		isEditEnable: boolean;
 		isEditing: boolean;
 		isSaving: boolean;
+		isDirty: boolean;
 		fullSize: boolean;
 		isShow: boolean;
 	};
@@ -29,7 +51,23 @@ export const useDataStore = defineStore('data', {
 	state: () => {
 		return {
 			user: {
-				viewMode: 'list'
+				id: '',
+				viewMode: 'list',
+				dateFormat: false,
+				singleClick: false,
+				// Default to no permissions so early access (e.g. ListingFiles
+				// hotkeys reading user.perm.rename/delete) before setUser() runs
+				// can't throw on an undefined `perm`.
+				perm: {
+					admin: false,
+					execute: false,
+					create: false,
+					rename: false,
+					modify: false,
+					delete: false,
+					share: false,
+					download: false
+				}
 			},
 			req: {},
 			jwt: '',
@@ -43,6 +81,7 @@ export const useDataStore = defineStore('data', {
 				isEditEnable: false,
 				isEditing: false,
 				isSaving: false,
+				isDirty: false,
 				fullSize: false,
 				isShow: false
 			}
@@ -90,10 +129,6 @@ export const useDataStore = defineStore('data', {
 		},
 
 		setUser(value: any) {
-			if (value === null) {
-				this.user = null;
-				return;
-			}
 			this.user = value;
 		},
 
@@ -101,14 +136,13 @@ export const useDataStore = defineStore('data', {
 			this.jwt = value;
 		},
 
-		updateUser(value: any) {
-			if (typeof value !== 'object') return;
-			for (const field in value) {
-				if (field === 'id') {
-					this.user.id = value[field];
-				}
-				if (field === 'viewMode') {
-					this.user.viewMode = value[field];
+		updateUser(value: UpdatableUserFields) {
+			if (typeof value !== 'object' || value === null) return;
+
+			const updatableFields: (keyof UpdatableUserFields)[] = ['id', 'viewMode'];
+			for (const field of updatableFields) {
+				if (field in value) {
+					Object.assign(this.user, { [field]: value[field] });
 				}
 			}
 		},

@@ -6,5 +6,5 @@ import {
 export const getDiskSize = (size) => {
 	const unit = getSuitableUnit(size, 'disk') || '';
 	const value = getValueByUnit(String(size), unit);
-	return value ? value + unit : '-';
+	return value ? value + (unit ? ' ' + unit : '') : '-';
 };

@@ -8,6 +8,7 @@
 		</div>
 		<q-btn
 			dense
+			no-caps
 			class="click-button q-px-md q-py-sm q-mt-lg text-body3 text-ink-2"
 			:label="buttonLabel"
 			@click="emit('onButtonClick')"

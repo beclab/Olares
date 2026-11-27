@@ -44,6 +44,7 @@
 								</q-item>
 
 								<q-item
+									v-if="deviceStore.isDesktop"
 									class="popup-item text-ink-2"
 									clickable
 									v-close-popup
@@ -160,12 +161,13 @@ import { useFilesStore, FilesIdType } from '../../../stores/files';
 import { SharePermission } from 'src/utils/interface/share';
 
 import { useQuasar } from 'quasar';
-import { DriveType } from '../../../utils/interface/files';
+import { DriveType, FileViewMode } from '../../../utils/interface/files';
 
 import ConnectServerStep1 from './../../../components/files/smb/ConnectServerStep1.vue';
 import ConnectServerPath from './../../../components/files/smb/ConnectServerPath.vue';
 import ConnectServerStep3 from './../../../components/files/smb/ConnectServerStep3.vue';
 import FilterView from './../../../components/files/share/FilterView.vue';
+import { useDeviceStore } from 'src/stores/settings/device';
 
 const $q = useQuasar();
 const props = defineProps({
@@ -192,6 +194,7 @@ const syncPermission = ref('rw');
 const filterShowing = ref(false);
 
 const isShareApplication = process.env.APPLICATION == 'SHARE';
+const deviceStore = useDeviceStore();
 
 const { t } = useI18n();
 
@@ -266,7 +269,7 @@ onMounted(async () => {
 	});
 });
 
-const switchView = async (type: string) => {
+const switchView = async (type: FileViewMode) => {
 	if (type === store.user.viewMode) {
 		return false;
 	}
@@ -330,7 +333,8 @@ const openConnectServer = () => {
 				componentProps: {
 					origin_id: props.origin_id,
 					smb_url: res.connectUrl,
-					hasFavorite: res.hasFavorite
+					hasFavorite: res.hasFavorite,
+					externalType: res.externalType
 				}
 			}).onOk((res) => {
 				if (res.connectData) {

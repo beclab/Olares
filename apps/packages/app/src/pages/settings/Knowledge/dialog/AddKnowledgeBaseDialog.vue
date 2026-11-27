@@ -69,7 +69,7 @@ if (props.datasetID) {
 		name.value = dataset.datasetName;
 		paths.value = dataset.paths ? dataset.paths.join(',') : '';
 		title.value = t('save_knowledge_base', {
-			base: `'${dataset.datasetName}'`
+			base: dataset.datasetName
 		});
 	}
 }

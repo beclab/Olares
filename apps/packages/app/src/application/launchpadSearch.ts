@@ -12,14 +12,35 @@ export function useLaunchpadSearch(
 	const isFocus = ref(false);
 	const carouselAnimated = ref(true);
 	let skipBlurOnCarouselSlideChange = false;
+	let slideBeforeSearch = 0;
+	let pendingSlideAfterSearchDrag: number | null = null;
+	let carouselPausedForSearchDrag = false;
+	let suppressSlideBeforeSearchCapture = false;
+
+	function captureSlideBeforeSearch() {
+		if (!slideRef) return;
+		slideBeforeSearch = slideRef.value;
+	}
 
 	function resetSlideForSearch() {
-		if (!slideRef || slideRef.value === 0) return;
-		skipBlurOnCarouselSlideChange = true;
-		carouselAnimated.value = false;
-		slideRef.value = 0;
-		void nextTick(() => {
-			carouselAnimated.value = true;
+		if (!slideRef) return;
+		if (slideRef.value !== 0) {
+			captureSlideBeforeSearch();
+			skipBlurOnCarouselSlideChange = true;
+			carouselAnimated.value = false;
+			slideRef.value = 0;
+			void nextTick(() => {
+				carouselAnimated.value = true;
+			});
+		}
+	}
+
+	if (slideRef) {
+		watch(slideRef, (v) => {
+			if (suppressSlideBeforeSearchCapture) return;
+			if (appStore.launchpadSearchQuery.length === 0) {
+				slideBeforeSearch = v;
+			}
 		});
 	}
 
@@ -38,6 +59,9 @@ export function useLaunchpadSearch(
 	}
 
 	function focusSearch() {
+		if (appStore.launchpadSearchQuery.length === 0) {
+			captureSlideBeforeSearch();
+		}
 		isFocus.value = true;
 	}
 
@@ -46,7 +70,11 @@ export function useLaunchpadSearch(
 	}
 
 	function updateSearch(val: string | number | null) {
-		appStore.update_search_result(String(val ?? ''));
+		const next = String(val ?? '');
+		if (next.length > 0 && appStore.launchpadSearchQuery.length === 0) {
+			captureSlideBeforeSearch();
+		}
+		appStore.update_search_result(next);
 		resetSlideForSearch();
 	}
 
@@ -56,6 +84,42 @@ export function useLaunchpadSearch(
 		resetSlideForSearch();
 	}
 
+	function exitSearchForDrag(_draggedAppId?: string) {
+		if (!appStore.launchpadSearchQuery.length) return;
+		const viewerSlideBeforeSearch = slideBeforeSearch;
+		searchVal.value = '';
+		suppressSlideBeforeSearchCapture = true;
+		appStore.dismiss_search_result();
+		suppressSlideBeforeSearchCapture = false;
+		if (!slideRef) return;
+
+		const maxSlide = Math.max(0, appStore.launchPadApps.length - 1);
+		const target = Math.min(Math.max(0, viewerSlideBeforeSearch), maxSlide);
+		pendingSlideAfterSearchDrag = target;
+	}
+
+	function applyPendingSlideRestoreAfterDrag(): number | null {
+		if (!slideRef || pendingSlideAfterSearchDrag === null) return null;
+		const target = pendingSlideAfterSearchDrag;
+		pendingSlideAfterSearchDrag = null;
+		skipBlurOnCarouselSlideChange = true;
+		slideRef.value = target;
+		carouselPausedForSearchDrag = true;
+		return target;
+	}
+
+	function clearPendingSlideAfterSearchDrag() {
+		pendingSlideAfterSearchDrag = null;
+	}
+
+	function resumeCarouselAfterSearchDrag() {
+		if (!carouselPausedForSearchDrag) return;
+		carouselPausedForSearchDrag = false;
+		void nextTick(() => {
+			carouselAnimated.value = true;
+		});
+	}
+
 	return {
 		searchVal,
 		isFocus,
@@ -63,6 +127,10 @@ export function useLaunchpadSearch(
 		focusSearch,
 		blurSearch,
 		updateSearch,
-		cleanSearchVal
+		cleanSearchVal,
+		exitSearchForDrag,
+		applyPendingSlideRestoreAfterDrag,
+		clearPendingSlideAfterSearchDrag,
+		resumeCarouselAfterSearchDrag
 	};
 }

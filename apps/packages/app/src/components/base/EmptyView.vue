@@ -34,9 +34,15 @@ const $q = useQuasar();
 
 <style lang="scss" scoped>
 .empty_root {
+	overflow: hidden;
+
 	.empty-image {
 		width: 240px;
 		height: 240px;
+		max-width: 100%;
+		max-height: 100%;
+		min-height: 0;
+		object-fit: contain;
 	}
 }
 </style>

@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { MenuData, MenuType, TopicInfo } from 'src/constant/constants';
+import { MenuData, MenuType } from 'src/constant/constants';
 import { i18n } from 'src/boot/i18n';
 
 export type MenuState = {

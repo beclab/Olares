@@ -2,7 +2,6 @@ import { defineStore } from 'pinia';
 import { useUserStore } from './user';
 import axios from 'axios';
 import { Submission, PrivateJwk, GolbalHost } from '@bytetrade/core';
-import { UserItem } from '@didvault/sdk/src/core';
 import { v4 as uuidv4 } from 'uuid';
 import { getPrivateJWK, getDID } from '../did/did-key';
 import { signJWS } from '../layouts/dialog/sign';
@@ -187,9 +186,7 @@ export const useCloudStore = defineStore('cloud', {
 				const loginToken: TokenData = result.data;
 
 				if (result.code == 200) {
-					const user: UserItem = userStore.users!.items.get(
-						userStore.current_id!
-					)!;
+					const user = userStore.users!.items.get(userStore.current_id!)!;
 					user.cloud_id = loginToken.userid;
 					user.cloud_token = loginToken.token;
 					user.cloud_expired = loginToken.expired;

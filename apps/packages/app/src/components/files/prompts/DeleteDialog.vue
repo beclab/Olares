@@ -1,8 +1,8 @@
 <template>
 	<bt-custom-dialog
 		ref="CustomRef"
-		:title="t('delete')"
-		:ok="t('confirm')"
+		:title="deleteTitle"
+		:ok="t('delete')"
 		:cancel="t('cancel')"
 		:okLoading="loading ? t('loading') : false"
 		size="small"
@@ -15,13 +15,7 @@
 			class="dialog-desc"
 			:style="{ textAlign: isMobile ? 'center' : 'left' }"
 		>
-			{{
-				filesStore.selectedCount(origin_id) <= 1
-					? t('prompts.deleteMessageSingle')
-					: t('prompts.deleteMessageMultiple', {
-							count: filesStore.selectedCount(origin_id)
-					  })
-			}}
+			{{ t('prompts.deleteMessageDesc') }}
 		</div>
 	</bt-custom-dialog>
 </template>
@@ -30,7 +24,7 @@
 import { useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useQuasar } from 'quasar';
-import { onMounted, onUnmounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 
 import {
 	notifyWaitingShow,
@@ -79,6 +73,13 @@ const store = useDataStore();
 const filesStore = useFilesStore();
 const operateinStore = useOperateinStore();
 const { t } = useI18n();
+const deleteTitle = computed(() =>
+	filesStore.selectedCount(props.origin_id) <= 1
+		? t('prompts.deleteMessageSingle')
+		: t('prompts.deleteMessageMultiple', {
+				count: filesStore.selectedCount(props.origin_id)
+		  })
+);
 
 const $q = useQuasar();
 const isMobile = ref(process.env.PLATFORM == 'MOBILE' || $q.platform.is.mobile);

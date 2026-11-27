@@ -89,6 +89,8 @@ import {
 import { WindowInfo, AppClickInfo, MessageData } from '../type/types';
 import { bus } from '../../../utils/bus';
 import { useApplicationStore } from '../../../stores/desktop/app';
+import { useBookmarkStore } from '../../../stores/desktop/bookmark';
+import { BOOKMARK_RAW_PREFIX } from '../../../types/desktop-layout';
 import { useTokenStore } from '../../../stores/desktop/token';
 import { useUpgradeStore } from '../../../stores/desktop/upgrade';
 import { expiresStorage } from '../../../utils/desktop/location';
@@ -427,11 +429,27 @@ const onAppClick = async (click: AppClickInfo) => {
 		return;
 	}
 
+	if (isShowLauncchPad.value && appStore.launchpadShakeMode) {
+		appStore.launchpadShakeMode = false;
+		return;
+	}
+
 	if (isShowLauncchPad.value) {
 		router.replace('/');
 	}
 
-	let app = appStore.myApps.find((app: any) => app.id == rid);
+	// Bookmarks open as an external tab on mobile (no desktop windowing here).
+	if (rid.startsWith(BOOKMARK_RAW_PREFIX)) {
+		const bm = useBookmarkStore().byId[rid.slice(BOOKMARK_RAW_PREFIX.length)];
+		if (bm) {
+			window.open(bm.url, '_blank', 'noopener,noreferrer');
+		} else {
+			BtNotify.show({ type: NotifyDefinedType.FAILED, message: rid });
+		}
+		return;
+	}
+
+	let app = appStore.resolveAppForOpen(rid);
 
 	if (app) {
 		let url = app.url;

@@ -1,5 +1,6 @@
 import { bus } from './bus';
 import { BtNotify, NotifyDefinedType } from '@bytetrade/ui';
+import { i18n } from 'src/boot/i18n';
 
 export const showNotify = (
 	message: string,
@@ -13,15 +14,21 @@ export const showNotify = (
 	});
 };
 
-export const notifySuccess = (info = 'Success', group?: string) => {
+export const notifySuccess = (
+	info = i18n.global.t('success'),
+	group?: string
+) => {
 	showNotify(info, NotifyDefinedType.SUCCESS, group);
 };
 
-export const notifyFailed = (info = 'Failed', group?: string) => {
+export const notifyFailed = (
+	info = i18n.global.t('failed'),
+	group?: string
+) => {
 	showNotify(info, NotifyDefinedType.FAILED, group);
 };
 
-export const notifyWarning = (info = 'Warning') => {
+export const notifyWarning = (info = i18n.global.t('warning')) => {
 	showNotify(info, NotifyDefinedType.WARNING);
 };
 

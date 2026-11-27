@@ -7,7 +7,7 @@
 		:okLoading="loading ? t('loading') : false"
 		:size="$q.platform.is.mobile ? 'small' : 'medium'"
 		:platform="$q.platform.is.mobile ? 'mobile' : 'web'"
-		:okDisabled="!name"
+		:okDisabled="!name || errorMessage.length > 0"
 		@onSubmit="submit"
 		@onHide="onCancel"
 		@onCancel="onCancel"
@@ -24,6 +24,7 @@
 				@keyup.enter="submit"
 				ref="renameRef"
 			/>
+			<div class="text-negative" v-if="errorMessage">{{ errorMessage }}</div>
 		</div>
 	</bt-custom-dialog>
 </template>
@@ -39,7 +40,7 @@ import {
 	notifyWarning
 } from '../../../utils/notifyRedefinedUtil';
 import { dataAPIs } from '../../../api';
-import { BtNotify, NotifyDefinedType } from '@bytetrade/ui';
+import { useFileNameValidation } from 'src/composables/files/useFileNameValidation';
 
 const props = defineProps({
 	origin_id: {
@@ -48,7 +49,7 @@ const props = defineProps({
 		default: FilesIdType.PAGEID
 	}
 });
-const name = ref();
+const name = ref<string>('');
 const store = useDataStore();
 const filesStore = useFilesStore();
 const { t } = useI18n();
@@ -56,6 +57,7 @@ const loading = ref(false);
 const renameRef = ref();
 
 const CustomRef = ref();
+const { errorMessage } = useFileNameValidation(name);
 
 onMounted(() => {
 	nextTick(() => {
@@ -63,7 +65,7 @@ onMounted(() => {
 			renameRef.value && renameRef.value.focus();
 		}, 100);
 	});
-	name.value = oldName();
+	name.value = oldName() ?? '';
 });
 
 const oldName = () => {
@@ -75,12 +77,8 @@ const submit = async () => {
 	if (!name.value) {
 		return false;
 	}
-	if (name.value.includes('\\') || name.value.includes('/')) {
-		BtNotify.show({
-			type: NotifyDefinedType.WARNING,
-			message: t('files.backslash_create')
-		});
-
+	if (errorMessage.value) {
+		notifyWarning(errorMessage.value);
 		return false;
 	}
 	const item = filesStore.getTargetFileItem(

@@ -26,7 +26,7 @@ import { filterPcvPath } from '../common/common';
 import { getextension } from 'src/utils/utils';
 import { encodeUrl, decodeUrl } from 'src/utils/encode';
 import { i18n } from 'src/boot/i18n';
-import { getFileIcon } from '@bytetrade/core';
+import { getFileIcon, getFilePreviewType, PreviewType } from '@bytetrade/core';
 import { IUploadCloudParams } from 'src/platform/interface/electron/interface';
 import { useUserStore } from 'src/stores/user';
 import { Router } from 'vue-router';
@@ -34,7 +34,8 @@ import * as filesUtil from '../common/utils';
 import { CommonUrlApiType, pasteMutiNodesDriveType } from '../common/utils';
 import { appendPath } from '../path';
 import { SyncRepoItemType } from '../sync/type';
-
+import ArchiveAPI from '../common/archive';
+import { ArchiveConflict, ArchiveFormat } from 'src/utils/interface/archive';
 export default class DriveDataAPI extends Origin {
 	public commonAxios: any;
 
@@ -83,8 +84,8 @@ export default class DriveDataAPI extends Origin {
 		return data;
 	}
 
-	async fetchMenuRepo(): Promise<DriveMenuType[]> {
-		return [
+	async fetchMenuRepo(origins?: DriveType[]): Promise<DriveMenuType[]> {
+		let items = [
 			{
 				label: i18n.global.t(`files_menu.${MenuItem.HOME}`),
 				key: MenuItem.HOME,
@@ -116,6 +117,20 @@ export default class DriveDataAPI extends Origin {
 				driveType: DriveType.Drive
 			}
 		];
+
+		if (origins && !origins.includes(DriveType.Drive)) {
+			items = [];
+		}
+
+		if (!origins || origins.includes(DriveType.External)) {
+			items.push({
+				label: i18n.global.t(`files_menu.${MenuItem.EXTERNAL}`),
+				key: MenuItem.EXTERNAL,
+				icon: 'sym_r_hard_drive',
+				driveType: DriveType.External
+			});
+		}
+		return items;
 	}
 
 	async getDownloadInfo(path: string): Promise<TransferItem[]> {
@@ -222,6 +237,11 @@ export default class DriveDataAPI extends Origin {
 				filesStore.currentFileList[this.origin_id]?.node
 			) {
 				dst_node = filesStore.currentFileList[this.origin_id]?.node;
+			} else if (this.driveType == DriveType.PublicShare) {
+				// Public share pastes must target the share's node.
+				dst_node =
+					filesStore.currentFileList[this.origin_id]?.node ||
+					this.getUploadNode();
 			}
 
 			items.push({
@@ -346,7 +366,7 @@ export default class DriveDataAPI extends Origin {
 	}
 
 	async formatFileContent(file: FileItem): Promise<FileItem> {
-		if (!['text', 'txt', 'textImmutable'].includes(file.type)) {
+		if (getFilePreviewType(file.name) !== PreviewType.TXT) {
 			return file;
 		}
 		try {
@@ -452,7 +472,7 @@ export default class DriveDataAPI extends Origin {
 	}
 
 	async onSaveFile(item: any, content: any): Promise<void> {
-		files.saveFile(item.path, content);
+		await files.saveFile(item.path, content);
 	}
 
 	getResumePath(path: string, relativePath: string) {
@@ -480,8 +500,7 @@ export default class DriveDataAPI extends Origin {
 			mode: 0,
 			modified: item.updateTime || 0,
 			name: item.name,
-			path:
-				item.front == TransferFront.download ? encodeUrl(item.path) : item.path,
+			path: item.path,
 			size: item.size,
 			type: item.type,
 			parentPath: item.parentPath,
@@ -494,6 +513,8 @@ export default class DriveDataAPI extends Origin {
 					? 'Home'
 					: this.driveType == DriveType.Data
 					? 'Data'
+					: this.driveType == DriveType.Common
+					? 'Common'
 					: '',
 			fileType: 'drive',
 			oPath,
@@ -739,5 +760,89 @@ export default class DriveDataAPI extends Origin {
 			fileExtend: 'Home',
 			path: files.driveRemovePrefix(path)
 		};
+	}
+	async createArchiveCompressTask(params: {
+		node: string;
+		parentPath: string;
+		param?: string;
+		format: ArchiveFormat;
+		items: FileItem[];
+		targetFileName: string;
+		password?: string;
+		splitVolume?: number;
+		conflictStrategy?: ArchiveConflict;
+		compressionLevel?: number;
+		preserveSymbolicLinks?: boolean;
+		driveType: DriveType;
+	}): Promise<{ task_id: string; node: string }> {
+		const sources = params.items.map((item) => {
+			const path = this.getFileApiFrontendPath(item);
+			return path;
+		});
+
+		const destination = appendPath(
+			this.utilsFormatPathtoUrl(params.parentPath),
+			params.targetFileName
+		);
+		const compressParams = {
+			sources: sources,
+			destination: decodeUrl(destination),
+			format: params.format,
+			level: params.compressionLevel,
+			conflict: params.conflictStrategy,
+			preserveSymlinks: params.preserveSymbolicLinks ?? true
+		};
+
+		const { task_id } = await ArchiveAPI.compress(
+			compressParams,
+			{
+				volumeSizeMB: params.splitVolume
+			},
+			params.node || this.getUploadNode(),
+			params.password
+		);
+		return { task_id, node: params.node || this.getUploadNode() };
+	}
+	async createArchiveExtractTask(params: {
+		node: string;
+		parentPath: string;
+		param?: string;
+		format?: ArchiveFormat;
+		items: FileItem[];
+		targetFolderName?: string;
+		password?: string;
+		preserveSymbolicLinks?: boolean;
+		conflictStrategy?: ArchiveConflict;
+	}): Promise<{ task_id: string; node: string }> {
+		const archiveItem = params.items[0];
+		if (!archiveItem) {
+			throw new Error('Archive source is missing');
+		}
+
+		const source = this.getFileApiFrontendPath(archiveItem);
+		const destination = appendPath(
+			decodeUrl(this.utilsFormatPathtoUrl(params.parentPath)),
+			params.targetFolderName || '',
+			'/'
+		);
+
+		const { task_id } = await ArchiveAPI.extract(
+			{
+				source: source,
+				destination: destination,
+				conflict: params.conflictStrategy,
+				preserveSymlinks: params.preserveSymbolicLinks ?? true
+			},
+			{
+				format: params.format
+			},
+			params.node || this.getUploadNode(),
+			params.password
+		);
+
+		return { task_id, node: params.node || this.getUploadNode() };
+	}
+	getFileApiFrontendPath(file: FileItem) {
+		return filesUtil.getFileApiSource(file);
 	}
 }

@@ -44,6 +44,7 @@
 				/>
 
 				<DatePickerStyle>
+					<!-- i18n-ignore-start: date/time pattern placeholder, not user-visible text -->
 					<el-date-picker
 						class="q-mt-sm"
 						style="width: 100%; height: 40px"
@@ -58,6 +59,7 @@
 						unlink-panels
 					>
 					</el-date-picker>
+					<!-- i18n-ignore-end -->
 				</DatePickerStyle>
 				<terminus-check-box
 					class="q-mt-lg"
@@ -108,12 +110,12 @@
 						<div class="text-ink-2 text-body2">{{ getShareLink }}</div>
 						<div class="text-ink-3 text-body3 q-mt-sm">
 							{{
-								t('expire_time') +
-								': ' +
-								formatFileModified(
-									shareResult.expire_time || '',
-									'YYYY-MM-DD HH:mm'
-								)
+								t('share.Expires on {time}', {
+									time: formatFileModified(
+										shareResult.expire_time || '',
+										'YYYY-MM-DD HH:mm'
+									)
+								})
 							}}
 						</div>
 					</div>

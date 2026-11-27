@@ -7,15 +7,15 @@
 
 		<div class="tabs-items row items-center justify-evenly">
 			<div
-				v-for="(item, index) in termipassStore.tabItems"
+				v-for="(item, index) in itemList"
 				:key="item.identify"
-				:style="`width:calc((100% - 20px)/${termipassStore.tabItems.length})`"
+				:style="`width:calc((100% - 20px)/${itemList.length})`"
 				@click="updateCurrent(index)"
 				class="tab-item column justify-end items-center"
 			>
 				<div v-if="current !== index">
-					<img
-						:src="getRequireImage(`tabs/${item.normalImage}.svg`)"
+					<terminus-svg-icon
+						:path="`tabs/${item.normalImage}.svg`"
 						class="tab-icon-size"
 					/>
 				</div>
@@ -33,13 +33,11 @@
 					class="row items-center justify-center active-icon"
 					v-if="current == index"
 				>
-					<img
-						:src="
-							getRequireImage(
-								$q.dark.isActive && item.darkActiveImage
-									? `tabs/${item.darkActiveImage}.svg`
-									: `tabs/${item.activeImage}.svg`
-							)
+					<terminus-svg-icon
+						:path="
+							$q.dark.isActive && item.darkActiveImage
+								? `tabs/${item.darkActiveImage}.svg`
+								: `tabs/${item.activeImage}.svg`
 						"
 						class="tab-icon-size"
 					/>
@@ -62,18 +60,25 @@
 </template>
 
 <script setup lang="ts">
-import { getRequireImage } from '../../utils/imageUtils';
+import { computed, PropType } from 'vue';
+import TerminusSvgIcon from './TerminusSvgIcon.vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useFilesStore } from './../../stores/files';
 import { useTermipassStore } from '../../stores/termipass';
 import { useQuasar } from 'quasar';
+import { TabbarItem } from 'src/application/interface';
 
 const props = defineProps({
 	current: {
 		type: Number,
 		default: 0,
 		required: true
+	},
+	items: {
+		type: Array as PropType<TabbarItem[]>,
+		required: false,
+		default: undefined
 	}
 });
 
@@ -88,20 +93,23 @@ const $q = useQuasar();
 const { t } = useI18n();
 
 const filesStore = useFilesStore();
+const itemList = computed(() =>
+	props.items && props.items.length > 0 ? props.items : termipassStore.tabItems
+);
 
 const updateCurrent = (index: number) => {
 	filesStore.previousStack = {};
 	if (index === props.current) {
 		return;
 	}
-	if (termipassStore.tabItems[index].tabChanged) {
-		const result = termipassStore.tabItems[index].tabChanged();
+	if (itemList.value[index].tabChanged) {
+		const result = itemList.value[index].tabChanged?.();
 		if (result) {
 			return;
 		}
 	}
-	if (termipassStore.tabItems[index].to) {
-		$router.replace(termipassStore.tabItems[index].to);
+	if (itemList.value[index].to) {
+		$router.replace(itemList.value[index].to);
 		return;
 	}
 	emit('updateCurrent', index);

@@ -79,10 +79,7 @@ const router = useRouter();
 const route = useRoute();
 const deviceStore = useDeviceStore();
 const clickReturn = () => {
-	if (handleMarketBack(router, route, { onlyAppRouteUseMenuItem: true })) {
-		return;
-	}
-	router.back();
+	handleMarketBack(router, route, { onlyAppRouteUseMenuItem: true });
 };
 </script>
 

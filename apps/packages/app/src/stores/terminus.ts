@@ -1,26 +1,32 @@
 import { defineStore } from 'pinia';
-import { OlaresInfo } from '@bytetrade/core';
+import { OlaresInfo, DefaultOlaresInfo } from '@bytetrade/core';
 import { TERMINUS_ID } from 'src/utils/localStorageConstant';
 import axios from 'axios';
 
 export type TerminusState = {
-	terminusInfo: OlaresInfo | null;
+	terminusInfo: OlaresInfo;
 };
 
 export const useTerminusStore = defineStore('terminus', {
 	state: () => {
 		return {
-			terminusInfo: null
+			terminusInfo: DefaultOlaresInfo
 		} as TerminusState;
 	},
 	getters: {
 		olaresId(): string {
-			return (
-				this.terminusInfo?.olaresId || this.terminusInfo?.terminusName || ''
-			);
+			return this.terminusInfo.olaresId || this.terminusInfo.terminusName || '';
 		},
 		olares_device_id(): string {
-			return this.terminusInfo?.id || this.terminusInfo?.terminusId || '';
+			return this.terminusInfo.id || this.terminusInfo.terminusId || '';
+		},
+		olaresd(): boolean {
+			return (
+				this.terminusInfo.olaresd === '1' || this.terminusInfo.terminusd === '1'
+			);
+		},
+		islocal(): boolean {
+			return window.location.hostname.endsWith('olares.local');
 		}
 	},
 
@@ -46,7 +52,7 @@ export const useTerminusStore = defineStore('terminus', {
 			onFailure = () => {},
 			onFinally = () => {}
 		) {
-			if (!this.terminusInfo || !this.terminusInfo.id) {
+			if (!this.terminusInfo.id) {
 				console.log('===> Validation check new machine');
 				await onFailure();
 				await onFinally();
@@ -67,6 +73,16 @@ export const useTerminusStore = defineStore('terminus', {
 				await onFailure();
 			}
 			await onFinally();
+		},
+		getAuthURL(): string {
+			let url = window.location.protocol + '//' + 'auth.';
+			if (this.islocal) {
+				url = url + this.olaresId.split('@')[0] + '.olares.local';
+			} else {
+				const name = this.olaresId.replace('@', '.');
+				url = url + name;
+			}
+			return url;
 		}
 	}
 });

@@ -18,7 +18,7 @@
 			v-close-popup
 			@click="close"
 		>
-			<q-tooltip>Close</q-tooltip>
+			<q-tooltip>{{ $t('close') }}</q-tooltip>
 		</q-btn>
 	</div>
 </template>

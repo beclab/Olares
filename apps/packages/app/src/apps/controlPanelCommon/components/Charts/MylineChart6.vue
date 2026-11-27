@@ -121,9 +121,7 @@ const title = computed(() =>
 		: `${props.data.title}`
 );
 
-const legend = isArray(props.data.legend)
-	? props.data.legend.map(capitalize)
-	: [];
+const legend = isArray(props.data.legend) ? props.data.legend : [];
 const legendShow = isArray(props.data?.legend) && props.data?.legend.length > 1;
 const gridTop = title.value || legendShow ? 54 : 0;
 

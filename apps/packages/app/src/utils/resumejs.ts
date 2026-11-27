@@ -27,7 +27,7 @@ import {
 import mime from 'mime';
 import { getApplication } from 'src/application/base';
 import { fileNameMaxLength, utf8BytesLength } from './format';
-import { notifyFailed } from './notifyRedefinedUtil';
+import { notifyFailed, notifySuccess } from './notifyRedefinedUtil';
 import { i18n } from 'src/boot/i18n';
 import { decodeURIComponentSafe } from './encode';
 
@@ -392,6 +392,15 @@ class Resumable {
 		if (files.length == 0) {
 			return;
 		}
+
+		notifySuccess(
+			i18n.global.t(
+				'files.added_to_upload_queue',
+				{ count: files.length },
+				files.length
+			)
+		);
+
 		const path = files[0].formData;
 
 		let isDir = false;
@@ -492,7 +501,23 @@ class Resumable {
 		const isFile = files[0].fileName === files[0].relativePath;
 
 		if (isFile) {
-			const transferStore = useTransfer2Store();
+			// Resolve the resume offset and mark already-uploaded chunks for
+			// EVERY file BEFORE registering the tasks. transferStore.add
+			// auto-starts the upload (commonUploader.resume -> file.retry() ->
+			// upload()), so marking afterwards would let a file start from byte 0
+			// before the offset applies. Looping over all files (not just a
+			// single one) means every file in a multi-file selection can resume
+			// instead of restarting from chunk 0.
+			//
+			// This is safe w.r.t. file.id: every file is paused above
+			// (file.pause(true)), so resumableUpload's resumable.upload() is a
+			// no-op here (paused files send no chunks, fire no progress events).
+			// file.id is assigned by the add() loop below, and the real upload
+			// only begins when add() un-pauses and retries the file, by which
+			// point the id is already set for progress/success callbacks.
+			for (let index = 0; index < files.length; index++) {
+				await this.resumableUpload(files[index], task_id);
+			}
 			for (let index = 0; index < tasks.length; index++) {
 				const task = tasks[index];
 				const id = await transferStore.add(task, TransferFront.upload);
@@ -500,9 +525,6 @@ class Resumable {
 					continue;
 				}
 				files[index].id = id;
-			}
-			if (tasks.length == 1) {
-				await this.resumableUpload(files[0], task_id);
 			}
 			this.startUpload();
 			return;
@@ -912,6 +934,7 @@ class Resumable {
 
 		const pathname =
 			(await dataAPI.formatUploaderPath(fullPathSplit[0])) || '/';
+
 		const repoId = fullPathSplit[1] ? getParams(fullPathSplit[1], 'id') : '';
 		const node = dataAPI.getUploadNode();
 		const res = {

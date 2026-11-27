@@ -13,7 +13,7 @@
 				text-color="blue"
 				unelevated
 				to="/"
-				label="Go Home"
+				:label="$t('go_home')"
 				no-caps
 			/>
 		</div>

@@ -24,22 +24,13 @@
 		<TerminusUserHeaderReminder v-if="showOnlyWifiTransfer">
 			<template v-slot:errorcontent>
 				<div>
-					{{
-						t('It is set to transmit only under WiFi, want to close it?').split(
-							t('want to close it?')
-						)[0]
-					}}
+					{{ transferWifiOnlyMessageParts[0] }}
 					<span class="jump-subline-item" @click="updateWifiSetting">
-						{{ t('want to close it?') }}
+						{{ t('transfer_wifi_only_action') }}
 					</span>
-					{{
-						t('It is set to transmit only under WiFi, want to close it?').split(
-							t('want to close it?')
-						)[1] || ''
-					}}
+					{{ transferWifiOnlyMessageParts[1] || '' }}
 				</div>
 			</template>
-			<!-- It is set to transmit only under WiFi, want to modify it? -->
 		</TerminusUserHeaderReminder>
 		<div class="content">
 			<div class="row items-center justify-between">
@@ -65,6 +56,17 @@
 						:name="TransferFront.download"
 						icon="sym_r_download"
 						:label="t('transmission.download.title')"
+					/>
+					<q-tab
+						:name="TransferFront.copy"
+						icon="sym_r_content_copy"
+						:label="t('transmission.copy_paste')"
+					/>
+					<q-tab
+						v-if="isArchiveEnable()"
+						:name="TransferFront.compress"
+						icon="sym_r_archive"
+						:label="t('transmission.archive')"
 					/>
 				</q-tabs>
 				<!-- <q-btn
@@ -115,7 +117,7 @@
 					"
 					@click="handlestatus(TransferStatus.Running)"
 				>
-					<sapn>{{ t('Ongoing') }}</sapn>
+					<span>{{ t('Ongoing') }}</span>
 					<span class="q-ml-xs">{{ progressTotal }}</span>
 				</div>
 			</div>
@@ -147,6 +149,31 @@
 					<file-transfer-history
 						ref="fileTransfer"
 						:transferFront="TransferFront.download"
+						:activeStatus="activeStatus"
+						:lockEvent="lockEvent"
+						@show-select-mode="showSelectMode"
+					/>
+				</q-tab-panel>
+				<q-tab-panel
+					:name="TransferFront.copy"
+					class="transfer-page-tab-panel q-pa-none tables-padding"
+				>
+					<file-transfer-history
+						ref="fileTransfer"
+						:transferFronts="[TransferFront.copy, TransferFront.move]"
+						:activeStatus="activeStatus"
+						:lockEvent="lockEvent"
+						@show-select-mode="showSelectMode"
+					/>
+				</q-tab-panel>
+				<q-tab-panel
+					v-if="isArchiveEnable()"
+					:name="TransferFront.compress"
+					class="transfer-page-tab-panel q-pa-none tables-padding"
+				>
+					<file-transfer-history
+						ref="fileTransfer"
+						:transferFronts="[TransferFront.compress, TransferFront.extract]"
 						:activeStatus="activeStatus"
 						:lockEvent="lockEvent"
 						@show-select-mode="showSelectMode"
@@ -192,6 +219,7 @@ import { UserStatusActive } from '../../../utils/checkTerminusState';
 import { useUserStore } from 'src/stores/user';
 import { useQuasar } from 'quasar';
 import TerminusTipDialog from '../../../components/dialog/TerminusTipDialog.vue';
+import { isArchiveEnable } from '../../../api';
 
 const transferStore = useTransfer2Store();
 
@@ -206,6 +234,10 @@ const termipassStore = useTermipassStore();
 const userStore = useUserStore();
 const deviceStore = useDeviceStore();
 const $q = useQuasar();
+const actionSlot = '{action}';
+const transferWifiOnlyMessageParts = computed(() =>
+	t('transfer_wifi_only_message', { action: actionSlot }).split(actionSlot)
+);
 
 const updateTab = () => {
 	lockEvent.value = true;
@@ -270,12 +302,48 @@ const downloadingNum = computed(() => {
 	}
 });
 
+const isCompletedStatus = (id: number) => {
+	return [TransferStatus.Completed, TransferStatus.Canceled].includes(
+		transferStore.transferMap[id]?.status
+	);
+};
+
+const getTransferIdsByFronts = (fronts: TransferFront[]) => {
+	return transferStore.transfers.filter((id) => {
+		const item = transferStore.transferMap[id];
+		return item && fronts.includes(item.front);
+	});
+};
+
+const getProcessingIdsByFronts = (fronts: TransferFront[]) => {
+	return getTransferIdsByFronts(fronts).filter((id) => !isCompletedStatus(id));
+};
+
+const getCompletedIdsByFronts = (fronts: TransferFront[]) => {
+	return getTransferIdsByFronts(fronts).filter((id) => isCompletedStatus(id));
+};
+
+const copyFronts = [TransferFront.copy, TransferFront.move];
+const archiveFronts = [TransferFront.compress, TransferFront.extract];
+const copyProcessing = computed(() => getProcessingIdsByFronts(copyFronts));
+const copyComplete = computed(() => getCompletedIdsByFronts(copyFronts));
+const archiveProcessing = computed(() =>
+	getProcessingIdsByFronts(archiveFronts)
+);
+const archiveComplete = computed(() => getCompletedIdsByFronts(archiveFronts));
+
 const completedTotal = computed(() => {
 	if (tab.value === TransferFront.upload) {
 		return transferStore.uploadComplete.length;
 	}
 	if (tab.value == TransferFront.download) {
 		return transferStore.downloadComplete.length;
+	}
+	if (tab.value === TransferFront.copy) {
+		return copyComplete.value.length;
+	}
+	if (tab.value === TransferFront.compress) {
+		return archiveComplete.value.length;
 	}
 	return 0;
 });
@@ -285,12 +353,25 @@ const progressTotal = computed(() => {
 		return uploadingNum.value;
 	} else if (tab.value === TransferFront.download) {
 		return downloadingNum.value;
+	} else if (tab.value === TransferFront.copy) {
+		return copyProcessing.value.length;
+	} else if (tab.value === TransferFront.compress) {
+		return archiveProcessing.value.length;
 	} else {
 		return 0;
 	}
 });
 
 const isPauseAll = computed(() => {
+	const processingIds =
+		tab.value === TransferFront.copy
+			? copyProcessing.value
+			: tab.value === TransferFront.compress
+			? archiveProcessing.value
+			: [];
+	if (processingIds.length > 0) {
+		return !processingIds.some((id) => !transferStore.transferMap[id].isPaused);
+	}
 	if (tab.value == TransferFront.upload) {
 		const isNotPause = transferStore.uploading.find(
 			(item) => !transferStore.transferMap[item].isPaused
@@ -317,6 +398,26 @@ const isPauseAll = computed(() => {
 });
 
 const handlePause = async () => {
+	const processingIds =
+		tab.value === TransferFront.copy
+			? copyProcessing.value
+			: tab.value === TransferFront.compress
+			? archiveProcessing.value
+			: [];
+	if (processingIds.length > 0) {
+		processingIds.forEach((id) => {
+			const item = transferStore.transferMap[id];
+			if (!item) {
+				return;
+			}
+			if (isPauseAll.value) {
+				void transferStore.resume(item);
+			} else {
+				void transferStore.pause(item);
+			}
+		});
+		return;
+	}
 	if (tab.value == TransferFront.upload) {
 		if (isPauseAll.value) {
 			transferStore.bulkResume(transferStore.uploading);
@@ -339,6 +440,12 @@ const hasProcessingItems = computed(() => {
 	if (tab.value == TransferFront.download) {
 		return transferStore.downloading.length > 0;
 	}
+	if (tab.value === TransferFront.copy) {
+		return copyProcessing.value.length > 0;
+	}
+	if (tab.value === TransferFront.compress) {
+		return archiveProcessing.value.length > 0;
+	}
 	return 0;
 });
 
@@ -360,7 +467,7 @@ const updateWifiSetting = () => {
 	$q.dialog({
 		component: TerminusTipDialog,
 		componentProps: {
-			title: t('Only transfer files over wifi'),
+			title: t('Allow file transfers on any network?'),
 			message: t(
 				'Are you sure you want to turn off file transfer only under WiFi?'
 			)

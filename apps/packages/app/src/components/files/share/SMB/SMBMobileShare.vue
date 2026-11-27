@@ -186,33 +186,12 @@
 						</div>
 					</div>
 					<template v-if="selectedUsers.length > 0 && !smbPublic">
-						<div
-							class="share-link q-pa-md q-mt-sm row items-center text-ink-3"
-							v-for="user in selectedUsers"
-							:key="user.id"
-						>
+						<div class="share-link q-pa-md q-mt-sm row items-center text-ink-3">
 							<div class="row items-center justify-start share-info">
 								<div class="title">{{ t('accounts') }}</div>
 								<div class="detail text-ink-2">
-									{{ user.name }}
+									{{ selectedUsers.map((e) => e.name).join(',') }}
 								</div>
-							</div>
-							<div class="row items-center justify-start share-info q-mt-md">
-								<div class="title">{{ t('password') }}</div>
-								<div class="text-ink-2">
-									{{ user.pwdDisplay ? user.password : '······' }}
-								</div>
-								<q-icon
-									class="q-ml-md"
-									color="blue-default"
-									size="16px"
-									:name="
-										user.pwdDisplay
-											? 'sym_r_visibility_off'
-											: 'sym_r_visibility'
-									"
-									@click="user.pwdDisplay = !user.pwdDisplay"
-								/>
 							</div>
 						</div>
 					</template>
@@ -459,8 +438,10 @@ onMounted(async () => {
 			}
 
 			.detail {
-				// flex: auto;
+				flex: auto;
 				max-width: calc(100% - 64px);
+				overflow-wrap: break-word;
+				word-break: break-all;
 			}
 		}
 	}

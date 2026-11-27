@@ -84,7 +84,10 @@ import AppStoreBody from '../../../components/base/AppStoreBody.vue';
 import EmptyView from '../../../components/base/EmptyView.vue';
 import SimpleWaiter from '../../../utils/simpleWaiter';
 import { usePreCheckStore } from '../../../stores/market/preCheck';
-import { VERSION_DISPLAY_MODE } from '../../../constant/constants';
+import {
+	TRANSACTION_PAGE,
+	VERSION_DISPLAY_MODE
+} from '../../../constant/constants';
 import { useSettingStore } from '../../../stores/market/setting';
 import { useDeviceStore } from '../../../stores/settings/device';
 import { useCenterStore } from '../../../stores/market/center';
@@ -93,7 +96,7 @@ import { useMenuStore } from '../../../stores/market/menu';
 import { intersection } from '../../../utils/utils';
 import { nsfwApp } from '../../../constant/config';
 import { onMounted, ref, watch } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { debounce } from 'lodash';
 
@@ -107,70 +110,134 @@ const searchContent = ref('');
 const menuStore = useMenuStore();
 const { t } = useI18n();
 const route = useRoute();
+const router = useRouter();
 const waiter = new SimpleWaiter();
 
-const calculateWeight = (appInfo: any, searchContent: string) => {
-	if (!searchContent) return 0;
-	const lowerSearch = searchContent.toLowerCase();
-	let weight = 0;
+const syncKeywordToUrl = () => {
+	// Only mutate the URL while this kept-alive page is the active route,
+	// otherwise we'd clobber another page's query while cached in background.
+	if (route.name !== TRANSACTION_PAGE.Search) {
+		return;
+	}
+	const next = (searchContent.value || '').trim();
+	if (((route.query.keyword as string) ?? '').trim() === next) {
+		return;
+	}
+	const query = { ...route.query };
+	if (next) {
+		query.keyword = next;
+	} else {
+		delete query.keyword;
+	}
+	router.replace({ query });
+};
 
-	const WEIGHTS = {
-		titleExact: 100,
-		titleInclude: 20,
-		descExact: 15,
-		descInclude: 5,
-		fullDescExact: 10,
-		fullDescInclude: 3
-	};
+interface FieldWeights {
+	exact: number;
+	all: number;
+	some: number;
+	prefix: number;
+}
 
-	let titleMatched = false;
+interface SearchScore {
+	weight: number;
+	isPrefix: boolean;
+	titleLen: number;
+}
+
+const tokenize = (value: string): string[] =>
+	value.toLowerCase().split(/\s+/).filter(Boolean);
+
+const scoreField = (
+	values: string[],
+	tokens: string[],
+	fullSearch: string,
+	weights: FieldWeights
+): number => {
+	let best = 0;
+	for (const value of values) {
+		if (value === fullSearch) {
+			best = Math.max(best, weights.exact);
+			continue;
+		}
+		let allHit = true;
+		let hit = 0;
+		for (const token of tokens) {
+			if (value.includes(token)) {
+				hit++;
+			} else {
+				allHit = false;
+			}
+		}
+		if (allHit) {
+			const prefixBonus = value.startsWith(tokens[0]) ? weights.prefix : 0;
+			best = Math.max(best, weights.all + prefixBonus);
+		} else if (hit > 0) {
+			best = Math.max(best, (hit / tokens.length) * weights.some);
+		}
+	}
+	return best;
+};
+
+const calculateWeight = (appInfo: any, searchContent: string): SearchScore => {
+	const tokens = tokenize(searchContent);
+	if (tokens.length === 0) {
+		return { weight: 0, isPrefix: false, titleLen: Number.MAX_SAFE_INTEGER };
+	}
+	const fullSearch = tokens.join(' ');
+
+	const names = [appInfo?.app_name?.toLowerCase()].filter(Boolean) as string[];
 	const titles = [
-		appInfo?.app_title['en-US']?.toLowerCase(),
-		appInfo?.app_title['zh-CN']?.toLowerCase()
-	].filter(Boolean);
-
-	if (titles.some((title) => title === lowerSearch)) {
-		weight += WEIGHTS.titleExact;
-		titleMatched = true;
-	} else if (
-		!titleMatched &&
-		titles.some((title) => title.includes(lowerSearch))
-	) {
-		weight += WEIGHTS.titleInclude;
-	}
-
-	let descMatched = false;
+		appInfo?.app_title?.['en-US']?.toLowerCase(),
+		appInfo?.app_title?.['zh-CN']?.toLowerCase()
+	].filter(Boolean) as string[];
 	const descs = [
-		appInfo?.app_description['en-US']?.toLowerCase(),
-		appInfo?.app_description['zh-CN']?.toLowerCase()
-	].filter(Boolean);
-
-	if (descs.some((desc) => desc === lowerSearch)) {
-		weight += WEIGHTS.descExact;
-		descMatched = true;
-	} else if (!descMatched && descs.some((desc) => desc.includes(lowerSearch))) {
-		weight += WEIGHTS.descInclude;
-	}
-
-	let fullDescMatched = false;
+		appInfo?.app_description?.['en-US']?.toLowerCase(),
+		appInfo?.app_description?.['zh-CN']?.toLowerCase()
+	].filter(Boolean) as string[];
 	const fullDescs = [
 		appInfo?.fullDescription?.['en-US']?.toLowerCase(),
 		appInfo?.fullDescription?.['zh-CN']?.toLowerCase()
-	].filter(Boolean);
+	].filter(Boolean) as string[];
 
-	if (fullDescs.some((fullDesc) => fullDesc === lowerSearch)) {
-		weight += WEIGHTS.fullDescExact;
-		fullDescMatched = true;
-	} else if (
-		!fullDescMatched &&
-		fullDescs.some((fullDesc) => fullDesc.includes(lowerSearch))
-	) {
-		weight += WEIGHTS.fullDescInclude;
-	}
-	return weight;
+	let weight = 0;
+	weight += scoreField(names, tokens, fullSearch, {
+		exact: 120,
+		all: 60,
+		some: 30,
+		prefix: 10
+	});
+	weight += scoreField(titles, tokens, fullSearch, {
+		exact: 100,
+		all: 40,
+		some: 20,
+		prefix: 10
+	});
+	weight += scoreField(descs, tokens, fullSearch, {
+		exact: 15,
+		all: 8,
+		some: 5,
+		prefix: 0
+	});
+	weight += scoreField(fullDescs, tokens, fullSearch, {
+		exact: 10,
+		all: 4,
+		some: 3,
+		prefix: 0
+	});
+
+	const isPrefix = [...names, ...titles].some((value) =>
+		value.startsWith(tokens[0])
+	);
+	const titleLen = titles.length
+		? Math.min(...titles.map((title) => title.length))
+		: Number.MAX_SAFE_INTEGER;
+
+	return { weight, isPrefix, titleLen };
 };
 
 const search = debounce(() => {
+	syncKeywordToUrl();
 	if (!searchContent.value) {
 		applications.value = [];
 		return;
@@ -183,13 +250,13 @@ const search = debounce(() => {
 		return;
 	}
 	applications.value = Array.from(appStore.appSimpleInfoMap.entries())
-		.filter(([key, appInfo]) => {
+		.filter(([, appInfo]) => {
 			return !(settingsStore.nsfw && nsfwApp(appInfo));
 		})
-		.filter(([key, appInfo]) => {
+		.filter(([, appInfo]) => {
 			return centerStore.allSourcesApps.has(appInfo.app_simple_info.app_name);
 		})
-		.filter(([key, appInfo]) => {
+		.filter(([, appInfo]) => {
 			const intersectedArray = intersection(
 				preCheckStore.systemResource.nodes,
 				appInfo.app_simple_info.support_arch
@@ -199,19 +266,24 @@ const search = debounce(() => {
 			return intersectedArray.length > 0;
 		})
 		.map(([key, appInfo]) => {
-			const weight = calculateWeight(
+			const score = calculateWeight(
 				appInfo.app_simple_info,
 				searchContent.value
 			);
-			return { key, appInfo: appInfo.app_simple_info, weight };
+			return { key, ...score };
 		})
 		.filter(({ weight }) => weight > 0)
-		.sort((a, b) => b.weight - a.weight)
+		.sort((a, b) => {
+			if (b.weight !== a.weight) return b.weight - a.weight;
+			// Same weight: prefix matches first, then shorter title.
+			if (a.isPrefix !== b.isPrefix) return a.isPrefix ? -1 : 1;
+			return a.titleLen - b.titleLen;
+		})
 		.map(({ key }) => {
 			const [sourceName, application] = key.split('_');
 			return { sourceName, application };
 		});
-});
+}, 200);
 
 onMounted(() => {
 	const initialKeyword = (route.query.keyword as string)?.trim();
@@ -228,6 +300,21 @@ onMounted(() => {
 	}
 });
 
+// Keep the input in sync when the keyword query changes from outside (e.g.
+// browser back, or an external jump to /search?keyword=). Guarded against the
+// echo of our own router.replace in syncKeywordToUrl.
+watch(
+	() => route.query.keyword,
+	(kw) => {
+		const next = ((kw as string) ?? '').trim();
+		if (next === (searchContent.value || '').trim()) {
+			return;
+		}
+		searchContent.value = next;
+		search();
+	}
+);
+
 watch(
 	() => appStore.appSimpleInfoMap,
 	() => {
@@ -241,6 +328,7 @@ watch(
 const clearSearch = () => {
 	searchContent.value = '';
 	applications.value = [];
+	syncKeywordToUrl();
 };
 </script>
 

@@ -1,9 +1,9 @@
 <template>
 	<bt-custom-dialog
 		ref="CustomRef"
-		:title="t('Clone App')"
+		:title="props.templateClone ? t('Create New Instance') : t('Clone App')"
 		:skip="false"
-		:ok="t('confirm')"
+		:ok="props.templateClone ? t('Create') : t('Clone')"
 		size="medium"
 		:cancel="t('cancel')"
 		:okDisabled="!isSetEnable"
@@ -81,6 +81,12 @@ const props = defineProps({
 	data: {
 		type: Object as PropType<AppCloneInfoResponse>,
 		required: true
+	},
+	// Only template-app instance creation shows the "Create New Instance" title;
+	// regular multi-instance clone keeps the original "Clone App" title.
+	templateClone: {
+		type: Boolean,
+		default: false
 	}
 });
 

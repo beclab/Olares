@@ -26,8 +26,31 @@
 	<div class="column env-var-input-body q-mt-xs">
 		<div class="row env-var-input-row items-start no-wrap">
 			<div ref="refPickerMainEl" class="env-var-input-main col">
+				<bt-multi-select-v3
+					v-if="isMultiSelect"
+					:model-value="selectedValues"
+					input-class="text-body3 text-ink-1"
+					class="full-width"
+					width="100%"
+					:options="options"
+					:placeholder="t('Select values')"
+					:is-error="inlineFieldError"
+					:error-message="inlineErrorMessage"
+					@update:modelValue="onMultiSelectInput"
+				/>
+				<bt-multi-tag-input
+					v-else-if="isMultiTag"
+					:model-value="selectedValues"
+					:splitter="splitter"
+					:placeholder="t('Enter value')"
+					:is-error="inlineFieldError"
+					:error-message="inlineErrorMessage"
+					@update:modelValue="onMultiSelectInput"
+				/>
 				<bt-select-v3
-					v-if="options.length > 0 && !hasBoundEnvRef && !isMissingRefRepairUi"
+					v-else-if="
+						options.length > 0 && !hasBoundEnvRef && !isMissingRefRepairUi
+					"
 					:model-value="String(inputValue ?? '')"
 					input-class="text-body3 text-ink-1"
 					class="full-width"
@@ -128,15 +151,15 @@
 
 <script setup lang="ts">
 import BtSelectV3 from './settings/base/BtSelectV3.vue';
+import BtMultiSelectV3 from './settings/base/BtMultiSelectV3.vue';
+import BtMultiTagInput from './settings/base/BtMultiTagInput.vue';
 import TerminusEdit from './settings/base/TerminusEdit.vue';
 import { BaseEnv, EnvOption, SelectorProps } from '../constant';
 import { computed, onMounted, PropType, ref, watch, nextTick } from 'vue';
 import { useI18n } from 'vue-i18n';
-import {
-	getSystemEnvList,
-	getUserEnvList,
-	remoteOptionsProxy
-} from 'src/api/settings/env';
+import { remoteOptionsProxy } from 'src/api/settings/env';
+import { useEnvValidation } from 'src/composables/env/useEnvValidation';
+import { useSystemEnvRefs } from 'src/composables/env/useSystemEnvRefs';
 
 const props = defineProps({
 	env: {
@@ -162,15 +185,15 @@ const props = defineProps({
 });
 const emit = defineEmits(['update:env']);
 const { t } = useI18n();
-const emailReg = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const { validateEnvValue } = useEnvValidation();
+const { refNames, refValueByName, loadRefEnvLists } = useSystemEnvRefs();
 const options = ref<SelectorProps[]>([]);
+const optionsResolved = ref(false);
 const itemRight = ref(false);
 const itemError = ref(
 	t('Application variable validation failed', { type: props.env.type })
 );
 const firstErrorRef = ref(props.firstError);
-const refNames = ref<string[]>([]);
-const refValueByName = ref<Record<string, string>>({});
 const refPickerMainEl = ref<HTMLElement | null>(null);
 const refPickerMenuWidth = ref('100%');
 const linkMenuOpen = ref(false);
@@ -188,57 +211,6 @@ const refMenuPaneStyle = computed(() => {
 function syncRefMenuWidth() {
 	const el = refPickerMainEl.value;
 	refPickerMenuWidth.value = el?.offsetWidth ? `${el.offsetWidth}px` : '100%';
-}
-
-function effectiveEnvLiteral(e: BaseEnv): string {
-	const v = e.value;
-	if (v !== undefined && v !== null && String(v).trim() !== '') {
-		return String(v);
-	}
-	return String(e.default ?? '');
-}
-
-async function loadRefEnvLists() {
-	try {
-		const [systemList, userList] = await Promise.all([
-			getSystemEnvList(),
-			getUserEnvList()
-		]);
-		let sys;
-		let usr;
-
-		if (process.env.APPLICATION === 'MARKET') {
-			sys = Array.isArray(systemList.data) ? systemList.data : [];
-			usr = Array.isArray(userList.data) ? userList.data : [];
-		} else if (process.env.APPLICATION === 'SETTINGS') {
-			sys = Array.isArray(systemList) ? systemList : [];
-			usr = Array.isArray(userList) ? userList : [];
-		} else {
-			new Error('Channel must be supported');
-		}
-		const valueMap: Record<string, string> = {};
-		for (const e of sys) {
-			if (e?.envName) {
-				valueMap[e.envName] = effectiveEnvLiteral(e);
-			}
-		}
-		for (const e of usr) {
-			if (e?.envName) {
-				valueMap[e.envName] = effectiveEnvLiteral(e);
-			}
-		}
-		refValueByName.value = valueMap;
-		const names = new Set<string>();
-		sys.forEach((e) => e?.envName && names.add(e.envName));
-		usr.forEach((e) => e?.envName && names.add(e.envName));
-		refNames.value = Array.from(names).sort((a, b) =>
-			a.localeCompare(b, undefined, { sensitivity: 'base' })
-		);
-	} catch (e) {
-		console.error(e);
-		refNames.value = [];
-		refValueByName.value = {};
-	}
 }
 
 function onLinkMenuToggle() {
@@ -344,6 +316,43 @@ const inputValueStr = computed(() => {
 	return String(v);
 });
 
+const splitter = computed(() => props.env.splitter || ',');
+
+const hasOptionSource = computed(
+	() =>
+		props.env.type === 'bool' ||
+		(props.env.options?.length ?? 0) > 0 ||
+		!!props.env.remoteOptions
+);
+
+const isMultiSelect = computed(
+	() =>
+		!!props.env.multiSelect &&
+		!hasBoundEnvRef.value &&
+		!isMissingRefRepairUi.value &&
+		(options.value.length > 0 ||
+			(hasOptionSource.value && !optionsResolved.value))
+);
+
+const isMultiTag = computed(
+	() =>
+		!!props.env.multiSelect &&
+		!isMultiSelect.value &&
+		!hasBoundEnvRef.value &&
+		!isMissingRefRepairUi.value
+);
+
+function splitMultiValue(value: string | undefined): string[] {
+	return String(value ?? '')
+		.split(splitter.value)
+		.map((part) => part.trim())
+		.filter((part) => part !== '');
+}
+
+const selectedValues = computed(() => splitMultiValue(inputValueStr.value));
+
+const optionValues = computed(() => options.value.map((o) => String(o.value)));
+
 async function envOptionToSelector(
 	localOptions: EnvOption[],
 	remoteUrl: string
@@ -397,6 +406,7 @@ onMounted(async () => {
 			props.env.remoteOptions ?? ''
 		);
 	}
+	optionsResolved.value = true;
 
 	await loadRefEnvLists();
 });
@@ -404,79 +414,6 @@ onMounted(async () => {
 function isRefBindingValue(item: BaseEnv) {
 	const vf = item.valueFrom;
 	return !!(vf?.envName?.trim() && vf.status === 'synced');
-}
-
-function validateValueAgainstSchema(item: BaseEnv, valueToCheck: string) {
-	if (!valueToCheck && !!item.required) {
-		return { right: false, error: t('cannot be empty') };
-	}
-
-	const trimmed = String(valueToCheck ?? '').trim();
-	if (item.options?.length && trimmed !== '') {
-		const ok = item.options.some((o) => String(o.value).trim() === trimmed);
-		if (!ok) {
-			return {
-				right: false,
-				error: t('Application variable validation failed', {
-					type: item.type ?? 'value'
-				})
-			};
-		}
-	}
-
-	if (item.regex) {
-		try {
-			const reg = new RegExp(item.regex);
-			if (!reg.test(valueToCheck)) {
-				return {
-					right: false,
-					error: t(
-						'does not meet format requirements (regex validation failed)',
-						{ regex: item.regex }
-					)
-				};
-			}
-		} catch {
-			return {
-				right: false,
-				error: t(
-					'does not meet format requirements (regex validation failed)',
-					{ regex: String(item.regex) }
-				)
-			};
-		}
-	}
-
-	switch (item.type) {
-		case 'number':
-		case 'int':
-			if (isNaN(Number(valueToCheck))) {
-				return { right: false, error: t('must be a number') };
-			}
-			break;
-		case 'email':
-			if (!emailReg.test(valueToCheck)) {
-				return { right: false, error: t('invalid email format') };
-			}
-			break;
-		case 'bool':
-			{
-				const v = String(valueToCheck).trim().toLowerCase();
-				if (v !== 'true' && v !== 'false') {
-					return {
-						right: false,
-						error: t('Application variable validation failed', {
-							type: item.type
-						})
-					};
-				}
-			}
-			break;
-		default:
-			break;
-	}
-
-	return { right: true, error: '' };
 }
 
 function literalForRefValidation(refName: string, value: string): string {
@@ -491,11 +428,13 @@ function literalForRefValidation(refName: string, value: string): string {
 }
 
 function validateItem(item: BaseEnv, value: string) {
+	const allowedValues = optionValues.value;
 	if (isRefBindingValue(item)) {
 		const refName = item.valueFrom!.envName;
-		return validateValueAgainstSchema(
+		return validateEnvValue(
 			item,
-			literalForRefValidation(refName, value)
+			literalForRefValidation(refName, value),
+			allowedValues
 		);
 	}
 
@@ -503,57 +442,45 @@ function validateItem(item: BaseEnv, value: string) {
 		return { right: false, error: t('cannot be empty') };
 	}
 
-	return validateValueAgainstSchema(item, value);
+	return validateEnvValue(item, value, allowedValues);
+}
+
+function commitValue(value: string, patch: Partial<BaseEnv> = {}) {
+	const next: BaseEnv = {
+		...props.env,
+		value,
+		valueFrom: undefined,
+		applyOnChange: props.env.applyOnChange,
+		...patch
+	};
+	const { right, error } = validateItem(next, value);
+	firstErrorRef.value = false;
+	itemRight.value = true;
+	itemError.value = '';
+	emit('update:env', { ...next, right, error });
 }
 
 function pickSystemEnvRef(name: string) {
 	const preserveApplyOnChange =
 		props.env.valueFrom?.status === 'notfound' || props.isFromMissingRefs;
 	const resolved = refValueByName.value[name] ?? '';
-	const next: BaseEnv = {
-		...props.env,
-		value: resolved,
-		valueFrom: {
-			envName: name,
-			status: 'synced'
-		},
+	commitValue(resolved, {
+		valueFrom: { envName: name, status: 'synced' },
 		applyOnChange: preserveApplyOnChange ? props.env.applyOnChange : true
-	};
-	const { right, error } = validateItem(next, resolved);
-	firstErrorRef.value = false;
-	itemRight.value = true;
-	itemError.value = '';
-	emit('update:env', { ...next, right, error });
+	});
 	linkMenuOpen.value = false;
 }
 
 function onSelectInput(result: string) {
-	const next: BaseEnv = {
-		...props.env,
-		value: result,
-		valueFrom: undefined,
-		applyOnChange: props.env.applyOnChange
-	};
-	const { right, error } = validateItem(next, result);
-	firstErrorRef.value = false;
-	itemRight.value = true;
-	itemError.value = '';
-	emit('update:env', { ...next, right, error });
+	commitValue(result);
+}
+
+function onMultiSelectInput(values: string[]) {
+	commitValue(values.join(splitter.value));
 }
 
 function onValueInput(result: string) {
-	const next: BaseEnv = {
-		...props.env,
-		value: result,
-		valueFrom: undefined,
-		applyOnChange: props.env.applyOnChange
-	};
-
-	const { right, error } = validateItem(next, result);
-	firstErrorRef.value = false;
-	itemRight.value = true;
-	itemError.value = '';
-	emit('update:env', { ...next, right, error });
+	commitValue(result);
 }
 </script>
 

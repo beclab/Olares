@@ -4,8 +4,8 @@ export const TEXT_FILE_EXTENSIONS: string[] = [
 	// Plain text & rich text
 	'txt',
 	'text',
-	'log',
 	'rtf',
+	'log',
 
 	// Markdown & documentation
 	'md',
@@ -152,6 +152,55 @@ export const TEXT_FILE_EXTENSIONS: string[] = [
 	'sb3'
 ];
 
+export const ARCHIVE_FILE_EXTENSIONS = [
+	'zip',
+	// 'rar',
+	'7z',
+	'tar',
+	'gz',
+	'gzip',
+	'tgz',
+	'bz2',
+	'bzip2',
+	'xz'
+];
+
+const ARCHIVE_VOLUME_SUFFIX_RULE = /^\d{3}$/;
+const ARCHIVE_COMPOUND_EXTENSIONS = ['tar.gz', 'tar.bz2', 'tar.xz'];
+
+export function getArchiveFileExtension(name?: string): string {
+	if (!name) {
+		return '';
+	}
+
+	const normalized = name.toLowerCase();
+	const parts = normalized.split('.');
+	if (ARCHIVE_VOLUME_SUFFIX_RULE.test(parts[parts.length - 1] || '')) {
+		parts.pop();
+	}
+	const nameWithoutVolume = parts.join('.');
+	const compoundExt = ARCHIVE_COMPOUND_EXTENSIONS.find((ext) =>
+		nameWithoutVolume.endsWith(`.${ext}`)
+	);
+	if (compoundExt) {
+		return compoundExt;
+	}
+
+	const ext = nameWithoutVolume.split('.').pop() || '';
+	return ARCHIVE_FILE_EXTENSIONS.includes(ext) ? ext : '';
+}
+
+export function isArchiveFile(item?: {
+	name?: string;
+	isDir?: boolean;
+}): boolean {
+	if (!item?.name || item.isDir) {
+		return false;
+	}
+
+	return !!getArchiveFileExtension(item.name);
+}
+
 const FILE_ICON_CONFIG: { [key: string]: string[] } = {
 	image: [
 		'png',
@@ -166,13 +215,139 @@ const FILE_ICON_CONFIG: { [key: string]: string[] } = {
 		'tiff',
 		'raw'
 	],
+
+	//edit file
+	// CSS: ['css'],
+	// rtf: ['rtf'],
+	asm: ['asm'],
+	bat: ['bat'],
+	bash: ['bash'],
+	c: ['c'],
+	cc: ['cc'],
+	cgf: ['cgf'],
+	cjs: ['cjs'],
+	clj: ['clj'],
+	cljc: ['cljc'],
+	cljs: ['cljs'],
+	cmake: ['cmake'],
+	cmd: ['cmd'],
+	conf: ['conf'],
+	config: ['cfg'],
+	cpp: ['cpp'],
+	cs: ['cs'],
+	css: ['css'],
+	cxx: ['cxx'],
+	dart: ['dart'],
+	dockerfile: ['dockerfile'],
+	dockerignore: ['dockerignore'],
+	dpr: ['dpr'],
+	editorconfig: ['editorconfig'],
+	env: ['env'],
+	erl: ['erl'],
+	ex: ['ex'],
+	exs: ['exs'],
+	f90: ['f90'],
+	f95: ['f95'],
+	fish: ['fish'],
+	for: ['for'],
+	fs: ['fs'],
+	fsi: ['fsi'],
+	fsx: ['fsx'],
+	gitattributes: ['gitattributes'],
+	gitignore: ['gitignore'],
+	go: ['go'],
+	gradle: ['gradle'],
+	groovy: ['groovy'],
+	h: ['h'],
+	hh: ['hh'],
+	hpp: ['hpp'],
+	hs: ['hs'],
+	html: ['htm', 'html', 'xhtml'],
+	hxx: ['hxx'],
+	ini: ['ini'],
+	ipynb: ['ipynb'],
+	java: ['java'],
+	js: ['js'],
+	json: ['json'],
+	json5: ['json5'],
+	jsonc: ['jsonc'],
+	jsonl: ['jsonl'],
+	jsx: ['jsx'],
+	kt: ['kt'],
+	less: ['less'],
+	lock: ['lock'],
+	log: ['log'],
+	lua: ['lua'],
+	m: ['m'],
+	makefile: ['makefile'],
+	md: ['md', 'markdown'],
+	mjs: ['mjs'],
+	mk: ['mk'],
+	ml: ['ml'],
+	mli: ['mli'],
+	mm: ['mm'],
+	msi: ['msi'],
+	msix: ['msix'],
+	ndjson: ['ndjson'],
+	nim: ['nim'],
+	pas: ['pas'],
+	php: ['php'],
+	pl: ['pl'],
+	pm: ['pm'],
+	properties: ['properties'],
+	ps1: ['ps1'],
+	py: ['py'],
+	r: ['r'],
+	rb: ['rb'],
+	rs: ['rs'],
+	s: ['s'],
+	sass: ['sass'],
+	sb3: ['sb3'],
+	scala: ['scala'],
+	scss: ['scss'],
+	sh: ['sh'],
+	toml: ['toml'],
+	sol: ['sol'],
+	sql: ['sql'],
+	styl: ['styl'],
+	style: ['style'],
+	swift: ['swift'],
+	tex: ['tex'],
+	ts: ['ts'],
+	tsx: ['tsx'],
+	vbp: ['vbp'],
+	vbs: ['vbs'],
+	vue: ['vue'],
+	xml: ['xml'],
+	yaml: ['yaml', 'yml'],
+	zig: ['zig'],
+	zsh: ['zsh'],
+
 	txt: TEXT_FILE_EXTENSIONS,
+
+	//
+	aab: ['aab'],
+	apk: ['apk'],
+	app: ['app'],
+	appimage: ['appimage'],
+	appx: ['appx'],
+	deb: ['deb'],
+	dmg: ['dmg'],
+	exe: ['exe'],
+	flatpak: ['flatpak'],
+	ipa: ['ipa'],
+	pkg: ['pkg'],
+	rpm: ['rpm'],
+	snap: ['snap'],
+	xapk: ['xapk'],
+
+	document: ['odt', 'pages'],
 	epub: ['epub'],
 	excel: ['xls', 'xlsx'],
 	word: ['doc', 'docx'],
 	pdf: ['pdf'],
 	ppt: ['ppt', 'pptx'],
-	zip: ['rar', 'zip', '7z', 'tar', 'gz', 'bz2'],
+	zip: ['rar', 'zip', '7z', 'tar', 'gz', 'gzip', 'bz2', 'bzip2'],
 	video: [
 		'mp4',
 		'm2v',
@@ -265,8 +440,8 @@ const FILE_TYPE_CONFIG: { [key: string]: string[] } = {
 	'WinRAR archive': ['rar'],
 	'7-Zip archive': ['7z'],
 	'TAR archive': ['tar'],
-	'GZIP archive': ['gz'],
-	'BZIP2 archive': ['bz2'],
+	'GZIP archive': ['gz', 'gzip'],
+	'BZIP2 archive': ['bz2', 'bzip2'],
 
 	// Audio
 	'MP3 Audio File': ['mp3'],
@@ -568,3 +743,70 @@ export function getFileTypeI18nKey(fileName: string): string {
 }
 
 export const txtReadonlyTypes = ['log'];
+
+export enum PreviewType {
+	UNSUPPORTED = 'unsupported',
+	IMAGE = 'image',
+	TXT = 'txt',
+	EBOOK = 'ebook',
+	EXCEL = 'excel',
+	WORD = 'word',
+	PDF = 'pdf',
+	VIDEO = 'video',
+	AUDIO = 'audio'
+}
+
+const FILE_Preview_CONFIG = {
+	[PreviewType.IMAGE]: [
+		'png',
+		'jpg',
+		'jpeg',
+		'bmp',
+		'gif',
+		'heic',
+		'webp',
+		'svg',
+		'tif',
+		'tiff',
+		'raw'
+	],
+	[PreviewType.TXT]: TEXT_FILE_EXTENSIONS,
+	[PreviewType.EBOOK]: ['epub'],
+	[PreviewType.EXCEL]: ['xls', 'xlsx'],
+	[PreviewType.WORD]: ['doc', 'docx'],
+	[PreviewType.PDF]: ['pdf'],
+	[PreviewType.VIDEO]: [
+		'mp4',
+		'm2v',
+		'mkv',
+		'rmvb',
+		'wmv',
+		'avi',
+		'flv',
+		'mov',
+		'm4v',
+		'ape',
+		'webm',
+		'vob',
+		'mpg',
+		'3gp',
+		'rm'
+	],
+	[PreviewType.AUDIO]: ['mp3', 'wav', 'm4a', 'flac', 'ogg', 'aac']
+};
+
+export function getFilePreviewType(fileName: string): PreviewType {
+	if (!fileName) return PreviewType.UNSUPPORTED;
+
+	const extension = fileName.split('.').pop()?.toLowerCase();
+	if (!extension) return PreviewType.UNSUPPORTED;
+
+	for (const fileType in FILE_Preview_CONFIG) {
+		const extensions = FILE_Preview_CONFIG[fileType];
+		if (extensions.indexOf(extension) !== -1) {
+			return fileType as PreviewType;
+		}
+	}
+
+	return PreviewType.UNSUPPORTED;
+}

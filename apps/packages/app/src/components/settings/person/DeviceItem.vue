@@ -67,7 +67,7 @@
 import { PropType, computed } from 'vue';
 import { TermiPassDeviceInfo } from '@bytetrade/core';
 import { getDeviceIconName } from 'src/constant/constants';
-import { useAdminStore } from 'src/stores/settings/admin';
+import { useDevicesStore } from 'src/stores/settings/devices';
 import AdaptiveLayout from '../AdaptiveLayout.vue';
 import BtSeparator from '../base/BtSeparator.vue';
 import { useI18n } from 'vue-i18n';
@@ -76,7 +76,7 @@ import { useRouter } from 'vue-router';
 
 const { t } = useI18n();
 const router = useRouter();
-const adminStore = useAdminStore();
+const devicesStore = useDevicesStore();
 
 const props = defineProps({
 	device: {
@@ -116,11 +116,11 @@ const goDeviceDetails = () => {
 
 const isMe = computed(() => {
 	return (
-		adminStore.thisDevice &&
-		adminStore.thisDevice.platform == props.device?.platform &&
-		adminStore.thisDevice.manufacturer == props.device.manufacturer &&
-		adminStore.thisDevice.client_type == props.device.client_type &&
-		adminStore.thisDevice.description == props.device.description
+		devicesStore.thisDevice &&
+		devicesStore.thisDevice.platform == props.device?.platform &&
+		devicesStore.thisDevice.manufacturer == props.device.manufacturer &&
+		devicesStore.thisDevice.client_type == props.device.client_type &&
+		devicesStore.thisDevice.description == props.device.description
 	);
 });
 </script>

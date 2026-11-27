@@ -1,7 +1,8 @@
-import { base64ToString, stringToBase64 } from '@didvault/sdk/src/core';
+import { stringToBase64 } from 'src/utils/encode';
 import { useSSIStore } from '../../stores/ssi';
-import { ClientSchema } from '../../globals';
-import { VCCardInfo, getSubmitApplicationJWS } from '../../utils/vc';
+import type { ClientSchema } from '../../globals';
+import { getSubmitApplicationJWS } from '../../utils/vc';
+import type { VCCardInfo } from '../../utils/vc';
 import { GeneralJwsSigner } from '../../jose/jws/general/signer';
 import { walletService } from '../../wallet';
 import {

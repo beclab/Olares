@@ -31,12 +31,12 @@
 				color="ink-3 q-ma-sm cursor-pointer"
 				size="24px"
 				name="sym_r_delete"
-				@click="onDeleteClick"
+				@click.stop="onDeleteClick"
 			/>
 		</div>
 		<div
 			class="display-url q-mt-xs q-mr-xl text-ink-3 text-body3 cursor-pointer"
-			@click="socialOpen"
+			@click.stop="socialOpen"
 		>
 			{{ displayUrl }}
 		</div>

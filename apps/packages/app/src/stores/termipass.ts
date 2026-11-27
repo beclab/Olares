@@ -12,9 +12,7 @@ import { TabbarItem } from '../application/interface/index';
 export class TermiPassState {
 	state: TermiPassStateI;
 	reactivation: boolean;
-	srpInvalid: boolean;
 	ssoInvalid: boolean;
-	tokenRefreshing: boolean;
 	tabItems: TabbarItem[];
 	vpnErrorCount: number;
 }
@@ -26,6 +24,8 @@ export interface TermiPassStateInfo {
 	title: string;
 	description?: string;
 	descriptionEx?: string;
+	descriptionI18nKey?: string;
+	descriptionExI18nKey?: string;
 }
 
 export const useTermipassStore = defineStore('termipass', {
@@ -33,7 +33,9 @@ export const useTermipassStore = defineStore('termipass', {
 		return {
 			state: new TermiPassStateI(),
 			tabItems: [] as TabbarItem[],
-			vpnErrorCount: 0
+			vpnErrorCount: 0,
+			reactivation: false,
+			ssoInvalid: false
 		} as TermiPassState;
 	},
 
@@ -100,11 +102,19 @@ export const useTermipassStore = defineStore('termipass', {
 					title: i18n.global.t('user_current_status.reactivation.title'),
 					icon: 'devices_off',
 					description: i18n.global.t(
-						'user_current_status.reactivation.description'
+						'user_current_status.reactivation.description',
+						{
+							action: i18n.global.t(
+								'user_current_status.reactivation.description_ex'
+							)
+						}
 					),
+					descriptionI18nKey: 'user_current_status.reactivation.description',
 					descriptionEx: i18n.global.t(
 						'user_current_status.reactivation.description_ex'
-					)
+					),
+					descriptionExI18nKey:
+						'user_current_status.reactivation.description_ex'
 				};
 			}
 
@@ -115,93 +125,113 @@ export const useTermipassStore = defineStore('termipass', {
 					title: i18n.global.t('user_current_status.token_invalid.title'),
 					icon: 'account_circle_off',
 					description: i18n.global.t(
-						'user_current_status.token_invalid.description'
+						'user_current_status.token_invalid.description',
+						{
+							action: i18n.global.t(
+								'user_current_status.token_invalid.description_ex'
+							)
+						}
 					),
+					descriptionI18nKey: 'user_current_status.token_invalid.description',
 					descriptionEx: i18n.global.t(
 						'user_current_status.token_invalid.description_ex'
-					)
-				};
-			}
-
-			if (this.srpInvalid) {
-				return {
-					status: TermiPassStatus.VaultTokenInvalid,
-					isError: UserStatusActive.error,
-					title: i18n.global.t('user_current_status.srp_invalid.title'),
-					icon: 'account_circle_off',
-					description: i18n.global.t(
-						'user_current_status.srp_invalid.description'
 					),
-					descriptionEx: i18n.global.t(
-						'user_current_status.srp_invalid.description_ex'
-					)
+					descriptionExI18nKey:
+						'user_current_status.token_invalid.description_ex'
 				};
 			}
 
 			const scaleStore = useScaleStore();
+			if (scaleStore.vpnAbility) {
+				if (
+					!userStore.current_user.isLocal &&
+					userStore.current_user.tailscale_activated &&
+					!scaleStore.isOn
+				) {
+					return {
+						status: TermiPassStatus.RequiresVpn,
+						isError: UserStatusActive.error,
+						title: i18n.global.t('user_current_status.requires_vpn.title'),
+						icon: 'public_off',
+						description: i18n.global.t(
+							'user_current_status.requires_vpn.description'
+						),
+						descriptionEx: i18n.global.t(
+							'user_current_status.requires_vpn.description_ex'
+						)
+					};
+				}
 
-			if (
-				!userStore.current_user.isLocal &&
-				userStore.current_user.tailscale_activated &&
-				!scaleStore.isOn
-			) {
-				return {
-					status: TermiPassStatus.RequiresVpn,
-					isError: UserStatusActive.error,
-					title: i18n.global.t('user_current_status.requires_vpn.title'),
-					icon: 'public_off',
-					description: i18n.global.t(
-						'user_current_status.requires_vpn.description'
-					),
-					descriptionEx: i18n.global.t(
-						'user_current_status.requires_vpn.description_ex'
-					)
-				};
-			}
+				if (
+					!userStore.current_user.isLocal &&
+					userStore.current_user.tailscale_activated &&
+					!scaleStore.isOn
+				) {
+					return {
+						status: TermiPassStatus.RequiresVpn,
+						isError: UserStatusActive.error,
+						title: i18n.global.t('user_current_status.requires_vpn.title'),
+						icon: 'public_off',
+						description: i18n.global.t(
+							'user_current_status.requires_vpn.description',
+							{
+								action: i18n.global.t(
+									'user_current_status.requires_vpn.description_ex'
+								)
+							}
+						),
+						descriptionI18nKey: 'user_current_status.requires_vpn.description',
+						descriptionEx: i18n.global.t(
+							'user_current_status.requires_vpn.description_ex'
+						),
+						descriptionExI18nKey:
+							'user_current_status.requires_vpn.description_ex'
+					};
+				}
+				if (scaleStore.isConnecting) {
+					return {
+						status: TermiPassStatus.VPNConnecting,
+						isError: UserStatusActive.active,
+						title: i18n.global.t('user_current_status.connecting.title'),
+						icon: ''
+					};
+				}
 
-			if (scaleStore.isConnecting) {
-				return {
-					status: TermiPassStatus.VPNConnecting,
-					isError: UserStatusActive.active,
-					title: i18n.global.t('user_current_status.connecting.title'),
-					icon: ''
-				};
-			}
+				if (scaleStore.isDisconnecting) {
+					return {
+						status: TermiPassStatus.VPNDisconnecting,
+						isError: UserStatusActive.active,
+						title: i18n.global.t('user_current_status.disconnecting.title'),
+						icon: ''
+					};
+				}
 
-			if (scaleStore.isDisconnecting) {
-				return {
-					status: TermiPassStatus.VPNDisconnecting,
-					isError: UserStatusActive.active,
-					title: i18n.global.t('user_current_status.disconnecting.title'),
-					icon: ''
-				};
-			}
-
-			if (scaleStore.isOn) {
-				if (userStore.current_user.isLargeVersion12) {
-					if (scaleStore.isLocal) {
+				if (scaleStore.isOn) {
+					if (userStore.current_user.isLargeVersion12) {
+						if (scaleStore.isLocal) {
+							return {
+								status: TermiPassStatus.Intranet,
+								isError: UserStatusActive.active,
+								title: i18n.global.t('user_current_status.intranet.title'),
+								icon: 'signal_wifi_0_bar'
+							};
+						}
+					}
+					if (this.isP2P) {
 						return {
-							status: TermiPassStatus.Intranet,
+							status: TermiPassStatus.P2P,
 							isError: UserStatusActive.active,
-							title: i18n.global.t('user_current_status.intranet.title'),
-							icon: 'signal_wifi_0_bar'
+							title: i18n.global.t('user_current_status.p2p.title'),
+							icon: 'vpn_lock'
 						};
 					}
-				}
-				if (this.isP2P) {
 					return {
-						status: TermiPassStatus.P2P,
+						status: TermiPassStatus.DERP,
 						isError: UserStatusActive.active,
-						title: i18n.global.t('user_current_status.p2p.title'),
+						title: i18n.global.t('user_current_status.derp.title'),
 						icon: 'vpn_lock'
 					};
 				}
-				return {
-					status: TermiPassStatus.DERP,
-					isError: UserStatusActive.active,
-					title: i18n.global.t('user_current_status.derp.title'),
-					icon: 'vpn_lock'
-				};
 			}
 
 			return {

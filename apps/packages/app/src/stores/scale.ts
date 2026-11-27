@@ -1,8 +1,5 @@
 import { defineStore } from 'pinia';
 import { useUserStore } from './user';
-import { axiosInstanceProxy } from '../platform/httpProxy';
-import { AxiosInstance } from 'axios';
-import { utcToDate } from '../utils/utils';
 import { getAppPlatform } from '../application/platform';
 import {
 	ConfigVPNInterface,
@@ -10,21 +7,11 @@ import {
 	instanceOfConfigVPNInterface,
 	TermiPassVpnStatus
 } from '../platform/terminusCommon/terminusCommonInterface';
-import { app } from '../globals';
-import { PreAuthKey } from '@didvault/sdk/src/core/api';
-import { useTermipassStore } from './termipass';
-import { UserStatusActive } from 'src/utils/checkTerminusState';
-import { TermiPassStatus } from 'src/utils/termipassState';
-import { notifyFailed } from 'src/utils/notifyRedefinedUtil';
-import { i18n } from 'src/boot/i18n';
 
 import ipaddr from 'ipaddr.js';
 
 export type DataState = {
 	owner: string;
-	authKey: PreAuthKey | undefined;
-	scaleServer: string;
-	instance?: AxiosInstance;
 	vpnStatus: TermiPassVpnStatus;
 	hostPeerInfo?: HostPeerInfo;
 	vpnAbility: boolean;
@@ -33,14 +20,18 @@ export type DataState = {
 export const useScaleStore = defineStore('scale', {
 	state: () => {
 		return {
-			authKey: undefined,
-			scaleServer: '',
+			owner: '',
 			vpnStatus: TermiPassVpnStatus.off,
 			vpnAbility: true
 		} as DataState;
 	},
 
 	getters: {
+		vpnAbility(): boolean {
+			const platform = getAppPlatform();
+			return platform.vpnAbility;
+		},
+
 		isOn(): boolean {
 			return this.vpnStatus == TermiPassVpnStatus.on;
 		},
@@ -118,150 +109,44 @@ export const useScaleStore = defineStore('scale', {
 	},
 
 	actions: {
-		async init() {
-			const userStore = useUserStore();
-			if (!userStore.current_user) {
-				this.instance = undefined;
-				return;
-			}
-			this.owner = userStore.current_user.name;
-			this.scaleServer = userStore.getModuleSever('headscale');
-			const data = await this.getDecryptData(this.owner);
-			this.instance = axiosInstanceProxy({
-				baseURL: this.scaleServer,
-				timeout: 10000,
-				headers: {
-					'Content-Type': 'application/json',
-					'X-Authorization': userStore.current_user?.access_token || ''
-				}
-			});
-			if (data) {
-				if (typeof data == 'string') {
-					this.authKey = new PreAuthKey().fromJSON(data);
-				} else {
-					this.authKey = data;
-				}
-			}
-		},
-		async setEncryptData(key: string, value: any) {
-			await getAppPlatform().userStorage.setItem(key, value);
-		},
-
-		async getDecryptData(key: string) {
-			return await getAppPlatform().userStorage.getItem(key);
-		},
-
-		async reLogin(): Promise<boolean> {
-			const userStore = useUserStore();
-			if (!(await userStore.unlockFirst())) {
-				return false;
-			}
-
-			if (userStore.current_user?.name !== this.owner) {
-				await this.init();
-			}
-			if (
-				!this.authKey ||
-				utcToDate(this.authKey.expiration).getTime() <= new Date().getTime() ||
-				this.authKey.olares_device_id !=
-					userStore.current_user?.olares_device_id
-			) {
-				try {
-					getAppPlatform().getQuasar()?.loading.show();
-					const data = await app.getPreAuthKey(
-						userStore.current_user!.access_token
-					);
-					getAppPlatform().getQuasar()?.loading.hide();
-					if (!data) {
-						throw Error('get preauthKey error');
-					}
-					if (userStore.current_user?.olares_device_id) {
-						data.olares_device_id = userStore.current_user.olares_device_id;
-					}
-					this.authKey = data;
-					await this.setEncryptData(this.owner, data.toJSON());
-				} catch (e) {
-					notifyFailed(e.message);
-					getAppPlatform().getQuasar()?.loading.hide();
-					console.error('get preauthKey error', e);
-				}
-			}
-
-			return (
-				!!this.authKey &&
-				utcToDate(this.authKey.expiration).getTime() > new Date().getTime() &&
-				!!this.scaleServer
-			);
-		},
-		async start() {
-			if (!this.notifyUserCannotCorrespondMethod()) {
-				this.vpnStatus = TermiPassVpnStatus.off;
-				return;
-			}
-			if (await this.reLogin()) {
-				if (!this.authKey) {
-					this.vpnStatus = TermiPassVpnStatus.off;
-					return;
-				}
-				const platform = getAppPlatform();
-				const userStore = useUserStore();
-				const info = {
-					authKey: this.authKey.key,
-					server: userStore.getModuleSever(
-						'headscale',
-						undefined,
-						undefined,
-						false
-					),
-					acceptDns: userStore.current_user?.isLargeVersion12 || false,
-					authToken: userStore.current_user?.access_token || ''
-				};
-
-				if (userStore.currentUserTokenExpired) {
-					await userStore.currentUserRefreshToken(true);
-				}
-
-				if (instanceOfConfigVPNInterface(platform)) {
-					(platform as any as ConfigVPNInterface).vpnOpen(info);
-					this.vpnStatus = TermiPassVpnStatus.connecting;
-
-					setTimeout(() => {
-						if (this.vpnStatus == TermiPassVpnStatus.connecting) {
-							this.reset();
-							this.vpnStatus = TermiPassVpnStatus.Invalid;
-						}
-					}, 180000);
-				} else {
-					this.vpnStatus = TermiPassVpnStatus.off;
-				}
-			} else {
-				this.vpnStatus = TermiPassVpnStatus.off;
-			}
-		},
-		async stop() {
+		async stop(force = false) {
 			const platform = getAppPlatform();
 			if (instanceOfConfigVPNInterface(platform)) {
-				if (this.isOn || this.isConnecting) {
+				if (force || this.isOn || this.isConnecting) {
 					const userStore = useUserStore();
 					if (userStore.current_user) userStore.current_user!.isLocal = false;
-					await (platform as any as ConfigVPNInterface).vpnStop();
 					this.vpnStatus = TermiPassVpnStatus.disconnecting;
-					setTimeout(() => {
-						this.vpnStatus = TermiPassVpnStatus.off;
-					}, 5000);
+					try {
+						await (platform as any as ConfigVPNInterface).vpnStop();
+					} finally {
+						setTimeout(() => {
+							if (this.vpnStatus === TermiPassVpnStatus.disconnecting) {
+								this.vpnStatus = TermiPassVpnStatus.off;
+							}
+						}, 5000);
+					}
 				} else {
 					this.vpnStatus = TermiPassVpnStatus.off;
 				}
+			}
+		},
+		async waitForVpnStopSettled(timeoutMs = 6000) {
+			if (this.vpnStatus !== TermiPassVpnStatus.disconnecting) {
+				return;
+			}
+			const start = Date.now();
+			while (this.vpnStatus === TermiPassVpnStatus.disconnecting) {
+				if (Date.now() - start >= timeoutMs) {
+					break;
+				}
+				await new Promise((resolve) => setTimeout(resolve, 100));
 			}
 		},
 		reset() {
 			if (this.owner) {
 				this.stop();
-				this.owner = '';
-				this.scaleServer = '';
-				this.authKey = undefined;
 			}
-			this.init();
+			this.owner = useUserStore().current_user?.name ?? '';
 		},
 		async configHostPeerInfo() {
 			const platform = getAppPlatform();
@@ -273,21 +158,6 @@ export const useScaleStore = defineStore('scale', {
 			).hostPeerInfo();
 
 			return this.hostPeerInfo;
-		},
-		notifyUserCannotCorrespondMethod() {
-			const termiPassStore = useTermipassStore();
-			if (
-				termiPassStore.totalStatus?.isError != UserStatusActive.active &&
-				termiPassStore.totalStatus?.status != TermiPassStatus.RequiresVpn
-			) {
-				notifyFailed(
-					i18n.global.t('the_current_status_this_module_cannot_be_accessed', {
-						status: termiPassStore.totalStatus?.title
-					})
-				);
-				return false;
-			}
-			return true;
 		},
 		async resendCache() {
 			const platform = getAppPlatform();

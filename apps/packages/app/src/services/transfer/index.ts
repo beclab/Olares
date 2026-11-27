@@ -1,12 +1,9 @@
-import { Platform } from 'quasar';
 import {
 	TransferActionInterface,
 	TransferClient as TransferClientInterface,
 	TransferClientService
 } from '../abstractions/transfer/interface';
 import { CommonTransfer } from './common';
-import { ElectronTransfer } from './electron';
-import { MobileTransfer } from './mobile';
 import { getAppPlatform } from 'src/application/platform';
 import { useUserStore } from 'src/stores/user';
 import * as process from 'process';
@@ -89,13 +86,7 @@ class TransferClient implements TransferClientInterface {
 		if (process.env.APPLICATION === 'WISE') {
 			this.client = new WiseTransfer();
 		} else {
-			if (Platform.is.electron) {
-				this.client = new ElectronTransfer();
-			} else if (Platform.is.nativeMobile) {
-				this.client = new MobileTransfer();
-			} else {
-				this.client = new CommonTransfer();
-			}
+			this.client = new CommonTransfer();
 		}
 		if (this.client.clouder) {
 			this.client.clouder.init();

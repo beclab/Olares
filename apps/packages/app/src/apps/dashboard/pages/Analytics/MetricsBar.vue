@@ -15,6 +15,7 @@
 		<!-- <MetricCard
       :value="data.uniques.value ? (num / data.uniques.value) * 100 : 0"
       label="Bounce rate"
+			:label="$t('BOUNCE_RATE')"
       unit="%"
       :change="
         data.uniques.value && data.uniques.change

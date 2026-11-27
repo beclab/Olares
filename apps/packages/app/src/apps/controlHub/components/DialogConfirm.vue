@@ -14,7 +14,7 @@
 			<q-checkbox
 				v-model="checkbox"
 				color="green"
-				label="Do not show this confirmation again."
+				:label="$t('DO_NOT_SHOW_THIS_CONFIRMATION_AGAIN')"
 			/>
 		</div>
 	</bt-custom-dialog>
@@ -32,22 +32,17 @@ defineProps({
 	title: {
 		type: String,
 		required: false,
-		default: 'Alert'
+		default: ''
 	},
 	message: {
 		type: String,
 		required: false,
-		default: 'Some message'
+		default: ''
 	},
 	showAgain: {
 		type: Boolean,
 		required: false,
 		default: false
-	},
-	okText: {
-		type: String,
-		required: false,
-		default: 'Confirm'
 	}
 });
 

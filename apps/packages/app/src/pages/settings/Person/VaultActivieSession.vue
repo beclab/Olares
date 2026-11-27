@@ -17,16 +17,16 @@
 
 <script lang="ts" setup>
 import { onMounted, ref } from 'vue';
-import { useAdminStore } from 'src/stores/settings/admin';
+import { useDevicesStore } from 'src/stores/settings/devices';
 import PageTitleComponent from 'src/components/settings/PageTitleComponent.vue';
 import TrustDeviceItem from 'src/components/settings/person/TrustDeviceItem.vue';
 import { useI18n } from 'vue-i18n';
 
-const adminStore = useAdminStore();
+const devicesStore = useDevicesStore();
 const { t } = useI18n();
 
 const devices = ref([]);
 onMounted(async () => {
-	devices.value = await adminStore.get_vault_devices();
+	devices.value = await devicesStore.get_vault_devices();
 });
 </script>

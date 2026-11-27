@@ -35,6 +35,11 @@ const routes = [
 			{
 				path: '/preview/:sourceId/:appName/:index',
 				name: TRANSACTION_PAGE.Preview,
+				meta: {
+					parentRouteName: TRANSACTION_PAGE.App,
+					inheritParams: ['sourceId', 'appName'],
+					inheritQuery: true
+				},
 				component: () =>
 					import('pages/market/application/AppImagePreviewPage.vue')
 			},
@@ -46,11 +51,13 @@ const routes = [
 			{
 				path: '/settings',
 				name: TRANSACTION_PAGE.Preference,
+				meta: { parentRouteName: TRANSACTION_PAGE.MyTerminus },
 				component: () => import('pages/market/me/PreferencesPage.vue')
 			},
 			{
 				path: '/log',
 				name: TRANSACTION_PAGE.Log,
+				meta: { parentRouteName: TRANSACTION_PAGE.MyTerminus },
 				component: () => import('pages/market/me/LogPage.vue')
 			},
 			{
@@ -66,15 +73,24 @@ const routes = [
 			{
 				path: '/version/:sourceId/:appName',
 				name: TRANSACTION_PAGE.Version,
+				meta: {
+					parentRouteName: TRANSACTION_PAGE.App,
+					inheritParams: ['sourceId', 'appName'],
+					inheritQuery: true
+				},
 				component: () =>
 					import('pages/market/application/VersionHistoryPage.vue')
 			}
 		]
 	},
-	{
-		path: '/dev',
-		component: () => import('pages/market/debug/DebugPanel.vue')
-	},
+	...(process.env.DEV
+		? [
+				{
+					path: '/dev',
+					component: () => import('pages/market/debug/DebugPanel.vue')
+				}
+		  ]
+		: []),
 	// Always leave this as last one,
 	// but you can also remove it
 	{

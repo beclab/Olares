@@ -43,17 +43,17 @@
 									dense
 									flat
 									size="16px"
-									:icon="isStudio2 ? 'sym_r_preview' : 'sym_r_edit_square'"
+									icon="sym_r_edit_square"
 									@click="clickHandler"
 								>
 									<q-tooltip>
 										<div style="white-space: nowrap">
-											{{ isStudio2 ? $t('VIEW_YAML') : $t('EDIT_YAML') }}
+											{{ $t('EDIT_YAML') }}
 										</div>
 									</q-tooltip>
 								</q-btn>
 							</QButtonStyle>
-							<QButtonStyle v-permission v-if="!isStudio2">
+							<QButtonStyle v-permission>
 								<q-btn
 									dense
 									flat
@@ -154,11 +154,10 @@ import MoreSelection from '@apps/control-panel-common/src/components/MoreSelecti
 import Yaml from '@apps/control-hub/src/pages/NamespacePods/Yaml3.vue';
 import RouterViewTransition from '@apps/control-panel-common/src/components/RouterViewTransition.vue';
 import { componentName } from '@apps/control-hub/src/router/const';
-import { useIsStudio, useIsStudio2 } from '@apps/control-hub/src/stores/hook';
+import { useIsStudio } from '@apps/control-hub/src/stores/hook';
 import MyCardHeader from '@apps/control-hub/src/components/MyCardHeader.vue';
 import { selectedNodes } from '../treeStore';
 const isStudio = useIsStudio();
-const isStudio2 = useIsStudio2();
 
 const $q = useQuasar();
 let loading = ref(false);

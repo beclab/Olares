@@ -1,6 +1,6 @@
 <template>
 	<div class="q-gutter-sm">
-		<my-card flat title="Cluster Resource Usage">
+		<my-card flat :title="$t('CLUSTER_RESOURCE_USAGE')">
 			<template #extra>
 				<div class="row items-center">
 					<DateRangeMonitoring
@@ -36,7 +36,7 @@
 
 		<q-space />
 
-		<my-card flat title="Application Resource Usage">
+		<my-card flat :title="$t('APPLICATION_RESOURCE_USAGE')">
 			<template #extra>
 				<div class="row items-center">
 					<DateRangeMonitoring
@@ -70,7 +70,7 @@
 			</MyLoading>
 		</my-card>
 
-		<my-card flat title="Projects">
+		<my-card flat :title="$t('PROJECTS')">
 			<MyLoading style="min-height: 134px" :showing="loading[2]">
 				<div class="row q-col-gutter-lg">
 					<div

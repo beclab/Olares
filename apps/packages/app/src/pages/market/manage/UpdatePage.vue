@@ -60,7 +60,7 @@ import FunctionAppCard from '../../../components/appcard/FunctionAppCard.vue';
 import PageContainer from '../../../components/base/PageContainer.vue';
 import AppStoreBody from '../../../components/base/AppStoreBody.vue';
 import EmptyView from '../../../components/base/EmptyView.vue';
-import { AppService } from '../../../stores/market/appService';
+import { AppService } from '../../../services/market/appOperation/appService';
 import { useDeviceStore } from '../../../stores/settings/device';
 import { useCenterStore } from '../../../stores/market/center';
 import { useAppStore } from '../../../stores/market/appStore';

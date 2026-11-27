@@ -8,7 +8,7 @@
 		:accept="accept"
 	/>
 	<panel-index
-		v-if="transfer2Store.isUploadProgressDialogShow && openPlatform"
+		v-if="shouldShowTaskPanel"
 		@onCloseUploadDialog="onCloseUploadDialog"
 	/>
 </template>
@@ -18,9 +18,11 @@ import { useTransfer2Store } from '../../../stores/transfer2';
 import PanelIndex from './../../../components/files/panel/PanelIndex.vue';
 
 import { FilesIdType } from '../../../stores/files';
+import { useDeviceStore } from 'src/stores/device';
+import { useQuasar } from 'quasar';
 import Resumable from './../../../utils/resumejs';
 
-import { ref, onMounted } from 'vue';
+import { computed, ref, onMounted } from 'vue';
 
 const props = defineProps({
 	autoBindResumable: {
@@ -42,9 +44,23 @@ const props = defineProps({
 const uploadInput = ref(null);
 
 const transfer2Store = useTransfer2Store();
+const deviceStore = useDeviceStore();
+const $q = useQuasar();
 const fileUploader = ref();
 const openPlatform = ref(
 	process.env.APPLICATION === 'FILES' || process.env.APPLICATION === 'SHARE'
+);
+const isMobile = computed(
+	() =>
+		deviceStore.isMobile ||
+		$q.platform.is.mobile ||
+		process.env.PLATFORM === 'MOBILE'
+);
+const shouldShowTaskPanel = computed(
+	() =>
+		openPlatform.value &&
+		!isMobile.value &&
+		transfer2Store.isUploadProgressDialogShow
 );
 
 onMounted(async () => {

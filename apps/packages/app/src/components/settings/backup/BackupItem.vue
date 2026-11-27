@@ -112,7 +112,8 @@
 
 <script lang="ts" setup>
 import { computed, PropType } from 'vue';
-import { date, format } from 'quasar';
+import { date } from 'quasar';
+import { format } from 'src/utils/format';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import BtGrid from '../base/BtGrid.vue';
@@ -124,7 +125,6 @@ import {
 	getBackupIconByLocation,
 	getBackupStatusImg
 } from 'src/constant';
-import humanStorageSize = format.humanStorageSize;
 import { useBackupStore } from 'src/stores/settings/backup';
 
 const router = useRouter();
@@ -133,7 +133,7 @@ const backupStore = useBackupStore();
 const props = defineProps({
 	plan: {
 		type: Object as PropType<BackupPlan>,
-		require: true
+		required: true
 	}
 });
 
@@ -156,7 +156,7 @@ const AppIcon = computed(() => {
 const size = computed(() => {
 	if (props.plan && props.plan.size) {
 		try {
-			return humanStorageSize(Number(props.plan.size));
+			return format.humanStorageSize(Number(props.plan.size));
 		} catch (e) {
 			return '';
 		}
@@ -167,10 +167,12 @@ const size = computed(() => {
 
 const nextSnapShot = computed(() => {
 	if (props.plan && props.plan.nextBackupTimestamp) {
-		return (
-			t('next_backup') +
-			date.formatDate(props.plan.nextBackupTimestamp * 1000, 'MMM DD, h:mm A')
-		);
+		return t('next_backup', {
+			time: date.formatDate(
+				props.plan.nextBackupTimestamp * 1000,
+				'MMM DD, h:mm A'
+			)
+		});
 	}
 	return '-';
 });

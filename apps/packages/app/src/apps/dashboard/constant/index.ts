@@ -28,17 +28,7 @@ export const imgContentModes: 'fill'[] =
 		// 'scale-down'
 	];
 
-export const firstToUpper = (str: string) => {
-	if (str.length === 0) {
-		return str;
-	}
-	const lowerCaseStr = str.trim().toLowerCase();
-	return lowerCaseStr.replace(lowerCaseStr[0], str[0].toUpperCase());
-};
-
-export const firstToUpperWith_ = (title: string) => {
-	return title
-		.split('_')
-		.map((item) => firstToUpper(item))
-		.join(' ');
-};
+export {
+	firstToUpper,
+	firstToUpperWith_
+} from '@apps/control-panel-common/src/constant';

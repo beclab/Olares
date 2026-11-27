@@ -177,7 +177,6 @@ export const useIntegrationStore = defineStore('settingsIntegration', {
 			console.log(spaceList);
 			if (spaceList.length > 0) {
 				const fullData: any = await this.getAccountFullData(spaceList[0]);
-				console.log(fullData);
 				try {
 					const response: any = await axios.post(
 						olaresSpaceUrl + '/api/v1/resource/backup/usage',

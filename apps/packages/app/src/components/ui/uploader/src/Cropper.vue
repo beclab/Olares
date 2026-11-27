@@ -3,7 +3,7 @@
 		<div class="cropper-dialog" ref="dialogRef" :model-value="dialogVisible">
 			<div class="cropper-container">
 				<div>
-					<div class="hearder">Cropper</div>
+					<div class="hearder">{{ $t('Cropper') }}</div>
 				</div>
 				<div class="cropper">
 					<div class="cropper-el">
@@ -53,13 +53,13 @@
 					<profile-button
 						:default-selected="false"
 						class="text-body3 q-mr-lg"
-						label="Cancel"
+						:label="$t('cancel')"
 						@click="handleClose"
 					/>
 					<profile-button
 						width="75px"
 						class="text-body3 q-mr-lg"
-						label="Confirm"
+						:label="$t('confirm')"
 						@click="saveImg"
 					/>
 				</div>

@@ -9,6 +9,7 @@ import {
 } from 'src/utils/interface/transfer';
 import { dataAPIs } from './index';
 import { decodeURIComponentSafe as decodeURIComponentSafeCopy } from 'src/utils/encode';
+import { i18n } from 'src/boot/i18n';
 
 export function removePrefix(url) {
 	url = url.split('/').splice(2).join('/');
@@ -49,9 +50,9 @@ export function getNotifyMsg(items: CopyStoragesType[]) {
 		if (name.length > maxLength) {
 			name = name.substring(0, maxLength) + '...';
 		}
-		notifyMsg = `Pasting ${name}`;
+		notifyMsg = i18n.global.t('pasting_name', { name });
 	} else {
-		notifyMsg = `Pasting ${items.length} items`;
+		notifyMsg = i18n.global.t('pasting_num_items', { num: items.length });
 	}
 
 	return notifyMsg;

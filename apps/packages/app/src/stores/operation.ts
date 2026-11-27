@@ -1,14 +1,20 @@
 import { defineStore } from 'pinia';
 import { OPERATE_ACTION } from '../utils/contact';
 import { RouteLocationNormalizedLoaded } from 'vue-router';
-import { useFilesStore, FilesIdType } from './files';
+import { useFilesStore, FilesIdType, FileItem } from './files';
 import { useFilesCopyStore } from './files-copy';
 import { BtNotify, NotifyDefinedType, BtDialog } from '@bytetrade/ui';
 
 import { useDataStore } from './data';
 import { MenuItem } from '../utils/contact';
 
-import { CommonFetch, common, filesUtil, isShareEnable } from '../api';
+import {
+	CommonFetch,
+	common,
+	filesUtil,
+	isShareEnable,
+	isFileBackupNewOpenEnable
+} from '../api';
 import { dataAPIs } from '../api/files';
 import { useTransfer2Store } from './transfer2';
 import { i18n } from '../boot/i18n';
@@ -17,18 +23,26 @@ import { getParams } from '../utils/utils';
 
 import { DriveType } from 'src/utils/interface/files';
 import {
+	ArchiveFormat,
+	canCompressItemsWithFormat,
+	isArchiveDriveTypeSupported,
+	isArchiveFile
+} from 'src/utils/interface/archive';
+import {
 	TransferFront,
 	TransferItem,
 	TransferStatus
 } from 'src/utils/interface/transfer';
 import { useUserStore } from './user';
+import { useDeviceStore } from './settings/device';
 import { notifySuccess } from 'src/utils/notifyRedefinedUtil';
 import { Platform } from 'quasar';
 import { ShareType } from 'src/utils/interface/share';
 import { getApplication } from 'src/application/base';
 import { busEmit } from 'src/utils/bus';
-import { decodeURIComponentSafe } from 'src/utils/encode';
+import { decodeURIComponentSafe, stringToBase64 } from 'src/utils/encode';
 import axios from 'axios';
+import Taskmanager from 'src/services/olaresTask';
 
 export interface EventType {
 	type?: DriveType;
@@ -44,6 +58,11 @@ export interface EventType {
 	isShareItem: boolean;
 	isShareRoot: boolean;
 	isOwner: boolean;
+	isArchive?: boolean;
+	selectedHasArchive?: boolean;
+	isDisableCompress?: boolean;
+	isArchivePreviewable?: boolean;
+	isArchiveAbility: boolean;
 	// isShareEditEnable: boolean;
 	isEditPermissionsEnable: boolean;
 	isPublicShare: boolean;
@@ -74,6 +93,7 @@ export type DataState = {
 	disableMenuItem: string[];
 	//external folder white list
 	externalFolderWhiteList: string[];
+	commonFolderWhiteList: string[];
 	// external/ai/ folder white list
 	externalAiFolderWhiteList: string[];
 	copyFiles: CopyStoragesType[];
@@ -85,7 +105,32 @@ export type DataState = {
 export const useOperateinStore = defineStore('operation', {
 	state: () => {
 		return {
+			// i18n-ignore-start: every `name` field below is an i18n key resolved via t(item.name)
 			contextmenu: [
+				{
+					name: 'files_popup_menu.preview_contents',
+					icon: 'sym_r_visibility',
+					action: OPERATE_ACTION.PREVIEW_CONTENTS,
+					condition: (event: EventType) =>
+						event.isSelected &&
+						event.isArchiveAbility &&
+						event.isArchivePreviewable &&
+						event.selectCount === 1 &&
+						isArchiveDriveTypeSupported(event.type)
+				},
+				{
+					name: 'files_popup_menu.extract_to',
+					icon: 'sym_r_folder_open',
+					action: OPERATE_ACTION.EXTRACT,
+					condition: (event: EventType) =>
+						event.isSelected &&
+						event.isArchiveAbility &&
+						event.isArchive &&
+						event.selectCount === 1 &&
+						event.rw &&
+						isArchiveDriveTypeSupported(event.type) &&
+						!event.isShareItem
+				},
 				{
 					name: 'buttons.download',
 					icon: 'sym_r_browser_updated',
@@ -94,41 +139,21 @@ export const useOperateinStore = defineStore('operation', {
 						event.isSelected && !event.isExternal && !event.isShareItem
 				},
 				{
-					name: 'files_popup_menu.Share to Internal',
-					icon: 'sym_r_folder_supervised',
-					action: OPERATE_ACTION.SHARE_IN_INTERNAL,
+					name: 'files_popup_menu.share_to',
+					icon: 'sym_r_share_windows',
+					action: OPERATE_ACTION.SHARE,
 					condition: (event: EventType) =>
 						isShareEnable() &&
 						(event.type === DriveType.Drive ||
 							event.type === DriveType.Data ||
 							event.type === DriveType.Sync ||
 							event.type === DriveType.External ||
+							event.type === DriveType.Common ||
 							event.type === DriveType.Cache) &&
 						event.isSelected &&
-						event.isDir
-				},
-				{
-					name: 'files_popup_menu.Share to SMB',
-					icon: 'sym_r_smb_share',
-					action: OPERATE_ACTION.SHARE_IN_SMB,
-					condition: (event: EventType) =>
-						isShareEnable() &&
-						(event.type === DriveType.Drive ||
-							event.type === DriveType.Data ||
-							event.type === DriveType.External ||
-							event.type === DriveType.Cache) &&
-						event.isSelected &&
-						event.isDir
-				},
-				{
-					name: 'files_popup_menu.Share to Public',
-					icon: 'sym_r_link',
-					action: OPERATE_ACTION.SHARE_IN_PUBLIC,
-					condition: (event: EventType) =>
-						isShareEnable() &&
-						(event.type === DriveType.Drive || event.type === DriveType.Data) &&
-						event.isSelected &&
-						event.isDir
+						event.selectCount === 1 &&
+						event.isDir &&
+						!event.isShareItem
 				},
 				{
 					name: 'files_popup_menu.Reset Password',
@@ -171,6 +196,20 @@ export const useOperateinStore = defineStore('operation', {
 						!event.isHomePage &&
 						event.rw &&
 						!event.isExternal &&
+						!event.isShareItem
+				},
+				{
+					name: 'files_popup_menu.compress_to',
+					icon: 'sym_r_archive',
+					action: OPERATE_ACTION.COMPRESS,
+					condition: (event: EventType) =>
+						event.isSelected &&
+						event.rw &&
+						event.isArchiveAbility &&
+						!event.isDisableCompress &&
+						!event.selectedHasArchive &&
+						!event.isArchive &&
+						isArchiveDriveTypeSupported(event.type) &&
 						!event.isShareItem
 				},
 				{
@@ -240,7 +279,8 @@ export const useOperateinStore = defineStore('operation', {
 						!event.isSelected &&
 						event.rw &&
 						!event.isExternal &&
-						!event.isShareRoot
+						!event.isShareRoot &&
+						useDeviceStore().isDesktop
 				},
 				{
 					name: 'paste',
@@ -274,6 +314,7 @@ export const useOperateinStore = defineStore('operation', {
 						event.isSelected && event.isExternal && event.selectCount == 1
 				}
 			],
+			// i18n-ignore-end
 			disableMenuItem: [
 				MenuItem.HOME,
 				MenuItem.DOCUMENTS,
@@ -288,6 +329,7 @@ export const useOperateinStore = defineStore('operation', {
 				'Huggingface'
 			],
 			externalFolderWhiteList: ['ai'],
+			commonFolderWhiteList: ['ollama', 'huggingface', 'comfyui'],
 			externalAiFolderWhiteList: ['output', 'model', 'comfyui', 'ollama'],
 			executing: false,
 			copyFiles: [],
@@ -305,7 +347,12 @@ export const useOperateinStore = defineStore('operation', {
 			route: RouteLocationNormalizedLoaded,
 			action: OPERATE_ACTION,
 			driveType: DriveType,
-			callback: (action: OPERATE_ACTION, data: any) => Promise<void>
+			callback: (action: OPERATE_ACTION, data: any) => Promise<void>,
+			options?: {
+				archiveFormat?: ArchiveFormat;
+				archiveExtractTargetName?: string;
+				extractToCurrentFolder?: boolean;
+			}
 		): Promise<void> {
 			e && e.preventDefault();
 			e && e.stopPropagation();
@@ -324,6 +371,25 @@ export const useOperateinStore = defineStore('operation', {
 
 				case OPERATE_ACTION.DOWNLOAD:
 					await this.download(route.path, origin_id);
+					callback(action, undefined);
+					break;
+				case OPERATE_ACTION.COMPRESS:
+					await this.compressSelected(
+						driveType,
+						origin_id,
+						options?.archiveFormat || ArchiveFormat.Zip
+					);
+					callback(action, undefined);
+					break;
+				case OPERATE_ACTION.EXTRACT:
+					await this.extractSelected(driveType, origin_id, {
+						targetName: options?.archiveExtractTargetName,
+						extractToCurrentFolder: options?.extractToCurrentFolder
+					});
+					callback(action, undefined);
+					break;
+				case OPERATE_ACTION.PREVIEW_CONTENTS:
+					await useFilesStore().openPreviewDialog(undefined, origin_id);
 					callback(action, undefined);
 					break;
 
@@ -489,17 +555,88 @@ export const useOperateinStore = defineStore('operation', {
 				return;
 			}
 
+			const userStore = useUserStore();
 			let origin = window.location.origin;
 			if (getApplication().applicationName == 'larepass') {
-				const user = useUserStore();
-				origin = user.getModuleSever('files');
+				origin = userStore.getModuleSever('files');
 			}
 			const settingOrigin = origin.replace('files', 'settings');
-			const url = `${settingOrigin}/backup/create_backup/files/${encodeURIComponent(
-				selectFiles.path
-			)}`;
+
+			const encodedPath = isFileBackupNewOpenEnable()
+				? stringToBase64(decodeURIComponentSafe(selectFiles.path))
+				: encodeURIComponent(selectFiles.path);
+			const url = `${settingOrigin}/backup/create_backup/files/${encodedPath}`;
 
 			getApplication().openUrl(url);
+		},
+
+		async compressSelected(
+			driveType: DriveType,
+			origin_id: number,
+			format: ArchiveFormat
+		) {
+			const filesStore = useFilesStore();
+			const currentPath = filesStore.currentPath[origin_id];
+			const selectedItems = filesStore.selected[origin_id]
+				.map((index) => filesStore.getTargetFileItem(index, origin_id))
+				.filter(Boolean) as FileItem[];
+
+			if (!currentPath || selectedItems.length === 0) {
+				return;
+			}
+			if (!canCompressItemsWithFormat(selectedItems, format)) {
+				return;
+			}
+
+			const task = await Taskmanager.archiveTask.createCompressTask({
+				items: selectedItems,
+				parentPath: currentPath.path,
+				driveType,
+				param: currentPath.param,
+				format,
+				node:
+					filesStore.currentFileList[origin_id]?.node ||
+					filesStore.currentNode[origin_id]?.name
+			});
+			if (task) {
+				await Taskmanager.addTasks([task]);
+			}
+		},
+
+		async extractSelected(
+			driveType: DriveType,
+			origin_id: number,
+			options?: {
+				targetName?: string;
+				extractToCurrentFolder?: boolean;
+			}
+		) {
+			const filesStore = useFilesStore();
+			const currentPath = filesStore.currentPath[origin_id];
+			const selectedItem = filesStore.getTargetFileItem(
+				filesStore.selected[origin_id][0],
+				origin_id
+			);
+
+			if (!currentPath || !selectedItem) {
+				return;
+			}
+
+			const task = await Taskmanager.archiveTask.createExtractTask({
+				items: [selectedItem],
+				parentPath: currentPath.path,
+				driveType,
+				param: currentPath.param,
+				// targetName: options?.targetName,
+				targetFolderName: options?.targetName,
+				extractToCurrentFolder: options?.extractToCurrentFolder,
+				node:
+					filesStore.currentFileList[origin_id]?.node ||
+					filesStore.currentNode[origin_id]?.name
+			});
+			if (task) {
+				await Taskmanager.addTasks([task]);
+			}
 		},
 
 		async download(path: string, origin_id: number) {
@@ -522,7 +659,7 @@ export const useOperateinStore = defineStore('operation', {
 
 			if (hasCanDownload) {
 				BtDialog.show({
-					title: i18n.global.t('tips'),
+					title: i18n.global.t('files.title_download_folder_unsupported'),
 					message: i18n.global.t('files.message_download_folder'),
 					okStyle: {
 						background: 'yellow-default',
@@ -535,11 +672,14 @@ export const useOperateinStore = defineStore('operation', {
 				return false;
 			}
 
-			if (process.env.APPLICATION === 'FILES') {
+			if (
+				process.env.APPLICATION === 'FILES' ||
+				process.env.APPLICATION === 'SHARE'
+			) {
 				const hasFolder = downloadInfoRes.find((item) => item.isFolder);
 				if (hasFolder) {
 					BtDialog.show({
-						title: i18n.global.t('tips'),
+						title: i18n.global.t('files.title_download_folder_unsupported'),
 						message: i18n.global.t('files.message_download_folder'),
 						okStyle: {
 							background: 'yellow-default',
@@ -555,7 +695,10 @@ export const useOperateinStore = defineStore('operation', {
 			for (let i = 0; i < downloadInfoRes.length; i++) {
 				const info = downloadInfoRes[i];
 				// info.isf = info.isFolder;
-				if (process.env.APPLICATION === 'FILES') {
+				if (
+					process.env.APPLICATION === 'FILES' ||
+					process.env.APPLICATION === 'SHARE'
+				) {
 					if (info.isFolder) {
 						continue;
 					}
@@ -721,7 +864,8 @@ export const useOperateinStore = defineStore('operation', {
 							const task = tasks[i];
 							await filesCopyStore.createTask({
 								...task,
-								action: 'copy'
+								action: 'copy',
+								origin_id
 							});
 						}
 						this.resetCopyFiles();
@@ -937,7 +1081,8 @@ export const useOperateinStore = defineStore('operation', {
 				(this.ieExternalRootPath(path) &&
 					this.externalFolderWhiteList.includes(name)) ||
 				(this.isExternalAiPath(path) &&
-					this.externalAiFolderWhiteList.includes(name))
+					this.externalAiFolderWhiteList.includes(name)) ||
+				(this.isCommonFolder(path) && this.commonFolderWhiteList.includes(name))
 			) {
 				return true;
 			}
@@ -950,6 +1095,10 @@ export const useOperateinStore = defineStore('operation', {
 		},
 		isExternalAiPath(path: string) {
 			const regex = /^\/Files\/External\/[^\/]+\/ai\/?$/;
+			return regex.test(path);
+		},
+		isCommonFolder(path: string) {
+			const regex = /^\/Common\/?$/;
 			return regex.test(path);
 		}
 	}

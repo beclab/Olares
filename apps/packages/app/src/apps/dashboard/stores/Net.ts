@@ -4,12 +4,6 @@ import { getSystemIFS } from '@apps/dashboard/src/network';
 import { t } from 'src/boot/dashboard-i18n';
 import { Locker } from '../types/main';
 
-enum IP_METHOD {
-	IP_METHOD_AUTO = 'DHCP',
-	IP_METHOD_MANUAL = '静态IP',
-	IP_METHOD_NONE = '无IP'
-}
-
 interface contentListItem {
 	name: string;
 	value: string;
@@ -58,20 +52,23 @@ export const useNetStore = defineStore('NetStore', {
 							name: t('NET_OP.IP_ACQUISITION_METHOD'),
 							value: item.method
 								? t(`NET_OP.${IP_METHOD_OPTION[item.method]}`)
-								: '-'
+								: '--'
 						},
-						{ name: t('OWNED_NODE'), value: item.hostname },
+						{ name: t('OWNED_NODE'), value: item.hostname || '--' },
 						{
 							name: t('NET_OP.NETWORK_CONFIGURATION'),
 							value: `MTU${item.mtu}`
 						},
-						{ name: t('NET_OP.IPV4_ADDRESS'), value: item.ip },
+						{ name: t('NET_OP.IPV4_ADDRESS'), value: item.ip || '--' },
 						{
 							name: t('NET_OP.IPV4_SUBNET_MASK'),
-							value: item.ipv4Mask
+							value: item.ipv4Mask || '--'
 						},
-						{ name: t('NET_OP.IPV4_GATEWAY_ADDRESS'), value: item.ipv4Gateway },
-						{ name: t('NET_OP.IPV4_DNS'), value: item.ipv4DNS },
+						{
+							name: t('NET_OP.IPV4_GATEWAY_ADDRESS'),
+							value: item.ipv4Gateway || '--'
+						},
+						{ name: t('NET_OP.IPV4_DNS'), value: item.ipv4DNS || '--' },
 						{
 							name: t('NET_OP.IPV4_NETWORK_STATUS'),
 							value:
@@ -84,13 +81,16 @@ export const useNetStore = defineStore('NetStore', {
 						}
 					],
 					contentList2: [
-						{ name: t('NET_OP.IPV6_ADDRESS'), value: item.ipv6Address },
+						{ name: t('NET_OP.IPV6_ADDRESS'), value: item.ipv6Address || '--' },
 						{
 							name: t('NET_OP.IPV6_SUBNET_MASK'),
-							value: item.ipv4Mask
+							value: item.ipv6Mask || '--'
 						},
-						{ name: t('NET_OP.IPV6_GATEWAY_ADDRESS'), value: item.ipv6Gateway },
-						{ name: t('NET_OP.IPV6_DNS'), value: item.ipv6DNS },
+						{
+							name: t('NET_OP.IPV6_GATEWAY_ADDRESS'),
+							value: item.ipv6Gateway || '--'
+						},
+						{ name: t('NET_OP.IPV6_DNS'), value: item.ipv6DNS || '--' },
 						{
 							name: t('NET_OP.IPV6_NETWORK_STATUS'),
 							value:

@@ -3,7 +3,7 @@
 		ref="CustomRef"
 		:title="t('Add ACL')"
 		:skip="false"
-		:ok="t('confirm')"
+		:ok="t('add')"
 		size="medium"
 		:cancel="t('cancel')"
 		:platform="deviceStore.platform"

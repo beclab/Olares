@@ -45,8 +45,6 @@ export const useBrowserCookieStore = defineStore('browserCookie', {
 		},
 		hasExpiredRecords(state): boolean {
 			const currentTime = Math.floor(Date.now() / 1000);
-			console.log('mainDomain-3', state.current_cookie);
-
 			return state.current_cookie.some((domainCookie) =>
 				domainCookie.records?.some((record) => {
 					const expires =
@@ -119,7 +117,6 @@ export const useBrowserCookieStore = defineStore('browserCookie', {
 						}
 					});
 
-					console.log('Successfully get cookie:', data);
 					this.cookieList = data.map((cookie) => ({
 						name: cookie.name,
 						value: cookie.value,
@@ -130,7 +127,6 @@ export const useBrowserCookieStore = defineStore('browserCookie', {
 						httpOnly: cookie.httpOnly || false,
 						sameSite: cookie.sameSite
 					}));
-					console.log('cookieList', this.cookieList);
 				} catch (e) {
 					console.log('Error getting cookies:', e);
 				}
@@ -144,8 +140,6 @@ export const useBrowserCookieStore = defineStore('browserCookie', {
 			const cookieStore = useCookieStore();
 			const mainDomain = cookieStore._getMainDomain(rootDomain);
 			this.current_cookie = cookieStore.getDomainCookies(mainDomain);
-			console.log('mainDomain', mainDomain);
-			console.log('mainDomain-2', this.current_cookie);
 		},
 		async pushCookie(url?: string) {
 			const collectSiteStore = useCollectSiteStore();

@@ -22,7 +22,7 @@
 			</bt-form-item>
 			<bt-form-item
 				:title="t('Device identifier')"
-				:data="adminStore.olares_device_id"
+				:data="terminusStore.olares_device_id"
 			/>
 			<bt-form-item
 				:title="t('CPU')"
@@ -45,7 +45,7 @@
 			<bt-form-item
 				v-if="isOlareOne"
 				:title="t('Power mode')"
-				:widthSeparator="false"
+				:widthSeparator="true"
 			>
 				<bt-select
 					v-model="oneWorkerMode"
@@ -53,13 +53,43 @@
 					@update:modelValue="updateWorkerMode"
 				/>
 			</bt-form-item>
+			<bt-form-item
+				v-if="isOlareOne"
+				:title="t('CPU frequency limit')"
+				:widthSeparator="true"
+			>
+				<bt-switch
+					size="sm"
+					truthy-track-color="blue-default"
+					v-model="cpuFreqLimitEnabled"
+					@update:model-value="updateCpuFreqLimit"
+				/>
+			</bt-form-item>
+			<bt-form-item
+				v-if="isOlareOne"
+				:title="t('Auto power on')"
+				:description="
+					autoPowerLoading || autoPowerSupported
+						? ''
+						: t('Auto power is not supported by the current device')
+				"
+				:widthSeparator="false"
+			>
+				<bt-switch
+					size="sm"
+					truthy-track-color="blue-default"
+					v-model="autoPowerOn"
+					:disable="autoPowerLoading || !autoPowerSupported"
+					@update:model-value="updateAutoPower"
+				/>
+			</bt-form-item>
 		</bt-list>
 		<div
 			class="row justify-end q-my-lg"
-			v-if="terminusDStore.olaresInfo && adminStore.isAdmin"
+			v-if="terminusDStore.olaresInfo && meStore.isAdmin"
 		>
 			<CustomButton
-				v-if="adminStore.isOwner && isOlaresDevice"
+				v-if="meStore.isOwner && isOlaresDevice"
 				:label="t('Reset SSH Password')"
 				icon="sym_r_terminal"
 				class="q-mr-md"
@@ -67,14 +97,14 @@
 			/>
 
 			<CustomButton
-				v-if="adminStore.isOwner"
+				v-if="meStore.isOwner"
 				:label="t('Shutdown')"
 				icon="sym_r_power_settings_new"
 				class="q-mr-md"
 				@click="shutdownOlares"
 			/>
 			<CustomButton
-				v-if="adminStore.isOwner"
+				v-if="meStore.isOwner"
 				:label="t('Restart')"
 				icon="sym_r_reset_tv"
 				@click="restartOlares"
@@ -101,7 +131,8 @@ import {
 import OlaresStatus from '../../../components/base/OlaresStatus.vue';
 import { useTerminusDStore } from '../../../stores/settings/terminusd';
 import { computed, onMounted, ref, watch } from 'vue';
-import { useAdminStore } from '../../../stores/settings/admin';
+import { useMeStore } from '../../../stores/settings/me';
+import { useTerminusStore } from '../../../stores/terminus';
 import CustomButton from '../../../components/settings/CustomButton.vue';
 import BtSelect from '../../../components/settings/base/BtSelect.vue';
 import { useRouter } from 'vue-router';
@@ -118,7 +149,8 @@ const terminusDStore = useTerminusDStore();
 const router = useRouter();
 const quasar = useQuasar();
 
-const adminStore = useAdminStore();
+const meStore = useMeStore();
+const terminusStore = useTerminusStore();
 
 onMounted(async () => {
 	await terminusDStore.system_status();
@@ -126,14 +158,14 @@ onMounted(async () => {
 
 const shutdownOlares = () => {
 	terminusDStore.commandData = {
-		username: adminStore.olaresId.split('@')[0]
+		username: terminusStore.olaresId.split('@')[0]
 	};
 	router.push('/hardware/shutdown');
 };
 
 const restartOlares = () => {
 	terminusDStore.commandData = {
-		username: adminStore.olaresId.split('@')[0]
+		username: terminusStore.olaresId.split('@')[0]
 	};
 	router.push('/hardware/reboot');
 };
@@ -180,25 +212,106 @@ const updateWorkerMode = async () => {
 
 const oneWorkerMode = ref(OneWorkerMode.Quite);
 
+const cpuFreqLimitEnabled = ref(false);
+const autoPowerOn = ref(false);
+const autoPowerSupported = ref(false);
+const autoPowerLoading = ref(false);
+
+let cpuFreqReqId = 0;
+let autoPowerReqId = 0;
+
+const getOneUrl = (api: MdnsApiEmum) => {
+	return tokenStore.url + getSettingsServerMdnsRequestApi(api);
+};
+
 watch(
 	() => terminusDStore.olaresInfo,
 	async () => {
 		if (terminusDStore.olaresInfo && isOlareOne.value) {
-			const url = getOneGpuUrl();
-			try {
-				const result: { mode: OneWorkerMode } = await axios.get(url);
-				oneWorkerMode.value = result.mode;
-			} catch (error) {
-				/* empty */
-			}
+			loadWorkerMode();
+			loadCpuFreqLimit();
+			loadAutoPower();
 		}
 	}
 );
 
+const loadWorkerMode = async () => {
+	try {
+		const result: { mode: OneWorkerMode } = await axios.get(getOneGpuUrl());
+		oneWorkerMode.value = result.mode;
+	} catch (error) {
+		/* empty */
+	}
+};
+
+const loadCpuFreqLimit = async () => {
+	const id = ++cpuFreqReqId;
+	try {
+		const result: { enabled: boolean } = await axios.get(
+			getOneUrl(MdnsApiEmum.ONE_CPU_FREQ_LIMIT_STATUS)
+		);
+		if (id !== cpuFreqReqId) return;
+		cpuFreqLimitEnabled.value = !!result.enabled;
+	} catch (error) {
+		/* empty */
+	}
+};
+
+const loadAutoPower = async () => {
+	const id = ++autoPowerReqId;
+	autoPowerLoading.value = true;
+	try {
+		const result: { auto_power_on: boolean } = await axios.get(
+			getOneUrl(MdnsApiEmum.ONE_GET_AUTO_POWER)
+		);
+		if (id !== autoPowerReqId) return;
+		autoPowerSupported.value = true;
+		autoPowerOn.value = !!result.auto_power_on;
+	} catch (error: any) {
+		if (id !== autoPowerReqId) return;
+		autoPowerSupported.value = false;
+		if (error?.response?.status !== 501) {
+			notifyFailed(error);
+		}
+	} finally {
+		if (id === autoPowerReqId) autoPowerLoading.value = false;
+	}
+};
+
+const updateCpuFreqLimit = async (value: boolean) => {
+	++cpuFreqReqId;
+	try {
+		await axios.post(
+			getOneUrl(
+				value
+					? MdnsApiEmum.ONE_CPU_FREQ_LIMIT_ON
+					: MdnsApiEmum.ONE_CPU_FREQ_LIMIT_OFF
+			)
+		);
+	} catch (error) {
+		cpuFreqLimitEnabled.value = !value;
+		notifyFailed(error);
+	}
+};
+
+const updateAutoPower = async (value: boolean) => {
+	++autoPowerReqId;
+	try {
+		await axios.post(getOneUrl(MdnsApiEmum.ONE_SET_AUTO_POWER), {
+			auto_power_mode: value ? 1 : 0
+		});
+	} catch (error: any) {
+		autoPowerOn.value = !value;
+		if (error?.response?.status === 501) {
+			autoPowerSupported.value = false;
+		} else {
+			notifyFailed(error);
+		}
+	}
+};
+
 const getOneGpuUrl = () => {
-	return (
-		tokenStore.url + getSettingsServerMdnsRequestApi(MdnsApiEmum.ONE_GPU_MODE)
-	);
+	return getOneUrl(MdnsApiEmum.ONE_GPU_MODE);
 };
 </script>
 

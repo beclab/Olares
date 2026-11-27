@@ -1,7 +1,6 @@
 import { QVueGlobals } from 'quasar';
 import { NormalApplication } from './base';
 import { useTransfer2Store } from 'src/stores/transfer2';
-import { importFilesStyle } from './utils/files';
 import { registerFilePreviewEvent } from './utils/preview';
 import { useFilesStore } from 'src/stores/files';
 import { useFilesCopyStore } from 'src/stores/files-copy';
@@ -18,9 +17,6 @@ import { FilesWSType } from 'src/websocket/public/files';
 export class FilesApplication extends NormalApplication {
 	applicationName = 'files';
 	async appLoadPrepare(data: any): Promise<void> {
-		//@ts-ignore
-		// (() => import('../css/styles.css'))();
-		// importFilesStyle(false);
 		await super.appLoadPrepare(data);
 		const quasar = data.quasar as QVueGlobals;
 		registerFilePreviewEvent(quasar);

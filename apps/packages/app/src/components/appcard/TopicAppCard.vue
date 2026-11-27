@@ -8,7 +8,7 @@
 				@click="goAppDetails"
 				:style="{ '--cardHeight': ' 268px' }"
 			>
-				<app-icon :src="appIcon" :size="100" :cs-app="clusterScopedApp" />
+				<app-icon :src="appIcon" :size="100" :cs-app="isCsOrShared" />
 				<div class="topic-app-card-title text-h5 text-ink-1 q-mt-md">
 					{{ appTitle }}
 				</div>
@@ -41,7 +41,7 @@
 				@click="goAppDetails"
 				:style="{ '--cardHeight': '196px' }"
 			>
-				<app-icon :src="appIcon" :size="56" :cs-app="clusterScopedApp" />
+				<app-icon :src="appIcon" :size="56" :cs-app="isCsOrShared" />
 				<div class="topic-app-card-title text-subtitle2 text-ink-1 q-mt-md">
 					{{ appTitle }}
 				</div>
@@ -95,7 +95,7 @@ const props = defineProps({
 
 const {
 	appAggregation,
-	clusterScopedApp,
+	isCsOrShared,
 	appIcon,
 	appTitle,
 	appDesc,

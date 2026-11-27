@@ -4,6 +4,7 @@ import { getextension } from 'src/utils/utils';
 import { i18n } from 'src/boot/i18n';
 import { DriveType } from 'src/utils/interface/files';
 import { displayPath } from './utils';
+import { getArchiveFileTypeI18nKey } from 'src/utils/interface/archive';
 
 export function formatData(data, url, origin_id) {
 	const filesStore = useFilesStore();
@@ -29,9 +30,10 @@ export function formatData(data, url, origin_id) {
 		el.driveType = DriveType.Data;
 		el.extension = extension;
 		el.modified = new Date(el.modified).getTime();
+		const archiveTypeKey = getArchiveFileTypeI18nKey(el.name);
 		el.type = el.isDir
 			? i18n.global.t('files.folders')
-			: i18n.global.t(getFileTypeI18nKey(el.name));
+			: i18n.global.t(archiveTypeKey || getFileTypeI18nKey(el.name));
 	});
 
 	data.items = curItems;

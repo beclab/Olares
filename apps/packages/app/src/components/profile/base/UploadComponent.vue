@@ -6,6 +6,7 @@
 		fileName="image"
 		:accept="IMAGES_UPLOAD_V1_ACCEPT"
 		action="/images/upload/v1"
+		:parmas="{ policy: 'public' }"
 		@ok="ok"
 		@loading="update"
 		:width="width"

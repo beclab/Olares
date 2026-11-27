@@ -18,7 +18,11 @@
 		<iframe
 			class="iframe-window"
 			allow="web-share; clipboard-read; clipboard-write"
-			:src="value.pathto ? value.url + '?pathto=' + value.pathto : value.url"
+			:src="
+				value.pathto
+					? value.url + '?pathto=' + encodeURIComponent(value.pathto)
+					: value.url
+			"
 			ref="iframeRef"
 		/>
 

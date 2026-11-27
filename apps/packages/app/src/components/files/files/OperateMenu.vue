@@ -23,8 +23,14 @@ import { useRoute } from 'vue-router';
 import { useMenuStore } from '../../../stores/files-menu';
 import { SYNC_STATE } from '../../../utils/contact';
 import { useOperateinStore } from './../../../stores/operation';
+import {
+	isArchiveFile,
+	isArchivePreviewSupported,
+	isUnsupportedArchiveExtract
+} from '../../../utils/interface/archive';
 import { common } from './../../../api';
 import { backupOriginsRef } from './../../../constant';
+import { isArchiveEnable } from '../../../api';
 
 import FileOperationItem from './FileOperationItem.vue';
 import {
@@ -78,9 +84,14 @@ const eventType = reactive<EventType>({
 	isDir: false,
 	isShareItem: false,
 	isOwner: false,
+	isArchiveAbility: isArchiveEnable(),
+	isArchive: false,
+	isArchivePreviewable: false,
+	selectedHasArchive: false,
 	isEditPermissionsEnable: false,
 	isShareRoot: false,
-	isPublicShare: false
+	isPublicShare: false,
+	isDisableCompress: false
 	// isShareEditEnable: false
 });
 
@@ -103,6 +114,19 @@ watch(
 		eventType.canBackup = false;
 		eventType.selectCount = newVal[1].length;
 		eventType.isShareRoot = false;
+
+		const selectedItems =
+			filesStore.currentFileList[props.origin_id]?.items?.filter((item) =>
+				newVal[1].includes(item.index)
+			) || [];
+		eventType.selectedHasArchive =
+			selectedItems.length > 1
+				? false
+				: selectedItems.some((item) => isArchiveFile(item));
+		eventType.isDisableCompress =
+			selectedItems.length > 1
+				? false
+				: selectedItems.some((item) => isUnsupportedArchiveExtract(item));
 
 		const fileId = newVal[1][0];
 
@@ -130,8 +154,9 @@ watch(
 			eventType.isExternal = [
 				ExternalType.HDD,
 				ExternalType.SMB,
+				ExternalType.NFS,
 				ExternalType.USB
-			].includes(selectFiles.externalType);
+			].includes(selectFiles.externalType as ExternalType);
 		} else {
 			eventType.isExternal = false;
 		}
@@ -151,11 +176,15 @@ watch(
 );
 
 watch(
-	() => [props.menuList],
-	(newVal) => {
-		if (newVal[0]) {
+	// Also depend on the selection: right-clicking the *same* item twice keeps
+	// `menuList` referencing the same object, so without this `filterItem` would
+	// not re-run and `selectedCount`-dependent fields (isArchive, showRename, …)
+	// would go stale after the selection changed (e.g. multi-select -> single).
+	() => [props.menuList, filesStore.selected[props.origin_id]],
+	() => {
+		if (props.menuList) {
 			eventType.isSelected = true;
-			filterItem(newVal[0]);
+			filterItem(props.menuList);
 		} else {
 			eventType.isSelected = false;
 		}
@@ -166,7 +195,8 @@ watch(
 		} else {
 			top.value = props.clientY || 0;
 		}
-	}
+	},
+	{ deep: true }
 );
 
 watch(
@@ -187,6 +217,14 @@ const filterItem = (item: any) => {
 	eventType.isDir = false;
 	eventType.isShareItem = item.isShareItem || false;
 	eventType.isPublicShare = false;
+	eventType.isArchive =
+		filesStore.selectedCount(props.origin_id) === 1 && isArchiveFile(item);
+	eventType.isArchivePreviewable = isArchivePreviewSupported(item);
+
+	const selectedItems =
+		filesStore.currentFileList[props.origin_id]?.items?.filter((item) => {
+			return filesStore.selected[props.origin_id].includes(item.index);
+		}) || [];
 
 	if (filesStore.selectedCount(props.origin_id) > 1) {
 		eventType.showRename = false;
@@ -203,15 +241,10 @@ const filterItem = (item: any) => {
 		eventType.isOwner = item.owner === filesStore.users?.owner;
 		eventType.isPublicShare = item.share_type == ShareType.PUBLIC;
 	}
-	eventType.type = item.driveType;
+	eventType.type =
+		item.driveType || filesStore.activeMenu(props.origin_id)?.driveType;
 
-	const hasSelected = filesStore.currentFileList[
-		props.origin_id
-	]?.items?.filter((item) => {
-		return filesStore.selected[props.origin_id].includes(item.index);
-	});
-
-	const hasSameValue = hasSelected?.find((item) =>
+	const hasSameValue = selectedItems.find((item) =>
 		operateinStore.isDisableMenuItem(item.name, Route.path)
 	);
 

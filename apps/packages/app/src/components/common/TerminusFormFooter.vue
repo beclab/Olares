@@ -11,7 +11,7 @@
 			type="reset"
 			class="but-cancel row justify-center items-center"
 		>
-			{{ cancelText }}
+			{{ cancelText || $t('cancel') }}
 		</q-btn>
 
 		<q-btn
@@ -23,7 +23,7 @@
 			:loading="loading"
 			class="but-creat row justify-center items-center"
 		>
-			{{ okText }}
+			{{ okText || $t('submit') }}
 		</q-btn>
 	</q-card-actions>
 </template>
@@ -32,12 +32,12 @@
 defineProps({
 	okText: {
 		type: String,
-		default: 'Sumbit',
+		default: '',
 		required: false
 	},
 	cancelText: {
 		type: String,
-		default: 'Cancel',
+		default: '',
 		required: false
 	},
 	showCancel: {

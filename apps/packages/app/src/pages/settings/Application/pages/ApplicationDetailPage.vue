@@ -7,7 +7,13 @@
 	<bt-scroll-area class="nav-height-scroll-area-conf">
 		<bt-list
 			first
-			v-if="application?.owner && application.owner == adminStore.user.name"
+			v-if="
+				application &&
+				((application.isShared && meStore.isAdmin) ||
+					(!application.isShared &&
+						application.owner &&
+						application.owner === meStore.user?.name))
+			"
 		>
 			<application-operate-item :app="application" />
 		</bt-list>
@@ -38,7 +44,7 @@
 					"
 					:app-name="application.name"
 					:raw-app-name="application.rawAppName"
-					:cs-app="application.isClusterScoped"
+					:shared-app="application.isClusterScoped || application.isShared"
 					:title="entrance.title"
 					:status="entrance.state"
 					:width-separator="index !== application.entrances.length - 1"
@@ -74,7 +80,7 @@
 					"
 					:app-name="application.name"
 					:raw-app-name="application.rawAppName"
-					:cs-app="application.isClusterScoped"
+					:shared-app="application.isClusterScoped || application.isShared"
 					:title="entrance.title || entrance.name"
 					:hideStatus="true"
 					:width-separator="index !== application.sharedEntrances.length - 1"
@@ -87,7 +93,13 @@
 		<bt-list
 			first
 			:label="t('Environment variables')"
-			v-if="application?.owner && application.owner == adminStore.user.name"
+			v-if="
+				application &&
+				((application.isShared && meStore.isAdmin) ||
+					(!application.isShared &&
+						application.owner &&
+						application.owner === meStore.user?.name))
+			"
 		>
 			<bt-form-item
 				:title="t('Manage environment variables')"
@@ -113,6 +125,11 @@
 			<bt-form-item
 				v-if="aclStore.appAclList && aclStore.appAclList.length > 0"
 				:title="t('acls')"
+				:description="
+					t(
+						'ACLs control which destinations and ports can be reached on the network'
+					)
+				"
 				@click="gotoAclPage"
 				:margin-top="false"
 				:width-separator="
@@ -124,6 +141,11 @@
 			<bt-form-item
 				v-if="application && application.ports.length > 0"
 				:title="t('export_ports')"
+				:description="
+					t(
+						'Exported ports allow other apps on the network to connect to this app'
+					)
+				"
 				@click="gotoPorts"
 				:margin-top="false"
 				:width-separator="
@@ -156,7 +178,7 @@ import { AppPermission, PermissionProviderRegister } from 'src/constant/global';
 import { useApplicationStore } from 'src/stores/settings/application';
 import { useDeviceStore } from 'src/stores/settings/device';
 import { useSecretStore } from 'src/stores/settings/secret';
-import { useAdminStore } from 'src/stores/settings/admin';
+import { useMeStore } from 'src/stores/settings/me';
 import { useAclStore } from 'src/stores/settings/acl';
 import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { TerminusEntrance } from '@bytetrade/core';
@@ -172,7 +194,7 @@ const { t } = useI18n();
 const aclStore = useAclStore();
 const Route = useRoute();
 const router = useRouter();
-const adminStore = useAdminStore();
+const meStore = useMeStore();
 const application = ref(
 	applicationStore.getApplicationById(Route.params.name as string)
 );
@@ -233,21 +255,18 @@ const gotoProvider = () => {
 	});
 };
 
-const gotoManagerEnvironment = (query: any) => {
+const gotoManagerEnvironment = ({
+	appName
+}: {
+	appName: string | string[];
+}) => {
+	const name = Array.isArray(appName) ? appName[0] : appName;
 	router.push({
-		path: '/application/environment/manager',
-		query
+		path: `/application/environment/manager/${name}`
 	});
 };
 
-async function checkSecretPermission() {
-	// const res = await secretStore.checkSecretPermission(application.value?.name);
-	// if (res && res.permission === true) {
-	// 	secretPermission.value = true;
-	// } else {
-	// 	secretPermission.value = false;
-	// }
-}
+async function checkSecretPermission() {}
 
 const appPermissions = ref<AppPermission | undefined>(undefined);
 
@@ -264,7 +283,7 @@ const getPermissions = async () => {
 const appRegisterProviders = ref<PermissionProviderRegister[] | undefined>([]);
 const getProviders = async () => {
 	try {
-		if (application.value?.owner === adminStore.user.name) {
+		if (application.value?.owner === meStore.user.name) {
 			appRegisterProviders.value =
 				await applicationStore.getProviderRegistryList(application.value?.name);
 		}

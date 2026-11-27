@@ -43,6 +43,23 @@ const isShareEnable = () => {
 	return userStore.current_user.isLargeVersion12_3;
 };
 
+const isCommonEnable = () => {
+	if (!getApplication().platform) {
+		return true;
+	}
+	const userStore = useUserStore();
+	if (!userStore.current_user) {
+		return false;
+	}
+	return userStore.current_user.isLargeVersion12_6;
+};
+
+const isArchiveEnable = () => isCommonEnable();
+
+const isNfsEnable = () => isCommonEnable();
+
+const isFileBackupNewOpenEnable = () => isCommonEnable();
+
 export {
 	files,
 	seahub,
@@ -54,5 +71,9 @@ export {
 	syncUtil,
 	syncFilesFormat,
 	ai,
-	isShareEnable
+	isShareEnable,
+	isCommonEnable,
+	isArchiveEnable,
+	isNfsEnable,
+	isFileBackupNewOpenEnable
 };

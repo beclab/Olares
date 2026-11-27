@@ -1,5 +1,5 @@
 <template>
-	<MyCard3 title="Usage Ranking" flat>
+	<MyCard3 :title="$t('USAGE_RANKING')" flat>
 		<template #extra>
 			<div class="row items-center q-gutter-x-md">
 				<Refresh @click="fetchData"></Refresh>

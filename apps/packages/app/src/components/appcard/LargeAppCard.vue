@@ -17,7 +17,8 @@
 			size="120"
 			cs-size="24"
 			icon-radius="20"
-			:cs-app="clusterScopedApp"
+			:cs-app="isCsOrShared"
+			:template-app="isTemplate"
 		/>
 
 		<app-featured-image v-else width="224" :src="appFeaturedImage" />
@@ -52,6 +53,8 @@
 					:larger="true"
 					:is-update="isUpdate"
 					:manager="manager"
+					:show-template="true"
+					:show-instance="true"
 					@on-error="onHandleErrorGroup"
 				/>
 			</span>
@@ -166,7 +169,8 @@ const onHandleErrorGroup = (value) => {
 
 const {
 	appAggregation,
-	clusterScopedApp,
+	isCsOrShared,
+	isTemplate,
 	appIcon,
 	appTitle,
 	appDesc,
@@ -215,6 +219,9 @@ const {
 
 		.application_btn {
 			margin-top: 12px;
+			max-width: 100%;
+			min-width: 0;
+			overflow: hidden;
 		}
 	}
 }

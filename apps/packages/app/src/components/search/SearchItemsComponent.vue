@@ -31,7 +31,7 @@
 				class="icon"
 				:src="
 					!file.isDir
-						? `./files/file-${file.fileIcon}.svg`
+						? `./img/files/file-${file.fileIcon}.svg`
 						: `./files/folder-default.svg`
 				"
 				alt="file"

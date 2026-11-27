@@ -35,7 +35,7 @@
 		<q-separator spaced v-if="selectUsers.length > 0" class="q-mt-md" />
 
 		<div class="text-caption-m text-light-blue-default q-mt-lg">
-			{{ t('files.Selected') + ': ' + selectUsers.length }}
+			{{ t('files.selected_count', { count: selectUsers.length }) }}
 		</div>
 
 		<q-list class="q-pa-none q-mt-md" v-if="usersOptions.length > 0">

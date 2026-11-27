@@ -167,7 +167,7 @@ const columns: any = [
 		name: 'power',
 		label: t('GPU_OP.GRAPHICS_CARD_POWER'),
 		field: 'power',
-		format: (value) => `${round(value, 2)}W`,
+		format: (value) => `${round(value, 2)} W`,
 		align: 'left'
 	},
 	{

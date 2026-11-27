@@ -99,6 +99,7 @@ const props = defineProps({
 				DriveType.External,
 				DriveType.Cache,
 				DriveType.Data,
+				DriveType.Common,
 				DriveType.GoogleDrive
 			];
 		}

@@ -84,9 +84,9 @@ const deleteAccount = async (id: string) => {
 	$q.dialog({
 		component: ReminderDialogComponent,
 		componentProps: {
-			title: t('delete_account'),
-			message: t('Are you sure to delete the account?'),
-			confirmText: t('confirm'),
+			title: t('remove_smb_account_title'),
+			message: t('remove_smb_account_message'),
+			confirmText: t('remove'),
 			cancelText: t('cancel')
 		}
 	}).onOk(async () => {

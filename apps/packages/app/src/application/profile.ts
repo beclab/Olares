@@ -1,5 +1,6 @@
 import { NormalApplication } from './base';
 import { useUserStore } from '../stores/profileUser';
+import { useDeviceStore as useSettingsDeviceStore } from 'src/stores/settings/device';
 import axios from 'axios';
 
 export class profileApplication extends NormalApplication {
@@ -10,6 +11,9 @@ export class profileApplication extends NormalApplication {
 
 	async appMounted(): Promise<void> {
 		const userStore = useUserStore();
+		// Keep viewport/orientation state reactive so the editor can block
+		// landscape on mobile (see ProfileEditorLayout.vue).
+		useSettingsDeviceStore().init();
 		if (process.env.APPLICATION === 'EDITOR') {
 			axios
 				.get(window.location.origin + '/api/profile/init')
@@ -25,20 +29,6 @@ export class profileApplication extends NormalApplication {
 		};
 
 		window.addEventListener('resize', updateLayout);
-	}
-
-	async appRedirectUrl(): Promise<void> {
-		const userStore = useUserStore();
-		if (process.env.APPLICATION === 'PREVIEW') {
-			return await axios
-				.get(window.location.origin + '/api/profile/init')
-				.then((response) => {
-					userStore.setUser(response.data.data.profile);
-					userStore.setInfo(response.data.data.info);
-					const profileName = userStore.olaresId;
-					document.title = profileName;
-				});
-		}
 	}
 
 	async appUnMounted(): Promise<void> {

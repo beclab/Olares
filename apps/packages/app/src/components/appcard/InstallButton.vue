@@ -5,223 +5,382 @@
 		v-if="!globalConfig.isOfficial"
 	>
 		<div
+			v-if="isTemplate && !showTemplate"
 			class="row install_btn_bg"
 			@click.stop
 			:style="{
-				'--textColor': uiState.textColor,
-				'--backgroundColor': uiState.backgroundColor,
-				'--border': uiState.border,
+				'--textColor': blueDefault,
+				'--backgroundColor': grey,
+				'--border': '1px solid transparent',
 				'--width': larger ? '108px' : '88px',
 				'--statusWidth': larger
-					? showMenu
+					? showTemplateRemove
 						? 'calc(100% - 25px)'
 						: '100%'
-					: showMenu
+					: showTemplateRemove
 					? 'calc(100% - 21px)'
 					: '100%'
 			}"
 		>
 			<q-btn
-				:loading="uiState.isLoading"
 				:class="larger ? 'application_install_larger' : 'application_install'"
 				:style="{
-					'--radius': showMenu ? '0' : larger ? '8px' : '4px'
+					'--radius': showTemplateRemove ? '0' : larger ? '8px' : '4px'
 				}"
-				@click="debouncedOnclick"
-				:disabled="uiState.isDisabled"
-				dense
-				flat
 				no-caps
+				flat
+				dense
+				@click="onView"
 			>
-				<q-tooltip v-if="getErrorTextByState(item.status.state)">
-					{{ t(getErrorTextByState(item.status.state)) }}
-				</q-tooltip>
-				<div>{{ t(uiState.statusText) }}</div>
-
-				<template v-slot:loading>
-					<div
-						style="width: 100%; height: 100%"
-						class="row justify-center items-center"
-						v-if="showAppStatus(item.status)"
-					>
-						{{ t(uiState.statusText) }}
-					</div>
-					<progress-button
-						ref="progressBar"
-						v-if="showDownloadProgress(item.status)"
-						:progress="item.status.progress"
-						:covered-text-color="white"
-						:default-text-color="blueDefault"
-						:progress-bar-color="blueDefault"
-					/>
-					<!--				<div v-if="isAppLoading(item.state)">-->
-					<!--					<q-img-->
-					<!--						class="pending-image"-->
-					<!--						:src="getRequireImage('pending_loading.png')"-->
-					<!--					/>-->
-					<!--				</div>-->
-				</template>
+				<div>{{ t('View') }}</div>
 			</q-btn>
+
+			<!-- Manager list: allow removing a locally uploaded template body -->
+			<template v-if="showTemplateRemove">
+				<div
+					class="install_btn_separator_bg items-center"
+					:style="{ background: grey, height: larger ? '32px' : '24px' }"
+				>
+					<div
+						class="install_btn_separator"
+						:style="{
+							height: larger ? '16px' : '12px',
+							marginTop: larger ? '8px' : '6px'
+						}"
+					/>
+				</div>
+				<q-btn-dropdown
+					v-if="!deviceStore.isMobile"
+					dropdown-icon="img:/market/market_arrow.svg"
+					:size="larger ? '12px' : '9px'"
+					:class="
+						larger
+							? 'application_install_larger_more'
+							: 'application_install_more'
+					"
+					content-class="dropdown-menu"
+					flat
+					dense
+					:menu-offset="[0, 4]"
+				>
+					<div class="column text-body3">
+						<div
+							class="dropdown-menu-item"
+							v-close-popup
+							@click="onRemoveLocal"
+						>
+							{{ t('app.remove') }}
+						</div>
+					</div>
+				</q-btn-dropdown>
+				<q-btn
+					v-else
+					icon="img:/market/market_arrow.svg"
+					:size="larger ? '12px' : '9px'"
+					:class="
+						larger
+							? 'application_install_larger_more'
+							: 'application_install_more'
+					"
+					flat
+					dense
+					@click.stop="onDropClick"
+				/>
+			</template>
+		</div>
+
+		<!-- Template body in detail header: Create + N Instances created -->
+		<div
+			v-else-if="isTemplate && showTemplate"
+			class="row items-center no-wrap"
+			@click.stop
+		>
+			<q-btn
+				:class="larger ? 'template-btn-larger' : 'template-btn'"
+				:style="{ color: blueDefault, background: blueAlpha }"
+				no-caps
+				flat
+				dense
+				@click="onClone"
+			>
+				{{ t('Create') }}
+			</q-btn>
+			<q-btn
+				v-if="showInstance"
+				:class="larger ? 'template-btn-larger' : 'template-btn'"
+				class="q-ml-sm template-info-btn"
+				:style="{ color: textInk2, background: grey }"
+				no-caps
+				flat
+				dense
+				@click="onScrollToInstances"
+			>
+				<q-icon name="sym_r_tab_inactive" size="16px" class="q-mr-xs" />
+				<span class="text-subtitle2">{{
+					t('{count} Instances created', { count: instancesCount })
+				}}</span>
+			</q-btn>
+		</div>
+
+		<!-- Default rendering (single / multi-instance / template instance) -->
+		<template v-else>
 			<div
-				v-if="showMenu"
-				class="install_btn_separator_bg items-center"
+				class="row install_btn_bg"
+				@click.stop
 				:style="{
-					background: uiState.backgroundColor,
-					height: larger ? '32px' : '24px'
+					'--textColor': uiState.textColor,
+					'--backgroundColor': uiState.backgroundColor,
+					'--border': uiState.border,
+					'--width': larger ? '108px' : '88px',
+					'--statusWidth': larger
+						? showMenu
+							? 'calc(100% - 25px)'
+							: '100%'
+						: showMenu
+						? 'calc(100% - 21px)'
+						: '100%'
 				}"
 			>
-				<div
-					class="install_btn_separator"
+				<q-btn
+					:loading="uiState.isLoading"
+					:class="larger ? 'application_install_larger' : 'application_install'"
 					:style="{
-						height: larger ? '16px' : '12px',
-						marginTop: larger ? '8px' : '6px'
+						'--radius': showMenu ? '0' : larger ? '8px' : '4px'
 					}"
-				/>
-			</div>
-			<q-btn-dropdown
-				v-if="showMore && !deviceStore.isMobile"
-				:dropdown-icon="
-					uiState.isErrorStatus
-						? 'img:/market/market_arrow_error.svg'
-						: uiState.isStopStatus
-						? 'img:/market/market_arrow_stop.svg'
-						: 'img:/market/market_arrow.svg'
-				"
-				:size="larger ? '12px' : '9px'"
-				:class="
-					larger
-						? 'application_install_larger_more'
-						: 'application_install_more'
-				"
-				content-class="dropdown-menu"
-				flat
-				dense
-				:menu-offset="[0, 4]"
-			>
-				<div class="column text-body3">
+					@click="debouncedOnclick"
+					:disabled="finalDisabled"
+					dense
+					flat
+					no-caps
+				>
+					<q-tooltip v-if="buttonOperation && buttonPolicy.tooltip.value">
+						{{ buttonPolicy.tooltip.value }}
+					</q-tooltip>
+					<q-tooltip v-else-if="getErrorTextByState(item.status.state)">
+						{{ t(getErrorTextByState(item.status.state)) }}
+					</q-tooltip>
+					<div>{{ t(uiState.statusText) }}</div>
+
+					<template v-slot:loading>
+						<div
+							style="width: 100%; height: 100%"
+							class="row justify-center items-center"
+							v-if="showAppStatus(item.status)"
+						>
+							{{ t(uiState.statusText) }}
+						</div>
+						<progress-button
+							ref="progressBar"
+							v-if="showDownloadProgress(item.status)"
+							:progress="item.status.progress"
+							:covered-text-color="white"
+							:default-text-color="blueDefault"
+							:progress-bar-color="blueDefault"
+						/>
+						<!--				<div v-if="isAppLoading(item.state)">-->
+						<!--					<q-img-->
+						<!--						class="pending-image"-->
+						<!--						:src="getRequireImage('pending_loading.png')"-->
+						<!--					/>-->
+						<!--				</div>-->
+					</template>
+				</q-btn>
+				<div
+					v-if="showMenu"
+					class="install_btn_separator_bg items-center"
+					:style="{
+						background: uiState.backgroundColor,
+						height: larger ? '32px' : '24px'
+					}"
+				>
 					<div
-						v-if="showRetry"
-						class="dropdown-menu-item q-mt-xs"
-						v-close-popup
-						@click="onRetry"
-					>
-						{{ t('app.retry') }}
-					</div>
-					<div
-						v-if="showResume"
-						class="dropdown-menu-item q-mt-xs"
-						v-close-popup
-						@click="onResume"
-					>
-						{{ t('app.resume') }}
-					</div>
-					<div
-						v-if="showStop"
-						class="dropdown-menu-item q-mt-xs"
-						v-close-popup
-						@click="onStop"
-					>
-						{{ t('app.stop') }}
-					</div>
-					<div
-						v-if="showOpenInUpgrade"
-						class="dropdown-menu-item q-mt-xs"
-						v-close-popup
-						@click="onUpdateOpen"
-					>
-						{{ t('app.open') }}
-					</div>
-					<div
-						v-if="showClone"
-						class="dropdown-menu-item q-mt-xs"
-						v-close-popup
-						@click="onClone"
-					>
-						{{ t('app.clone') }}
-					</div>
-					<div
-						v-if="showUninstall"
-						class="dropdown-menu-item"
-						v-close-popup
-						@click="onUninstall"
-					>
-						{{ t('app.uninstall') }}
-					</div>
-					<div
-						v-if="showRemoveLocal"
-						class="dropdown-menu-item"
-						v-close-popup
-						@click="onRemoveLocal"
-					>
-						{{ t('app.remove') }}
-					</div>
+						class="install_btn_separator"
+						:style="{
+							height: larger ? '16px' : '12px',
+							marginTop: larger ? '8px' : '6px'
+						}"
+					/>
 				</div>
-			</q-btn-dropdown>
+				<q-btn-dropdown
+					v-if="showMore && !deviceStore.isMobile"
+					:dropdown-icon="
+						uiState.isErrorStatus
+							? 'img:/market/market_arrow_error.svg'
+							: uiState.isStopStatus
+							? 'img:/market/market_arrow_stop.svg'
+							: 'img:/market/market_arrow.svg'
+					"
+					:size="larger ? '12px' : '9px'"
+					:class="
+						larger
+							? 'application_install_larger_more'
+							: 'application_install_more'
+					"
+					content-class="dropdown-menu"
+					flat
+					dense
+					:menu-offset="[0, 4]"
+				>
+					<div class="column text-body3">
+						<div
+							v-if="showUpdateInStop"
+							class="dropdown-menu-item q-mt-xs"
+							v-close-popup
+							@click="onUpdate"
+						>
+							{{ t('app.update') }}
+						</div>
+						<div
+							v-if="showRetry"
+							class="dropdown-menu-item q-mt-xs"
+							v-close-popup
+							@click="onRetry"
+						>
+							{{ t('app.retry') }}
+						</div>
+						<div
+							v-if="showResume"
+							class="dropdown-menu-item q-mt-xs"
+							v-close-popup
+							@click="onResume"
+						>
+							{{ t('app.resume') }}
+						</div>
+						<div
+							v-if="showStop"
+							class="dropdown-menu-item q-mt-xs"
+							v-close-popup
+							@click="onStop"
+						>
+							{{ t('app.stop') }}
+						</div>
+						<div
+							v-if="showOpenInUpgrade"
+							class="dropdown-menu-item q-mt-xs"
+							v-close-popup
+							@click="onUpdateOpen"
+						>
+							{{ t('app.open') }}
+						</div>
+						<div
+							v-if="showClone"
+							class="dropdown-menu-item q-mt-xs"
+							v-close-popup
+							@click="onClone"
+						>
+							{{ t('app.clone') }}
+						</div>
+						<div
+							v-if="showUninstall"
+							class="dropdown-menu-item"
+							v-close-popup
+							@click="onUninstall"
+						>
+							{{ t('app.uninstall') }}
+						</div>
+						<div
+							v-if="showRemoveLocal"
+							class="dropdown-menu-item"
+							v-close-popup
+							@click="onRemoveLocal"
+						>
+							{{ t('app.remove') }}
+						</div>
+					</div>
+				</q-btn-dropdown>
 
+				<q-btn
+					v-if="showMore && deviceStore.isMobile"
+					:icon="
+						uiState.isErrorStatus
+							? 'img:/market/market_arrow_error.svg'
+							: uiState.isStopStatus
+							? 'img:/market/market_arrow_stop.svg'
+							: 'img:/market/market_arrow.svg'
+					"
+					:size="larger ? '12px' : '9px'"
+					:class="
+						larger
+							? 'application_install_larger_more'
+							: 'application_install_more'
+					"
+					flat
+					dense
+					@click.stop="onDropClick"
+				/>
+
+				<div
+					v-if="showCancelBtn"
+					class="cursor-pointer row justify-center items-center"
+					:class="
+						larger
+							? 'application_install_larger_more'
+							: 'application_install_more'
+					"
+					@click.stop="onCancelInstall"
+				>
+					<q-icon
+						:name="
+							item.status.state === APP_STATUS.DOWNLOAD.DEFAULT
+								? 'img:/market/market_download_close.svg'
+								: 'img:/market/market_normal_close.svg'
+						"
+						:size="larger ? '20px' : '15px'"
+					/>
+				</div>
+			</div>
+
+			<!-- Template instance detail header: jump back to the template body -->
 			<q-btn
-				v-if="showMore && deviceStore.isMobile"
-				:icon="
-					uiState.isErrorStatus
-						? 'img:/market/market_arrow_error.svg'
-						: uiState.isStopStatus
-						? 'img:/market/market_arrow_stop.svg'
-						: 'img:/market/market_arrow.svg'
-				"
-				:size="larger ? '12px' : '9px'"
-				:class="
-					larger
-						? 'application_install_larger_more'
-						: 'application_install_more'
-				"
+				v-if="isTemplateInstanceApp && showTemplate && showInstance"
+				:class="larger ? 'template-btn-larger' : 'template-btn'"
+				class="q-ml-sm template-info-btn"
+				:style="{ color: blueDefault, background: grey }"
+				no-caps
 				flat
 				dense
-				@click.stop="onDropClick"
-			/>
+				@click.stop="onOpenBody"
+			>
+				<q-icon name="sym_r_open_in_new" size="16px" class="q-mr-xs" />
+				<span class="text-subtitle2 template-info-text">{{
+					t('Created from {name}', { name: bodyTitle })
+				}}</span>
+				<bt-tooltip :label="t('Created from {name}', { name: bodyTitle })" />
+			</q-btn>
 
-			<q-btn
-				v-if="showCancelBtn"
-				:icon="
-					item.status.state === APP_STATUS.DOWNLOAD.DEFAULT
-						? 'img:/market/market_download_close.svg'
-						: 'img:/market/market_normal_close.svg'
-				"
-				:size="larger ? '12px' : '9px'"
-				:class="
-					larger
-						? 'application_install_larger_more'
-						: 'application_install_more'
-				"
-				flat
-				dense
-				@click.stop="onCancelInstall"
-			/>
-		</div>
-		<div
-			class="text-overline text-center text-ink-3"
-			:class="layout.includes('row') ? 'q-ml-sm' : 'q-mt-xs'"
-			v-if="showImageSize"
-		>
-			{{ calcImageSize }}
-		</div>
+			<div
+				class="text-overline text-center text-ink-3"
+				:class="layout.includes('row') ? 'q-ml-sm' : 'q-mt-xs'"
+				v-if="showImageSize"
+			>
+				{{ calcImageSize }}
+			</div>
+		</template>
 	</div>
 </template>
 
 <script lang="ts" setup>
 import InstallButtonOperationDialog from 'src/components/appcard/InstallButtonOperationDialog.vue';
 import ProgressButton from '../../components/base/ProgressButton.vue';
+import BtTooltip from 'src/components/base/BtTooltip.vue';
 import SimpleWaiter from 'src/utils/simpleWaiter';
-import { getSuitableUnit, getValueByUnit } from 'src/utils/settings/monitoring';
+import { getValueByUnit } from 'src/utils/settings/monitoring';
 import { usePreCheckStore } from 'src/stores/market/preCheck';
 import useAppAction from 'src/components/appcard/useAppAction';
+import { useAppOpPolicy } from 'src/components/appcard/useAppOpPolicy';
+import { OPERATION_TYPE } from 'src/services/market/appOperation/operationTypes';
 import { useDeviceStore as useThemeDeviceStore } from 'src/stores/device';
 import { useDeviceStore } from 'src/stores/settings/device';
 import { notifyFailed } from 'src/utils/settings/btNotify';
 import { usePaymentStore } from 'src/stores/market/payment';
-import { AppService } from 'src/stores/market/appService';
+import { AppService } from 'src/services/market/appOperation/appService';
 import { useAppStore } from 'src/stores/market/appStore';
+import { useMenuStore } from 'src/stores/market/menu';
 import globalConfig from '../../api/market/config';
 import { busOff, busOn } from 'src/utils/bus';
+import { pushWithParent } from 'src/utils/marketBack';
 import { useColor } from '@bytetrade/ui';
+import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useI18n } from 'vue-i18n';
 import debounce from 'lodash/debounce';
@@ -252,8 +411,10 @@ import {
 	APP_PAYMENT_TYPE,
 	APP_STATUS,
 	AppStatusLatest,
+	getI18nValue,
 	LOCAL_STATUS,
-	PAYMENT_STATUS
+	PAYMENT_STATUS,
+	TRANSACTION_PAGE
 } from 'src/constant/constants';
 
 const props = defineProps({
@@ -283,6 +444,16 @@ const props = defineProps({
 		require: false,
 		default: false
 	},
+	showTemplate: {
+		type: Boolean,
+		required: false,
+		default: false
+	},
+	showInstance: {
+		type: Boolean,
+		required: false,
+		default: false
+	},
 	layout: {
 		type: String,
 		default: 'row'
@@ -300,6 +471,7 @@ const { color: redSoft } = useColor('red-soft');
 const { color: negative } = useColor('negative');
 const { color: grey } = useColor('background-3');
 const { color: white } = useColor('ink-on-brand');
+const { color: textInk2 } = useColor('ink-2');
 const emit = defineEmits(['onError']);
 const simpleWaiter = new SimpleWaiter();
 const appPaymentType = ref<APP_PAYMENT_TYPE>(APP_PAYMENT_TYPE.APP_TYPE_UNKNOWN);
@@ -309,7 +481,7 @@ const themeDeviceStore = useThemeDeviceStore();
 const deviceStore = useDeviceStore();
 const appStore = useAppStore();
 const preCheckStore = usePreCheckStore();
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const $q = useQuasar();
 
 const {
@@ -320,6 +492,8 @@ const {
 	onUninstall,
 	showOpenInUpgrade,
 	onUpdateOpen,
+	showUpdateInStop,
+	onUpdate,
 	showRetry,
 	onRetry,
 	showStop,
@@ -331,8 +505,94 @@ const {
 	onClone,
 	showMore,
 	showMenu,
-	onCancelInstall
+	onCancelInstall,
+	isTemplate,
+	isTemplateInstanceApp,
+	instancesCount,
+	showTemplateRemove
 } = useAppAction(props);
+
+const router = useRouter();
+const menuStore = useMenuStore();
+
+// Title of the template body this instance was created from.
+const bodyTitle = computed(() => {
+	const aggregation = appStore.getAppAggregationInfo(
+		props.item.status?.rawAppName,
+		props.sourceId
+	);
+	return (
+		getI18nValue(
+			aggregation?.app_simple_latest?.app_simple_info?.app_title,
+			locale.value
+		) ?? ''
+	);
+});
+
+const goDetail = (appName?: string) => {
+	if (!appName) {
+		return;
+	}
+	pushWithParent(router, {
+		name: TRANSACTION_PAGE.App,
+		params: {
+			appName,
+			sourceId: props.sourceId
+		},
+		query: {
+			...router.currentRoute.value.query,
+			menuItem: menuStore.currentItem
+		}
+	});
+};
+
+// Store/list: template body opens its detail page (no inline install).
+const onView = () => {
+	goDetail(props.appName);
+};
+
+const onOpenBody = async () => {
+	const rawAppName = props.item.status?.rawAppName;
+	if (!rawAppName) {
+		return;
+	}
+	const latest = await appStore.fetchAppFullInfoNow(rawAppName, props.sourceId);
+	if (!latest) {
+		notifyFailed(t('The source app is no longer available.'));
+		return;
+	}
+	goDetail(rawAppName);
+};
+
+// Template body detail: scroll to the Instances section.
+const onScrollToInstances = () => {
+	document
+		.getElementById('app-instances-section')
+		?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+
+const buttonOperation = computed<OPERATION_TYPE | null>(() => {
+	switch (currentStateMeta.value?.type) {
+		case 'installable':
+			return OPERATION_TYPE.INSTALL;
+		case 'update':
+			return OPERATION_TYPE.UPGRADE;
+		default:
+			return null;
+	}
+});
+
+const buttonPolicy = useAppOpPolicy({
+	op: buttonOperation,
+	appName: computed(() => props.appName),
+	sourceId: computed(() => props.sourceId)
+});
+
+const finalDisabled = computed(
+	() =>
+		uiState.isDisabled ||
+		(buttonOperation.value !== null && buttonPolicy.isDisabled.value)
+);
 
 type UIStateType =
 	| 'uninstalled'
@@ -408,7 +668,7 @@ const stateConfigs: Array<{
 			statusText: 'app.get',
 			textColor: blueDefault.value,
 			backgroundColor: grey.value,
-			border: '1px solid transparent',
+			border: '1px solid transparent', // i18n-ignore
 			isDisabled: isFetchingFullInfo.value,
 			isLoading: isFetchingFullInfo.value,
 			isErrorStatus: false,
@@ -430,12 +690,25 @@ const stateConfigs: Array<{
 				}
 			}
 			if (!appFullInfo) {
-				notifyFailed('Failed to load app details, please try again.');
+				notifyFailed(t('Failed to load app details, please try again.'));
 				return;
 			}
 
+			try {
+				await preCheckStore.refreshSystemStatus(true);
+			} catch (e) {
+				// A failed refresh must not abort the install flow; preflight
+				// falls back to cached data and legacy G009/G013 checks.
+				console.error('refreshSystemStatus before preflight failed', e);
+			}
+
 			const errorGroup = preCheckStore.frontendPreflight(
-				appFullInfo.app_info.app_entry
+				appFullInfo.app_info.app_entry,
+				{
+					op: OPERATION_TYPE.INSTALL,
+					appName: props.appName,
+					sourceId: props.sourceId
+				}
 			);
 			emit('onError', errorGroup);
 
@@ -478,7 +751,7 @@ const stateConfigs: Array<{
 			statusText: getPaymentTextByState(params),
 			textColor: blueDefault.value,
 			backgroundColor: blueAlpha.value,
-			border: '1px solid transparent',
+			border: '1px solid transparent', // i18n-ignore
 			isDisabled: false,
 			isLoading: false,
 			isErrorStatus: false,
@@ -505,7 +778,7 @@ const stateConfigs: Array<{
 			statusText: 'app.install',
 			textColor: blueDefault.value,
 			backgroundColor: blueAlpha.value,
-			border: '1px solid transparent',
+			border: '1px solid transparent', // i18n-ignore
 			isDisabled: false,
 			isLoading: false,
 			isErrorStatus: false,
@@ -537,7 +810,7 @@ const stateConfigs: Array<{
 			statusText: t('app.failed'),
 			textColor: negative.value,
 			backgroundColor: redSoft.value,
-			border: '1px solid transparent',
+			border: '1px solid transparent', // i18n-ignore
 			isDisabled: false,
 			isLoading: true,
 			isErrorStatus: true,
@@ -557,7 +830,7 @@ const stateConfigs: Array<{
 			backgroundColor: showDownloadProgress(props.item.status)
 				? blueAlpha.value
 				: blueDefault.value,
-			border: '1px solid transparent',
+			border: '1px solid transparent', // i18n-ignore
 			isDisabled: false,
 			isLoading: true,
 			isErrorStatus: false,
@@ -572,7 +845,7 @@ const stateConfigs: Array<{
 			statusText: 'app.canceling',
 			textColor: white.value,
 			backgroundColor: blueDefault.value,
-			border: '1px solid transparent',
+			border: '1px solid transparent', // i18n-ignore
 			isDisabled: true,
 			isLoading: true,
 			isErrorStatus: false,
@@ -587,7 +860,7 @@ const stateConfigs: Array<{
 			statusText: 'app.installed',
 			textColor: blueDefault.value,
 			backgroundColor: blueAlpha.value,
-			border: '1px solid transparent',
+			border: '1px solid transparent', // i18n-ignore
 			isDisabled: false,
 			isLoading: false,
 			isErrorStatus: false,
@@ -600,7 +873,7 @@ const stateConfigs: Array<{
 		checker: () => {
 			const { state } = props.item.status;
 			return (
-				(state === APP_STATUS.STOP.COMPLETED || state === APP_STATUS.RUNNING) &&
+				state === APP_STATUS.RUNNING &&
 				canUpgrade(props.item, props.appName, props.sourceId)
 			);
 		},
@@ -608,7 +881,7 @@ const stateConfigs: Array<{
 			statusText: 'app.update',
 			textColor: blueDefault.value,
 			backgroundColor: blueAlpha.value,
-			border: '1px solid transparent',
+			border: '1px solid transparent', // i18n-ignore
 			isDisabled: false,
 			isLoading: false,
 			isErrorStatus: false,
@@ -625,14 +898,12 @@ const stateConfigs: Array<{
 
 	{
 		type: 'stopCompleted',
-		checker: () =>
-			props.item.status.state === APP_STATUS.STOP.COMPLETED &&
-			!canUpgrade(props.item, props.appName, props.sourceId),
+		checker: () => props.item.status.state === APP_STATUS.STOP.COMPLETED,
 		uiConfig: () => ({
 			statusText: 'app.stopped',
 			textColor: orangeDefault.value,
 			backgroundColor: orangeSoft.value,
-			border: '1px solid transparent',
+			border: '1px solid transparent', // i18n-ignore
 			isDisabled: false,
 			isLoading: false,
 			isErrorStatus: false,
@@ -653,7 +924,7 @@ const stateConfigs: Array<{
 			statusText: canOpen(status) ? 'app.open' : 'app.running',
 			textColor: blueDefault.value,
 			backgroundColor: blueAlpha.value,
-			border: '1px solid transparent',
+			border: '1px solid transparent', // i18n-ignore
 			isDisabled: false,
 			isLoading: false,
 			isErrorStatus: false,
@@ -673,7 +944,7 @@ const stateConfigs: Array<{
 			statusText: state,
 			textColor: negative.value,
 			backgroundColor: redSoft.value,
-			border: '1px solid transparent',
+			border: '1px solid transparent', // i18n-ignore
 			isDisabled: true,
 			isLoading: false,
 			isErrorStatus: true,
@@ -743,12 +1014,7 @@ const calcImageSize = computed(() => {
 			}
 		);
 	}
-	return (
-		getValueByUnit(
-			needDownloadSize,
-			getSuitableUnit(needDownloadSize, 'disk')
-		) + getSuitableUnit(needDownloadSize, 'disk')
-	);
+	return getValueByUnit(String(needDownloadSize), 'Gi') + 'GB';
 });
 
 function resetUIState() {
@@ -956,6 +1222,49 @@ const debouncedOnclick = debounce(onClick, 500, {
 		height: 32px;
 		border-radius: 0 8px 8px 0 !important;
 		text-align: center;
+	}
+}
+
+.template-btn {
+	box-sizing: border-box;
+	height: 24px;
+	min-width: 88px;
+	padding: 0 8px;
+	border-radius: 4px;
+	font-family: Roboto;
+	font-size: 12px;
+	font-weight: 500;
+	line-height: 16px;
+	white-space: nowrap;
+}
+
+.template-btn-larger {
+	box-sizing: border-box;
+	height: 32px;
+	min-width: 108px;
+	padding: 0 12px !important;
+	border-radius: 8px !important;
+	font-family: Roboto;
+	font-size: 14px;
+	font-weight: 500;
+	line-height: 20px;
+	white-space: nowrap;
+}
+
+.template-info-btn {
+	max-width: 240px;
+	overflow: hidden;
+
+	:deep(.q-btn__content) {
+		flex-wrap: nowrap;
+		min-width: 0;
+	}
+
+	.template-info-text {
+		min-width: 0;
+		overflow: hidden;
+		white-space: nowrap;
+		text-overflow: ellipsis;
 	}
 }
 

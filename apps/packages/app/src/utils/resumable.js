@@ -574,6 +574,11 @@ const { type } = require('os');
 			$.remainingTime = -1; // remainingTime = -1 : preparing, remainingTime != 0 : uploading, remainingTime = 0; uploaded
 			$.isSaved = false;
 			$.newFileName = $.fileName; // need a default name
+			// Number of leading chunks that should be treated as already
+			// uploaded (resume offset). Chunk objects are built asynchronously
+			// in bootstrap(), so this is remembered here and also applied to
+			// chunks that are created *after* markChunksCompleted() is called.
+			$._completedOffset = 0;
 			var _error = uniqueIdentifier !== undefined;
 
 			// Callback when something happens within the chunk
@@ -665,9 +670,18 @@ const { type } = require('os');
 				for (var offset = 0; offset < maxOffset; offset++) {
 					(function (offset) {
 						window.setTimeout(function () {
-							$.chunks.push(
-								new ResumableChunk($.resumableObj, $, offset, chunkEvent)
+							var chunk = new ResumableChunk(
+								$.resumableObj,
+								$,
+								offset,
+								chunkEvent
 							);
+							// Honour a resume offset that may have been set before
+							// this chunk object was created.
+							if (offset < $._completedOffset) {
+								chunk.markComplete = true;
+							}
+							$.chunks.push(chunk);
 							$.resumableObj.fire('chunkingProgress', $, offset / maxOffset);
 						}, 0);
 					})(offset);
@@ -766,10 +780,19 @@ const { type } = require('os');
 				return found;
 			};
 			$.markChunksCompleted = function (chunkNumber) {
-				if (!$.chunks || $.chunks.length <= chunkNumber) {
+				if (!chunkNumber || chunkNumber <= 0) {
 					return;
 				}
-				for (var num = 0; num < chunkNumber; num++) {
+				// Remember the resume offset so chunks that are still being built
+				// asynchronously (see bootstrap) are also marked as completed once
+				// they are created. This avoids restarting from the first chunk
+				// when markChunksCompleted runs before chunking has finished.
+				$._completedOffset = Math.max($._completedOffset, chunkNumber);
+				if (!$.chunks) {
+					return;
+				}
+				var max = Math.min(chunkNumber, $.chunks.length);
+				for (var num = 0; num < max; num++) {
 					$.chunks[num].markComplete = true;
 				}
 			};

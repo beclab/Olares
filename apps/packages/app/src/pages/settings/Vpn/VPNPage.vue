@@ -17,7 +17,7 @@
 		<app-menu-feature :menu-type="MENU_TYPE.VPN" />
 		<bt-list>
 			<bt-form-item
-				v-if="adminStore.isAdmin"
+				v-if="meStore.isAdmin"
 				:title="t('allow_ssh_via_vpn')"
 				:description="
 					t('Enable remote SSH connections to the cluster through a VPN')
@@ -30,8 +30,8 @@
 					@update:model-value="setAclToggle"
 				/>
 			</bt-form-item>
-			<bt-form-item
-				v-if="adminStore.isAdmin"
+			<!-- <bt-form-item
+				v-if="meStore.isAdmin"
 				:title="t('Subnet routes')"
 				:description="
 					t(
@@ -44,10 +44,10 @@
 					:model-value="aclStore.allow_subroutes"
 					@update:model-value="setSubroutesToggle"
 				/>
-			</bt-form-item>
+			</bt-form-item> -->
 
 			<bt-form-item
-				v-if="adminStore.isAdmin"
+				v-if="meStore.isAdmin"
 				:title="t('forcing_vpn_access_to_private_network')"
 				:description="
 					t(
@@ -72,7 +72,7 @@
 			/>
 		</bt-list>
 
-		<AdaptiveLayout v-if="adminStore.isAdmin">
+		<AdaptiveLayout v-if="meStore.isAdmin">
 			<template v-slot:pc>
 				<q-list class="q-py-md q-list-class q-mt-lg">
 					<div
@@ -229,7 +229,7 @@
 
 		<div
 			class="row justify-end"
-			v-if="!deviceStore.isMobile && adminStore.isAdmin"
+			v-if="!deviceStore.isMobile && meStore.isAdmin"
 		>
 			<q-btn
 				dense
@@ -260,7 +260,8 @@ import { useApplicationStore } from 'src/stores/settings/application';
 import { useHeadScaleStore } from 'src/stores/settings/headscale';
 import { useDeviceStore } from 'src/stores/settings/device';
 import { getRequireImage } from 'src/utils/settings/helper';
-import { useAdminStore } from 'src/stores/settings/admin';
+import { useMeStore } from 'src/stores/settings/me';
+import { useTerminusStore } from 'src/stores/terminus';
 import { computed, onMounted } from 'vue';
 import { MENU_TYPE } from 'src/constant';
 import { useRouter } from 'vue-router';
@@ -278,7 +279,8 @@ import { notifyFailed } from 'src/utils/settings/btNotify';
 const applicationStore = useApplicationStore();
 const headScaleStore = useHeadScaleStore();
 const deviceStore = useDeviceStore();
-const adminStore = useAdminStore();
+const meStore = useMeStore();
+const terminusStore = useTerminusStore();
 const aclStore = useAclStore();
 const router = useRouter();
 const { t } = useI18n();
@@ -321,7 +323,7 @@ const addACL = () => {
 		const addItem = {
 			appName: 'olares-app',
 			port: `*:${port}`,
-			appOwner: adminStore.olaresId.split('@')[0],
+			appOwner: terminusStore.olaresId.split('@')[0],
 			proto: '',
 			status: PortStatus.Add,
 			appTitle: 'olares-app'

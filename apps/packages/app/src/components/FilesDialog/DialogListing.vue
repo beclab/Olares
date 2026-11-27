@@ -58,7 +58,7 @@ import { PropType, inject } from 'vue';
 import { useFilesStore, PickType } from 'src/stores/files';
 import ListingItem from '../../components/files/ListingItem.vue';
 import FilesTableHeader from '../../components/files/FilesTableHeader.vue';
-import { stringToBase64 } from '@didvault/sdk/src/core';
+import { stringToBase64 } from 'src/utils/encode';
 import {
 	COL_RESIZE_KEY,
 	ColResizeContext

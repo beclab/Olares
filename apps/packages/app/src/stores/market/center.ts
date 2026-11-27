@@ -85,8 +85,9 @@ export const useCenterStore = defineStore('marketCenter', {
 				if (isUpgradable(statusLatest.status)) {
 					const list = combinedId.split('_');
 					const sourceId = list[0];
+					const appName = list[1];
 					const simpleLatest = appStore.getAppSimpleInfo(
-						statusLatest.status.rawAppName,
+						appName,
 						sourceId,
 						statusLatest.status
 					);
@@ -323,6 +324,7 @@ export const useCenterStore = defineStore('marketCenter', {
 					console.log('menuList ===>', menuStore.menuList);
 				}
 
+				// i18n-ignore-start
 				if (this.marketSource?.others.pages) {
 					console.log('market page ===>', this.marketSource?.others.pages);
 					console.log(
@@ -452,6 +454,7 @@ export const useCenterStore = defineStore('marketCenter', {
 						}
 					});
 				}
+				// i18n-ignore-end
 			}
 
 			console.log('all ===>', this.pagesMap);

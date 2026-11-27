@@ -14,7 +14,7 @@
 							v-model:pagination="pagination"
 							:rows="rows"
 							:columns="columns"
-							row-key="name"
+							row-key="id"
 							flat
 							class="bg-transparent"
 							:loading="loading"
@@ -137,12 +137,7 @@ const pagination = ref({
 
 let parseUrlRequestSeq = 0;
 
-function normalizeRowsPerPage(rowsPerPage: number) {
-	if (rowsPerPage && rowsPerPage > 0) return rowsPerPage;
-	return pagination.value.rowsNumber && pagination.value.rowsNumber > 0
-		? pagination.value.rowsNumber
-		: 9999;
-}
+const SHOW_ALL_FETCH_LIMIT = 9999;
 
 const columns: any = [
 	{
@@ -175,24 +170,21 @@ const props = defineProps({
 function getData() {
 	loading.value = true;
 	const requestSeq = ++parseUrlRequestSeq;
-	const normalizedRowsPerPage = normalizeRowsPerPage(
-		pagination.value.rowsPerPage
-	);
-	if (!(pagination.value.rowsPerPage > 0)) {
+	const isShowAll = !(pagination.value.rowsPerPage > 0);
+	const limit = isShowAll ? SHOW_ALL_FETCH_LIMIT : pagination.value.rowsPerPage;
+	if (isShowAll) {
 		pagination.value.page = 1;
 	}
+	const offset = limit * (pagination.value.page - 1);
 	backupStore
-		.parseUrl(
-			props.url,
-			props.pwd,
-			normalizedRowsPerPage * (pagination.value.page - 1),
-			normalizedRowsPerPage
-		)
+		.parseUrl(props.url, props.pwd, offset, limit)
 		.then((data: any) => {
 			if (requestSeq !== parseUrlRequestSeq) return;
 			if (data) {
-				pagination.value.rowsNumber = data.totalCount;
 				rows.value = data.snapshots ? data.snapshots : [];
+				pagination.value.rowsNumber = isShowAll
+					? rows.value.length
+					: (data.totalPage || 1) * pagination.value.rowsPerPage;
 				backupPath.value = data.backupPath;
 				resourceType.value = data.backupType;
 			}
@@ -261,8 +253,12 @@ const onLoad = () => {
 				};
 			}
 		})
+		.catch(() => {
+			CustomRef.value.onDialogCancel();
+		})
 		.finally(() => {
 			loading.value = false;
+			mobileLoading.value = false;
 		});
 };
 

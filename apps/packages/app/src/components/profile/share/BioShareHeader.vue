@@ -36,6 +36,7 @@
 		<bio-button
 			:class="userStore.isMobile ? 'text-body1' : 'text-body3'"
 			class="q-ml-md"
+			:height="userStore.isMobile ? '40px' : '32px'"
 			:label="t('base.share')"
 			icon="sym_r_share"
 		>
@@ -66,13 +67,13 @@ const copyUrl = () => {
 		.then(() => {
 			BtNotify.show({
 				type: NotifyDefinedType.SUCCESS,
-				message: 'Copied URL to clipboard'
+				message: t('copy_profile_url_success')
 			});
 		})
-		.catch((e) => {
+		.catch(() => {
 			BtNotify.show({
 				type: NotifyDefinedType.FAILED,
-				message: 'Copied failure ' + e.message
+				message: t('copy_profile_url_failed')
 			});
 		});
 };

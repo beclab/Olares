@@ -175,7 +175,7 @@ export enum ALIGNMENT_TYPE {
 
 export enum FONT_TYPE {
 	ROBOTO = 'Roboto',
-	POPINS = 'Popins',
+	POPINS = 'Poppins',
 	ARVO = 'Arvo',
 	BITTER = 'Bitter',
 	RIGHTEOUS = 'Righteous',

@@ -7,7 +7,7 @@
 					<Quota class="q-mt-sm"></Quota>
 				</q-card>
 				<q-card class="my-card" flat>
-					<MyTitle size="lg">Pods</MyTitle>
+					<MyTitle size="lg">{{ $t('PODS') }}</MyTitle>
 					<div class="row items-center q-mt-xs">
 						<div class="row q-col-gutter-x-md">
 							<QInputStyle>

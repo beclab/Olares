@@ -21,7 +21,7 @@ import {
 	TransferStatus,
 	TransferFront
 } from 'src/utils/interface/transfer';
-import { getFileIcon } from '@bytetrade/core';
+import { getFileIcon, getFilePreviewType, PreviewType } from '@bytetrade/core';
 import { getextension } from 'src/utils/utils';
 import md5 from 'js-md5';
 import * as files from './utils';
@@ -229,7 +229,7 @@ export default class Awss3DataAPI extends DriveDataAPI {
 	}
 
 	async formatFileContent(file: FileItem): Promise<FileItem> {
-		if (!['text', 'txt', 'textImmutable'].includes(file.type)) {
+		if (getFilePreviewType(file.name) !== PreviewType.TXT) {
 			return file;
 		}
 		try {

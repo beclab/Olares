@@ -1,5 +1,4 @@
-import { notifyFailed } from 'src/utils/settings/btNotify';
-import { AppService } from 'src/stores/market/appService';
+import { AppService } from 'src/services/market/appOperation/appService';
 import { useAppStore } from 'src/stores/market/appStore';
 import { BtDialog, useColor } from '@bytetrade/ui';
 import { useI18n } from 'vue-i18n';
@@ -13,6 +12,9 @@ import {
 	canUpgrade,
 	isCloneApp,
 	isFailed,
+	isMultiInstanceApp,
+	isTemplateApp,
+	isTemplateInstance,
 	isUninstallable,
 	uninstalledApp
 } from 'src/constant/config';
@@ -37,6 +39,7 @@ export default function useAppAction(props: any) {
 			(showResume.value ||
 				showUninstall.value ||
 				showOpenInUpgrade.value ||
+				showUpdateInStop.value ||
 				showStop.value ||
 				showRetry.value ||
 				showRemoveLocal.value ||
@@ -48,14 +51,31 @@ export default function useAppAction(props: any) {
 		return canInstallingCancel(props.item.status);
 	});
 
-	const supportClone = computed(() => {
-		const aggregation = appStore.getAppAggregationInfo(
-			props.appName,
-			props.sourceId
-		);
-		return aggregation?.app_full_info?.app_info?.app_entry?.options
-			?.allowMultipleInstall;
-	});
+	const appSimpleInfo = computed(
+		() =>
+			appStore.getAppAggregationInfo(props.appName, props.sourceId)
+				?.app_simple_latest?.app_simple_info
+	);
+
+	const supportClone = computed(() => isMultiInstanceApp(appSimpleInfo.value));
+
+	// Is the current app a template body (no installable body, Create instances).
+	// A clone instance shares the template chart's simpleInfo (so templateOnly is
+	// also true on it); exclude clones so instances are treated as regular apps.
+	const isTemplate = computed(
+		() => isTemplateApp(appSimpleInfo.value) && !isCloneApp(props.item?.status)
+	);
+
+	// Is the current status a template instance (a clone whose own simpleInfo is
+	// a template). Read from the instance's own simple — never look up the body.
+	const isTemplateInstanceApp = computed(() =>
+		isTemplateInstance(props.item?.status, appSimpleInfo.value)
+	);
+
+	// Number of instances created from this template body.
+	const instancesCount = computed(
+		() => appStore.getCloneApp(props.appName, props.sourceId).length
+	);
 
 	const showClone = computed(() => {
 		return (
@@ -73,6 +93,10 @@ export default function useAppAction(props: any) {
 		);
 	});
 
+	const showTemplateRemove = computed(
+		() => props.manager && showRemoveLocal.value
+	);
+
 	const showUninstall = computed(() => {
 		return isUninstallable(props.item.status);
 	});
@@ -80,6 +104,13 @@ export default function useAppAction(props: any) {
 	const showOpenInUpgrade = computed(() => {
 		return (
 			props.item.status.state === APP_STATUS.RUNNING &&
+			canUpgrade(props.item, props.appName, props.sourceId)
+		);
+	});
+
+	const showUpdateInStop = computed(() => {
+		return (
+			props.item.status.state === APP_STATUS.STOP.COMPLETED &&
 			canUpgrade(props.item, props.appName, props.sourceId)
 		);
 	});
@@ -100,6 +131,9 @@ export default function useAppAction(props: any) {
 		);
 	});
 
+	// Reused for both "Clone" (multi-instance body) and "Create" (template body).
+	// For a template body the body itself is never installed, so app_name is the
+	// template chart name.
 	function onClone() {
 		if (!props.item || !props.item.status) {
 			return;
@@ -108,7 +142,10 @@ export default function useAppAction(props: any) {
 			props.item.status,
 			{
 				app_name: props.appName,
-				source: props.sourceId
+				source: props.sourceId,
+				// Template body has no installable body; flag template instance creation
+				// so the backend and the clone dialog title can branch accordingly.
+				...(isTemplate.value ? { templateClone: true } : {})
 			},
 			$q
 		);
@@ -132,9 +169,24 @@ export default function useAppAction(props: any) {
 		if (!props.item || !props.item.status) {
 			return;
 		}
-		AppService.resumeApp(props.item.status, {
+		AppService.resumeApp(
+			props.item.status,
+			{
+				app_name: props.appName,
+				source: props.sourceId
+			},
+			$q
+		);
+	}
+
+	function onUpdate() {
+		if (!props.item || !props.item.status) {
+			return;
+		}
+		AppService.upgradeApp(props.item.status, {
 			app_name: props.appName,
-			source: props.sourceId
+			source: props.sourceId,
+			version: props.version
 		});
 	}
 
@@ -211,7 +263,7 @@ export default function useAppAction(props: any) {
 			await AppService.cancelInstallingApp(props.item.status, {
 				app_name: props.appName,
 				source: props.sourceId,
-				version: props.version
+				version: props.item?.version
 			});
 		}
 	}
@@ -221,29 +273,6 @@ export default function useAppAction(props: any) {
 			return;
 		}
 		if (uninstalledApp(props.item.status)) {
-			//has clone app return
-			if (supportClone.value) {
-				const cloneAppList: string[] = [];
-				appStore.appStatusMap.forEach((statusLatest, combinedId) => {
-					const { sourceId } = appStore.splitCombinedId(combinedId);
-					if (
-						statusLatest &&
-						isCloneApp(statusLatest.status) &&
-						!uninstalledApp(statusLatest.status) &&
-						statusLatest.status.rawAppName === props.appName &&
-						sourceId === props.sourceId
-					) {
-						cloneAppList.push(combinedId);
-					}
-				});
-
-				if (cloneAppList.length > 0) {
-					notifyFailed(
-						'Removal of the installation package is prohibited as there are cloned versions of the current application.'
-					);
-					return;
-				}
-			}
 			BtDialog.show({
 				title: t('app.remove'),
 				message: t(
@@ -285,7 +314,7 @@ export default function useAppAction(props: any) {
 				await AppService.cancelInstallingApp(props.item.status, {
 					app_name: props.appName,
 					source: props.sourceId,
-					version: props.version
+					version: props.item?.version
 				});
 				break;
 			case APP_STATUS.DOWNLOAD.FAILED:
@@ -306,7 +335,8 @@ export default function useAppAction(props: any) {
 					{
 						app_name: props.appName,
 						source: props.sourceId,
-						version: props.version
+						version: props.item?.version,
+						deleteData: false
 					},
 					$q
 				);
@@ -319,10 +349,14 @@ export default function useAppAction(props: any) {
 				});
 				break;
 			case APP_STATUS.RESUME.FAILED:
-				await AppService.resumeApp(props.item.status, {
-					app_name: props.appName,
-					source: props.sourceId
-				});
+				await AppService.resumeApp(
+					props.item.status,
+					{
+						app_name: props.appName,
+						source: props.sourceId
+					},
+					$q
+				);
 				break;
 			case APP_STATUS.STOP.FAILED:
 				await AppService.stopApp(
@@ -347,7 +381,8 @@ export default function useAppAction(props: any) {
 				{
 					app_name: props.appName,
 					source: props.sourceId,
-					version: props.version
+					version: props.item?.version,
+					deleteData: false
 				},
 				$q
 			);
@@ -360,12 +395,18 @@ export default function useAppAction(props: any) {
 		showMore,
 		showClone,
 		onClone,
+		isTemplate,
+		isTemplateInstanceApp,
+		instancesCount,
 		showRemoveLocal,
+		showTemplateRemove,
 		onRemoveLocal,
 		showUninstall,
 		onUninstall,
 		showOpenInUpgrade,
 		onUpdateOpen,
+		showUpdateInStop,
+		onUpdate,
 		showRetry,
 		onRetry,
 		showStop,

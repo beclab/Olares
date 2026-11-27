@@ -6,7 +6,7 @@
 			v-model:text="blockRef.nickName"
 		/>
 		<div class="edit-label full-width q-mt-lg">
-			{{ t('blocks.url_or_email') + '(' + t('base.required') + ')' }}
+			{{ t('blocks.url_or_email_required') }}
 		</div>
 		<edit-view
 			v-if="userStore.user"
@@ -18,11 +18,11 @@
 			<bio-image v-model:img-url="blockRef.icon" />
 			<div class="column justify-between link-text">
 				<edit-view
-					:placeholder="t('base.title') + '(' + t('base.required') + ')'"
+					:placeholder="t('blocks.link_title_required')"
 					v-model="blockRef.title"
 				/>
 				<edit-view
-					:placeholder="t('base.subtitle') + '(' + t('base.optional') + ')'"
+					:placeholder="t('blocks.link_subtitle_optional')"
 					v-model="blockRef.subTitle"
 				/>
 			</div>

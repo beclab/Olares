@@ -15,6 +15,16 @@ defineProps({
 });
 </script>
 
+<style lang="scss" scoped>
+.bt-menu {
+	width: auto;
+}
+</style>
+
+<!--
+	QMenu teleports its popup (carrying the `.q-menu` class) to <body>, so scoped
+	styles can't reach it. These rules must stay global.
+-->
 <style lang="scss">
 .q-menu {
 	border-radius: 8px !important;
@@ -22,19 +32,15 @@ defineProps({
 	box-shadow: 0 4px 10px 0 #00000033 !important;
 }
 
-::v-deep(.q-field__native .q-field__prefix .q-field__suffix .q-field__input) {
+.q-field__native .q-field__prefix .q-field__suffix .q-field__input {
 	padding: 0 !important;
 }
 
-::v-deep(.q-field--dense .q-field__control .q-field--dense .q-field__marginal) {
+.q-field--dense .q-field__control .q-field--dense .q-field__marginal {
 	height: auto !important;
 }
 
-::v-deep(.q-field__control) {
+.q-field__control {
 	height: auto !important;
-}
-
-.bt-menu {
-	width: auto;
 }
 </style>

@@ -1,7 +1,11 @@
 <template>
 	<page-container :model-value="false" :title-height="56">
 		<template v-slot:title>
-			<title-bar :show="true" title="" @onReturn="Router.back()" />
+			<title-bar
+				:show="true"
+				title=""
+				@onReturn="handleMarketBack(Router, route)"
+			/>
 		</template>
 		<template v-slot:page>
 			<adaptive-layout>
@@ -136,6 +140,7 @@ import {
 	TopicInfo
 } from '../../../constant/constants';
 import { useAppStore } from '../../../stores/market/appStore';
+import { handleMarketBack } from '../../../utils/marketBack';
 
 const Router = useRouter();
 const route = useRoute();

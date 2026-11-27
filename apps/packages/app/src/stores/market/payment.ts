@@ -15,6 +15,7 @@ import {
 	startBackendPolling,
 	submitTransaction
 } from 'src/api/market/private/payment';
+import { i18n } from 'src/boot/i18n';
 
 export const usePaymentStore = defineStore('payment', {
 	state: () => {
@@ -43,12 +44,14 @@ export const usePaymentStore = defineStore('payment', {
 				return;
 			}
 			if (!result) {
-				notifyFailed('getAppPaymentStatus result null');
+				notifyFailed(i18n.global.t('getAppPaymentStatus result null'));
 				return;
 			}
 			const appStore = useAppStore();
 			if (result.status === PAYMENT_STATUS.SYNCING) {
-				notifySuccess(t('The backend is querying data, please wait.'));
+				notifySuccess(
+					i18n.global.t('The backend is querying data, please wait.')
+				);
 			}
 			appStore.updateLocalStatus(appId, sourceId, {
 				status: result.status
@@ -77,7 +80,7 @@ export const usePaymentStore = defineStore('payment', {
 				return;
 			}
 			if (!result) {
-				notifyFailed('recoverAppPurchase result null');
+				notifyFailed(i18n.global.t('recoverAppPurchase result null'));
 				return;
 			}
 
@@ -148,12 +151,14 @@ export const usePaymentStore = defineStore('payment', {
 				return;
 			}
 			if (!result) {
-				notifyFailed('getAppPurchase result null');
+				notifyFailed(i18n.global.t('getAppPurchase result null'));
 				return;
 			}
 			const appStore = useAppStore();
 			if (result.status === PAYMENT_STATUS.SYNCING) {
-				notifySuccess('The backend is querying data, please wait.');
+				notifySuccess(
+					i18n.global.t('The backend is querying data, please wait.')
+				);
 			}
 			appStore.updateLocalStatus(appId, sourceId, {
 				status: result.status
@@ -172,7 +177,7 @@ export const usePaymentStore = defineStore('payment', {
 				}
 				const paymentData = result.payment_data as PaymentOrderData;
 				if (!paymentData) {
-					notifyFailed('payment data empty');
+					notifyFailed(i18n.global.t('payment data empty'));
 					return;
 				}
 				paymentWithProduct(paymentData)
@@ -183,13 +188,15 @@ export const usePaymentStore = defineStore('payment', {
 						})
 							.then(() => {
 								notifySuccess(
-									'Transaction submitted. Awaiting confirmation...'
+									i18n.global.t(
+										'Transaction submitted. Awaiting confirmation...'
+									)
 								);
 							})
 							.catch((error) => {
 								const msg =
 									error instanceof Error ? error.message : String(error);
-								notifyFailed(msg || 'Payment failed');
+								notifyFailed(msg || i18n.global.t('Payment failed'));
 							});
 
 						pollingService.startTxPolling(txHash, {
@@ -200,13 +207,15 @@ export const usePaymentStore = defineStore('payment', {
 								startBackendPolling(appId, sourceId, txHash, productId)
 									.then(() => {
 										notifySuccess(
-											'Transaction confirmed. Waiting for backend data synchronization...'
+											i18n.global.t(
+												'Transaction confirmed. Waiting for backend data synchronization...'
+											)
 										);
 									})
 									.catch((error) => {
 										const msg =
 											error instanceof Error ? error.message : String(error);
-										notifyFailed(msg || 'Payment failed');
+										notifyFailed(msg || i18n.global.t('Payment failed'));
 									});
 							},
 							onError: (error) => {
@@ -219,7 +228,7 @@ export const usePaymentStore = defineStore('payment', {
 					})
 					.catch((error) => {
 						const msg = error instanceof Error ? error.message : String(error);
-						notifyFailed(msg || 'Payment failed');
+						notifyFailed(msg || i18n.global.t('Payment failed'));
 					});
 			};
 
@@ -304,12 +313,16 @@ export const usePaymentStore = defineStore('payment', {
 								result.frontend_data.productId
 							)
 								.then(() => {
-									notifySuccess('Success, waiting for data synchronization...');
+									notifySuccess(
+										i18n.global.t(
+											'Success, waiting for data synchronization...'
+										)
+									);
 								})
 								.catch((error) => {
 									const msg =
 										error instanceof Error ? error.message : String(error);
-									notifyFailed(msg || 'Payment failed');
+									notifyFailed(msg || i18n.global.t('Payment failed'));
 								});
 						} else {
 							BtDialog.show({
@@ -329,17 +342,25 @@ export const usePaymentStore = defineStore('payment', {
 									startBackendPolling(appId, sourceId, res as string, productId)
 										.then(() => {
 											notifySuccess(
-												'Success, waiting for data synchronization...'
+												i18n.global.t(
+													'Success, waiting for data synchronization...'
+												)
 											);
 										})
 										.catch((error) => {
 											const msg =
 												error instanceof Error ? error.message : String(error);
-											notifyFailed(msg || 'Payment failed');
+											notifyFailed(msg || i18n.global.t('Payment failed'));
 										});
 								} else {
 									notifyFailed(
-										`Failed to obtain txHash ${res} and productId ${productId}`
+										i18n.global.t(
+											'Failed to obtain txHash {txHash} and productId {productId}',
+											{
+												txHash: res,
+												productId: productId
+											}
+										)
 									);
 								}
 							});

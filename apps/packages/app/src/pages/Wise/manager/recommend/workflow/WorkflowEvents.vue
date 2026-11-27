@@ -81,7 +81,6 @@ async function query2() {
 
 async function query1() {
 	const url =
-		//'/api/v1/stream/events/' +
 		'/api/v1/workflow-events/' +
 		argoStore.namespace +
 		'?listOptions.fieldSelector=metadata.namespace=' +

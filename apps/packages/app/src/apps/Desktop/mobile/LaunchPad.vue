@@ -1,6 +1,10 @@
 <template>
 	<div
 		class="Launch_pad_page in-center-page"
+		:class="{
+			'is-edit-mode': isDisplay,
+			'is-dragging': isInDrag
+		}"
 		@touchstart.stop
 		@touchmove.stop
 		@click.prevent="dismiss"
@@ -47,7 +51,7 @@
 					v-model="slide"
 					transition-prev="slide-right"
 					transition-next="slide-left"
-					swipeable
+					:swipeable="!isInDrag"
 					:animated="carouselAnimated"
 					ref="carousel"
 					class="bg-grey-1 shadow-2 rounded-borders q_vackgr_carousel"
@@ -57,37 +61,42 @@
 						:key="'deskp0' + Indexlist"
 						:name="Indexlist"
 						class="column_launchpadapps column no-wrap column_none"
+						:data-lp-slide="Indexlist"
 						:style="slideGridStyle"
 					>
 						<div
 							class="row items-center justify-center pad-app-item"
-							:class="isDisplay ? 'vibrate-1' : ''"
+							:class="{
+								'drag-start':
+									dragLaunchAppId === appStore.desktopApps[element].id
+							}"
 							v-for="element in appStore.launchPadApps[Indexlist]"
 							:key="appStore.desktopApps[element].id"
-							style="
-								border-radius: 16px;
-								-webkit-touch-callout: none;
-								-webkit-user-select: none;
-								-khtml-user-select: none;
-								-moz-user-select: none;
-								-ms-user-select: none;
-								user-select: none;
-								position: relative;
-							"
 							:id="appStore.desktopApps[element].id"
+							@pointerdown="
+								(e) => onTilePointerDown(e, appStore.desktopApps[element].id)
+							"
 						>
-							<div
-								:style="
-									isDisplay && !appStore.desktopApps[element].isSysApp
-										? 'display: block;'
-										: 'display: none;'
-								"
-								class="delete_launch"
-								@click.stop="
-									deleteLaunch(appStore.desktopApps[element], $event)
-								"
-							/>
 							<div class="relative-position" style="font-size: 0px">
+								<div
+									:style="
+										isDisplay &&
+										!appStore.desktopApps[element].isSysApp &&
+										(appStore.desktopApps[element].kind === 'bookmark' ||
+											(!isDoingState(
+												appStore.desktopApps[element].fatherState
+											) &&
+												isUninstallableState(
+													appStore.desktopApps[element].fatherState
+												)))
+											? 'display: block;'
+											: 'display: none;'
+									"
+									class="delete_launch"
+									@click.stop="
+										deleteLaunch(appStore.desktopApps[element], $event)
+									"
+								></div>
 								<div
 									class="install_loading_status"
 									v-if="isDoingState(appStore.desktopApps[element].fatherState)"
@@ -98,17 +107,12 @@
 								</div>
 
 								<img
-									v-touch-hold:1200.mouse="handleHold"
 									:id="appStore.desktopApps[element].id"
-									@click.stop="openWindow(appStore.desktopApps[element])"
+									@click.stop="onTileClick(appStore.desktopApps[element])"
 									@contextmenu.prevent
 									draggable="false"
 									class="pad-img"
-									:key="
-										appStore.desktopApps[element].id +
-										'-' +
-										appStore.desktopApps[element].fatherState
-									"
+									:key="appStore.desktopApps[element].id"
 									:src="appStore.desktopApps[element].icon"
 									:style="`border-radius: 15px;${
 										appStore.desktopApps[element].state ==
@@ -119,11 +123,13 @@
 											: 'filter: grayscale(0%)'
 									}`"
 								/>
+								<BookmarkBadge
+									v-if="appStore.desktopApps[element].kind === 'bookmark'"
+								/>
 							</div>
 							<div
 								class="launchpadapps_name"
 								:data-index="appStore.desktopApps[element].id"
-								@click.stop
 							>
 								<span
 									class="app_state q-mr-xs suspend_color"
@@ -139,7 +145,7 @@
 										ENTRANCE_STATUS.NOT_READY
 									"
 								></span>
-								{{ appStore.desktopApps[element].title }}
+								{{ getAppDisplayTitle(appStore.desktopApps[element], t) }}
 							</div>
 						</div>
 					</q-carousel-slide>
@@ -169,20 +175,24 @@
 
 <script lang="ts" setup>
 import ConfirmDialog from '../components/ConfirmDialog.vue';
+import BookmarkBadge from '../components/BookmarkBadge.vue';
 import { APP_STATUS, ENTRANCE_STATUS } from 'src/constant/constants';
 import { useApplicationStore } from 'src/stores/desktop/app';
+import { BOOKMARK_RAW_PREFIX } from 'src/types/desktop-layout';
 import { DesktopAppInfo, AppClickInfo } from '../type/types';
 import { notifyFailed } from 'src/utils/settings/btNotify';
-import { AppService } from 'src/stores/market/appService';
+import { AppService } from 'src/services/market/appOperation/appService';
 import { useAppStore } from 'src/stores/market/appStore';
-import { isDoingState } from 'src/constant/config';
+import { isDoingState, isUninstallableState } from 'src/constant/config';
 import { useI18n } from 'vue-i18n';
 import { useQuasar } from 'quasar';
-import { onBeforeUnmount, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useMobileLaunchpad } from 'src/application/mobile';
 import { useLaunchpadSearch } from 'src/application/launchpadSearch';
+import { useMobileLaunchpadDragReorder } from 'src/application/useMobileLaunchpadDragReorder';
 import { useStableViewportHeight } from 'src/composables/useStableViewportHeight';
-import { borderRadiusFormat } from 'src/utils/desktop/utils';
+import { busOn, busOff } from 'src/utils/bus';
+import { getAppDisplayTitle } from 'src/stores/desktop/app';
 
 defineProps({
 	isShowLaunc: {
@@ -200,7 +210,12 @@ const launchPadAppsEl = ref<HTMLElement | null>(null);
 const $q = useQuasar();
 const appStore = useApplicationStore();
 
-const isDisplay = ref<boolean>(false);
+const isDisplay = computed<boolean>({
+	get: () => appStore.launchpadShakeMode,
+	set: (v) => {
+		appStore.launchpadShakeMode = v;
+	}
+});
 const carousel = ref();
 const searchInputRef = ref<{ blur?: () => void } | null>(null);
 let slide = ref(0);
@@ -212,7 +227,11 @@ const {
 	focusSearch,
 	blurSearch,
 	updateSearch,
-	cleanSearchVal
+	cleanSearchVal,
+	exitSearchForDrag,
+	applyPendingSlideRestoreAfterDrag,
+	clearPendingSlideAfterSearchDrag,
+	resumeCarouselAfterSearchDrag
 } = useLaunchpadSearch(slide, searchInputRef);
 
 const { stableHeight, keyboardOpen } = useStableViewportHeight();
@@ -225,8 +244,34 @@ const { slideGridStyle } = useMobileLaunchpad(
 	keyboardOpen
 );
 
-let isDelete = false;
-let lastDragFinishTime = 0;
+const {
+	dragLaunchAppId,
+	isInDrag,
+	lastDragFinishTime,
+	onTilePointerDown,
+	shouldSuppressClick,
+	dispose: disposeMobileDrag
+} = useMobileLaunchpadDragReorder({
+	slide,
+	carousel,
+	carouselAnimated,
+	launchpadMount: launchpadPage,
+	appStore,
+	isDisplay,
+	exitSearchForDrag,
+	applyPendingSlideRestoreAfterDrag,
+	clearPendingSlideAfterSearchDrag,
+	resumeCarouselAfterSearchDrag
+});
+
+const onTileClick = (item: DesktopAppInfo) => {
+	if (shouldSuppressClick()) return;
+	if (isDisplay.value) {
+		isDisplay.value = false;
+		return;
+	}
+	void openWindow(item);
+};
 
 const openWindow = async (item: DesktopAppInfo) => {
 	console.log('openWindow', item);
@@ -242,7 +287,8 @@ const openWindow = async (item: DesktopAppInfo) => {
 			componentProps: {
 				title: t('confirmation'),
 				message: t('message_desktop.suspended'),
-				icon: item.icon
+				icon: item.icon,
+				okTitle: t('i_got_it')
 			}
 		});
 		return false;
@@ -254,7 +300,8 @@ const openWindow = async (item: DesktopAppInfo) => {
 			componentProps: {
 				title: t('confirmation'),
 				message: t('message_desktop.crashed'),
-				icon: item.icon
+				icon: item.icon,
+				okTitle: t('i_got_it')
 			}
 		});
 		return false;
@@ -267,51 +314,68 @@ const openWindow = async (item: DesktopAppInfo) => {
 };
 
 const dismiss = () => {
-	if (isDelete) {
-		isDelete = false;
+	if (isDisplay.value) {
 		isDisplay.value = false;
-	} else {
-		if (isFocus.value) {
-			cleanSearchVal();
-			isFocus.value = false;
-		}
-		emits('dismiss');
+		return;
 	}
+	if (isFocus.value) {
+		cleanSearchVal();
+		isFocus.value = false;
+	}
+	emits('dismiss');
 };
 
-const handleHold = () => {
-	let now = new Date().getTime();
-	let diff = now - lastDragFinishTime;
-	if (diff < 1000) {
+async function deleteLaunch(appInfo: DesktopAppInfo, e: any) {
+	if (appInfo.kind === 'bookmark') {
+		const bookmarkId = appInfo.id.startsWith('bdesk:' + BOOKMARK_RAW_PREFIX)
+			? appInfo.id.slice(('bdesk:' + BOOKMARK_RAW_PREFIX).length)
+			: '';
+		if (!bookmarkId) {
+			return;
+		}
+		$q.dialog({
+			component: ConfirmDialog,
+			componentProps: {
+				title: t('desktop_settings.delete_bookmark_title'),
+				message: t('desktop_settings.delete_bookmark_msg', {
+					name: appInfo.title || appInfo.name
+				}),
+				showCancel: true,
+				persistent: true
+			}
+		}).onOk(async () => {
+			await appStore.deleteBookmarkFromDesktop(bookmarkId);
+		});
 		return;
 	}
 
-	isDelete = true;
-
-	isDisplay.value = true;
-};
-
-function deleteLaunch(appInfo: DesktopAppInfo, e: any) {
 	const marketAppStore = useAppStore();
 	const marketApp = marketAppStore.findAppByName(
 		appInfo && appInfo.fatherName ? appInfo.fatherName : ''
 	);
+	if (
+		isDoingState(appInfo.fatherState) ||
+		!isUninstallableState(appInfo.fatherState)
+	) {
+		return;
+	}
+
 	if (marketApp) {
-		e.target.parentNode.classList.add('uninstallAni');
-		setTimeout(async () => {
-			await AppService.uninstallApp(
-				marketApp.status,
-				{
-					app_name: marketApp.appId,
-					source: marketApp.sourceId,
-					version: marketApp.version
-				},
-				$q
-			);
-			e.target.parentNode.classList.remove('uninstallAni');
-		}, 500);
+		const succeeded = await AppService.uninstallApp(
+			marketApp.status,
+			{
+				app_name: marketApp.appId,
+				source: marketApp.sourceId,
+				version: marketApp.version,
+				deleteData: false
+			},
+			$q
+		);
+		if (succeeded) {
+			appStore.uninstall_application(appInfo.fatherName);
+		}
 	} else {
-		notifyFailed('Failed to retrieve app information');
+		notifyFailed(t('error.app_info_get_failure'));
 	}
 }
 
@@ -319,9 +383,20 @@ const goto = (value: number) => {
 	carousel.value.goTo(value);
 };
 
+const onHardwareBack = () => {
+	dismiss();
+};
+
+onMounted(() => {
+	busOn('backButton', onHardwareBack);
+});
+
 onBeforeUnmount(() => {
+	busOff('backButton', onHardwareBack);
+	disposeMobileDrag();
 	cleanSearchVal();
 	updateSearch('');
+	appStore.launchpadShakeMode = false;
 });
 </script>
 
@@ -332,6 +407,11 @@ onBeforeUnmount(() => {
 
 .drag-start {
 	opacity: 0;
+}
+
+.dragging-pause-shake {
+	animation: none !important;
+	-webkit-animation: none !important;
 }
 
 .dialog_box {
@@ -385,6 +465,29 @@ onBeforeUnmount(() => {
 	height: 100% !important;
 	overflow: hidden !important;
 	touch-action: pan-x;
+	contain: layout paint;
+}
+
+.pad-app-item {
+	border-radius: 16px;
+	-webkit-touch-callout: none;
+	user-select: none;
+	position: relative;
+	touch-action: none;
+	contain: layout style;
+}
+
+.Launch_pad_page.is-edit-mode:not(.is-dragging) {
+	.pad-app-item {
+		animation: vibrate-1 0.3s linear infinite both;
+		-webkit-animation: vibrate-1 0.3s linear infinite both;
+	}
+}
+
+.Launch_pad_page.is-dragging {
+	.pad-app-item {
+		will-change: transform;
+	}
 }
 
 .dragMask {
@@ -409,6 +512,7 @@ onBeforeUnmount(() => {
 	grid-template-rows: repeat(var(--lp-rows, 4), var(--lp-row-track));
 	grid-template-columns: repeat(var(--lp-cols, 4), minmax(0, 1fr));
 	grid-row-gap: 30px;
+	contain: layout style;
 
 	.pad-img {
 		width: 58px;
@@ -461,8 +565,8 @@ onBeforeUnmount(() => {
 		background-position: center;
 		background-size: 60% 60%;
 		position: absolute;
-		top: -14px;
-		left: 7px;
+		top: -16px;
+		left: -16px;
 		z-index: 99;
 		cursor: pointer;
 	}
@@ -575,6 +679,7 @@ onBeforeUnmount(() => {
 		width: 100%;
 		display: flex;
 		flex-wrap: wrap;
+		justify-content: center;
 
 		.launch_pad_Dragg {
 			width: 100%;

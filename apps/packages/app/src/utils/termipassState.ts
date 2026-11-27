@@ -1,7 +1,6 @@
 import { OlaresInfo } from '@bytetrade/core';
-import { ErrorCode, UserItem } from '@didvault/sdk/src/core';
+import type { UserItem } from 'src/account/localUserVault';
 // import axios from 'axios';
-import { app, getSenderUrl, setSenderUrl } from 'src/globals';
 import { useUserStore } from 'src/stores/user';
 import {
 	NetworkUpdateMode,
@@ -40,10 +39,7 @@ enum TermipassActionStatus {
 	None = 0,
 	UserSetupFinished,
 	TerminusPinged,
-	NeedReactive,
-	SrpInvalid,
 	SsoTokenInvalid,
-	SrpValid,
 	RefreshTokenInvalid,
 	TokenNoNeedRefresh,
 	TokenRefreshed,
@@ -56,19 +52,16 @@ export interface TermiPassStateInterface {
 
 type TermiPassStateCacheInfo = 'termimusInfo' | 'vpnStateInfo';
 
-type TermiPassCheckItem = 'termimusInfo' | 'srpToken' | 'refreshToken';
+type TermiPassCheckItem = 'termimusInfo' | 'refreshToken';
 
 interface CacheInfo<T> {
 	cacheDate?: Date;
 	info: T;
 }
-// termipassStore.srpInvalid = false;
-// 				termipassStore.ssoInvalid = false;
 interface CheckHistoryResult {
 	before?:
 		| {
 				reactivation: boolean;
-				srpInvalid: boolean;
 				ssoInvalid: boolean;
 		  }
 		| {
@@ -79,7 +72,6 @@ interface CheckHistoryResult {
 	after?:
 		| {
 				reactivation: boolean;
-				srpInvalid: boolean;
 				ssoInvalid: boolean;
 		  }
 		| {
@@ -108,6 +100,28 @@ const CheckVPNStatusInfoTimeInterval = 30;
 
 const UserCheckHistoryMaxLength = 100;
 
+// A single forced token refresh rejection (e.g. right after activation while
+// VPN/session is still settling) must not immediately surface "need login".
+// Require this many consecutive hard refresh failures before escalating to
+// RefreshTokenInvalid.
+const RefreshTokenInvalidConfirmCount = 3;
+
+// Persistent-unreachable heuristic: when the olares has been uninstalled for a
+// long time, requests fail as plain network errors instead of the inactive
+// status. After this many consecutive hard failures spanning at
+// least this duration, and only if the phone clearly has public internet, we
+// escalate to `reactivation` so the "Olares inactive" entry can appear.
+const OlaresUnreachableCountMax = 3;
+
+const OlaresUnreachableDurationMs = 10 * 60 * 1000;
+
+const PublicInternetProbeUrls = [
+	'https://www.gstatic.com/generate_204',
+	'https://cloudflare.com/cdn-cgi/trace'
+];
+
+const PublicInternetProbeTimeoutMs = 1500;
+
 export class TermiPassState {
 	private getVPNHostPeerInfoTimer: NodeJS.Timer | undefined;
 
@@ -116,6 +130,10 @@ export class TermiPassState {
 	private tokenRefreshIng = false;
 
 	private tokenForceRefresh = false;
+
+	// Consecutive hard refresh failures; only escalate to RefreshTokenInvalid
+	// once it reaches RefreshTokenInvalidConfirmCount.
+	private refreshTokenInvalidStreak = 0;
 
 	private terminusInfoRefresh = false;
 
@@ -136,9 +154,17 @@ export class TermiPassState {
 		CheckLogHistoryInterface[]
 	> = {};
 
-	private srpTokenCheck = false;
+	private olaresUnreachable: Record<
+		string,
+		{ count: number; firstAt: number }
+	> = {};
 
-	private srpTokenChecking = false;
+	// Sticky per-user flag: once we have definitively surfaced reactivation
+	// (persistent-unreachable escalation, remote "gone" answer, or a special gone
+	// HTTP status), keep it set so the VPN-off suppression branch cannot silently
+	// flip reactivation back off. Cleared only when the olares becomes reachable
+	// again (or the remote answer arrives).
+	private olaresReactivationConfirmed: Record<string, boolean> = {};
 
 	private appIsActive = true;
 
@@ -164,49 +190,33 @@ export class TermiPassState {
 			step: [],
 			reset: BuildTransition('*', TermipassActionStatus.None, () => {
 				const termipassStore = useTermipassStore();
-				termipassStore.srpInvalid = false;
 				termipassStore.ssoInvalid = false;
 				termipassStore.reactivation = false;
+				this.refreshTokenInvalidStreak = 0;
 			}),
 			goto: BuildTransition<TermipassActionStatus>(
 				'*',
 				(state) => state,
-				(from, to) => {
+				(_from, to) => {
 					const termipassStore = useTermipassStore();
-					if (to == TermipassActionStatus.SrpValid) {
-						termipassStore.srpInvalid = false;
-						termipassStore.ssoInvalid = false;
+					if (to == TermipassActionStatus.SsoTokenInvalid) {
+						this.tokenForceRefresh = true;
+					} else if (to == TermipassActionStatus.RefreshTokenInvalid) {
+						termipassStore.ssoInvalid = true;
 						termipassStore.reactivation = false;
-						this.publicActions.startTokenRefresh();
-					} else if (to == TermipassActionStatus.TokenRefreshed) {
-						if (from == TermipassActionStatus.SsoTokenInvalid) {
-							this.srpTokenCheck = true;
-						} else if (from == TermipassActionStatus.SrpValid) {
-							setTimeout(() => {
+					} else if (
+						to == TermipassActionStatus.TokenRefreshed ||
+						to == TermipassActionStatus.TokenNoNeedRefresh
+					) {
+						if (to == TermipassActionStatus.TokenRefreshed) {
+							termipassStore.ssoInvalid = false;
+						}
+						setTimeout(() => {
+							if (this.stateMachine.state() == to) {
 								this.stateMachine
 									.transition()
 									.goto(TermipassActionStatus.Completed);
-							}, 100);
-						}
-					} else if (to == TermipassActionStatus.SrpInvalid) {
-						termipassStore.srpInvalid = true;
-						termipassStore.ssoInvalid = false;
-						termipassStore.reactivation = false;
-					} else if (to == TermipassActionStatus.SsoTokenInvalid) {
-						this.publicActions.startTokenRefresh();
-					} else if (to == TermipassActionStatus.NeedReactive) {
-						termipassStore.srpInvalid = false;
-						termipassStore.ssoInvalid = false;
-						termipassStore.reactivation = true;
-					} else if (to == TermipassActionStatus.RefreshTokenInvalid) {
-						termipassStore.srpInvalid = false;
-						termipassStore.ssoInvalid = true;
-						termipassStore.reactivation = false;
-					} else if (to == TermipassActionStatus.TokenNoNeedRefresh) {
-						setTimeout(() => {
-							this.stateMachine
-								.transition()
-								.goto(TermipassActionStatus.Completed);
+							}
 						}, 100);
 					}
 				}
@@ -221,7 +231,7 @@ export class TermiPassState {
 			'network_error',
 			async (info: { type: NetworkErrorMode; error: any }) => {
 				const now = new Date().getTime();
-				if (now - this.lastErrorCheckNetworkTimer > 30 * 1000) {
+				if (now - this.lastErrorCheckNetworkTimer > 10 * 1000) {
 					if (!this.needChecking()) {
 						return;
 					}
@@ -238,8 +248,8 @@ export class TermiPassState {
 								info.error
 						});
 					}
-
-					this.srpTokenCheck = true;
+					this.publicActions.startTokenRefresh();
+					this.publicActions.startTerminusInfoRefresh();
 				}
 			}
 		);
@@ -255,7 +265,7 @@ export class TermiPassState {
 				reasonDesc: 'account_update'
 			});
 			await this.actions.ping();
-			this.srpTokenCheck = true;
+			this.publicActions.startTokenRefresh();
 		});
 
 		busOn('network_update', async (mode: NetworkUpdateMode) => {
@@ -279,7 +289,7 @@ export class TermiPassState {
 					reasonDesc: 'network_update:'
 				});
 				await this.actions.ping();
-				this.srpTokenCheck = true;
+				this.publicActions.startTokenRefresh();
 			}
 		});
 
@@ -296,14 +306,14 @@ export class TermiPassState {
 			});
 			await this.actions.init();
 			await this.actions.ping();
-			this.srpTokenCheck = true;
+			this.publicActions.startTokenRefresh();
 		});
 
 		busOn('terminus_update', async () => {
 			setTimeout(async () => {
 				await this.actions.init();
 				await this.actions.ping();
-				this.srpTokenCheck = true;
+				this.publicActions.startTokenRefresh();
 			}, 5000);
 		});
 
@@ -320,9 +330,6 @@ export class TermiPassState {
 		resetCheckEnable: (checkEnable: boolean) => {
 			this.checkEnable = checkEnable;
 		},
-		startSrpTokenCheck: () => {
-			this.srpTokenCheck = true;
-		},
 		getCheckHistory: () => {
 			return this.termiPassStateCheckHistory[this.currentUser.id];
 		},
@@ -332,6 +339,7 @@ export class TermiPassState {
 			) {
 				return;
 			}
+
 			this.stateMachine
 				.transition()
 				.goto(TermipassActionStatus.SsoTokenInvalid);
@@ -390,130 +398,9 @@ export class TermiPassState {
 					this.terminusInfoRefresh = true;
 				}
 				this.publicActions.updateIsLocal(isLocal);
-				this.actions.resetSenderUrl();
 			}
 
 			this.stateMachine.transition().goto(TermipassActionStatus.TerminusPinged);
-		},
-		resetSenderUrl: async () => {
-			if (this.stateMachine.state() < TermipassActionStatus.UserSetupFinished) {
-				return;
-			}
-			if (!getAppPlatform().hookServerHttp) {
-				return;
-			}
-			if (getSenderUrl() != this.currentUser!.vault_url) {
-				setSenderUrl({
-					url: this.currentUser!.vault_url
-				});
-			}
-		},
-		checkSRPValid: async () => {
-			if (this.tokenRefreshIng) {
-				return;
-			}
-
-			if (this.srpTokenChecking) {
-				return;
-			}
-
-			this.srpTokenCheck = false;
-
-			if (!getAppPlatform().hookServerHttp) {
-				return;
-			}
-
-			this.srpTokenChecking = true;
-
-			const termipassStore = useTermipassStore();
-
-			const checkResult: CheckHistoryResult = {
-				before: {
-					reactivation: termipassStore.reactivation,
-					ssoInvalid: termipassStore.ssoInvalid,
-					srpInvalid: termipassStore.srpInvalid
-				},
-				description: ''
-			};
-
-			if (termipassStore.reactivation) {
-				await this.actions.getTerminusInfo(true, false);
-				if (termipassStore.reactivation) {
-					checkResult.after = {
-						reactivation: termipassStore.reactivation,
-						ssoInvalid: termipassStore.ssoInvalid,
-						srpInvalid: termipassStore.srpInvalid
-					};
-					checkResult.description = 'No need to check again app.simpleSync';
-					this.addCheckHistory(this.currentUser.id, {
-						type: 'check',
-						date: new Date(),
-						result: checkResult,
-						checkItem: 'srpToken'
-					});
-					this.srpTokenChecking = false;
-					return;
-				}
-			}
-
-			const result = await app.simpleSync();
-
-			if (result) {
-				checkResult.description = result;
-				if (result == ErrorCode.INVALID_SESSION) {
-					this.stateMachine.transition().goto(TermipassActionStatus.SrpInvalid);
-				} else {
-					if (result == ErrorCode.TOKE_INVILID) {
-						// 400
-						const terminusInfo = await this.actions.getTerminusInfo(false);
-						if (
-							terminusInfo &&
-							((terminusInfo.id &&
-								terminusInfo.id == this.currentUser.olares_device_id) ||
-								(terminusInfo.terminusId &&
-									terminusInfo.terminusId == this.currentUser.olares_device_id))
-						) {
-							this.stateMachine
-								.transition()
-								.goto(TermipassActionStatus.SsoTokenInvalid);
-						} else {
-							this.stateMachine
-								.transition()
-								.goto(TermipassActionStatus.SrpInvalid);
-						}
-					} else {
-						//525
-						if (result == ErrorCode.SERVER_NOT_EXIST) {
-							this.stateMachine
-								.transition()
-								.goto(TermipassActionStatus.NeedReactive);
-							await this.actions.getTerminusInfo(false);
-						} else if (result == ErrorCode.SERVER_ERROR) {
-							if (this.currentUser.isLocal) {
-								await this.actions.ping();
-							} else {
-								await this.actions.getTerminusInfo(false);
-							}
-						}
-					}
-				}
-			} else {
-				this.stateMachine.transition().goto(TermipassActionStatus.SrpValid);
-			}
-
-			checkResult.after = {
-				reactivation: termipassStore.reactivation,
-				ssoInvalid: termipassStore.ssoInvalid,
-				srpInvalid: termipassStore.srpInvalid
-			};
-
-			this.addCheckHistory(this.currentUser.id, {
-				type: 'check',
-				date: new Date(),
-				result: checkResult,
-				checkItem: 'srpToken'
-			});
-			this.srpTokenChecking = false;
 		},
 		// isPing on used in Olares 1.11
 		getTerminusInfo: async (
@@ -539,8 +426,7 @@ export class TermiPassState {
 			const checkResult: CheckHistoryResult = {
 				before: {
 					reactivation: termipassStore.reactivation,
-					ssoInvalid: termipassStore.ssoInvalid,
-					srpInvalid: termipassStore.srpInvalid
+					ssoInvalid: termipassStore.ssoInvalid
 				},
 				description: ''
 			};
@@ -573,15 +459,22 @@ export class TermiPassState {
 					}
 
 					this.publicActions.updateIsLocal(false);
-					this.actions.resetSenderUrl();
 
 					termipassStore.reactivation = true;
+					// Definitive remote answer: clear the unreachable streak and
+					// keep reactivation sticky against later VPN-off suppression.
+					this.resetOlaresUnreachable(this.currentUser.id);
+					this.setReactivationConfirmed(this.currentUser.id, true);
 					await userStore.setUserTerminusInfo(this.currentUser.id, undefined);
 					checkResult.description = data.data;
 				} else {
 					const terminusInfo: OlaresInfo = data.data.data;
 
 					termipassStore.reactivation = false;
+					// Reached the olares successfully: reset the unreachable streak and
+					// clear the sticky reactivation confirmation.
+					this.resetOlaresUnreachable(this.currentUser.id);
+					this.setReactivationConfirmed(this.currentUser.id, false);
 					termipassStore.vpnErrorCount = 0;
 					if (is_local) {
 						await userStore.setUserTerminusInfo(
@@ -592,9 +485,6 @@ export class TermiPassState {
 
 					this.currentUser.tailscale_activated = terminusInfo.tailScaleEnable;
 
-					if (terminusInfo.tailScaleEnable) {
-						this.actions.resetSenderUrl();
-					}
 					checkResult.description = JSON.stringify(terminusInfo);
 					return terminusInfo;
 				}
@@ -605,24 +495,72 @@ export class TermiPassState {
 					termipassStore.updateVpn();
 				}
 
-				if (!isPing && (e.response || process.env.PLATFORM == 'BEX')) {
-					if (
+				if (!isPing) {
+					const isSpecialGoneStatus =
 						process.env.PLATFORM == 'BEX' ||
-						e.response.status == 525 ||
-						e.response.status == 522 ||
-						e.response.status == 530 ||
-						e.response.status > 1000
-					) {
+						(!!e.response &&
+							(e.response.status == 525 ||
+								e.response.status == 522 ||
+								e.response.status == 530 ||
+								e.response.status > 1000));
+
+					if (isSpecialGoneStatus) {
 						if (this.currentUser.tailscale_activated) {
 							const scaleStore = useScaleStore();
-							if (!scaleStore.isOn) {
+							// A VPN-activated machine with VPN off normally just needs the
+							// VPN, so don't flag reactivation yet. But once it has been
+							// unreachable persistently, stop suppressing and surface it.
+							if (
+								!scaleStore.isOn &&
+								!this.reachedReactivationThreshold(this.currentUser.id) &&
+								!this.isReactivationConfirmed(this.currentUser.id)
+							) {
 								termipassStore.reactivation = false;
-								termipassStore.srpInvalid = false;
 								termipassStore.ssoInvalid = false;
 								return;
 							}
 						}
 						termipassStore.reactivation = true;
+						// Sticky: a special gone status is a definitive "olares gone"
+						// signal; keep it surfaced against later VPN-off suppression.
+						this.setReactivationConfirmed(this.currentUser.id, true);
+						this.resetOlaresUnreachable(this.currentUser.id);
+					} else if (!e.response) {
+						// Hard unreachable: no HTTP response at all (DNS failure, timeout,
+						// connection refused). After a long-uninstalled olares the inactive
+						// status never arrives, so only this
+						// shape feeds the persistent-unreachable heuristic. Escalate once
+						// we've failed persistently and the phone clearly has public
+						// internet.
+						if (this.currentUser.tailscale_activated) {
+							const scaleStore = useScaleStore();
+							// VPN-activated machine with VPN off: being unreachable is
+							// expected and only means "turn on the VPN", NOT that Olares is
+							// gone. Don't feed the persistent-unreachable heuristic — doing
+							// so would eventually escalate to `reactivation`, which
+							// `totalStatus` ranks above Requires-VPN and would hide the
+							// "turn on VPN" hint behind a false "Olares inactive". Reset the
+							// streak so VPN-off failures never accumulate toward escalation.
+							// (If reactivation was already confirmed, it stays surfaced.)
+							if (!scaleStore.isOn) {
+								this.resetOlaresUnreachable(this.currentUser.id);
+								return;
+							}
+						}
+						this.recordOlaresUnreachable(this.currentUser.id);
+						await this.maybeEscalateReactivation(this.currentUser.id);
+					} else {
+						// Reachable but erroring (generic 4xx/5xx with a response): we
+						// got *some* response, so this isn't a hard-unreachable data
+						// point — clear the unreachable streak. But a generic gateway
+						// error is NOT proof the olares is back (it can be a transient
+						// 5xx), so do NOT clear the sticky reactivation confirmation
+						// here: doing so while `reactivation` stays true would let a
+						// later special-gone status with VPN off re-enter the
+						// suppression branch and hide the inactive Olares entry. The
+						// sticky flag is cleared only on genuine reachability (the
+						// success branch above, which received terminusInfo).
+						this.resetOlaresUnreachable(this.currentUser.id);
 					}
 				}
 			} finally {
@@ -642,8 +580,7 @@ export class TermiPassState {
 				if (addHistory) {
 					checkResult.after = {
 						reactivation: termipassStore.reactivation,
-						ssoInvalid: termipassStore.ssoInvalid,
-						srpInvalid: termipassStore.srpInvalid
+						ssoInvalid: termipassStore.ssoInvalid
 					};
 					this.addCheckHistory(this.currentUser.id, {
 						type: 'check',
@@ -680,21 +617,31 @@ export class TermiPassState {
 			}
 			this.tokenRefreshIng = true;
 			const result = await userStore.currentUserRefreshToken(
-				this.stateMachine.state() == TermipassActionStatus.SsoTokenInvalid ||
-					this.tokenForceRefresh
+				this.tokenForceRefresh
 			);
-			console.log('result --->', result);
-			this.tokenForceRefresh = false;
-
 			if (result.status) {
+				this.refreshTokenInvalidStreak = 0;
 				this.stateMachine
 					.transition()
 					.goto(TermipassActionStatus.TokenRefreshed);
+				this.tokenForceRefresh = false;
 			} else if (!result.status && result.refreshError) {
-				this.stateMachine
-					.transition()
-					.goto(TermipassActionStatus.RefreshTokenInvalid);
+				// Require consecutive confirmations before surfacing "need login",
+				// so a transient post-activation rejection does not falsely log the
+				// user out. Until the threshold, treat it as no-need (will retry).
+				this.refreshTokenInvalidStreak += 1;
+				if (this.refreshTokenInvalidStreak >= RefreshTokenInvalidConfirmCount) {
+					this.stateMachine
+						.transition()
+						.goto(TermipassActionStatus.RefreshTokenInvalid);
+					this.tokenForceRefresh = false;
+				} else {
+					this.stateMachine
+						.transition()
+						.goto(TermipassActionStatus.TokenNoNeedRefresh);
+				}
 			} else if (!result.status) {
+				this.refreshTokenInvalidStreak = 0;
 				this.stateMachine
 					.transition()
 					.goto(TermipassActionStatus.TokenNoNeedRefresh);
@@ -823,6 +770,96 @@ export class TermiPassState {
 		];
 	}
 
+	private recordOlaresUnreachable(userId: string) {
+		const cur = this.olaresUnreachable[userId];
+		if (!cur || cur.count === 0) {
+			this.olaresUnreachable[userId] = { count: 1, firstAt: Date.now() };
+		} else {
+			cur.count += 1;
+		}
+	}
+
+	private resetOlaresUnreachable(userId: string) {
+		this.olaresUnreachable[userId] = { count: 0, firstAt: 0 };
+	}
+
+	private setReactivationConfirmed(userId: string, confirmed: boolean) {
+		this.olaresReactivationConfirmed[userId] = confirmed;
+	}
+
+	private isReactivationConfirmed(userId: string) {
+		return this.olaresReactivationConfirmed[userId] === true;
+	}
+
+	private reachedReactivationThreshold(userId: string) {
+		const info = this.olaresUnreachable[userId];
+		if (!info || info.count === 0) {
+			return false;
+		}
+		return (
+			info.count >= OlaresUnreachableCountMax &&
+			Date.now() - info.firstAt >= OlaresUnreachableDurationMs
+		);
+	}
+
+	// Lightweight public-internet probe used to avoid false positives: if the
+	// phone itself has no internet, olares being unreachable means nothing.
+	private async hasPublicInternet(): Promise<boolean> {
+		for (const probeUrl of PublicInternetProbeUrls) {
+			const controller = new AbortController();
+			const timer = setTimeout(
+				() => controller.abort(),
+				PublicInternetProbeTimeoutMs
+			);
+			try {
+				await fetch(probeUrl, {
+					method: 'GET',
+					mode: 'no-cors',
+					cache: 'no-store',
+					signal: controller.signal
+				});
+				clearTimeout(timer);
+				return true;
+			} catch (e) {
+				clearTimeout(timer);
+			}
+		}
+		return false;
+	}
+
+	private async maybeEscalateReactivation(userId: string): Promise<boolean> {
+		if (!this.reachedReactivationThreshold(userId)) {
+			return false;
+		}
+		const deviceStore = useDeviceStore();
+		if (!deviceStore.networkOnLine) {
+			return false;
+		}
+		if (!(await this.hasPublicInternet())) {
+			return false;
+		}
+		const termipassStore = useTermipassStore();
+		termipassStore.reactivation = true;
+		termipassStore.ssoInvalid = false;
+		// Mirror the remote "gone" path: clear the cached Olares info so account
+		// UI and flows reading `getUserTerminusInfo` don't keep showing stale data
+		// while reactivation is surfaced.
+		const userStore = useUserStore();
+		await userStore.setUserTerminusInfo(userId, undefined);
+		// Sticky: keep reactivation surfaced so a later special-gone status while
+		// the VPN is off does not re-enter the suppression branch and hide it.
+		this.setReactivationConfirmed(userId, true);
+		this.addCheckHistory(userId, {
+			type: 'reason',
+			date: new Date(),
+			reasonDesc: 'olares persistently unreachable -> reactivation' // i18n-ignore
+		});
+		// Definitive escalation: clear the streak so subsequent failing polls
+		// don't keep re-triggering and spamming the check history.
+		this.resetOlaresUnreachable(userId);
+		return true;
+	}
+
 	private resetCheckIntervalStatus() {
 		if (this.terminusCheckingRunLoopTimer) {
 			return;
@@ -831,51 +868,46 @@ export class TermiPassState {
 		this.terminusCheckingRunLoopTimer = setInterval(() => {
 			this.actions.runloopTasks(ms);
 
-			if (!this.checkEnable || !this.needChecking()) {
+			if (!this.checkEnable || !this.needChecking() || !this.currentUser) {
 				return;
 			}
-			if (this.tokenRefresh || this.tokenForceRefresh) {
+			if (
+				!this.tokenRefreshIng &&
+				(this.tokenRefresh || this.tokenForceRefresh)
+			) {
 				this.tokenRefresh = false;
 				this.actions.refreshCurrentToken();
 			}
 
-			if (this.srpTokenCheck) {
-				this.actions.checkSRPValid();
-			} else {
-				const date = new Date();
-				if (!this.currentUser) {
-					return;
-				}
-				const cacheTerminusInfo = this.getTermiPassStateUserLastCheckCacheInfo(
-					this.currentUser.id,
-					'termimusInfo'
-				);
-				const termipassStore = useTermipassStore();
-				if (
-					this.terminusInfoRefresh ||
-					cacheTerminusInfo == undefined ||
-					(cacheTerminusInfo !== undefined &&
-						(cacheTerminusInfo.cacheDate == undefined ||
-							(cacheTerminusInfo.cacheDate &&
-								cacheTerminusInfo.cacheDate.getTime() / 1000 +
-									(termipassStore.isVPNOn
-										? CheckVPNStatusInfoTimeInterval
-										: CheckTerminusInfoTimeInterval) <
-									date.getTime() / 1000)))
-				) {
-					this.terminusInfoRefresh = false;
-					this.actions
-						.getTerminusInfo(true, undefined, true)
-						.then((olaresInfo) => {
-							if (!olaresInfo) {
-								this.publicActions.updateIsLocal(false);
-							}
-							if (this.currentUser!.isLocal) {
-								this.actions.getTerminusInfo(true, undefined, false);
-							}
-						});
-					return;
-				}
+			const date = new Date();
+			const cacheTerminusInfo = this.getTermiPassStateUserLastCheckCacheInfo(
+				this.currentUser.id,
+				'termimusInfo'
+			);
+			const termipassStore = useTermipassStore();
+			if (
+				this.terminusInfoRefresh ||
+				cacheTerminusInfo == undefined ||
+				(cacheTerminusInfo !== undefined &&
+					(cacheTerminusInfo.cacheDate == undefined ||
+						(cacheTerminusInfo.cacheDate &&
+							cacheTerminusInfo.cacheDate.getTime() / 1000 +
+								(termipassStore.isVPNOn
+									? CheckVPNStatusInfoTimeInterval
+									: CheckTerminusInfoTimeInterval) <
+								date.getTime() / 1000)))
+			) {
+				this.terminusInfoRefresh = false;
+				this.actions
+					.getTerminusInfo(true, undefined, true)
+					.then((olaresInfo) => {
+						if (!olaresInfo) {
+							this.publicActions.updateIsLocal(false);
+						}
+						if (this.currentUser!.isLocal) {
+							this.actions.getTerminusInfo(true, undefined, false);
+						}
+					});
 			}
 		}, 1000);
 	}

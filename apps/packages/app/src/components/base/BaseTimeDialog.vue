@@ -1,7 +1,7 @@
 <template>
 	<bt-custom-dialog
 		ref="CustomRef"
-		:title="t('run_backup_at')"
+		:title="t('set_backup_time')"
 		:skip="false"
 		:ok="t('confirm')"
 		size="small"

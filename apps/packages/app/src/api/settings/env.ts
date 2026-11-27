@@ -1,6 +1,49 @@
 import axios from 'axios';
-import { BaseEnv, EnvDetail, UpdateEnvBody } from 'src/constant';
+import { BaseEnv, UpdateEnvBody } from 'src/constant';
 import { useTokenStore } from 'src/stores/settings/token';
+
+/**
+ * Wraps a fetcher with in-flight de-duplication plus a short-lived cache.
+ * Concurrent callers (e.g. many EnvVarInput instances mounting at once) share
+ * one network request, and repeated reads within the TTL reuse the result.
+ */
+function createCachedFetcher<T>(
+	fetcher: () => Promise<T>,
+	ttlMs: number
+): () => Promise<T> {
+	let cache: { value: T; expireAt: number } | null = null;
+	let inFlight: Promise<T> | null = null;
+
+	return (): Promise<T> => {
+		if (cache && cache.expireAt > Date.now()) {
+			return Promise.resolve(cache.value);
+		}
+		if (inFlight) {
+			return inFlight;
+		}
+		inFlight = fetcher()
+			.then((value) => {
+				cache = { value, expireAt: Date.now() + ttlMs };
+				return value;
+			})
+			.finally(() => {
+				inFlight = null;
+			});
+		return inFlight;
+	};
+}
+
+const ENV_LIST_CACHE_TTL_MS = 5000;
+
+const systemEnvFetcher = createCachedFetcher<BaseEnv[]>(() => {
+	const tokenStore = useTokenStore();
+	return axios.get(`${tokenStore.url}/api/env/systemenvs`);
+}, ENV_LIST_CACHE_TTL_MS);
+
+const userEnvFetcher = createCachedFetcher<BaseEnv[]>(() => {
+	const tokenStore = useTokenStore();
+	return axios.get(`${tokenStore.url}/api/env/userenvs`);
+}, ENV_LIST_CACHE_TTL_MS);
 
 export async function getAppEnv(appName: string): Promise<BaseEnv[]> {
 	const tokenStore = useTokenStore();
@@ -16,8 +59,7 @@ export async function updateAppEnv(
 }
 
 export async function getSystemEnvList(): Promise<BaseEnv[]> {
-	const tokenStore = useTokenStore();
-	return await axios.get(`${tokenStore.url}/api/env/systemenvs`);
+	return systemEnvFetcher();
 }
 
 export async function updateSystemEnv(body: UpdateEnvBody): Promise<BaseEnv> {
@@ -26,8 +68,7 @@ export async function updateSystemEnv(body: UpdateEnvBody): Promise<BaseEnv> {
 }
 
 export async function getUserEnvList(): Promise<BaseEnv[]> {
-	const tokenStore = useTokenStore();
-	return await axios.get(`${tokenStore.url}/api/env/userenvs`);
+	return userEnvFetcher();
 }
 
 export async function addUserEnv(env: BaseEnv) {

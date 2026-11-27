@@ -124,7 +124,7 @@ const BaseMenuItems: Record<MENU_TYPE, MenuItem> = {
 		key: MENU_TYPE.GPU,
 		img: 'settings/imgs/root/gpu.svg',
 		description:
-			'Manage and monitor all available GPU resources across your nodes.'
+			'View and manage computing resources across all nodes in the cluster.'
 	},
 	[MENU_TYPE.Backup]: {
 		label: 'home_menus.backup',
@@ -171,7 +171,7 @@ export enum OLARES_ROLE {
 
 export function getRoleName(role: string) {
 	if (role === OLARES_ROLE.NORMAL) {
-		return i18n.global.t('members');
+		return i18n.global.t('member');
 	} else if (role === OLARES_ROLE.ADMIN) {
 		return i18n.global.t('admin');
 	} else if (role === OLARES_ROLE.OWNER) {
@@ -490,6 +490,9 @@ export const getApplicationStatus = (status: string) => {
 		case APP_STATUS.MODEL.INSTALLED:
 			realStatus = i18n.global.t('app.installed');
 			break;
+		case APP_STATUS.STOP.DEFAULT:
+			realStatus = i18n.global.t('app.stopping');
+			break;
 		case APP_STATUS.STOP.COMPLETED:
 			realStatus = i18n.global.t('app.stopped');
 			break;
@@ -574,17 +577,17 @@ export const reverseProxyOptions = () => {
 		// 	enable: true
 		// },
 		{
-			label: 'Cloudflare Tunnel',
+			label: i18n.global.t('Cloudflare Tunnel'),
 			value: ReverseProxyMode.CloudFlare,
 			enable: true
 		},
 		{
-			label: 'Olares Tunnel',
+			label: i18n.global.t('Olares Tunnel'),
 			value: ReverseProxyMode.OlaresTunnel,
 			enable: true
 		},
 		{
-			label: 'Self-built FRP',
+			label: i18n.global.t('Custom FRP server'),
 			value: ReverseProxyMode.SelfBuiltFrp,
 			enable: true
 		}
@@ -903,6 +906,7 @@ export enum BackupStatus {
 export const backupOriginsRef = ref([
 	DriveType.Drive,
 	DriveType.Data,
+	DriveType.Common,
 	DriveType.Cache,
 	DriveType.External
 ]);
@@ -978,6 +982,7 @@ export interface RestorePlanDetail {
 export const BackupPathOrigins = [
 	DriveType.Drive,
 	DriveType.Data,
+	DriveType.Common,
 	DriveType.Cache,
 	DriveType.External
 ];
@@ -985,6 +990,7 @@ export const BackupPathOrigins = [
 export const SearchPathOrigins = [
 	DriveType.Drive,
 	DriveType.Data,
+	DriveType.Common,
 	DriveType.Cache,
 	DriveType.External
 ];
@@ -1077,6 +1083,8 @@ export interface BaseEnv {
 	required?: boolean;
 	options?: EnvOption[];
 	remoteOptions?: string;
+	multiSelect?: boolean;
+	splitter?: string;
 	regex?: string;
 	description?: string;
 	applyOnChange?: boolean;

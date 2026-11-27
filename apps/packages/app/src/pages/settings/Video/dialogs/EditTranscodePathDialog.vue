@@ -6,7 +6,6 @@
 		:ok="t('confirm')"
 		size="medium"
 		@onSubmit="confirmAction"
-		:okDisabled="!enableEdit"
 	>
 		<div class="text-body3 text-ink-2">
 			{{
@@ -42,11 +41,7 @@ const { t } = useI18n();
 
 const CustomRef = ref();
 
-const folderRef = ref(props.folder);
-
-const enableEdit = computed(() => {
-	return folderRef.value.length > 0 && folderRef.value != props.folder;
-});
+const folderRef = ref(props.folder || '');
 
 const confirmAction = () => {
 	CustomRef.value.onDialogOK(folderRef.value);

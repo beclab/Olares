@@ -6,7 +6,7 @@
 			v-for="item in data"
 			:key="item.name"
 		>
-			<div class="text-body3 text-ink-3">{{ item.name }}：</div>
+			<div class="text-body3 text-ink-3">{{ item.name }}:&nbsp;</div>
 			<div class="text-subtitle2 text-ink-1">
 				<div v-if="item.name === 'Cluster'">
 					<span>{{ Cluster }}</span>

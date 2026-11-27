@@ -38,7 +38,7 @@
 					v-model="slide"
 					transition-prev="slide-right"
 					transition-next="slide-left"
-					swipeable
+					:swipeable="!isInDrag"
 					:animated="carouselAnimated"
 					class="bg-grey-1 shadow-2 rounded-borders pad_carousel"
 					ref="carousel"
@@ -49,98 +49,78 @@
 						:name="indexList"
 						class="column_launch_pad_apps column no-wrap column_none"
 					>
-						<div
-							v-for="(element, index) in appStore.launchPadApps[indexList]"
-							:key="'app_' + index"
-							:class="isDisplay ? 'vibrate-1' : ''"
-							:style="`
-									border-radius: 16px;
-									position:absolute;
-									z-index: 1;
+						<div class="lp-slide-surface" :data-lp-slide="indexList">
+							<div
+								v-for="element in appStore.launchPadApps[indexList]"
+								:key="appStore.desktopApps[element].id"
+								class="lp-launch-pad-slot"
+								:class="[
+									isDisplay && !isInDrag ? 'vibrate-1' : '',
+									dragLaunchAppId === appStore.desktopApps[element].id &&
+									launchPadDragSlotHidden
+										? 'drag-start'
+										: '',
+									dragLaunchAppId === appStore.desktopApps[element].id
+										? 'dragging-pause-shake'
+										: ''
+								]"
+								:style="`
 									top:${appStore.desktopApps[element].top}px;
 									left:${appStore.desktopApps[element].left}px;
-									width:${appStore.DESKTOP_APP_SIZE}px;`"
-							v-touch-hold:1200.mouse="handleHold"
-							:capture="!isInDrag"
-							:mouse="!isInDrag"
-							:mouseCapture="!isInDrag"
-							:id="appStore.desktopApps[element].id"
-							@click="openWindow(appStore.desktopApps[element])"
-							@dragstart="onDragStart"
-							:draggable="true"
-							@dragenter="onDragEnter(appStore.desktopApps[element].id, $event)"
-							@dragleave="onDragLeave"
-							@dragend="onDragEnd"
-						>
-							<div class="dragMask"></div>
-							<div
-								:style="
-									isDisplay && !appStore.desktopApps[element].isSysApp
-										? 'display: block;'
-										: 'display: none;'
+									width:${appStore.DESKTOP_APP_SIZE}px;
+									transition: left ${iconPosTransitionMs}ms ease, top ${iconPosTransitionMs}ms ease;`"
+								v-touch-hold:1200.mouse="handleHold"
+								:capture="!isInDrag"
+								:mouse="!isInDrag"
+								:mouseCapture="!isInDrag"
+								:id="appStore.desktopApps[element].id"
+								@mousedown.stop
+								@click="openWindow(appStore.desktopApps[element])"
+								@dragstart="onDragStart"
+								:draggable="true"
+								@dragenter="
+									onDragEnter(appStore.desktopApps[element].id, $event)
 								"
-								class="delete_launch"
-								@click.stop="
-									deleteLaunch(appStore.desktopApps[element], $event)
-								"
-							/>
-
-							<div
-								class="install_loading_status"
-								:style="`
-										width:${appStore.DESKTOP_APP_SIZE}px;
-										height:${appStore.DESKTOP_APP_SIZE}px;
-										border-radius: ${borderRadiusFormat(
-											appStore.DESKTOP_APP_SIZE,
-											appStore.DESKTOP_APP_SIZE
-										)}px;
-										`"
-								v-if="isDoingState(appStore.desktopApps[element].fatherState)"
+								@dragend="onDragEnd"
 							>
-								<svg viewBox="0 0 32 32" id="install_loading_speed">
-									<circle r="16" cx="16" cy="16" />
-								</svg>
-							</div>
-							<img
-								:key="appStore.desktopApps[element].title"
-								:src="appStore.desktopApps[element].icon"
-								:style="`width:${appStore.DESKTOP_APP_SIZE}px;height:${
-									appStore.DESKTOP_APP_SIZE
-								}px;border-radius: ${borderRadiusFormat(
-									appStore.DESKTOP_APP_SIZE,
-									appStore.DESKTOP_APP_SIZE
-								)}px;${
-									appStore.desktopApps[element].state ==
-										ENTRANCE_STATUS.NOT_READY ||
-									appStore.desktopApps[element].fatherState ==
-										APP_STATUS.UPGRADE.FAILED
-										? 'filter: grayscale(100%) brightness(0.8)'
-										: 'filter: grayscale(0%)'
-								}`"
-							/>
-							<div
-								class="launch_pad_apps_name"
-								:data-index="appStore.desktopApps[element].id"
-							>
-								<span
-									class="app_state q-mr-sm suspend_color"
-									v-if="
+								<LaunchpadAppTile
+									:app-id="appStore.desktopApps[element].id"
+									:kind="appStore.desktopApps[element].kind"
+									:icon="appStore.desktopApps[element].icon"
+									:label="getAppDisplayTitle(appStore.desktopApps[element], t)"
+									:tile-size-px="appStore.DESKTOP_APP_SIZE"
+									:show-delete-button="
+										isDisplay &&
+										!appStore.desktopApps[element].isSysApp &&
+										(appStore.desktopApps[element].kind === 'bookmark' ||
+											(!isDoingState(
+												appStore.desktopApps[element].fatherState
+											) &&
+												isUninstallableState(
+													appStore.desktopApps[element].fatherState
+												)))
+									"
+									:show-install-loading="
+										isDoingState(appStore.desktopApps[element].fatherState)
+									"
+									:show-stopped-state="
 										appStore.desktopApps[element].state ==
 										ENTRANCE_STATUS.STOPPED
 									"
-								></span>
-								<span
-									class="app_state q-mr-sm crash_color"
-									v-if="
+									:show-crash-state="
 										appStore.desktopApps[element].state ==
 										ENTRANCE_STATUS.NOT_READY
 									"
-								></span>
-								{{
-									systemApps.includes(appStore.desktopApps[element].name)
-										? t(`system_app.${appStore.desktopApps[element].title}`)
-										: appStore.desktopApps[element].title
-								}}
+									:icon-is-grayscale="
+										appStore.desktopApps[element].state ==
+											ENTRANCE_STATUS.NOT_READY ||
+										appStore.desktopApps[element].fatherState ==
+											APP_STATUS.UPGRADE.FAILED
+									"
+									@delete-click="
+										deleteLaunch(appStore.desktopApps[element], $event)
+									"
+								/>
 							</div>
 						</div>
 					</q-carousel-slide>
@@ -156,6 +136,9 @@
 								v-for="(dot, index) in appStore.launchPadApps"
 								:key="index"
 								@click.stop="goto(index)"
+								@dragenter.prevent="onDotDragEnter(index)"
+								@dragleave.prevent="onDotDragLeave"
+								@dragover.prevent
 							></span>
 						</q-carousel-control>
 					</template>
@@ -167,24 +150,25 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, onBeforeUnmount } from 'vue';
 import { useQuasar } from 'quasar';
-import { DesktopAppInfo, DesktopPosition, AppClickInfo } from './type/types';
+import { DesktopAppInfo, AppClickInfo } from './type/types';
 import { useI18n } from 'vue-i18n';
 import {
 	useApplicationStore,
-	systemApps,
-	localStoreKeys
+	getAppDisplayTitle
 } from 'src/stores/desktop/app';
+import { BOOKMARK_RAW_PREFIX } from 'src/types/desktop-layout';
 import ConfirmDialog from './components/ConfirmDialog.vue';
-import { borderRadiusFormat } from 'src/utils/desktop/utils';
+import LaunchpadAppTile from './LaunchpadAppTile.vue';
 import { ENTRANCE_STATUS, APP_STATUS } from 'src/constant/constants';
-import { isDoingState } from 'src/constant/config';
-import { AppService } from 'src/stores/market/appService';
+import { isDoingState, isUninstallableState } from 'src/constant/config';
+import { AppService } from 'src/services/market/appOperation/appService';
 import { useAppStore } from 'src/stores/market/appStore';
 import { notifyFailed } from 'src/utils/settings/btNotify';
 import { useLaunchpadSearch } from 'src/application/launchpadSearch';
-import { debounce } from 'lodash';
+import { useLaunchpadMetrics } from 'src/application/useLaunchpadMetrics';
+import { useLaunchpadDragReorder } from 'src/application/useLaunchpadDragReorder';
 
 defineProps({
 	isShowLaunch: {
@@ -202,58 +186,7 @@ const searchBox = ref<HTMLElement>();
 const $q = useQuasar();
 const appStore = useApplicationStore();
 
-function applyLaunchpadMetrics() {
-	const el = launchpadPage.value;
-	if (!el) return;
-	const offsetWidth = el.offsetWidth;
-	const offsetHeight = el.offsetHeight;
-	if (offsetWidth < 8 || offsetHeight < 8) return;
-
-	let grid_x: number = Math.floor(offsetWidth / 20);
-	const grid_y: number = Math.floor(offsetHeight / 11.5);
-	grid_x = grid_x < grid_y ? grid_x : grid_y;
-
-	appStore.DESKTOP_APP_SIZE = grid_x;
-	appStore.DESKTOP_APP_X_GAP = grid_x * 1.2;
-	appStore.DESKTOP_APP_Y_GAP = grid_x * 1 + 16; // maybe have some issue
-
-	appStore.DOCKER_APP_START_Y_GAP =
-		Math.floor(
-			offsetHeight -
-				appStore.DESKTOP_APP_Y_NUM * grid_x -
-				(appStore.DESKTOP_APP_Y_NUM - 1) * appStore.DESKTOP_APP_Y_GAP
-		) * 0.15;
-
-	appStore.DOCKER_APP_START_X_GAP =
-		Math.floor(
-			offsetWidth -
-				appStore.DESKTOP_APP_X_NUM * grid_x -
-				(appStore.DESKTOP_APP_X_NUM - 1) * appStore.DESKTOP_APP_X_GAP
-		) * 0.5;
-	appStore.DOCKER_APP_END_X_GAP = appStore.DOCKER_APP_START_X_GAP;
-
-	const search = appStore.launchpadSearchQuery;
-	if (search.length > 0) {
-		void appStore.update_search_result(search);
-	} else {
-		appStore.resize();
-	}
-}
-
-const debouncedApplyLaunchpadMetrics = debounce(applyLaunchpadMetrics, 120);
-
-onMounted(() => {
-	applyLaunchpadMetrics();
-	window.addEventListener('resize', debouncedApplyLaunchpadMetrics);
-});
-
-onBeforeUnmount(() => {
-	debouncedApplyLaunchpadMetrics.cancel();
-	window.removeEventListener('resize', debouncedApplyLaunchpadMetrics);
-});
-
-const isDisplay = ref<boolean>(false);
-let slide = ref(0);
+const slide = ref(0);
 
 const {
 	searchVal,
@@ -262,18 +195,64 @@ const {
 	focusSearch,
 	blurSearch,
 	updateSearch,
-	cleanSearchVal
+	cleanSearchVal,
+	exitSearchForDrag,
+	applyPendingSlideRestoreAfterDrag,
+	clearPendingSlideAfterSearchDrag,
+	resumeCarouselAfterSearchDrag
 } = useLaunchpadSearch(slide);
-let isDelete = false;
-let isInDrag = ref(false);
-let chooseInUse = ref(-1);
-let drag_launch_app: string | null = null;
-let choose = -1;
-let isAnimation = false;
-let lastDragFinishTime = 0;
+carouselAnimated.value = false;
+
 const carousel = ref();
 
+const { iconPosTransitionMs, dispose: disposeLaunchpadMetrics } =
+	useLaunchpadMetrics(launchpadPage, appStore, carouselAnimated);
+
+const {
+	dragLaunchAppId,
+	launchPadDragSlotHidden,
+	isInDrag,
+	onDragStart,
+	onDragEnd,
+	onDragEnter,
+	onDotDragEnter,
+	onDotDragLeave,
+	goto,
+	lastDragFinishTime,
+	dispose: disposeLaunchpadDrag
+} = useLaunchpadDragReorder({
+	slide,
+	carousel,
+	carouselAnimated,
+	launchpadMount: launchpadPage,
+	appStore,
+	exitSearchForDrag,
+	applyPendingSlideRestoreAfterDrag,
+	clearPendingSlideAfterSearchDrag,
+	resumeCarouselAfterSearchDrag,
+	onEmitDrag: (id) => emits('drag_launch_app', id)
+});
+
+onBeforeUnmount(() => {
+	disposeLaunchpadDrag();
+	appStore.launchpadShakeMode = false;
+});
+onBeforeUnmount(() => {
+	disposeLaunchpadMetrics();
+});
+
+const isDisplay = computed<boolean>({
+	get: () => appStore.launchpadShakeMode,
+	set: (v) => {
+		appStore.launchpadShakeMode = v;
+	}
+});
+
 const openWindow = async (item: DesktopAppInfo) => {
+	if (isDisplay.value) {
+		isDisplay.value = false;
+		return;
+	}
 	if (isDoingState(item.fatherState)) {
 		return;
 	}
@@ -286,7 +265,8 @@ const openWindow = async (item: DesktopAppInfo) => {
 			componentProps: {
 				title: t('confirmation'),
 				message: t('message_desktop.suspended'),
-				icon: item.icon
+				icon: item.icon,
+				okTitle: t('i_got_it')
 			}
 		});
 		return false;
@@ -298,7 +278,8 @@ const openWindow = async (item: DesktopAppInfo) => {
 			componentProps: {
 				title: t('confirmation'),
 				message: t('message_desktop.crashed'),
-				icon: item.icon
+				icon: item.icon,
+				okTitle: t('i_got_it')
 			}
 		});
 		return false;
@@ -311,17 +292,16 @@ const openWindow = async (item: DesktopAppInfo) => {
 };
 
 const dismiss = () => {
-	if (isDelete) {
-		isDelete = false;
+	if (isDisplay.value) {
 		isDisplay.value = false;
-	} else {
-		if (isFocus.value) {
-			isFocus.value = false;
-			searchVal.value = '';
-		}
-		appStore.dismiss_search_result();
-		emits('dismiss');
+		return;
 	}
+	if (isFocus.value) {
+		isFocus.value = false;
+		searchVal.value = '';
+	}
+	appStore.dismiss_search_result();
+	emits('dismiss');
 };
 
 const handleHold = () => {
@@ -329,262 +309,69 @@ const handleHold = () => {
 		return;
 	}
 
-	if (isAnimation) {
+	const now = new Date().getTime();
+	const diff = now - lastDragFinishTime.value;
+	if (diff < 300) {
 		return;
 	}
-
-	let now = new Date().getTime();
-	let diff = now - lastDragFinishTime;
-	if (diff < 1000) {
-		return;
-	}
-
-	isDelete = true;
 
 	isDisplay.value = true;
 };
 
-function deleteLaunch(appInfo: DesktopAppInfo, e: any) {
-	console.log(appInfo);
+async function deleteLaunch(appInfo: DesktopAppInfo, e: MouseEvent) {
+	if (appInfo.kind === 'bookmark') {
+		const bookmarkId = appInfo.id.startsWith('bdesk:' + BOOKMARK_RAW_PREFIX)
+			? appInfo.id.slice(('bdesk:' + BOOKMARK_RAW_PREFIX).length)
+			: '';
+		if (!bookmarkId) {
+			return;
+		}
+		$q.dialog({
+			component: ConfirmDialog,
+			componentProps: {
+				title: t('desktop_settings.delete_bookmark_title'),
+				message: t('desktop_settings.delete_bookmark_msg', {
+					name: appInfo.title || appInfo.name
+				}),
+				showCancel: true,
+				persistent: true
+			}
+		}).onOk(async () => {
+			await appStore.deleteBookmarkFromDesktop(bookmarkId);
+		});
+		return;
+	}
+
 	const marketAppStore = useAppStore();
 	const marketApp = marketAppStore.findAppByName(
 		appInfo && appInfo.fatherName ? appInfo.fatherName : ''
 	);
+
+	if (
+		isDoingState(appInfo.fatherState) ||
+		!isUninstallableState(appInfo.fatherState)
+	) {
+		return;
+	}
+
 	if (marketApp) {
-		e.target.parentNode.classList.add('uninstallAni');
-		setTimeout(async () => {
-			await AppService.uninstallApp(
-				marketApp.status,
-				{
-					app_name: marketApp.appId,
-					source: marketApp.sourceId,
-					version: marketApp.version
-				},
-				$q
-			);
-			e.target.parentNode.classList.remove('uninstallAni');
-		}, 500);
-	} else {
-		notifyFailed('Failed to retrieve app information');
-	}
-}
-
-const getAppIndexInDesktop = (id: string) => {
-	for (var i = 0; i < appStore.desktopApps.length; i++) {
-		const draggedEl: any = document.getElementById(appStore.desktopApps[i].id);
-		if (draggedEl?.id == id) {
-			return i;
-		}
-	}
-	return -1;
-};
-
-const onDragStart = async (e: any) => {
-	if (isDelete) {
-		return;
-	}
-
-	e.dataTransfer.setData('text', e.target.id);
-	e.dataTransfer.dropEffect = 'move';
-
-	isInDrag.value = true;
-	choose = getAppIndexInDesktop(e.target.id);
-	chooseInUse.value = choose;
-
-	e.dataTransfer.effectAllowed = 'move';
-	window.setTimeout(() => {
-		e.target.classList.add('drag-start');
-	}, 10);
-
-	drag_launch_app = e.target.id;
-	emits('drag_launch_app', e.target.id);
-};
-
-function animate(sources: number[], targets: DesktopPosition[]) {
-	if (sources.length != targets.length) return;
-	if (sources.length == 0) return;
-
-	isAnimation = true;
-	let p: any[] = [];
-	for (var i = 0; i < targets.length - 1; ++i) {
-		p.push(
-			new Promise((resolve) => {
-				let source = sources[i];
-				let target = targets[i];
-
-				function finish() {
-					clearInterval(moveY);
-
-					appStore.desktopApps[source].index = target.index;
-					appStore.desktopApps[source].page = target.page;
-					appStore.desktopApps[source].page_num = target.page_num;
-					appStore.desktopApps[source].left = target.left;
-					appStore.desktopApps[source].top = target.top;
-
-					resolve(true);
-				}
-
-				let moveY = setInterval(function () {
-					if (isAnimation == false) {
-						finish();
-						return;
-					}
-
-					if (target.left > appStore.desktopApps[source].left) {
-						appStore.desktopApps[source].left += 160;
-						if (target.left <= appStore.desktopApps[source].left) {
-							finish();
-						}
-					} else if (target.left < appStore.desktopApps[source].left) {
-						appStore.desktopApps[source].left -= 160;
-						if (target.left >= appStore.desktopApps[source].left) {
-							finish();
-						}
-					} else {
-						finish();
-					}
-				}, 4);
-			})
+		const succeeded = await AppService.uninstallApp(
+			marketApp.status,
+			{
+				app_name: marketApp.appId,
+				source: marketApp.sourceId,
+				version: marketApp.version,
+				deleteData: false
+			},
+			$q
 		);
-	}
-
-	Promise.all(p).then(() => {
-		appStore.desktopApps[sources[targets.length - 1]].index =
-			targets[targets.length - 1].index;
-		appStore.desktopApps[sources[targets.length - 1]].page =
-			targets[targets.length - 1].page;
-		appStore.desktopApps[sources[targets.length - 1]].page_num =
-			targets[targets.length - 1].page_num;
-		appStore.desktopApps[sources[targets.length - 1]].left =
-			targets[targets.length - 1].left;
-		appStore.desktopApps[sources[targets.length - 1]].top =
-			targets[targets.length - 1].top;
-
-		isAnimation = false;
-	});
-}
-
-const checkMove = (id: string) => {
-	if (isAnimation) {
-		return;
-	}
-
-	let dragIndex = getAppIndexInDesktop(id);
-
-	if (choose == dragIndex || dragIndex == -1) {
-		return;
-	}
-
-	let sources: number[] = [];
-	let targets: DesktopPosition[] = [];
-
-	if (
-		appStore.desktopApps[choose].page != appStore.desktopApps[dragIndex].page
-	) {
-		return;
-	}
-
-	if (
-		appStore.desktopApps[choose].index < appStore.desktopApps[dragIndex].index
-	) {
-		for (var i = 0; i < appStore.desktopApps.length; i++) {
-			if (i == choose) {
-				continue;
-			}
-
-			if (appStore.desktopApps[i].page != appStore.desktopApps[choose].page) {
-				continue;
-			}
-
-			if (
-				appStore.desktopApps[i].page_num >
-					appStore.desktopApps[choose].page_num &&
-				appStore.desktopApps[i].page_num <=
-					appStore.desktopApps[dragIndex].page_num
-			) {
-				sources.push(i);
-				targets.push(
-					appStore.get_desktop_position(appStore.desktopApps[i].index - 1)
-				);
-			}
+		if (succeeded) {
+			appStore.uninstall_application(appInfo.fatherName);
 		}
 	} else {
-		for (let i = 0; i < appStore.desktopApps.length; i++) {
-			if (i == choose) {
-				continue;
-			}
-
-			if (appStore.desktopApps[i].page != appStore.desktopApps[choose].page) {
-				continue;
-			}
-
-			if (
-				appStore.desktopApps[i].page_num <
-					appStore.desktopApps[choose].page_num &&
-				appStore.desktopApps[i].page_num >=
-					appStore.desktopApps[dragIndex].page_num
-			) {
-				sources.push(i);
-				targets.push(
-					appStore.get_desktop_position(appStore.desktopApps[i].index + 1)
-				);
-			}
-		}
+		notifyFailed(t('error.app_info_get_failure'));
 	}
-
-	sources.push(choose);
-	targets.push(
-		appStore.get_desktop_position(appStore.desktopApps[dragIndex].index)
-	);
-
-	if (targets.length > 0) {
-		animate(sources, targets);
-	}
-};
-
-const onDragEnter = async (id: string, e: any) => {
-	e.preventDefault();
-
-	if (!drag_launch_app) {
-		return;
-	}
-
-	checkMove(id);
-};
-
-const onDragLeave = async (e: any) => {
-	e.target.classList.remove('drag-enter');
-};
-
-const onDragEnd = async () => {
-	isInDrag.value = false;
-	lastDragFinishTime = new Date().getTime();
-	chooseInUse.value = -1;
-
-	emits('drag_launch_app', null);
-
-	if (drag_launch_app) {
-		const draggedEl: any = document.getElementById(drag_launch_app);
-		draggedEl?.classList.remove('drag-start');
-		drag_launch_app = null;
-	}
-
-	console.log('appStore.desktopApps[element] ===>', appStore.desktopApps);
-	const apps = appStore.desktopApps
-		.map((e) => {
-			return {
-				id: e.id,
-				index: e.index
-			};
-		})
-		.sort((a, b) => a.index - b.index);
-	console.log('appStore.apps', apps);
-	localStorage.setItem(localStoreKeys.LAUNCH_PAD, JSON.stringify(apps));
-};
-
-const goto = (value: number) => {
-	carousel.value.goTo(value);
-};
+}
 </script>
 
 <style lang="scss" scoped>
@@ -597,6 +384,12 @@ $launch-pad-animation-duration: 0.6s;
 
 .drag-start {
 	opacity: 0;
+}
+
+.dragging-pause-shake {
+	animation: none !important;
+	-webkit-animation: none !important;
+	transform: none !important;
 }
 
 .dialog_box {
@@ -630,108 +423,26 @@ $launch-pad-animation-duration: 0.6s;
 	overflow: hidden !important;
 }
 
-.dragMask {
-	width: 140%;
-	height: 120%;
-	transform: translate(-13%, -10%);
-	position: absolute;
-	top: 0;
-	left: 0;
-	z-index: 2;
-	overflow: hidden;
-	cursor: pointer;
-}
-
 .column_none {
 	overflow: hidden !important;
 }
 
 .column_launch_pad_apps {
-	.launch_pad_apps_name {
-		width: 140%;
-		transform: translateX(-15%);
-		text-align: center;
-		font-size: 14px;
-		font-family: Roboto-Medium, Roboto;
-		font-weight: 500;
-		color: #ffffff;
-		overflow: hidden;
-		white-space: nowrap;
-		text-overflow: ellipsis;
-		margin-top: 12px;
+	position: relative;
 
-		.app_state {
-			display: inline-block;
-			width: 8px;
-			height: 8px;
-			border-radius: 4px;
-
-			&.suspend_color {
-				background-color: $warning;
-			}
-
-			&.crash_color {
-				background-color: $negative;
-			}
-
-			&.running_color {
-				background-color: $positive;
-			}
-
-			&.upgrade_error_color {
-				background-color: $blue;
-			}
-		}
+	.lp-slide-surface {
+		position: relative;
+		flex: 1 1 auto;
+		width: 100%;
+		min-height: 0;
 	}
+}
 
-	.delete_launch {
-		width: 20px;
-		height: 20px;
-		background-image: url('../../assets/desktop/delete_app_icon.svg');
-		background-repeat: no-repeat;
-		background-position: center;
-		background-size: contain;
-		position: absolute;
-		top: -5px;
-		left: -5px;
-		z-index: 100;
-		cursor: pointer;
-	}
-
-	.install_loading_status {
-		position: absolute;
-		top: 0px;
-		left: 0px;
-		z-index: 99;
-		background-image: url('../../assets/desktop/installing.svg');
-		background-position: center;
-		background-size: 100% 100%;
-		background-repeat: no-repeat;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-
-		svg {
-			transform: rotate(-90deg);
-			border-radius: 50%;
-			height: 40%;
-		}
-
-		circle {
-			fill: rgba(0, 0, 0, 0.5);
-			stroke: rgba(255, 255, 255, 1);
-			stroke-width: 32;
-			stroke-dasharray: 0 100;
-			animation: fillup 5s linear infinite;
-		}
-
-		@keyframes fillup {
-			to {
-				stroke-dasharray: 158 158;
-				opacity: 0;
-			}
-		}
-	}
+.lp-launch-pad-slot {
+	border-radius: 16px;
+	position: absolute;
+	z-index: 1;
+	box-sizing: border-box;
 }
 
 .launch_pad_page {

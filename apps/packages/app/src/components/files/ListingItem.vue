@@ -10,8 +10,13 @@
 		@drop="drop"
 		@click.stop="click"
 		@dblclick.stop="open"
+		@touchstart="onTouchStart"
+		@touchmove="onTouchMove"
+		@touchend="onTouchEnd"
+		@touchcancel="onTouchEnd"
 		:data-dir="item.isDir"
 		:data-type="item.type"
+		:data-index="item.index"
 		:aria-label="item.name"
 		:aria-selected="isSelected"
 	>
@@ -107,10 +112,16 @@
 				<p
 					:class="{
 						name: !isPad || filesStore.selected[origin_id].length == 0,
-						action_name: isPad && filesStore.selected[origin_id].length > 0
+						action_name: isPad && filesStore.selected[origin_id].length > 0,
+						'name--with-badge': isUnsupportedArchiveItem
 					}"
 				>
-					{{ translateFolderName(route.path, item.name) }}
+					<span class="name-text">
+						{{ translateFolderName(route.path, item.name) }}
+					</span>
+					<span v-if="isUnsupportedArchiveItem" class="unsupported-badge">
+						{{ t('files.archive.unsupported') }}
+					</span>
 				</p>
 				<p class="size" :data-order="humanSize()">
 					{{ humanSize() }}
@@ -160,6 +171,8 @@ import { getAppPlatform } from '../../application/platform';
 import PadFileItemPopupMenu from './popup/PadFileItemPopupMenu.vue';
 import { format } from '../../utils/format';
 import { ShareType, SharePermission } from 'src/utils/interface/share';
+import { isUnsupportedArchiveExtract } from 'src/utils/interface/archive';
+import { FileViewMode } from 'src/utils/interface/files';
 
 const props = defineProps({
 	item: {
@@ -167,7 +180,7 @@ const props = defineProps({
 		required: true
 	},
 	viewMode: {
-		type: String,
+		type: String as PropType<FileViewMode>,
 		required: true
 	},
 	origin_id: {
@@ -182,7 +195,7 @@ const props = defineProps({
 	}
 });
 
-const emits = defineEmits(['resetOpacity', 'closeMenu']);
+const emits = defineEmits(['resetOpacity', 'closeMenu', 'showMenu']);
 
 const { humanStorageSize } = format;
 
@@ -198,6 +211,10 @@ const isPad = ref(getAppPlatform() && getAppPlatform().isPad);
 onMounted(() => {
 	fileName.value = props.item.name;
 });
+
+const isUnsupportedArchiveItem = computed(() =>
+	isUnsupportedArchiveExtract(props.item)
+);
 
 const isCurSelectType = computed(() => {
 	if (
@@ -334,7 +351,73 @@ const drop = async (event: any) => {
 	);
 };
 
+// iOS / iPadOS WebKit does not fire a `contextmenu` event on long-press (it
+// shows the native callout instead), so the desktop right-click menu never
+// opens on iPad. Detect the long-press via touch events and surface it through
+// the same `showMenu` -> `rightClick` path. On Android the OS still fires
+// `contextmenu`, but `rightClick` is idempotent so there is no double popup.
+const LONG_PRESS_DURATION = 500;
+const LONG_PRESS_MOVE_TOLERANCE = 10;
+let pressTimer: ReturnType<typeof setTimeout> | null = null;
+let longPressTriggered = false;
+let touchStartX = 0;
+let touchStartY = 0;
+
+const clearPressTimer = () => {
+	if (pressTimer) {
+		clearTimeout(pressTimer);
+		pressTimer = null;
+	}
+};
+
+const onTouchStart = (event: TouchEvent) => {
+	if (props.selectType) {
+		return;
+	}
+	const touch = event.touches[0];
+	if (!touch) {
+		return;
+	}
+	longPressTriggered = false;
+	touchStartX = touch.clientX;
+	touchStartY = touch.clientY;
+	const target = event.currentTarget;
+	clearPressTimer();
+	pressTimer = setTimeout(() => {
+		longPressTriggered = true;
+		emits('showMenu', {
+			clientX: touchStartX,
+			clientY: touchStartY,
+			target,
+			preventDefault: () => {}
+		});
+	}, LONG_PRESS_DURATION);
+};
+
+const onTouchMove = (event: TouchEvent) => {
+	const touch = event.touches[0];
+	if (!touch) {
+		return;
+	}
+	if (
+		Math.abs(touch.clientX - touchStartX) > LONG_PRESS_MOVE_TOLERANCE ||
+		Math.abs(touch.clientY - touchStartY) > LONG_PRESS_MOVE_TOLERANCE
+	) {
+		clearPressTimer();
+	}
+};
+
+const onTouchEnd = () => {
+	clearPressTimer();
+};
+
 const click = (event: any) => {
+	// Swallow the click that fires right after a long-press so it does not
+	// immediately open the item on top of the just-opened menu.
+	if (longPressTriggered) {
+		longPressTriggered = false;
+		return;
+	}
 	if (isCurSelectType.value) return false;
 
 	if (isPad.value) {
@@ -463,11 +546,47 @@ if (isPad.value) {
 	background: $background-hover;
 }
 
+// In mosaic (grid) view each tile is small, so the faint hover background is
+// easy to miss; use the stronger selected background to make picks obvious,
+// including when items are selected via rubber-band (marquee) selection.
+#listing.mosaic .item[aria-selected='true'] {
+	background: $background-hover;
+}
+
 #listing .item[aria-selected-border='true'] {
 	border: 1px solid $light-blue-default;
 }
 
 #listing .item:hover {
 	background: $background-hover;
+}
+
+// When a file carries the "Unsupported" badge, lay the name cell out as a row so
+// the name can ellipsis while the badge stays fully visible on its right.
+.name--with-badge {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+
+	.name-text {
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+}
+
+.unsupported-badge {
+	flex-shrink: 0;
+	display: inline-flex;
+	align-items: center;
+	padding: 2px 4px;
+	border-radius: 4px;
+	background: $orange-alpha;
+	color: $orange-default;
+	font-size: 10px;
+	font-weight: 500;
+	line-height: 12px;
+	white-space: nowrap;
 }
 </style>

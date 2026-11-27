@@ -47,7 +47,7 @@
 				dense
 				class="confirm-btn bound-btn q-mr-md"
 				:disable="current_nft == undefined"
-				:label="t('bound')"
+				:label="t('link_nft_avatar')"
 				flat
 				@click="bindNFT"
 			/>
@@ -158,7 +158,7 @@ async function bindNFT() {
 	);
 
 	if (hasBound != undefined) {
-		notifyFailed(t('had_bound'));
+		notifyFailed(t('nft_avatar_already_linked'));
 		return;
 	}
 

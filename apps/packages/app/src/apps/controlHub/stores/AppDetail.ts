@@ -52,7 +52,6 @@ export const useAppDetailStore = defineStore('appDetail', {
 		hasPermission(data: string | string[]) {
 			const value = isArray(data) ? data[0] : data;
 
-			// Some permissions of demo station are higher than ordinary users
 			const hasHigherDemoPrivileges = isArray(data) ? data[1] : false;
 
 			if (!value) {

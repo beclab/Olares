@@ -42,7 +42,7 @@
 					<empty-component
 						class="q-pb-xl"
 						v-else
-						:info="t('No image added')"
+						:info="t('No access rules')"
 						:empty-image-top="40"
 					/>
 				</q-list>

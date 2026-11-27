@@ -39,12 +39,13 @@
 				/>
 			</div>
 
-			<object
+			<iframe
 				v-else-if="
 					filesStore.previewItem[origin_id]?.type?.toLowerCase() == 'pdf'
 				"
 				class="pdf"
-				:data="displayRaw"
+				:src="displayRaw"
+				frameborder="0"
 			/>
 			<vue-office-docx
 				v-else-if="

@@ -71,6 +71,44 @@
 					</div>
 				</div>
 
+				<template v-if="getApplication().applicationName == 'files'">
+					<div class="home-module-title q-mt-lg" v-if="dataMenus.length > 0">
+						{{ t('files.data') }}
+					</div>
+					<div
+						class="module-content q-mt-md bg-background-1"
+						v-if="dataMenus.length > 0"
+					>
+						<div v-for="(cell, index) in dataMenus" :key="index">
+							<terminus-item
+								:show-board="false"
+								img-bg-classes="bg-background-3"
+								:icon-name="cell.iconName"
+								icon-color="ink-2"
+								:whole-picture-size="32"
+								:icon-size="16"
+								@click="seahubAtion(cell.menu, cell.name)"
+							>
+								<template v-slot:title>
+									<div class="text-subtitle1">{{ cell.name }}</div>
+								</template>
+								<template v-slot:side>
+									<q-icon
+										name="sym_r_keyboard_arrow_right"
+										size="20px"
+										color="ink-3"
+									/>
+								</template>
+							</terminus-item>
+							<q-separator
+								inset
+								class="bg-separator"
+								v-if="index + 1 < dataMenus.length"
+							/>
+						</div>
+					</div>
+				</template>
+
 				<div
 					class="home-module-title q-mt-lg"
 					v-if="cloudDriveMenus.length > 0"
@@ -175,6 +213,7 @@ import { AccountType, IntegrationAccountMiniData } from '@bytetrade/core';
 import integrationService from '../../../services/integration';
 import { DriveType } from '../../../utils/interface/files';
 import { isShareEnable } from '../../../api';
+import { isCommonEnable } from '../../../api/files';
 import * as filesUtil from '../../../api/files/v2/common/utils';
 import { getApplication } from 'src/application/base';
 import * as googleUtil from 'src/api/files/v2/google/utils';
@@ -220,6 +259,28 @@ const driveMenus = ref([
 	}
 ]);
 
+const dataMenus = ref([
+	{
+		name: t(`files_menu.${MenuItem.DATA}`),
+		iconName: 'sym_r_database',
+		menu: MenuItem.DATA
+	},
+	{
+		name: t(`files_menu.${MenuItem.CACHE}`),
+		iconName: 'sym_r_analytics',
+		menu: MenuItem.CACHE
+	},
+	...(isCommonEnable()
+		? [
+				{
+					name: t(`files_menu.${MenuItem.COMMON}`),
+					iconName: 'sym_r_interests',
+					menu: MenuItem.COMMON
+				}
+		  ]
+		: [])
+]);
+
 const seahubAtion = (menu: MenuItem, name?: string) => {
 	const query = {
 		name: name ? name : menu
@@ -227,17 +288,22 @@ const seahubAtion = (menu: MenuItem, name?: string) => {
 
 	switch (menu) {
 		case MenuItem.DATA:
-			Router.push({
-				path: '/Files/Application/'
-			});
-
+			fileStore.setBrowserUrl('/Data/', DriveType.Data);
 			break;
 
 		case MenuItem.CACHE:
-			Router.push({
-				path: '/Files/AppData/'
-			});
+			if (fileStore.nodes.length == 1 && fileStore.masterNode) {
+				fileStore.setBrowserUrl(
+					`/Cache/${fileStore.masterNode}/`,
+					DriveType.Cache
+				);
+			} else {
+				fileStore.setBrowserUrl('/Cache/', DriveType.Cache);
+			}
+			break;
 
+		case MenuItem.COMMON:
+			fileStore.setBrowserUrl('/Common/', DriveType.Common);
 			break;
 
 		case MenuItem.MYLIBRARIES:

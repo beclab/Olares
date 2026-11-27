@@ -48,39 +48,6 @@ export const hiddenChar = (str: string, frontLen: number, endLen: number) => {
 	}
 };
 
-export const getPastTime = (stamp1: Date, stamp2: Date) => {
-	const { t } = useI18n();
-
-	const time = stamp1.getTime() - stamp2.getTime();
-	const second = time / 1000;
-	const minute = second / 60;
-	if (minute < 1) {
-		return t('just_now');
-	}
-	if (minute < 60) {
-		return `${minute.toFixed(0)}` + ' ' + t('minutes_ago');
-	}
-
-	const hour = minute / 60;
-	if (hour < 24) {
-		return `${hour.toFixed(0)}` + ' ' + t('hours_ago');
-	}
-
-	const day = hour / 24;
-	if (day < 30) {
-		return `${day.toFixed(0)} ` + ' ' + t('days_ago');
-	}
-
-	const month = day / 30;
-
-	if (month < 12) {
-		return `${month.toFixed(0)} months ago` + ' ' + t('months_ago');
-	}
-
-	const year = month / 12;
-	return `${year.toFixed(0)} years ago` + ' ' + t('years_ago');
-};
-
 export const formatStampTime = (
 	stamp: number,
 	compare = new Date().getTime()
@@ -329,7 +296,17 @@ export function containsSameValue<T>(
 }
 
 export const getextension = (name: string) => {
-	return name.indexOf('.') > -1 ? name.substring(name.lastIndexOf('.')) : '';
+	if (!name || name.indexOf('.') === -1) {
+		return '';
+	}
+
+	const parts = name.split('.');
+	const last = parts[parts.length - 1];
+	if (/^\d{3}$/.test(last) && parts.length > 2) {
+		return `.${parts[parts.length - 2]}`;
+	}
+
+	return name.substring(name.lastIndexOf('.'));
 };
 
 //https://github.com/bhowell2/binary-insert-js
@@ -462,13 +439,13 @@ export function formatTimeDifference(utcTimeString: string): string {
 	} else if (weeksDifference < 4) {
 		return `${weeksDifference} weeks ago`;
 	} else if (monthsDifference === 1) {
-		return '1 month ago';
+		return '1 month ago'; // i18n-ignore: legacy util mirrored by @apps/market formatTimeDifference
 	} else if (monthsDifference < 12) {
 		return `${monthsDifference} months ago`;
 	} else if (yearsDifference === 1) {
 		return '1 year ago';
 	} else if (yearsDifference <= 2) {
-		return '2 years ago';
+		return '2 years ago'; // i18n-ignore: legacy util mirrored by @apps/market formatTimeDifference
 	} else {
 		return utcDate.toLocaleDateString('en-US', {
 			year: 'numeric',
@@ -498,6 +475,7 @@ export function intersection<T>(array1: T[], array2: T[]): T[] {
 	return array1.filter((value) => array2.includes(value));
 }
 
+// i18n-ignore-start: locale-code -> English name data dictionary
 const languageMap: LanguageMap = {
 	af: 'Afrikaans',
 	'af-ZA': 'Afrikaans (South Africa)',
@@ -739,6 +717,7 @@ const languageMap: LanguageMap = {
 	zu: 'Zulu',
 	'zu-ZA': 'Zulu (South Africa)'
 };
+// i18n-ignore-end
 
 interface LanguageMap {
 	[key: string]: string;

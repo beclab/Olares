@@ -13,6 +13,7 @@ import {
 import psl from 'psl';
 import { CookieParserFactory, CookieFormat } from './cookieParser';
 import { useBackgroundStore } from './background';
+import { i18n } from 'src/boot/i18n';
 
 export class CookieValidationError extends Error {
 	constructor(message: string) {
@@ -45,7 +46,7 @@ export const useCookieStore = defineStore('cookie', {
 		openCollectionCookiesLink(): string {
 			const backgroundStore = useBackgroundStore();
 			if (backgroundStore.localeIsCN) {
-				return 'https://docs.olares.com/zh/manual/olares/wise/manage-cookies.html ';
+				return 'https://docs.olares.com/zh/manual/olares/wise/manage-cookies.html';
 			}
 			return 'https://docs.olares.com/manual/olares/wise/manage-cookies.html';
 		}
@@ -94,7 +95,7 @@ export const useCookieStore = defineStore('cookie', {
 
 		async updateDomainCookie(domain: string, records: DomainCookieRecord[]) {
 			if (!domain) {
-				throw new CookieValidationError('need domain');
+				throw new CookieValidationError(i18n.global.t('errors.need_domain'));
 			}
 
 			const domainCookie = new DomainCookie({
@@ -107,8 +108,6 @@ export const useCookieStore = defineStore('cookie', {
 			const currentStoreKey = domainCookie.get_store_key();
 
 			await createOrUpdateCookie(this.base_url, domainCookie);
-
-			console.log(domainCookie);
 
 			const mainDomain = this._getMainDomain(domainCookie.domain);
 			const aggregatedDomain = this.aggregatedDomainMap.get(mainDomain);
@@ -267,10 +266,11 @@ export const useCookieStore = defineStore('cookie', {
 			try {
 				const parser = CookieParserFactory.getParser('netscape');
 				if (!parser) {
-					throw new CookieValidationError('Netscape parser not found');
+					throw new CookieValidationError(
+						i18n.global.t('errors.netscape_parser_not_found')
+					);
 				}
 				const parseResult = parser.parse(netscapeText);
-				console.log('addNetscapeCookies', parseResult);
 				return this._uploadParsedCookies(parseResult);
 			} catch (error: any) {
 				return Promise.reject(
@@ -286,17 +286,22 @@ export const useCookieStore = defineStore('cookie', {
 			try {
 				const valid = psl.isValid(domain);
 				if (!valid) {
-					throw new CookieValidationError('The domain is invalid.');
+					throw new CookieValidationError(
+						i18n.global.t('errors.the_domain_is_invalid')
+					);
 				}
 				const parser = CookieParserFactory.getParser('header');
 				if (!parser) {
-					throw new CookieValidationError('Header parser not found');
+					throw new CookieValidationError(
+						i18n.global.t('errors.header_parser_not_found')
+					);
 				}
 				if (!domain || !domain.trim()) {
-					throw new CookieValidationError('domain cannot be empty');
+					throw new CookieValidationError(
+						i18n.global.t('errors.domain_cannot_be_empty')
+					);
 				}
 				const parseResult = parser.parse(headerText, domain);
-				console.log('addHeaderCookies', parseResult);
 				return this._uploadParsedCookies(parseResult);
 			} catch (error: any) {
 				return Promise.reject(
@@ -309,10 +314,11 @@ export const useCookieStore = defineStore('cookie', {
 			try {
 				const parser = CookieParserFactory.getParser('json');
 				if (!parser) {
-					throw new CookieValidationError('JSON parser not found');
+					throw new CookieValidationError(
+						i18n.global.t('errors.json_parser_not_found')
+					);
 				}
 				const parseResult = parser.parse(jsonText);
-				console.log('addJsonCookies', parseResult);
 				return this._uploadParsedCookies(parseResult);
 			} catch (error: any) {
 				return Promise.reject(
@@ -328,10 +334,14 @@ export const useCookieStore = defineStore('cookie', {
 
 		async _uploadParsedCookies(parseResult: any): Promise<DomainCookie[]> {
 			if (!this.account) {
-				throw new CookieValidationError('account not found');
+				throw new CookieValidationError(
+					i18n.global.t('errors.account_not_found')
+				);
 			}
 			if (parseResult.cookies.size === 0) {
-				throw new CookieValidationError('No valid cookies found');
+				throw new CookieValidationError(
+					i18n.global.t('errors.no_valid_cookies_found')
+				);
 			}
 
 			return await parseResult.cookies

@@ -1,5 +1,5 @@
 <template>
-	<FullPageWithBack :title="$t('PHYSICAL_RESOURCE_MONTORING')">
+	<FullPageWithBack :title="$t('PHYSICAL_RESOURCE_MONITORING')">
 		<template #extra>
 			<DateRangeMonitoring
 				v-model="selectValue2"

@@ -1,4 +1,4 @@
-import { getFileIcon } from '@bytetrade/core';
+import { getFileIcon, getFilePreviewType, PreviewType } from '@bytetrade/core';
 import Origin from './../origin';
 import { MenuItem } from 'src/utils/contact';
 import { OPERATE_ACTION } from 'src/utils/contact';
@@ -10,7 +10,8 @@ import {
 	notifyWaitingShow,
 	notifyHide,
 	notifySuccess,
-	notifyFailed
+	notifyFailed,
+	notifyRequestMessageError
 } from 'src/utils/notifyRedefinedUtil';
 
 import {
@@ -54,6 +55,7 @@ import * as files from './utils';
 import { appendPath } from '../path';
 
 import * as filesUtil from '../common/utils';
+import { ArchiveConflict, ArchiveFormat } from 'src/utils/interface/archive';
 
 export default class SyncDataAPI extends Origin {
 	public commonAxios: any;
@@ -190,10 +192,6 @@ export default class SyncDataAPI extends Origin {
 	}
 
 	async fetchShareInfo(repo_id: string): Promise<ShareInfoResType> {
-		// const res: ShareInfoResType = await this.commonAxios.get(
-		// 	`/seahub/api/v2.1/repos/${repo_id}/share-info/`,
-		// 	{}
-		// );
 		return {
 			shared_group_ids: [],
 			shared_user_emails: []
@@ -407,8 +405,7 @@ export default class SyncDataAPI extends Origin {
 	}
 
 	getPreviewURL(file: FileItem, thumb: 'big' | 'thumb'): string {
-		let repo_id =
-			getParams(file.path, 'id') || getParams((files as any).to, 'id');
+		let repo_id = getParams(file.path, 'id');
 		if (!repo_id) {
 			repo_id = file.path.split('/')[5];
 		}
@@ -476,11 +473,12 @@ export default class SyncDataAPI extends Origin {
 
 	async formatFileContent(file: FileItem): Promise<FileItem> {
 		const fileType = getFileIcon(file.name);
-
+		const filePreviewType = getFilePreviewType(file.name);
 		if (
-			!['text', 'txt', 'textImmutable', 'audio', 'video', 'pdf'].includes(
-				fileType
-			)
+			filePreviewType !== PreviewType.TXT &&
+			filePreviewType !== PreviewType.AUDIO &&
+			filePreviewType != PreviewType.VIDEO &&
+			filePreviewType != PreviewType.PDF
 		) {
 			return file;
 		}
@@ -496,22 +494,32 @@ export default class SyncDataAPI extends Origin {
 				appendPath(parentPath, encodeUrl(file.name)),
 				repo_id
 			);
-			const res = await this.commonAxios.get(url, {
+			let res = await this.commonAxios.get(url, {
 				params: {
 					inline: true,
 					dict: 1,
-					meta: ['audio', 'video', 'pdf'].includes(fileType) ? 'true' : 'false'
-				}
+					meta: filePreviewType !== PreviewType.TXT ? 'true' : 'false'
+				},
+				noToast: true
 			});
 
-			if (['audio', 'video', 'pdf'].includes(fileType)) {
+			if (filePreviewType == PreviewType.TXT) {
+				// TXT previews are fetched with meta=false, so the response is the
+				// raw file content (plain text). Do NOT JSON.parse it.
+				file.content = res;
+			} else {
+				// Non-TXT previews use meta=true and return a JSON object with
+				// `raw_path`; some transports hand it back as a string, so parse only
+				// in this branch.
+				if (typeof res === 'string') {
+					res = JSON.parse(res);
+				}
 				const store = useDataStore();
 				file.url = store.baseURL() + res.raw_path;
-			} else if (['text', 'txt', 'textImmutable'].includes(fileType)) {
-				file.content = res;
 			}
 		} catch (error) {
-			console.error(error.message);
+			notifyRequestMessageError(error);
+			throw error;
 		}
 		return file;
 	}
@@ -631,7 +639,7 @@ export default class SyncDataAPI extends Origin {
 
 	async onSaveFile(item: any, content: any): Promise<void> {
 		const { repo_id } = this.getRepoIdByFileItem(item);
-		files.updateFile(
+		await files.updateFile(
 			appendPath(
 				encodeUrl(item.parentPath) || '',
 				encodeUrl(item.name),
@@ -667,12 +675,7 @@ export default class SyncDataAPI extends Origin {
 
 	formatTransferToFileItem(item: TransferItem): FileItem {
 		const extension = getextension(item.name);
-		const fullPathSplit = item.path.split('?');
-		const path = `${
-			item.front == TransferFront.download
-				? encodeUrl(fullPathSplit[0])
-				: fullPathSplit[0]
-		}?${fullPathSplit[1]}`;
+		const path = item.path;
 		const parentPath = item.parentPath
 			? item.parentPath.startsWith('/')
 				? item.parentPath
@@ -985,5 +988,38 @@ export default class SyncDataAPI extends Origin {
 			fileExtend: '',
 			path: ''
 		};
+	}
+
+	async createArchiveCompressTask(params: {
+		node: string;
+		parentPath: string;
+		param?: string;
+		format: ArchiveFormat;
+		items: FileItem[];
+		targetFileName: string;
+		password?: string;
+		splitVolume?: number;
+		conflictStrategy?: ArchiveConflict;
+		compressionLevel?: number;
+		preserveSymbolicLinks?: boolean;
+		driveType: DriveType;
+	}): Promise<{ task_id: string; node: string }> {
+		throw new Error(i18n.global.t('files.not_implemented'));
+	}
+
+	async createArchiveExtractTask(params: {
+		node: string;
+		parentPath: string;
+		param?: string;
+		format?: ArchiveFormat;
+		items: FileItem[];
+		targetFolderName?: string;
+		password?: string;
+	}): Promise<{ task_id: string; node: string }> {
+		throw new Error(i18n.global.t('files.not_implemented'));
+	}
+
+	getFileApiFrontendPath(file: FileItem) {
+		return this.utilsFormatPathtoUrl(file.path);
 	}
 }

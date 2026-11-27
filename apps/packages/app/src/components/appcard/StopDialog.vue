@@ -23,6 +23,7 @@
 				check-img="market/check_box.svg"
 				uncheck-img="market/uncheck_box.svg"
 				class="q-mt-md"
+				:disabled="allDisabled"
 				:model-value="allRef"
 				@update:model-value="onUpdate"
 			/>
@@ -47,6 +48,10 @@ const props = defineProps({
 		type: Boolean,
 		required: true,
 		default: true
+	},
+	allDisabled: {
+		type: Boolean,
+		default: false
 	}
 });
 

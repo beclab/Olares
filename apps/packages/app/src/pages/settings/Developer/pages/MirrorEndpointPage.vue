@@ -211,7 +211,7 @@ const removeConfirm = (item: string) => {
 				source: item
 			}),
 			useCancel: true,
-			confirmText: t('confirm'),
+			confirmText: t('delete'),
 			cancelText: t('cancel')
 		}
 	}).onOk(async () => {
@@ -264,7 +264,7 @@ const columns: any = [
 	{
 		name: 'actions',
 		align: 'right',
-		label: t('action'),
+		label: t('actions'),
 		sortable: false
 	}
 ];

@@ -22,13 +22,7 @@
 				<q-tooltip>{{ selectAll ? t('cancel') : t('select_all') }}</q-tooltip>
 			</q-btn>
 		</div>
-		<div class="row items-center text-h7">
-			{{
-				t('vault_t.count_items_selected', {
-					count: selectIds.length
-				})
-			}}
-		</div>
+		<div class="row items-center text-h7">{{ selectedCountText }}</div>
 		<div class="row items-center">
 			<span class="q-mr-xs cursor-pointer checkOperate" v-if="showMove">
 				<q-btn
@@ -52,35 +46,41 @@
 				</q-btn>
 			</span>
 
-			<span class="cursor-pointer checkOperate">
-				<q-btn
-					v-if="selectIds.length"
-					class="text-ink-1 btn-size-sm btn-no-text btn-no-border"
-					icon="sym_r_delete"
-					text-color="ink-2"
-					@click="handleRemove"
-				>
-					<q-tooltip>{{ t('delete') }}</q-tooltip>
-				</q-btn>
-				<q-btn
-					v-else
-					class="text-ink-1 btn-size-sm btn-no-text btn-no-border"
-					icon="sym_r_delete"
-					text-color="ink-2"
-					disabled
-				>
-					<q-tooltip>{{ t('delete') }}</q-tooltip>
-				</q-btn>
-			</span>
+			<slot
+				name="right-actions"
+				:disabled="!selectIds.length"
+				:handle-remove="handleRemove"
+			>
+				<span class="cursor-pointer checkOperate">
+					<q-btn
+						v-if="selectIds.length"
+						class="text-ink-1 btn-size-sm btn-no-text btn-no-border"
+						icon="sym_r_delete"
+						text-color="ink-2"
+						@click="handleRemove"
+					>
+						<q-tooltip>{{ t('delete') }}</q-tooltip>
+					</q-btn>
+					<q-btn
+						v-else
+						class="text-ink-1 btn-size-sm btn-no-text btn-no-border"
+						icon="sym_r_delete"
+						text-color="ink-2"
+						disabled
+					>
+						<q-tooltip>{{ t('delete') }}</q-tooltip>
+					</q-btn>
+				</span>
+			</slot>
 		</div>
 	</div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
-defineProps({
+const props = defineProps({
 	selectIds: {
 		type: Array,
 		required: true,
@@ -90,11 +90,23 @@ defineProps({
 		type: Boolean,
 		required: false,
 		default: false
+	},
+	selectedCountKey: {
+		type: String,
+		required: false,
+		default: 'vault_t.count_items_selected'
 	}
 });
 
 const { t } = useI18n();
 const selectAll = ref(false);
+const selectedCountText = computed(() =>
+	t(props.selectedCountKey, props.selectIds.length, {
+		named: {
+			count: props.selectIds.length
+		}
+	})
+);
 
 const emits = defineEmits([
 	'handleClose',

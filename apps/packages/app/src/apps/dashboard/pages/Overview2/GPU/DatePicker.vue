@@ -4,9 +4,9 @@
 			v-model="dateValue"
 			type="datetimerange"
 			unlink-panels
-			range-separator="To"
-			start-placeholder="Start date"
-			end-placeholder="End date"
+			:range-separator="$t('RANGE_SEPARATOR')"
+			:start-placeholder="$t('START_DATE')"
+			:end-placeholder="$t('END_DATE')"
 			:shortcuts="shortcuts"
 			:disabled-date="disabledDate"
 			:disabled="disabled"
@@ -60,7 +60,34 @@ const handleVisibleChange = (visible: boolean) => {
 	}
 };
 
-const shortcuts = [
+const shortcuts = computed(() => [
+	{
+		text: t('LAST_TIME_M', { count: 10 }),
+		value: () => {
+			const end = new Date();
+			const start = new Date();
+			start.setTime(start.getTime() - 60 * 1000 * 10);
+			return [start, end];
+		}
+	},
+	{
+		text: t('LAST_TIME_M', { count: 20 }),
+		value: () => {
+			const end = new Date();
+			const start = new Date();
+			start.setTime(start.getTime() - 60 * 1000 * 20);
+			return [start, end];
+		}
+	},
+	{
+		text: t('LAST_TIME_M', { count: 30 }),
+		value: () => {
+			const end = new Date();
+			const start = new Date();
+			start.setTime(start.getTime() - 60 * 1000 * 30);
+			return [start, end];
+		}
+	},
 	{
 		text: t('LAST_TIME_H', { count: 1 }),
 		value: () => {
@@ -71,11 +98,29 @@ const shortcuts = [
 		}
 	},
 	{
-		text: t('LAST_TIME_H', { count: 6 }),
+		text: t('LAST_TIME_H', { count: 2 }),
 		value: () => {
 			const end = new Date();
 			const start = new Date();
-			start.setTime(start.getTime() - 3600 * 1000 * 6);
+			start.setTime(start.getTime() - 3600 * 1000 * 2);
+			return [start, end];
+		}
+	},
+	{
+		text: t('LAST_TIME_H', { count: 3 }),
+		value: () => {
+			const end = new Date();
+			const start = new Date();
+			start.setTime(start.getTime() - 3600 * 1000 * 3);
+			return [start, end];
+		}
+	},
+	{
+		text: t('LAST_TIME_H', { count: 5 }),
+		value: () => {
+			const end = new Date();
+			const start = new Date();
+			start.setTime(start.getTime() - 3600 * 1000 * 5);
 			return [start, end];
 		}
 	},
@@ -124,7 +169,7 @@ const shortcuts = [
 			return [start, end];
 		}
 	}
-];
+]);
 
 const disabledDate = (time: Date) => {
 	return time.getTime() >= Date.now();

@@ -1,43 +1,39 @@
-# Quasar App (quasar-project)
+# Olares Web Applications
 
-A Quasar Project
+## Install dependencies
 
-## Install the dependencies
+Run `npm install` from the repository root. Follow the [local development guide](../../README.md#local-development-guide) to configure your hosts file and `packages/app/.env`.
+
+## Start in development mode
+
+Run the following command from `packages/app` to start Files.
 
 ```bash
-yarn
-# or
-npm install
+npm run dev:files
 ```
 
-### Start the app in development mode (hot-code reloading, error reporting, etc.)
+See the [project list](../../README.md#available-projects) for the other development commands and their ports.
+
+## Build for production
+
+From `packages/app`, generate the Material Symbols font before building. The following commands build Files.
 
 ```bash
-quasar dev
+npm run icons:subset
+npm run build:files
 ```
 
-### Lint the files
+See the [production build table](../../README.md#build-for-production) for the other build commands and output directories.
+
+## Lint and format
+
+Run these commands from `packages/app`.
 
 ```bash
-yarn lint
-# or
 npm run lint
-```
-
-### Format the files
-
-```bash
-yarn format
-# or
 npm run format
 ```
 
-### Build the app for production
-
-```bash
-quasar build
-```
-
-### Customize the configuration
+## Customize the configuration
 
 See [Configuring quasar.config.js](https://v2.quasar.dev/quasar-cli-webpack/quasar-config-js).

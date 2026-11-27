@@ -10,6 +10,7 @@ import { NetworkErrorMode, busEmit, bus, busOn } from '../utils/bus';
 import qs from 'qs';
 import { useDeviceStore } from 'src/stores/device';
 import { getRequestErrorMessage } from 'src/utils/notifyRedefinedUtil';
+import { i18n } from './i18n';
 
 declare module '@vue/runtime-core' {
 	interface ComponentCustomProperties {
@@ -68,29 +69,9 @@ export default boot(({ app }) => {
 				return config;
 			}
 
-			// if (
-			// 	config.url &&
-			// 	config.url.indexOf('/api/cloud/sig') >= 0 &&
-			// 	config.method === 'post'
-			// ) {
-			// 	const data = config.data || {};
-			// 	config.data = qs.stringify(data);
-			// 	return config;
-			// }
-
 			const userStore = useUserStore();
 
 			if (config.headers) {
-				// config.headers['Access-Control-Allow-Origin'] = '*';
-				// config.headers['Access-Control-Allow-Headers'] = 'Content-Type';
-				// config.headers['Access-Control-Allow-Methods'] =
-				// 	'PUT,POST,GET,DELETE,OPTIONS';
-
-				// if (tokenStore.$state.token?.access_token) {
-				// 	config.headers['X-Authorization'] =
-				// 		tokenStore.$state.token?.access_token;
-				// 	return config;
-				// } else {
 				if (!userStore.current_id) {
 					return config;
 				}
@@ -115,7 +96,7 @@ export default boot(({ app }) => {
 			(response.status != 200 && response.status != 201) ||
 			!response.data
 		) {
-			throw Error('Network error, please try again later');
+			throw Error(i18n.global.t('errors.network_error_please_try_again_later'));
 		}
 
 		const cloudStore = useCloudStore();
@@ -147,7 +128,7 @@ export default boot(({ app }) => {
 			if (data.code == 100001) {
 				busEmit('network_error', {
 					type: NetworkErrorMode.axois,
-					error: 'token expired'
+					error: 'token expired' // i18n-ignore: internal error code, not user-visible
 				});
 				//store.commit("account/remove");
 

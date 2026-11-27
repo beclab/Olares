@@ -26,7 +26,10 @@
 									)}`"
 								></div>
 							</div>
-							<div class="column q-ml-sm" style="width: calc(100% - 50px)">
+							<div
+								class="column justify-center q-ml-sm"
+								style="width: calc(100% - 50px)"
+							>
 								<div class="row items-center" style="width: 100%">
 									<div
 										class="text-subtitle1 text-ink-1"
@@ -47,7 +50,7 @@
 										size="16px"
 									/>
 								</div>
-								<div class="tags-bg row q-gutter-xs">
+								<div v-if="showTag" class="tags-bg row q-gutter-xs">
 									<div
 										class="bg-background-3 text-overline row items-center justify-center tags-add"
 										@click.stop="addTag"
@@ -73,7 +76,10 @@
 				</div>
 			</q-item-section>
 
-			<q-item-section side>
+			<q-item-section
+				side
+				v-if="!device.availableRoutes || device.availableRoutes.length == 0"
+			>
 				<q-icon name="sym_r_delete" size="20px" @click.stop="deleteDevice" />
 			</q-item-section>
 		</template>
@@ -191,30 +197,49 @@
 						<q-item dense style="padding: 0">
 							<q-item-section
 								class="text-body2 title"
-								:top="routeList.length > 1"
+								:top="device.availableRoutes.length > 1"
 							>
 								{{ t('device_routes') }}
 							</q-item-section>
 							<q-item-section class="text-body2 column detail">
 								<div
-									v-for="(route, index) in routeList"
-									:key="'ru' + route.id"
+									v-for="(route, index) in device.availableRoutes"
+									:key="route"
 									class="row items-center"
-									:class="index + 1 < routeList.length ? 'q-mb-xs' : ''"
+									:class="
+										index + 1 < device.availableRoutes.length ? 'q-mb-xs' : ''
+									"
 								>
-									<div>{{ route.prefix }}</div>
+									<div>{{ route }}</div>
 									<div
-										class="row items-center justify-center text-caption"
-										@click="modifyDeviceRoutesAction(route.id)"
-										:class="
-											route.enabled ? 'route-bg-enable' : 'route-bg-pendding'
-										"
+										class="row items-center justify-center text-caption route-toggle"
+										:class="routeToggleClass(route)"
+										@click="modifyDeviceRoutesAction(route)"
 									>
-										<div
-											class="node q-mr-sm"
-											:class="route.enabled ? 'node-enable' : 'node-pendding'"
-										></div>
-										{{ route.enabled ? t('enable') : t('pending') }}
+										<q-spinner-dots
+											v-if="isRouteApproving(route)"
+											size="14px"
+											:color="
+												device.approvedRoutes.includes(route)
+													? 'positive'
+													: 'warning'
+											"
+										/>
+										<template v-else>
+											<div
+												class="node q-mr-sm"
+												:class="
+													device.approvedRoutes.includes(route)
+														? 'node-enable'
+														: 'node-pendding'
+												"
+											/>
+											{{
+												device.approvedRoutes.includes(route)
+													? t('enable')
+													: t('pending')
+											}}
+										</template>
 									</div>
 								</div>
 							</q-item-section>
@@ -223,35 +248,54 @@
 					<template v-slot:mobile>
 						<q-item
 							style="padding: 0"
-							v-if="!deviceStore.isMobile || routeList.length > 0"
+							v-if="!deviceStore.isMobile || device.availableRoutes.length > 0"
 						>
 							<q-item-section>
 								<q-item-label
 									class="text-body3-m text-ink-3 q-mt-lg"
-									:top="routeList.length > 1"
+									:top="device.availableRoutes.length > 1"
 								>
 									{{ t('device_routes') }}
 								</q-item-label>
 								<q-item-label class="text-body3-m text-ink-1">
 									<div
-										v-for="(route, index) in routeList"
-										:key="'ru' + route.id"
+										v-for="(route, index) in device.availableRoutes"
+										:key="route"
 										class="row items-center"
-										:class="index + 1 < routeList.length ? 'q-mb-xs' : ''"
+										:class="
+											index + 1 < device.availableRoutes.length ? 'q-mb-xs' : ''
+										"
 									>
-										<div>{{ route.prefix }}</div>
+										<div>{{ route }}</div>
 										<div
-											class="row items-center justify-center text-caption"
-											@click="modifyDeviceRoutesAction(route.id)"
-											:class="
-												route.enabled ? 'route-bg-enable' : 'route-bg-pendding'
-											"
+											class="row items-center justify-center text-caption route-toggle"
+											:class="routeToggleClass(route)"
+											@click="modifyDeviceRoutesAction(route)"
 										>
-											<div
-												class="node q-mr-sm"
-												:class="route.enabled ? 'node-enable' : 'node-pendding'"
-											></div>
-											{{ route.enabled ? t('enable') : t('pending') }}
+											<q-spinner-dots
+												v-if="isRouteApproving(route)"
+												size="14px"
+												:color="
+													device.approvedRoutes.includes(route)
+														? 'positive'
+														: 'warning'
+												"
+											/>
+											<template v-else>
+												<div
+													class="node q-mr-sm"
+													:class="
+														device.approvedRoutes.includes(route)
+															? 'node-enable'
+															: 'node-pendding'
+													"
+												></div>
+												{{
+													device.approvedRoutes.includes(route)
+														? t('enable')
+														: t('pending')
+												}}
+											</template>
 										</div>
 									</div>
 								</q-item-label>
@@ -272,36 +316,65 @@ import { useHeadScaleStore } from 'src/stores/settings/headscale';
 import { useDeviceStore } from 'src/stores/settings/device';
 import { getLocalTime } from 'src/utils/settings/utils';
 import { HeadScaleDevice } from '@bytetrade/core';
-import { ref, onMounted, onUnmounted } from 'vue';
-import { Route } from 'src/headscale/classes';
 import { useQuasar } from 'quasar';
 import { useI18n } from 'vue-i18n';
+import { PropType, ref } from 'vue';
 
 const props = defineProps({
 	device: {
-		type: HeadScaleDevice,
+		type: Object as PropType<HeadScaleDevice>,
 		required: true
 	}
 });
 
 const headScaleStore = useHeadScaleStore();
 const deviceStore = useDeviceStore();
-const timer = ref();
-const routeList = ref<Route[]>([]);
+const showTag = ref(false);
 
 const $q = useQuasar();
 const { t } = useI18n();
 
-async function getDeviceRoutesAction() {
-	routeList.value = (
-		await headScaleStore.getDeviceRoutes(props.device.id)
-	).slice(0, 1);
+const approvingRoute = ref<string | null>(null);
+
+function isRouteApproving(route: string) {
+	return approvingRoute.value === route;
 }
 
-async function modifyDeviceRoutesAction(routeID: number) {
-	await headScaleStore.modifyDeviceRoutes(routeList.value, routeID);
+function routeToggleClass(route: string) {
+	const base = props.device.approvedRoutes.includes(route)
+		? 'route-bg-enable'
+		: 'route-bg-pendding';
+	if (approvingRoute.value === null) {
+		return [base, 'route-toggle--interactive'];
+	}
+	if (approvingRoute.value === route) {
+		return [base, 'route-toggle--loading'];
+	}
+	return [base, 'route-toggle--idle'];
+}
 
-	await getDeviceRoutesAction();
+async function modifyDeviceRoutesAction(route: string) {
+	if (approvingRoute.value !== null) {
+		return;
+	}
+
+	const currentList = props.device?.approvedRoutes || [];
+
+	const hasRoute = currentList.includes(route);
+	let newList: string[];
+
+	if (hasRoute) {
+		newList = currentList.filter((item) => item !== route);
+	} else {
+		newList = [...currentList, route];
+	}
+
+	approvingRoute.value = route;
+	try {
+		await headScaleStore.approveRoutes(props.device.id, newList);
+	} finally {
+		approvingRoute.value = null;
+	}
 }
 
 function timeStatus(date: Date) {
@@ -325,14 +398,6 @@ async function deleteTag(index: number) {
 	newTags.splice(index, 1);
 	await headScaleStore.updateTags(props.device.id, newTags);
 }
-
-onMounted(async () => {
-	await getDeviceRoutesAction();
-});
-
-onUnmounted(() => {
-	clearInterval(timer.value);
-});
 
 const addTag = () => {
 	$q.dialog({
@@ -364,7 +429,12 @@ const deleteDevice = () => {
 		component: ReminderDialogComponent,
 		componentProps: {
 			title: t('delete_device'),
-			message: t('delete_device') + props.device.givenName
+			message: t('delete_device_message', {
+				device: props.device.givenName
+			}),
+			useCancel: true,
+			confirmText: t('delete'),
+			cancelText: t('cancel')
 		}
 	}).onOk(async () => {
 		await headScaleStore.removeDevice(props.device.id);
@@ -510,6 +580,32 @@ const titleAction = () => {
 
 	.node-enable {
 		background: $green;
+	}
+
+	.route-toggle {
+		transition: opacity 0.2s ease, transform 0.2s ease;
+		min-height: 20px;
+	}
+
+	.route-toggle--interactive {
+		cursor: pointer;
+	}
+
+	.route-toggle--interactive:active {
+		transform: scale(0.98);
+	}
+
+	.route-toggle--loading {
+		cursor: wait;
+		padding-left: 10px;
+		padding-right: 10px;
+		pointer-events: none;
+	}
+
+	.route-toggle--idle {
+		cursor: not-allowed;
+		opacity: 0.45;
+		pointer-events: none;
 	}
 }
 </style>

@@ -156,7 +156,8 @@ const uninstallableAppStates = new Set<string>([
 	APP_STATUS.UPGRADE.FAILED,
 	APP_STATUS.RESUME.FAILED,
 	APP_STATUS.MODEL.INSTALLED,
-	APP_STATUS.ENV.APPLY_FAILED
+	APP_STATUS.ENV.APPLY_FAILED,
+	APP_STATUS.ENV.CANCEL_FAILED
 ]);
 
 export function isUninstallable(app: AppStatusInfo): boolean {
@@ -201,6 +202,24 @@ export function isCloneApp(app?: AppStatusInfo): boolean {
 	return !!(app && !!app.rawAppName && app.rawAppName !== app.name);
 }
 
+export function isTemplateApp(simple?: AppSimpleInfo): boolean {
+	return !!simple?.templateOnly;
+}
+
+export function isMultiInstanceApp(simple?: AppSimpleInfo): boolean {
+	return !!simple?.allowMultipleInstall;
+}
+
+// A clone instance carries the template chart's own simpleInfo (templateOnly is
+// true on the instance itself), so detect "from template" from the instance's
+// OWN simple — never look up the body (rawAppName), which may not be installed.
+export function isTemplateInstance(
+	status?: AppStatusInfo,
+	simple?: AppSimpleInfo
+): boolean {
+	return isCloneApp(status) && isTemplateApp(simple);
+}
+
 export function getRawAppTitle(
 	locale: string,
 	status?: AppStatusInfo,
@@ -213,7 +232,13 @@ export function getRawAppTitle(
 	}
 }
 
-export function uninstalledAppState(state: string): boolean {
+export function uninstalledAppState(
+	state: string,
+	uninstallingIsUninstalled = false
+): boolean {
+	if (uninstallingIsUninstalled && state == APP_STATUS.UNINSTALL.DEFAULT) {
+		return true;
+	}
 	return uninstalledAppStates.has(state);
 }
 

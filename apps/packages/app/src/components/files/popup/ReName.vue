@@ -6,7 +6,7 @@
 		:cancel="t('cancel')"
 		:ok-loading="submitLoading ? t('loading') : false"
 		size="medium"
-		:okDisabled="!name"
+		:okDisabled="!name || errorMessage.length > 0"
 		@onSubmit="submit"
 	>
 		<div
@@ -20,6 +20,7 @@
 				v-model.trim="name"
 				@keyup.enter="submit"
 			/>
+			<div class="text-negative" v-if="errorMessage">{{ errorMessage }}</div>
 		</div>
 	</bt-custom-dialog>
 </template>
@@ -33,6 +34,8 @@ import { DriveType } from '../../../utils/interface/files';
 
 import { useI18n } from 'vue-i18n';
 import { busEmit } from 'src/utils/bus';
+import { notifyWarning } from 'src/utils/notifyRedefinedUtil';
+import { useFileNameValidation } from 'src/composables/files/useFileNameValidation';
 
 const props = defineProps({
 	item: {
@@ -50,6 +53,7 @@ const submitLoading = ref(false);
 const isMobile = $q.platform.is.mobile;
 const CustomRef = ref();
 const { t } = useI18n();
+const { errorMessage } = useFileNameValidation(name);
 
 onMounted(() => {
 	name.value = props.item!.name;
@@ -58,6 +62,10 @@ onMounted(() => {
 const submit = async () => {
 	if (name.value.length == 0) {
 		return;
+	}
+	if (errorMessage.value) {
+		notifyWarning(errorMessage.value);
+		return false;
 	}
 
 	submitLoading.value = true;

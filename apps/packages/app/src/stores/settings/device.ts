@@ -27,6 +27,9 @@ export const useDeviceStore = defineStore('deviceStore', {
 		},
 		platform(): string {
 			return this.isMobile ? 'mobile' : 'web';
+		},
+		isDesktop(): boolean {
+			return this.deviceInfo.device === DeviceType.DESKTOP;
 		}
 	},
 

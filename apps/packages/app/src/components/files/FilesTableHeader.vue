@@ -119,7 +119,7 @@
 					role="button"
 					tabindex="0"
 				>
-					<span>{{ 'Action' }}</span>
+					<span>{{ t('action') }}</span>
 				</p>
 
 				<p

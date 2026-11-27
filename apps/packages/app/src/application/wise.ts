@@ -21,6 +21,7 @@ import {
 	KNOWLEDGE_DATABASE,
 	WISE_DATABASE
 } from 'src/utils/localStorageConstant';
+import { i18n } from 'src/boot/i18n';
 
 export class WiseApplication extends NormalApplication {
 	applicationName = 'wise';
@@ -206,7 +207,7 @@ export class WiseApplication extends NormalApplication {
 			) {
 				busEmit('network_error', {
 					type: NetworkErrorMode.axois,
-					error: 'Network error, please try again later'
+					error: i18n.global.t('errors.network_error_please_try_again_later')
 				});
 			}
 
@@ -242,7 +243,8 @@ export class WiseApplication extends NormalApplication {
 				if (!response.data || response.data.code !== 0) {
 					busEmit(
 						'network_error',
-						response.data.message || 'Network error, please try again later'
+						response.data.message ||
+							i18n.global.t('errors.network_error_please_try_again_later')
 					);
 					throw new Error(response.data.message);
 				}
@@ -257,7 +259,8 @@ export class WiseApplication extends NormalApplication {
 				if ((!response.data || response.data.code !== 0) && !isNoToast) {
 					busEmit(
 						'network_error',
-						response.data.message || 'Network error, please try again later'
+						response.data.message ||
+							i18n.global.t('errors.network_error_please_try_again_later')
 					);
 					throw new Error(response.data.message);
 				}

@@ -9,6 +9,7 @@ import {
 } from '../abstractions/olaresTask/interface';
 import copyer from './copyer';
 import cloudUpload from './cloudUpload';
+import archive from './archive';
 import { CommonFetch } from 'src/api';
 import { useTransfer2Store } from 'src/stores/transfer2';
 import { useFilesStore } from 'src/stores/files';
@@ -16,13 +17,14 @@ import { useFilesStore } from 'src/stores/files';
 class OlaresTaskManager {
 	copyerTask = copyer;
 	cloudUploadTask = cloudUpload;
+	archiveTask = archive;
 	tasks: Record<string, OlaresTaskBaseItem> = {};
 	maxRetries = 3;
 	Taskmanager: any;
 
 	async doAction(
 		item: TransferItem,
-		action: 'start' | 'cancel' | 'pause' | 'resume' | 'complete'
+		action: 'start' | 'cancel' | 'pause' | 'resume' | 'complete' | 'retry'
 	) {
 		if (item.phaseTaskId) {
 			if (action === 'cancel') {
@@ -33,6 +35,15 @@ class OlaresTaskManager {
 				return result;
 			} else if (action == 'pause' || action == 'resume') {
 				const result = await this.pauseOrResumeTask(item, action);
+				return result;
+			} else if (action == 'retry') {
+				const result = await this.pauseOrResumeTask(item, 'resume');
+				if (result) {
+					const task = this.tasks[item.phaseTaskId];
+					if (task) {
+						task.retryCount = 0;
+					}
+				}
 				return result;
 			}
 		}
@@ -54,10 +65,7 @@ class OlaresTaskManager {
 					const id = runningTaskIds[i];
 
 					const transferStore = useTransfer2Store();
-					if (
-						res.tasks[i].task_type !== 'copy' &&
-						res.tasks[i].task_type !== 'move'
-					) {
+					if (!this.isTransferTask(res.tasks[i].task_type)) {
 						return;
 					}
 					if (transferStore.filesCopyTransferMap[id] === undefined) {
@@ -73,6 +81,11 @@ class OlaresTaskManager {
 							task_type: res.tasks[i].task_type,
 							retryCount: 0,
 							pending: false,
+							maxRetries:
+								res.tasks[i].task_type === 'compress' ||
+								res.tasks[i].task_type === 'extract'
+									? this.archiveTask.maxRetries
+									: undefined,
 							transfer_id: transferStore.filesCopyTransferMap[id],
 							node: node
 						};
@@ -91,7 +104,7 @@ class OlaresTaskManager {
 	async addTask(
 		taskId: string,
 		node: string,
-		task_type: 'copy' | 'upload' | 'move',
+		task_type: 'copy' | 'upload' | 'move' | 'compress' | 'extract',
 		info: any
 	) {
 		const task = await this.getTask({ id: taskId, node });
@@ -111,6 +124,15 @@ class OlaresTaskManager {
 				...info,
 				node
 			});
+		} else if (task_type == 'compress' || task_type == 'extract') {
+			formatTask = {
+				...task.task,
+				node,
+				task_type,
+				retryCount: 0,
+				pending: false,
+				maxRetries: this.archiveTask.maxRetries
+			};
 		}
 
 		if (formatTask === undefined) return false;
@@ -129,7 +151,10 @@ class OlaresTaskManager {
 		const runningTasks = Object.values(this.tasks);
 		for (const task of runningTasks) {
 			try {
-				if (task && task.pending) {
+				if (
+					task &&
+					(task.pending || task.retryCount > this.getMaxRetries(task))
+				) {
 					continue;
 				}
 				task.pending = true;
@@ -149,9 +174,19 @@ class OlaresTaskManager {
 							...res.task
 						});
 						await this.updateTask(dealTask, res.task);
+					} else if (
+						task.task_type == 'compress' ||
+						task.task_type == 'extract'
+					) {
+						const dealTask = await this.archiveTask.setQueryResult({
+							...task,
+							...res.task
+						});
+						dealTask.maxRetries = this.archiveTask.maxRetries;
+						await this.updateTask(dealTask, res.task);
 					}
 				} else {
-					if (task.retryCount > this.maxRetries) {
+					if (task.retryCount > this.getMaxRetries(task)) {
 						delete this.tasks[task.id];
 						const transferStore = useTransfer2Store();
 						if (task.transfer_id)
@@ -186,7 +221,7 @@ class OlaresTaskManager {
 		) {
 			delete this.tasks[task.id];
 		} else if (task.status === 'failed') {
-			if (task.retryCount > this.maxRetries) {
+			if (task.retryCount >= this.getMaxRetries(task)) {
 				delete this.tasks[task.id];
 			} else {
 				task.retryCount += 1;
@@ -216,6 +251,35 @@ class OlaresTaskManager {
 				task.node,
 				TransferStatus.Running,
 				queryTask.dst_type
+			);
+
+			transferStore.filesInDialogMap[
+				transferStore.filesCopyTransferMap[task.id]
+			] = {
+				...transferItem,
+				isPaused: false,
+				id: task.transfer_id,
+				speed: 0,
+				progress: queryTask.progress / 100,
+				leftTime: 0,
+				bytes: 0
+			};
+		}
+
+		if (
+			(task.task_type === 'compress' || task.task_type === 'extract') &&
+			task.transfer_id &&
+			!transferStore.filesInDialogMap[task.transfer_id]
+		) {
+			transferStore.filesInDialog.push(task.transfer_id);
+
+			const transferItem = this.archiveTask.formatArchiveToTransfer(
+				{
+					...queryTask,
+					action: task.task_type
+				},
+				task.node,
+				TransferStatus.Running
 			);
 
 			transferStore.filesInDialogMap[
@@ -297,13 +361,17 @@ class OlaresTaskManager {
 					...e,
 					retryCount: 0,
 					pending: false,
+					maxRetries:
+						(e as any).action === 'compress' || (e as any).action === 'extract'
+							? this.archiveTask.maxRetries
+							: undefined,
 					node: node,
 					task_type: (e as any).action
 				};
 			});
 			return res;
 		} catch (error) {
-			return { tasks: [], code: 500, msg: 'Failed to fetch tasks' };
+			return { tasks: [], code: 500, msg: 'Failed to fetch tasks' }; // i18n-ignore
 		}
 	}
 	async cancelTask(item: TransferItem) {
@@ -362,6 +430,17 @@ class OlaresTaskManager {
 			console.error(`Failed to delete task ${item.phaseTaskId}:`, error);
 			throw false;
 		}
+	}
+
+	private isTransferTask(taskType: string) {
+		return ['copy', 'move', 'compress', 'extract'].includes(taskType);
+	}
+
+	private getMaxRetries(task: { maxRetries?: number }) {
+		if (task.maxRetries !== undefined) {
+			return task.maxRetries;
+		}
+		return this.maxRetries;
 	}
 }
 

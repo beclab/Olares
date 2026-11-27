@@ -326,12 +326,12 @@ const openErrorToast = (file) => {
 };
 
 const fileIcon = (name: any) => {
-	let src = '/img/file-';
-	let folderSrc = '/img/file-blob.svg';
+	let src = '/img/files/file-';
+	let folderSrc = '/img/files/file-blob.svg';
 
 	if (process.env.PLATFORM == 'DESKTOP') {
-		src = './img/file-';
-		folderSrc = './img/file-blob.svg';
+		src = './img/files/file-';
+		folderSrc = './img/files/file-blob.svg';
 	}
 
 	if (name.split('.').length > 1) {

@@ -1,7 +1,9 @@
 import axios, { AxiosProgressEvent } from 'axios';
 import { MARKET_SOURCE_OFFICIAL } from 'src/constant/constants';
 import { CloneEntrance, UpdateEnvBody } from 'src/constant';
+import { ComputeBindingItem, ComputeType } from 'src/constant/compute';
 import { useAppStore } from 'src/stores/market/appStore';
+import { i18n } from 'src/boot/i18n';
 
 export interface BaseOperationRequest {
 	app_name: string;
@@ -12,20 +14,37 @@ export interface OperationRequest extends BaseOperationRequest {
 	version: string;
 	sync?: boolean;
 	envs?: UpdateEnvBody;
+	selectedGpuType?: ComputeType;
 }
 
-export interface CSV2Request extends OperationRequest {
+export interface StopRequest extends BaseOperationRequest {
 	//only uninstall and only cs v2
-	all: boolean;
+	all?: boolean;
+}
+
+export interface UninstallRequest extends BaseOperationRequest {
+	version: string;
+	//only uninstall and only cs v2
+	all?: boolean;
+	sync?: boolean;
+	deleteData: boolean;
 }
 
 //no version
 export interface CloneRequest extends BaseOperationRequest {
 	sync?: boolean;
 	envs?: UpdateEnvBody;
+	selectedGpuType?: ComputeType;
 	//only clone
 	title?: string;
 	entrances?: CloneEntrance[];
+	// true when creating an instance from a template app (no installable body)
+	templateClone?: boolean;
+}
+
+//no version, shared by resume and restart
+export interface Resume2RestartRequest extends BaseOperationRequest {
+	computeBinding?: ComputeBindingItem[];
 }
 
 export async function installApp(request: OperationRequest): Promise<any> {
@@ -50,7 +69,7 @@ export async function cancelInstalling(
 	});
 }
 
-export async function uninstallApp(request: CSV2Request): Promise<any> {
+export async function uninstallApp(request: UninstallRequest): Promise<any> {
 	const store = useAppStore();
 	const url = store.appUrl + '/apps/' + request.app_name;
 	return await axios.delete(url, {
@@ -64,20 +83,37 @@ export async function upgradeApp(request: OperationRequest): Promise<any> {
 	return await axios.put(url, request);
 }
 
-export async function resumeApp(appName: string): Promise<any> {
+export async function resumeApp(request: Resume2RestartRequest): Promise<any> {
 	const store = useAppStore();
 	const url = store.appUrl + '/apps/resume';
 	return await axios.post(url, {
-		appName
+		...request
 	});
 }
 
-export async function stopApp(appName: string, all: boolean): Promise<any> {
+export async function validateResumeCompute(
+	request: Resume2RestartRequest
+): Promise<any> {
+	const store = useAppStore();
+	const url = store.appUrl + '/apps/' + request.app_name + '/bindings/validate';
+	return await axios.post(url, {
+		...request
+	});
+}
+
+export async function restartApp(request: Resume2RestartRequest): Promise<any> {
+	const store = useAppStore();
+	const url = store.appUrl + '/apps/restart';
+	return await axios.post(url, {
+		...request
+	});
+}
+
+export async function stopApp(request: StopRequest): Promise<any> {
 	const store = useAppStore();
 	const url = store.appUrl + '/apps/stop';
 	return await axios.post(url, {
-		appName,
-		all
+		...request
 	});
 }
 
@@ -113,12 +149,15 @@ export async function uploadLocalPackage(
 		if (response.data) {
 			return { data: response.data, message: '' };
 		}
-		return { data: null, message: response.message ?? 'Upload response error' };
+		return {
+			data: null,
+			message: response.message ?? i18n.global.t('Upload response error')
+		};
 	} catch (e: any) {
 		console.error(e.response);
 		return {
 			data: null,
-			message: e.response?.data?.message || 'Upload failed'
+			message: e.response?.data?.message || i18n.global.t('Upload failed')
 		};
 	}
 }

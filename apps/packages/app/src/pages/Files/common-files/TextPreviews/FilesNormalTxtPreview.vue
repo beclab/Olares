@@ -1,31 +1,65 @@
 <template>
-	<div
-		class="info-content text-subtitle3 text-ink-1"
-		:class="$q.platform.is.mobile ? 'q-pa-md' : 'q-pa-lg'"
-	>
-		{{ content }}
+	<code-editor
+		v-if="hasContent"
+		:value="text"
+		:name="name"
+		:readonly="true"
+		:show-gutter="false"
+		hide-cursor
+		:options="previewOptions"
+		class="info-content"
+	/>
+	<div v-else class="info-empty column items-center justify-center">
+		<div class="text-body3 text-ink-3">{{ t('files.no_content') }}</div>
 	</div>
 </template>
 
 <script setup lang="ts">
-import { useQuasar } from 'quasar';
+import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
+import CodeEditor from './CodeEditor.vue';
 
-defineProps({
+const { t } = useI18n();
+
+const props = defineProps({
 	content: {
+		type: [String, Object],
+		default: '',
+		required: false
+	},
+	name: {
 		type: String,
 		default: '',
 		required: false
 	}
 });
 
-const $q = useQuasar();
+const text = computed(() => {
+	const value = props.content;
+	if (value == null) return '';
+	return typeof value === 'object'
+		? JSON.stringify(value, null, 2)
+		: String(value);
+});
+
+const hasContent = computed(() => text.value.trim().length > 0);
+
+const previewOptions = {
+	highlightActiveLine: false,
+	highlightGutterLine: false,
+	highlightSelectedWord: false,
+	displayIndentGuides: false
+};
 </script>
 
 <style scoped lang="scss">
 .info-content {
-	overflow-y: scroll;
+	width: 100%;
 	height: 100%;
-	white-space: pre-wrap;
-	word-wrap: break-word;
+}
+
+.info-empty {
+	width: 100%;
+	height: 100%;
 }
 </style>

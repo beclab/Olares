@@ -9,15 +9,12 @@ This directory contains the code for system applications, primarily for LarePass
 | Application | Description |
 | --- | --- |
 | Files | A file management app that manages and synchronizes files across devices and sources, enabling seamless sharing and access. |
-| Wise | A local-first and AI-native modern reader that helps to collect, read, and manage information from various platforms. Users can run self-hosted recommendation algorithms to filter and sort online content. |
-| Vault | A secure password manager for storing and managing sensitive information across devices. |
 | Market | A decentralized and permissionless app store for installing, uninstalling, and updating applications and recommendation algorithms. |
 | Desktop | A hub for managing and interacting with installed applications. File and application searching are also supported. |
 | Profile | An app to customize the user's profile page. |
 | Settings | A system configuration application. |
 | Dashboard | An app for monitoring system resource usage. |
 | Control Hub | The console for Olares, providing precise and autonomous control over the system and its environment. |
-| Studio | A development tool for building and deploying Olares applications. |
 
 
 # Local Development Guide
@@ -32,14 +29,9 @@ This document describes how to start and develop various sub-projects locally.
 | Files | `npm run dev:files` | 5090 |
 | Settings | `npm run dev:settings` | 9000 |
 | Market | `npm run dev:market` | 8080 |
-| Vault | `npm run dev:vault` | 8090 |
-| Wise | `npm run dev:wise` | 8100 |
 | Dashboard | `npm run dev:dashboard` | 9003 |
 | Control Hub | `npm run dev:hub` | 9002 |
-| Share | `npm run dev:share` | 5070 |
 | Editor | `npm run dev:editor` | 9100 |
-| Preview | `npm run dev:preview` | 9001 |
-| Studio | `npm run dev:studio` | 9001 |
 
 ## Step 1: Modify Local Hosts File
 
@@ -149,14 +141,9 @@ After successful startup, visit in your browser (replace port according to the p
 | Files | `https://test.xxx.olares.com:5090` |
 | Settings | `https://test.xxx.olares.com:9000` |
 | Market | `https://test.xxx.olares.com:8080` |
-| Vault | `https://test.xxx.olares.com:8090` |
-| Wise | `https://test.xxx.olares.com:8100` |
 | Dashboard | `https://test.xxx.olares.com:9003` |
 | Control Hub | `https://test.xxx.olares.com:9002` |
-| Share | `https://test.xxx.olares.com:5070` |
 | Editor | `https://test.xxx.olares.com:9100` |
-| Preview | `https://test.xxx.olares.com:9001` |
-| Studio | `https://test.xxx.olares.com:9001` |
 
 > **Note**: Since a self-signed certificate is used, the browser may display an insecure connection warning. Click "Advanced" and select "Proceed" to continue.
 
@@ -185,35 +172,15 @@ Ensure the `ACCOUNT_DOMAIN` in the `.env` file is set correctly. The proxy confi
 
 ## Build for Production
 
-```bash
-# Build Desktop
-npm run build:desktop
+Run the build commands from `packages/app`.
 
-# Build Files
-npm run build:files
-
-# Build Settings
-npm run build:settings
-
-# Build other projects...
-npm run build:<project>
-```
-
-### Build Output Directory
-
-| Project | Output Directory |
-|---------|------------------|
-| Desktop | `dist/apps/desktop` |
-| Files | `dist/apps/files` |
-| Settings | `dist/apps/settings` |
-| Market | `dist/apps/market` |
-| Vault | `dist/apps/vault` |
-| Dashboard | `dist/apps/dashboard` |
-| Control Hub | `dist/apps/control-hub` |
-| Share | `dist/apps/share` |
-| Editor | `dist/apps/editor` |
-| Preview | `dist/apps/preview` |
-| **Wise** | `dist/spa` |
-| **Studio** | `dist/spa` |
-
-> **Note**: Build outputs for Wise and Studio are located in `dist/spa` directory, not under `dist/apps/`.
+| Project | Command | Output Directory |
+| --- | --- | --- |
+| Desktop | `npm run build:desktop` | `dist/apps/desktop` |
+| Files | `npm run build:files` | `dist/apps/files` |
+| Settings | `npm run build:settings` | `dist/apps/settings` |
+| Market | `npm run build:market` | `dist/apps/market` |
+| Dashboard | `npm run build:dashboard` | `dist/apps/dashboard` |
+| Control Hub | `npm run build:hub` | `dist/apps/control-hub` |
+| Editor | `npm run build:editor` | `dist/apps/profile-editor` |
+| Wizard | `npm run build:wizard` | `dist/spa` |

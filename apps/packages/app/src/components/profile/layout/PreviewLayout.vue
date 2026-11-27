@@ -365,7 +365,7 @@ const onOpenWindow = (url: string) => {
 				.image-title {
 					max-width: 100%;
 					overflow-wrap: break-word;
-					word-break: break-all;
+					word-break: normal;
 					font-size: 1.125em;
 					font-style: normal;
 					font-weight: 500;
@@ -376,7 +376,7 @@ const onOpenWindow = (url: string) => {
 				.image-description {
 					max-width: 100%;
 					overflow-wrap: break-word;
-					word-break: break-all;
+					word-break: normal;
 					white-space: pre-wrap;
 					text-align: center;
 					font-size: 0.875em;
@@ -394,7 +394,7 @@ const onOpenWindow = (url: string) => {
 				.text-title {
 					max-width: 100%;
 					overflow-wrap: break-word;
-					word-break: break-all;
+					word-break: normal;
 					font-size: 1.5em;
 					font-style: normal;
 					font-weight: 700;
@@ -404,7 +404,7 @@ const onOpenWindow = (url: string) => {
 				.text-description {
 					max-width: 100%;
 					overflow-wrap: break-word;
-					word-break: break-all;
+					word-break: normal;
 					white-space: pre-wrap;
 					font-size: 1em;
 					font-style: normal;
@@ -431,7 +431,7 @@ const onOpenWindow = (url: string) => {
 						max-width: 100%;
 						white-space: pre-line;
 						overflow-wrap: break-word;
-						word-break: break-all;
+						word-break: normal;
 						width: 100%;
 						height: auto;
 						cursor: pointer;

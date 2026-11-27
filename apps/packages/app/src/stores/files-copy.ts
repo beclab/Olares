@@ -24,17 +24,20 @@ export const useFilesCopyStore = defineStore('filesCopy', {
 			type,
 			node,
 			dst_drive_type,
-			action
+			action,
+			origin_id
 		}: {
 			taskId: string;
 			type: TransferFront;
 			node: string;
 			dst_drive_type: DriveType;
 			action: 'copy' | 'move';
+			origin_id?: number;
 		}) {
 			Taskmanager.addTask(taskId, node, action, {
 				type,
-				dst_drive_type
+				dst_drive_type,
+				origin_id
 			});
 		},
 

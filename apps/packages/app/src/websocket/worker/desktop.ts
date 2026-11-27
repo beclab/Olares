@@ -33,38 +33,21 @@ export class DesktopWebsocketBean extends BaseWebsocketBean {
 				]
 			};
 			desktopInsertNotificationItem(item, this.db, (item: NotificationItem) => {
-				this.connections.forEach((port) =>
-					port.postMessage({
-						type: 'message',
-						data: {
-							type: 'notification',
-							data: item
-						}
-					})
-				);
+				this.publishAppMessage({
+					type: 'notification',
+					data: item
+				});
 			});
 			return;
 		}
-		this.connections.forEach((port) =>
-			port.postMessage({
-				type: 'message',
-				data: {
-					type: 'ws',
-					data: ev.data
-				}
-			})
-		);
+		this.publishAppMessage({
+			type: 'ws',
+			data: ev.data
+		});
 	}
 
 	async onReconnectSuccess() {
 		super.onReconnectSuccess();
-		this.connections.forEach((port) => {
-			port.postMessage({
-				type: 'message',
-				data: {
-					type: 'reconnected'
-				}
-			});
-		});
+		this.publishAppMessage({ type: 'reconnected' });
 	}
 }

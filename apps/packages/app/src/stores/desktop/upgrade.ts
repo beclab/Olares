@@ -3,12 +3,13 @@ import axios from 'axios';
 import { useTokenStore } from './token';
 import { UpgradeState } from '@apps/desktop/type/types';
 import { compareOlaresVersion } from '@bytetrade/core';
+import { TerminusStatusEnum } from 'src/services/abstractions/mdns/service';
 
 export type UpgradeStateStore = {
 	state: UpgradeState;
 	upgradeDetail: {
 		upgradingState: string;
-		terminusState: string;
+		terminusState: TerminusStatusEnum;
 	};
 	refreshTimer: any;
 };
@@ -23,7 +24,20 @@ export const useUpgradeStore = defineStore('upgrade', {
 	getters: {
 		isUpgrading(state): boolean {
 			return (
-				state.upgradeDetail && state.upgradeDetail.terminusState == 'upgrading'
+				state.upgradeDetail &&
+				state.upgradeDetail.terminusState == TerminusStatusEnum.Upgrading
+			);
+		},
+		isUpgradingComplete(state): boolean {
+			return (
+				state.upgradeDetail &&
+				state.upgradeDetail.terminusState == TerminusStatusEnum.TerminusRunning
+			);
+		},
+		isUpgradingError(state): boolean {
+			return (
+				state.upgradeDetail &&
+				state.upgradeDetail.terminusState == TerminusStatusEnum.SystemError
 			);
 		}
 	},
@@ -60,12 +74,26 @@ export const useUpgradeStore = defineStore('upgrade', {
 				if (this.isUpgrading) {
 					this.setStateByUpgradingState(this.upgradeDetail.upgradingState);
 				} else {
-					this.stopRefreshUpgradeState();
+					const isFailed =
+						this.isUpgradingError ||
+						this.upgradeDetail.upgradingState == 'failed';
+
+					if (
+						this.state == UpgradeState.StatusRunning &&
+						!isFailed &&
+						!this.isUpgradingComplete
+					) {
+						return;
+					}
+
 					if (this.state == UpgradeState.StatusRunning) {
-						this.state = UpgradeState.StatusComplete;
+						this.state = isFailed
+							? UpgradeState.StatusFailed
+							: UpgradeState.StatusComplete;
 					} else {
 						this.state = UpgradeState.NotRunning;
 					}
+					this.stopRefreshUpgradeState();
 				}
 			} catch (error) {
 				/* empty */

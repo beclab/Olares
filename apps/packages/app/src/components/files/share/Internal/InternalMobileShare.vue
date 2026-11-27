@@ -357,13 +357,6 @@ const ok = computed(() => {
 });
 
 const onDisabled = computed(() => {
-	if (currentStep.value == ShareAddStep.BASE) {
-		return (
-			selectedUsers.value.filter((e) => e.name !== filesStore.users?.owner)
-				.length == 0
-		);
-	}
-
 	if (currentStep.value == ShareAddStep.USER_PERMISSION) {
 		return selectedUsers.value.length == 0;
 	}

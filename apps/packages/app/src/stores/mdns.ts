@@ -672,6 +672,7 @@ export const useMDNSStore = defineStore('mdnsStore', {
 				.onOk(async (upgradeMode: UpgradeMode) => {
 					const onRequestUpgrade = async (upgradeMode: UpgradeMode) => {
 						try {
+							getNativeAppPlatform().getQuasar()?.loading.show();
 							const upgradeInfo = {
 								version: machine.version?.upgradeableVersion,
 								wizardURL: machine.version?.wizardUrl,
@@ -695,6 +696,8 @@ export const useMDNSStore = defineStore('mdnsStore', {
 						} catch (error) {
 							notifyRequestMessageError(error);
 							return false;
+						} finally {
+							getNativeAppPlatform().getQuasar()?.loading.hide();
 						}
 					};
 					if (upgradeMode == UpgradeMode.DOWNLOAD_AND_UPGRADE) {
@@ -707,6 +710,7 @@ export const useMDNSStore = defineStore('mdnsStore', {
 				});
 		},
 		async cancelUpgradeOlares(machine: TerminusServiceInfo) {
+			getNativeAppPlatform().getQuasar()?.loading.show();
 			try {
 				const instance = await this.createAxiosInstanceProxy(
 					machine,
@@ -733,10 +737,13 @@ export const useMDNSStore = defineStore('mdnsStore', {
 			} catch (error) {
 				notifyRequestMessageError(error);
 				return false;
+			} finally {
+				getNativeAppPlatform().getQuasar()?.loading.hide();
 			}
 		},
 		async confirmUpgradeOlares(machine: TerminusServiceInfo) {
 			const onOk = async () => {
+				getNativeAppPlatform().getQuasar()?.loading.show();
 				try {
 					const instance = await this.createAxiosInstanceProxy(
 						machine,
@@ -763,6 +770,8 @@ export const useMDNSStore = defineStore('mdnsStore', {
 				} catch (error) {
 					notifyRequestMessageError(error);
 					return false;
+				} finally {
+					getNativeAppPlatform().getQuasar()?.loading.hide();
 				}
 			};
 
@@ -774,7 +783,7 @@ export const useMDNSStore = defineStore('mdnsStore', {
 					?.dialog({
 						component: TerminusTipDialog,
 						componentProps: {
-							title: i18n.global.t('Upgrade now'),
+							title: i18n.global.t('Update available'),
 							message: i18n.global.t(
 								'Upgrade to the new version of Olares {version}?',
 								{
@@ -958,7 +967,7 @@ export const useMDNSStore = defineStore('mdnsStore', {
 		},
 
 		async startSearchBluetoothDevice() {
-			getNativeAppPlatform().startSearchBluethooth();
+			return getNativeAppPlatform().startSearchBluethooth();
 		},
 
 		stopSearchMdnsService() {
@@ -1228,7 +1237,7 @@ export const useMDNSStore = defineStore('mdnsStore', {
 						res &&
 						res.data &&
 						res.data.message &&
-						res.data.message.startsWith('connect ECONNREFUSED')
+						res.data.message.startsWith('connect ECONNREFUSED') // i18n-ignore: Node.js errno match
 					) {
 						this.apiMachine = {
 							serviceName: '',

@@ -5,7 +5,9 @@ export enum TransferFront {
 	upload = 2,
 	cloud = 3,
 	copy = 4,
-	move = 5
+	move = 5,
+	compress = 6,
+	extract = 7
 }
 
 export enum TransferStatus {

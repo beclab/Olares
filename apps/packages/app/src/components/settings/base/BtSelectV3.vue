@@ -13,19 +13,15 @@
 					: fallbackLabel ?? ''
 			}}
 		</div>
-		<q-btn-dropdown
+		<q-icon
 			class="selected-arrow text-ink-2"
-			ref="dropdown"
-			dropdown-icon="sym_r_keyboard_arrow_down"
-			size="10px"
-			flat
-			:menu-offset="[15, 10]"
-			dense
-		>
+			name="sym_r_keyboard_arrow_down"
+			size="20px"
+		/>
+		<q-menu fit anchor="bottom left" self="top left" :offset="[0, 5]">
 			<div
 				class="select-card"
 				:class="{ 'select-card--show-selected': showSelectedIcon }"
-				:style="{ '--selectedWidth': selectedWidth }"
 			>
 				<div
 					v-if="$slots.header"
@@ -89,7 +85,7 @@
 					<slot name="footer" />
 				</div>
 			</div>
-		</q-btn-dropdown>
+		</q-menu>
 	</div>
 	<div
 		class="text-overline q-mt-xs text-red"
@@ -155,7 +151,6 @@ const props = defineProps({
 
 const selected = ref<SelectorProps>();
 const rootRef = ref();
-const dropdown = ref();
 const setFocused = inject<(focused: boolean) => void>('setFocused');
 const setBlured = inject<(blured: boolean) => void>('setBlured');
 
@@ -164,10 +159,6 @@ onMounted(() => {
 		rootRef.value.addEventListener('focus', () => setFocused?.(true));
 		rootRef.value.addEventListener('blur', () => setBlured?.(true));
 	}
-});
-
-const selectedWidth = computed(() => {
-	return rootRef.value ? `${rootRef.value.offsetWidth}px` : '0px';
 });
 
 const headerIsSelected = computed(
@@ -216,6 +207,7 @@ const onItemClick = (item: SelectorProps) => {
 	height: var(--height);
 	width: var(--width);
 	color: $ink-2;
+	cursor: pointer;
 
 	.selected-title {
 		width: calc(var(--width) - 54px);
@@ -226,13 +218,14 @@ const onItemClick = (item: SelectorProps) => {
 	}
 
 	.selected-arrow {
+		flex-shrink: 0;
 		width: 20px;
 		height: 20px;
 	}
 }
 
 .select-card {
-	width: var(--selectedWidth);
+	width: 100%;
 	display: flex;
 	padding: 12px;
 	flex-direction: column;

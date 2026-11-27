@@ -25,7 +25,8 @@
 				:src="appIcon"
 				:size="deviceStore.isMobile ? 56 : 64"
 				:cs-size="20"
-				:cs-app="clusterScopedApp"
+				:cs-app="isCsOrShared"
+				:template-app="isTemplate"
 			/>
 
 			<app-featured-image v-else :width="128" :src="appFeaturedImage" />
@@ -188,7 +189,8 @@ const onHandleErrorGroup = (value) => {
 
 const {
 	appAggregation,
-	clusterScopedApp,
+	isCsOrShared,
+	isTemplate,
 	appIcon,
 	appTitle,
 	appDesc,

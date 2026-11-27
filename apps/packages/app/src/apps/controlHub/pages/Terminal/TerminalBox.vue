@@ -2,7 +2,7 @@
 	<div
 		class="relative-position terminal-box-container"
 		:style="{
-			height: terminalStore.terminal_show ? 'calc(100vh - 96px)' : '0px'
+			height: terminalStore.terminal_show ? 'calc(100vh - 56px)' : '0px'
 		}"
 		v-if="terminalStore.terminal_init && terminalStore.current_node"
 	>
@@ -31,8 +31,8 @@ const node = computed(() => terminalStore.current_node);
 <style lang="scss" scoped>
 .terminal-box-container {
 	position: absolute;
-	inset: 20px;
-	top: 76px;
+	inset: 0px;
+	top: 56px;
 	background: #fff;
 	border-radius: 12px;
 }
@@ -43,7 +43,6 @@ const node = computed(() => terminalStore.current_node);
 .node-terminal-wrapper {
 	width: 100%;
 	height: 100%;
-	border-radius: 12px;
 	overflow: hidden;
 }
 </style>
