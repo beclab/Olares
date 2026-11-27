@@ -94,12 +94,14 @@ function localizeLink(link) {
 const filtered = computed(() => {
   const q = query.value.trim().toLowerCase();
   return useCases.filter((item) => {
+    const matchesLocale =
+      !item.locales || item.locales.includes(isZh.value ? "zh" : "en");
     const matchesCategory =
       selected.value === "All" || item.category === selected.value;
     const title = displayTitle(item).toLowerCase();
     const desc = displayDesc(item).toLowerCase();
     const matchesQuery = !q || title.includes(q) || desc.includes(q);
-    return matchesCategory && matchesQuery;
+    return matchesLocale && matchesCategory && matchesQuery;
   });
 });
 </script>
@@ -213,3 +215,4 @@ const filtered = computed(() => {
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
 }
 </style>
+

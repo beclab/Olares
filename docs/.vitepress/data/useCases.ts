@@ -10,6 +10,8 @@ export interface UseCase {
   category: string;
   description: string;
   descriptionZh?: string;
+  // Omit to show an entry in both languages.
+  locales?: ("en" | "zh")[];
 }
 
 // Display order of the category filter pills (canonical English keys).
@@ -69,6 +71,7 @@ export const useCases: UseCase[] = [
   { title: "Blender", link: "/use-cases/blender", category: "Creative media", description: "Run Blender and save projects on Olares", descriptionZh: "在 Olares 上运行 Blender 并保存项目" },
   { title: "ComfyUI", link: "/use-cases/comfyui", category: "Creative media", description: "Node-based AI image generation", descriptionZh: "节点式 AI 图像生成" },
   { title: "Concat", link: "/use-cases/concat", category: "Creative media", description: "Edit videos in your browser or through MCP", descriptionZh: "在浏览器中剪辑视频，或通过 MCP 对话式编辑" },
+  { title: "FastH3", link: "/use-cases/fasth3", category: "Creative media", description: "Generate videos with sound from text, frames, and references", descriptionZh: "根据文本、首尾帧和参考素材生成带声音的视频" },
   { title: "FlowStudio", link: "/use-cases/flowstudio", category: "Creative media", description: "Generate images and videos with reusable AI workflows", descriptionZh: "使用可复用的 AI 工作流生成图像和视频" },
   { title: "Music Studio", link: "/use-cases/music-studio", category: "Creative media", description: "Create songs from lyrics and musical ideas", descriptionZh: "将歌词和音乐灵感变成歌曲" },
   { title: "Open Design", link: "/use-cases/open-design", category: "Creative media", description: "Turn prompts into prototypes, pages, and slide decks", descriptionZh: "将提示词转化为原型、页面和幻灯片" },
@@ -123,3 +126,4 @@ export const useCases: UseCase[] = [
   { title: "SearXNG", link: "/use-cases/searxng", category: "Utilities", description: "Privacy-focused meta search engine", descriptionZh: "注重隐私的元搜索引擎" },
   { title: "Home Assistant", link: "/use-cases/home-assistant", category: "Utilities", description: "Build your smart home hub with local device discovery and automation", descriptionZh: "搭建智能家居中枢，支持本地设备发现与自动化" },
 ];
+
