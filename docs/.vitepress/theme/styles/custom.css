@@ -15,3 +15,35 @@
 .troubleshooting-guide td:first-child {
   width: 40%;
 }
+
+.doc-table {
+  margin: 16px 0;
+  overflow-x: auto;
+}
+
+.vp-doc .doc-table table {
+  display: table;
+  width: 100%;
+  margin: 0;
+}
+
+.doc-table th:first-child,
+.doc-table td:first-child {
+  white-space: nowrap;
+}
+
+.doc-table td {
+  vertical-align: top;
+}
+
+.doc-table--comparison table {
+  min-width: 36rem;
+}
+
+.doc-table--comparison th:nth-child(2) {
+  width: 32%;
+}
+
+.doc-table td ul {
+  margin: 0;
+}

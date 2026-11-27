@@ -32,6 +32,8 @@ When you install a new app that requires GPU resources, Olares automatically bin
 
 Olares can display the following accelerator resource types:
 
+<div class="doc-table">
+
 | Resource type | Description |
 | -- | -- |
 | **NVIDIA** | General NVIDIA GPUs. |
@@ -39,6 +41,8 @@ Olares can display the following accelerator resource types:
 | **Apple M-series** | Apple M-series chips. |
 | **AMD Strix Halo** | AMD Strix Halo devices. |
 | **CPU** | Fallback resource used when no accelerator device is available. |
+
+</div>
 
 :::info
 AMD GPU and AMD APU devices are not covered in this version.
@@ -48,11 +52,15 @@ AMD GPU and AMD APU devices are not covered in this version.
 
 For supported GPU resources, the mode controls how apps share the GPU. Not every accelerator supports all three modes. The mode dropdown only shows the modes available for that specific resource.
 
+<div class="doc-table doc-table--comparison">
+
 | Mode | Description | Usage & notes |
 | -- | -- | -- |
-| **Time slice** | Multiple apps share one GPU<br> by taking turns using compute<br> and VRAM. Each app can see <br>the full GPU, but workloads run<br> in slices. | <ul><li>**Best for**: Running several GPU-dependent apps at the same time.</li><li>**Note**: The quota for each app is fixed to the GPU's full dedicated VRAM and cannot be edited. Launch may also be blocked by the node memory check described below.</li></ul> |
-| **Memory slice** | Multiple apps share one GPU<br> with fixed VRAM allocations. | <ul><li>**Best for**: Running multiple GPU-dependent apps while controlling VRAM usage. </li><li>**Note**: During launch, Olares allocates the app's minimum required VRAM by default. You can adjust the allocation.</li></ul> |
-| **Exclusive** | One app gets full access to the<br> GPU. | <ul><li>**Best for**: Running heavy workloads that need maximum performance, such as large models, rendering, or high-end gaming. </li><li>**Note**: No other apps can bind to this GPU until it is released.</li></ul> |
+| **Time slice** | Multiple apps share one GPU by taking turns using compute and VRAM. Each app can see the full GPU, but workloads run in slices. | <ul><li>**Best for**: Running several GPU-dependent apps at the same time.</li><li>**Note**: The quota for each app is fixed to the GPU's full dedicated VRAM and cannot be edited. Launch may also be blocked by the node memory check described below.</li></ul> |
+| **Memory slice** | Multiple apps share one GPU with fixed VRAM allocations. | <ul><li>**Best for**: Running multiple GPU-dependent apps while controlling VRAM usage. </li><li>**Note**: During launch, Olares allocates the app's minimum required VRAM by default. You can adjust the allocation.</li></ul> |
+| **Exclusive** | One app gets full access to the GPU. | <ul><li>**Best for**: Running heavy workloads that need maximum performance, such as large models, rendering, or high-end gaming. </li><li>**Note**: No other apps can bind to this GPU until it is released.</li></ul> |
+
+</div>
 
 :::info How node memory is calculated in Time slice
 In **Time slice** mode, Olares currently checks node memory using these calculations:
