@@ -1,316 +1,525 @@
 ---
+title: 在 Olares 上部署本地大模型
 connectionVersion: "1.12.7"
 connectionLatestPath: /zh/use-cases/llm-base-apps
 outline: [2, 3]
-title: 使用 Engine Base 运行本地大模型
-description: 了解如何在 Olares 中使用引擎基座应用来自托管本地大语言模型，并通过克隆基座应用运行不同的推理引擎。
+description: 在 Olares 上使用 Ollama、llama.cpp、vLLM、SGLang 或 Strata 部署本地大模型，配置模型来源、显存和上下文长度。
 head:
   - - meta
     - name: keywords
-      content: Olares, Router, Engine Base, self-hosted LLM, vLLM, llama.cpp, SGLang, run LLM locally
+      content: Olares, Router, Engine Base, 本地大模型, Ollama, vLLM, llama.cpp, SGLang, Strata, 模型部署
+doc_version: "2.0"
+doc_updated: "2026-11-27"
 ---
 
 :::warning
 本文档由 AI 自动翻译，仅供参考。涉及关键操作或信息时，请以[英文原文](../../use-cases/llm-base-apps.md)为准。
 :::
 
-# 使用 Ollama、vLLM、llama.cpp 和 SGLang 运行本地大模型
+# 使用 Ollama、llama.cpp、vLLM、SGLang 和 Strata 部署本地大模型
 
 <VersionRouteSelect />
 
-Olares 提供四个引擎基座应用，每个基于不同的推理引擎构建：**Ollama 引擎基座**、**vLLM 引擎基座**、**llama.cpp 引擎基座**和**SGLang 引擎基座**。
+Olares 支持 Ollama、llama.cpp、vLLM、SGLang 和 Strata 五种推理引擎。每种引擎都有基座应用，可用于创建独立的本地模型服务。
 
-选择所需引擎对应的基座应用，克隆它来部署模型。在模型应用中确认部署就绪后，通过 Router 查看模型详情并连接客户端。
+选择适合模型的基座，填写模型来源和运行参数，然后通过 Router 将模型接入 AI 应用。
 
-## 开始之前
+## 学习目标
 
-- 你的 Olares 系统已升级至 v1.12.7 或更高版本。
-- 如果你想跳过手动配置、快速体验模型，可以直接从 Market 安装预构建的模型应用。这些应用打包了 Olares 验证推荐的模型与引擎组合。
+- 根据模型格式选择引擎基座。
+- 创建模型实例，填写配置并确认模型就绪。
+- 调整 GPU 显存需求、上下文长度和引擎启动参数。
 
-  ::: details 查看可用的预构建模型应用
-  - Qwen3.6-27B (llama.cpp)
-  - Qwen3.6-35B-A3B (llama.cpp)
-  - Qwen3.6-27B MTP (llama.cpp)
-  - Qwopus3.6-27B MTP (llama.cpp)
-  - Gemma-4-12B (vLLM)
-  - Qwen3.5-9B (SGLang)
-  - Gemma 4 26B (Ollama)
-  - Ornith 35B (Ollama)
-  :::
+## 前提条件 {#开始之前}
 
-## 找到引擎基座应用
+Olares 版本需为 1.12.7 或更高版本。使用 1.12.6 时，请切换到页面顶部的旧版教程。
 
-1. 打开 Market，搜索 "引擎基座"。
-
-    会出现四个引擎基座应用：vLLM 引擎基座、SGLang 引擎基座、Ollama 引擎基座和 llama.cpp 引擎基座。
-
-    ![Market 中的引擎基座应用](/images/manual/olares/llm-base-apps1.png#bordered)
-
-2. 根据模型格式和服务目标选择引擎。先看模型格式：GGUF 文件使用 llama.cpp，Ollama 模型标签使用 Ollama，包含 `.safetensors` 权重的 Hugging Face 仓库使用 vLLM 或 SGLang。
-
-    | 引擎基座 | 模型来源 | 适用场景 |
-    | :--- | :--- | :--- |
-    | **llama.cpp 引擎基座** | Hugging Face 上的 GGUF 文件 | 运行量化 GGUF 模型、GPU 显存有限，或需要使用 CPU 推理。Olares One 推荐使用该引擎。 |
-    | **Ollama 引擎基座** | Ollama 模型库中的模型标签 | 希望快速完成配置，并兼容多种对话或嵌入模型。Ollama 会根据原生标签下载模型。 |
-    | **SGLang 引擎基座** | 包含 `.safetensors` 权重的 Hugging Face 仓库 | 需要结构化生成或高级推理优化，并且模型支持 SGLang。 |
-    | **vLLM 引擎基座** | 包含 `.safetensors` 权重的 Hugging Face 仓库 | 需要为多个并发请求提供高吞吐量服务，并且模型支持 vLLM。 |
-
-    如果应用市场已经提供对应模型的预构建应用，除非需要更换引擎或调整启动参数，否则优先安装预构建应用。它使用的模型与引擎组合已经过 Olares 验证。
-
-## 创建新的模型实例
-
-引擎基座应用只是一个模板。要运行模型，你必须先将基座克隆为独立的运行实例。
-
-1. 选择与你所需推理引擎匹配的引擎基座，然后点击 **View**。例如 **llama.cpp 引擎基座**。
-2. 点击 **Create**，初始化一个新实例。
-
-    ![创建模型实例](/images/manual/olares/llm-base-apps-create-instance2.png#bordered)
-
-3. 选择实例运行所用的硬件加速器，然后点击 **Confirm**。
-4. 配置实例标识：
-
-    - **New app name**：输入实例的唯一名称。该名称会作为应用名显示在 Market 和 Settings 中。例如 `Qwen3.6-35B-A3B`。
-    - **Shortcut name for [client]**：输入实例的唯一快捷方式名称。该名称会显示在 Launchpad 上。例如 `qwen3.6-35b-a3b`。
-
-5. 点击 **Create**，进入环境变量配置。
-
-## 配置引擎环境变量
-
-创建实例后，会弹出配置窗口。你需要定义引擎从哪里拉取模型、使用多少显存，以及向其他客户端应用暴露哪些能力。
-
-1. 在 **Configure environment variables for [New-app-name]** 窗口中，根据目标模型和引擎填写以下信息。
-
-    <tabs>
-    <template #llama-cpp>
-
-    | 变量 | 说明 |
-    | :--- | :--- |
-    | **MODEL_SOURCE** | 指定引擎从哪里拉取模型。<br><br>格式：`hf://<repo> --include <file>.gguf`。<br>如需下载多个文件，用逗号分隔每个条目：`hf://<repo> --include <file1>.gguf,hf://<repo> --include <file2>.gguf`。<br><br>示例：<ul><li>模型页面：`https://huggingface.co/unsloth/Qwen3.6-35B-A3B-GGUF`</li><li>`MODEL_SOURCE`：`hf://unsloth/Qwen3.6-35B-A3B-GGUF --include Qwen3.6-35B-A3B-UD-Q4_K_XL.gguf`</li></ul> |
-    | **MODEL_NAME** | 定义客户端应用调用该实例时使用的名称。<br><br>从 `MODEL_SOURCE` 推导，格式为：`<repo>:<quantization>`（每个实例只能带一种量化）。<br><br>示例：<ul><li>`MODEL_SOURCE`：`hf://unsloth/Qwen3.6-35B-A3B-GGUF --include Qwen3.6-35B-A3B-UD-Q4_K_XL.gguf`</li><li>`MODEL_NAME`：`unsloth/Qwen3.6-35B-A3B-GGUF:UD-Q4_K_XL`</li></ul> |
-    | **MODEL_MODE** | 选择 **Chat** 或 **Embedding**。 |
-    | **MODEL_SUPPORTS** | 选择模型支持的能力：**Vision**、**Tools** 或 **Thinking**。若为嵌入模型，请选择 **None**。 |
-    | **ENGINE_ARGS** | 设置引擎启动参数。上下文长度（`-c`）为必填项。多个参数之间用空格分隔。<br><br>示例：<ul><li>`-c 65536`</li><li>`-c 65536 -ngl all`</li></ul>更多参数见[引擎调优参数](#引擎调优参数)。 |
-    | **LLAMACPP<br>_REQUIRED<br>_GPU_MEMORY** | 设置实例启动所需的最小 GPU 显存，单位为 MB 或 Gi。例如 `20Gi`。<ul><li>在时间分片或独占模式下，设为小于显卡总显存。</li><li>在显存分片模式下，设为小于剩余显存。</li><li>在 CPU 模式下，设为 `0`。</li></ul> |
-
-    </template>
-    <template #Ollama>
-
-    | 变量 | 说明 |
-    | :--- | :--- |
-    | **MODEL_SOURCE** | 指定引擎从哪里拉取模型。<br><br>格式：`ollama://<model>:<size-tag>`。<br><br>示例：<ul><li>模型页面：`https://ollama.com/library/qwen3.5`</li><li>`MODEL_SOURCE`：`ollama://qwen3.5:2b`</li></ul> |
-    | **MODEL_NAME** | 定义客户端应用调用该实例时使用的名称。<br><br>从 `MODEL_SOURCE` 推导：取 `ollama://` 之后的字符串。<br><br>示例：<ul><li>`MODEL_SOURCE`：`ollama://qwen3.5:2b`</li><li>`MODEL_NAME`：`qwen3.5:2b`</li></ul> |
-    | **MODEL_MODE** | 选择 **Chat** 或 **Embedding**。 |
-    | **MODEL_SUPPORTS** | 选择模型支持的能力：**Vision**、**Tools** 或 **Thinking**。若为嵌入模型，请选择 **None**。 |
-    | **ENGINE_ARGS** | 设置引擎启动参数。上下文长度为必填项。多个参数之间用空格分隔。<br><br>示例：<ul><li>`OLLAMA_CONTEXT_LENGTH=8192`</li><li>`OLLAMA_CONTEXT_LENGTH=8192 OLLAMA_KV_CACHE_TYPE=q8_0`</li></ul>更多参数见[引擎调优参数](#引擎调优参数)。 |
-    | **OLLAMA<br>_REQUIRED<br>_GPU_MEMORY** | 设置实例启动所需的最小 GPU 显存，单位为 MB 或 Gi。例如 `8Gi` 或 `8192Mi`。<ul><li>在时间分片或独占模式下，设为小于显卡总显存。</li><li>在显存分片模式下，设为小于剩余显存。</li><li>在 CPU 模式下，设为 `0`。</li></ul> |
-
-    </template>
-    <template #vLLM-or-SGLang>
-
-    | 变量 | 说明 |
-    | :--- | :--- |
-    | **MODEL_SOURCE** | 指定引擎从哪里拉取模型。选择包含 `.safetensors` 权重文件的仓库。<br><br>格式：`hf://<repo>`。<br><br>示例：<ul><li>模型页面：`https://huggingface.co/Qwen/Qwen3.5-2B`</li><li>`MODEL_SOURCE`：`hf://Qwen/Qwen3.5-2B`</li></ul> |
-    | **MODEL_NAME** | 定义客户端应用调用该实例时使用的名称。<br><br>从 `MODEL_SOURCE` 推导：取 `hf://` 之后的字符串。<br><br>示例：<ul><li>`MODEL_SOURCE`：`hf://Qwen/Qwen3.5-2B`</li><li>`MODEL_NAME`：`Qwen/Qwen3.5-2B`</li></ul> |
-    | **MODEL_MODE** | 选择 **Chat** 或 **Embedding**。 |
-    | **MODEL_SUPPORTS** | 选择模型支持的能力：**Vision**、**Tools** 或 **Thinking**。若为嵌入模型，请选择 **None**。 |
-    | **ENGINE_ARGS** | 设置引擎启动参数。上下文长度为必填项。多个参数之间用空格分隔。<br><br>示例：<ul><li>vLLM：`--max-model-len 65536`</li><li>SGLang：`--context-length 65536`</li></ul>更多参数见[引擎调优参数](#引擎调优参数)。 |
-    | **VLLM/SGLANG<br>_REQUIRED_GPU<br>_MEMORY** | 设置实例启动所需的最小 GPU 显存，单位为 MB 或 Gi。例如 `20Gi`。<ul><li>在时间分片或独占模式下，设为小于显卡总显存。</li><li>在显存分片模式下，设为小于剩余显存。</li><li>在 CPU 模式下，设为 `0`。</li></ul> |
-
-    </template>
-    </tabs>
-
-2. 点击 **Confirm** 保存配置并开始安装实例。
-
-    页面右侧会出现 **Instances** 面板，显示安装进度。安装完成后，实例的操作按钮会变为 **Open**，表示底层服务正在运行。同名的模型应用也会出现在 Launchpad 上。
-
-    ![模型实例安装完成](/images/manual/olares/llm-base-model-instance-installed1.png#bordered)
-
-    :::info
-    从引擎基座应用创建的模型实例，应用名旁会显示 `From template` 标签。在 Market 或 Settings 中查看该应用时即可看到此标签。
-
-    ![模型实例标签](/images/manual/olares/llm-base-model-instance-tag1.png#bordered){width=70%}
-    :::
-
-:::tip 后续修改环境变量
-安装后如需修改这些变量，进入 Olares **Settings** > **Applications** > **[App-Name]** > **Manage environment variables**。点击变量旁的编辑图标，更新其值，保存修改，然后点击 **Apply**。
+:::tip 获取更多预构建模型
+[升级到最新 Olares 版本](/zh/manual/olares/settings/update.md)，可获得更多预构建模型应用。
 :::
 
-## 监控部署并配置模型服务
+## Step 1: 选择本地大模型推理引擎 {#找到引擎基座应用}
 
-在模型应用的 Model Console 中跟踪下载进度，确认模型是否就绪、引擎是否运行。模型详情、上下文配置和客户端连接信息均在 Router 中查看。
+先看模型来源和格式，再选择基座。使用 vLLM 或 SGLang 前，还需确认模型支持该引擎。
 
-1. 在引擎基座应用详情页的 **Instances** 面板中找到该模型实例，或在 Launchpad 中找到它。
-2. 打开它，启动专属的模型控制台。
+| 模型来源或需求 | 选择的基座 |
+| --- | --- |
+| Hugging Face 上的 GGUF 文件。Olares One 推荐使用该引擎 | llama.cpp 引擎基座 |
+| Ollama 模型库中的模型标签 | Ollama 引擎基座 |
+| Hugging Face 上的 `.safetensors` 权重，需要处理多个并发请求 | vLLM 引擎基座 |
+| Hugging Face 上的 `.safetensors` 权重，需要结构化生成或推理优化 | SGLang 引擎基座 |
+| 结合系统内存、SSD 和显存，在消费级显卡上运行 Hy4-Flash 等大型 MoE 模型 | Strata 引擎基座 |
 
-    控制台默认打开 **Status** 标签页，模型文件会自动开始下载。
+1. 打开 Market，搜索“引擎基座”。
+2. 在搜索结果中找到所选引擎。
 
-3. 在 **Service status** 下跟踪模型和引擎的就绪状态：
+   ![Market 中的引擎基座应用](/images/manual/olares/llm-base-apps1.png#bordered)
 
-    - **Model**：文件下载并校验完成后显示 `Ready`。
-    - **Engine**：推理服务上线后显示 `Running`。
+## Step 2: 创建并配置本地模型 {#创建新的模型实例}
 
-    ![模型控制台就绪](/images/manual/olares/llm-base-model-console-status.png#bordered)
+1. 在所选引擎基座上点击 **View**，然后点击 **Create**。
 
-    如果任一状态一直未就绪，请参考[模型或引擎未就绪](/zh/manual/help/ts-model-engine-not-ready.md)。
+   ![创建模型实例](/images/manual/olares/llm-base-apps-create-instance2.png#bordered)
 
-### 在 Router 中查看模型详情
+2. 选择实例使用的硬件加速器，点击 **Confirm**。
+3. 填写名称。以下以 Qwen3.6-27B MTP 为例：
 
-部署完成后，打开 Router 查看模型能力、上下文窗口和引擎参数。以下以 Qwen3.8-27B (llama.cpp) 为例：
+   | 字段 | 填写内容 | 显示位置 |
+   | --- | --- | --- |
+   | **New app name** | 唯一的应用名，例如 `Qwen3.6-27B-MTP` | Market 和 Settings |
+   | **Shortcut name for [client]** | 唯一的快捷方式名称，例如 `qwen3.6-27b-mtp` | Launchpad |
 
-<!--@include: ../reusables/ai-service-connections.md#model-context-window-->
+   Strata 还提供 **Shortcut name for [strataui]**，用于命名 Strata UI 快捷方式。
 
-如需调整引擎参数，点击模型卡片中的 **Edit**。保存更改后的参数会重新启动引擎。
+4. 点击 **Create**，进入 **Configure environment variables for [New-app-name]** 窗口。
 
-## 将客户端应用连接到模型服务
+<a id="配置引擎环境变量"></a>
 
-在 Olares 1.12.7 及更高版本中，客户端通过 Router 连接模型实例。Router 提供客户端使用的地址、模型名称和访问控制。
+<a id="custom-model"></a>
 
-1. 从 Launchpad 打开 Router，在 **LLM** 中找到聊天模型。发送请求前，确认状态为 **Callable**。如果不可用，查看状态下方显示的原因。
-2. 在 **Default models** 中将该实例设为默认聊天模型。应用教程使用 Qwen3.8-27B (llama.cpp)，你也可以选择在本教程中创建的聊天模型实例。
-3. 返回模型所在行，点击 **View connection example**。对于安装在 Olares 中的客户端，选择 **Apps in Olares**，然后复制 **Base URL**，保留 `/v1` 后缀。
+<a id="推荐模型与参数"></a>
 
-   <!-- ![复制 Router 连接信息](/images/manual/use-cases/router-how-to-call-model.png#bordered) -->
+按所选引擎填写下面的字段。展开示例可查看一套完整配置。
 
-4. 按照[将 OpenCode 连接到自定义提供方](opencode.md#连接到自定义提供方)操作，使用 Router 的 Base URL，并手动添加 `default-chat` 作为模型 ID。如果希望客户端始终使用该实例，不随默认模型更改，请改用 Router 中的完整**模型名称**。
-5. 在 OpenCode 中发送一条简短消息，然后在 Router 的 **Usage** 中确认请求使用了预期的模型。
+### 使用 llama.cpp 配置 GGUF 模型 {#llama-cpp}
 
-外部客户端需使用对应连接标签页中的地址和 Router 签发的 API 密钥。嵌入模型实例应使用完整模型名称，不能使用 `default-chat`。详情见[使用 Olares Router 作为 AI 网关](/zh/use-cases/olares-router.md)。
+选择 Hugging Face 上的 GGUF 文件。`<repo>` 包含用户或组织名及仓库名，`<quantization>` 为量化类型，每个实例使用一种量化。
 
-## 参考资料
+| 字段 | 格式 |
+| --- | --- |
+| **MODEL_SOURCE** | `hf://<repo> --include <file>.gguf` |
+| **MODEL_NAME** | `<repo>:<quantization>` |
+| **ENGINE_ARGS** | 包含 `-c <tokens>`，设置上下文 token 数。多个参数用空格分隔 |
+| **MODEL_MODE** | 聊天模型选 **Chat**，嵌入模型选 **Embedding** |
+| **MODEL_SUPPORTS** | 按模型能力选择 **Vision**（图片理解）、**Tools**（工具调用）或 **Thinking**（推理）。嵌入模型选 **None** |
+| **LLAMACPP_REQUIRED_GPU_MEMORY** | 实例启动所需的最小 GPU 显存，单位为 MB 或 Gi，例如 `23Gi` |
+| **LOG_LEVEL** | 日志级别，例如 `Info` |
 
-### 引擎调优参数
+下载多个 GGUF 文件时，用逗号分隔完整的 `hf://... --include ...` 条目。
 
-使用 `ENGINE_ARGS` 变量添加自定义设置，以调整显存占用、上下文长度和处理行为。多个参数之间用空格分隔。点击下方推理引擎查看一些常用的调优参数。
+<details>
+<summary>示例：Qwen3.6-27B MTP</summary>
 
-<tabs>
-<template #Llama-cpp>
+模型：Hugging Face 上的 [`unsloth/Qwen3.6-27B-MTP-GGUF`](https://huggingface.co/unsloth/Qwen3.6-27B-MTP-GGUF)，量化参数 `UD-Q4_K_XL`
 
-| 参数 | 用途 | 推荐 |
-| :--- | :--- | :--- |
-| `-c` | 设置最大上下文长度（以 token 为单位）。 | `65536` |
-| `-ngl` | 将所有模型层加载到 GPU，避免 CPU 计算拖慢速度。 | `all` |
-| `-fa` | 启用 Flash Attention 以加速注意力计算。 | `on` |
-| `-ctk` / `-ctv` | 将 KV Cache 量化为 8-bit，在显存占用与精度之间取得平衡。 | `q8_0` |
+**MODEL_SOURCE**
 
-更多 llama.cpp 参数见[官方文档](https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md)。
-</template>
-<template #Ollama>
+```text
+hf://unsloth/Qwen3.6-27B-MTP-GGUF --include Qwen3.6-27B-UD-Q4_K_XL.gguf
+```
 
-| 参数 | 用途 | 推荐 |
-| :--- | :--- | :--- |
-| `OLLAMA_CONTEXT_LENGTH` | 设置默认上下文窗口大小（以 token 为单位）。<br><br>默认值随显存自动调整：<ul><li>小于 24G：4096</li><li>24G 到 48G：32768</li><li>48G 及以上：262144</li></ul> | `8192` 到 `131072` |
-| `OLLAMA_KEEP_ALIVE` | 设置最后一次请求后模型在 GPU 显存中的驻留时长。<br>到期后权重会被换出到系统内存。<ul><li>`-1` 表示永久驻留在 GPU 显存中。</li><li>`3m` 表示驻留 3 分钟。</li></ul>默认值：`-1`。 | `-1` 或 `30m` |
-| `OLLAMA_FLASH_ATTENTION` | 启用 Flash Attention。使用 `OLLAMA_KV_CACHE_TYPE`<br> 进行 KV 缓存量化时必须开启。<br><br>默认值：`1`。 | `1`（开启） |
-| `OLLAMA_KV_CACHE_TYPE` | 设置键值（KV）缓存的量化类型以节省显存。<br><br>默认值：`f16`。 | `q8_0`（轻微精度损失）或 `q4_0` |
-| `OLLAMA_NUM_PARALLEL` | 设置每个模型可同时处理的并发请求数。<br><br>默认值：`1`。 | `1` |
+需要处理图片时，在 **MODEL_SOURCE** 中添加配套的视觉投影文件：
 
-更多 Ollama 参数见[官方文档](https://github.com/ollama/ollama/blob/main/docs/faq.mdx)。
-</template>
-<template #SGLang>
+```text
+hf://unsloth/Qwen3.6-27B-MTP-GGUF --include Qwen3.6-27B-UD-Q4_K_XL.gguf,hf://unsloth/Qwen3.6-27B-MTP-GGUF --include mmproj-F16.gguf
+```
 
-| 参数 | 用途 | 推荐 |
-| :--- | :--- | :--- |
-| `--context-length` | 设置最大上下文长度。 | `65536` |
-| `--mem-fraction-static` | 设置预分配给静态用途的显存比例，类似 vLLM 的 <br>`--gpu-memory-utilization`。 | `0.85` |
-| `--chunked-prefill-size` | 将超长输入分块处理，避免长时间占用 GPU，让并发请求的流式输出 <br>保持顺畅。 | `4096` |
+**MODEL_NAME**
 
-更多 SGLang 参数见[官方文档](https://docs.sglang.io/docs/advanced_features/server_arguments)。
-</template>
-<template #vLLM>
+```text
+unsloth/Qwen3.6-27B-MTP-GGUF:UD-Q4_K_XL
+```
 
-| 参数 | 用途 | 推荐 |
-| :--- | :--- | :--- |
-| `--max-model-len` | 设置最大上下文长度。 | `65536` |
-| `--gpu-memory-utilization` | 设置 vLLM 引擎使用的显存比例。 | `0.9` |
-| `--tensor-parallel-size` | 设置张量并行规模，即用多少张 GPU 切分并共同运行同一个模型。 | `1` |
-| `--max-num-batched-tokens` | 限制单个批次处理的最大 token 数，使遇到超长请求时响应时间 <br>保持稳定。 | `8192` |
-| `--enable-prefix-caching` | 在 KV Cache 中缓存并复用相同前缀的计算结果。 | 启用 |
-
-更多 vLLM 参数见[官方文档](https://docs.vllm.ai/en/v0.17.0/configuration/engine_args/)。
-</template>
-</tabs>
-
-### 推荐模型与参数
-
-以下是各引擎经过验证的最佳实践推荐。可作为起点，再根据你的硬件进行调整。
-
-<tabs>
-<template #Llama-cpp>
-
-**推荐模型 1**
-
-- **推荐模型**：Hugging Face 上的 [`unsloth/Qwen3.6-27B-MTP-GGUF`](https://huggingface.co/unsloth/Qwen3.6-27B-MTP-GGUF)，量化参数 `UD-Q4_K_XL`
-- **MODEL_SOURCE**：`hf://unsloth/Qwen3.6-27B-MTP-GGUF --include Qwen3.6-27B-UD-Q4_K_XL.gguf`
-    :::tip 多模态模型
-    如果模型具备多模态能力，请在 `MODEL_SOURCE` 中带上 `mmproj-F16.gguf` 文件：
-
-    `hf://unsloth/Qwen3.6-27B-MTP-GGUF --include Qwen3.6-27B-UD-Q4_K_XL.gguf,hf://unsloth/Qwen3.6-27B-MTP-GGUF --include mmproj-F16.gguf`
-    :::
-- **MODEL_NAME**：`unsloth/Qwen3.6-27B-MTP-GGUF:UD-Q4_K_XL`
 - **MODEL_MODE**：`Chat`
 - **MODEL_SUPPORTS**：`Thinking`, `Tools`
-- **ENGINE_ARGS**：`-c 131072 -ngl all -fa on -ctk q8_0 -ctv q8_0 --jinja -np 1 --spec-type draft-mtp --spec-draft-n-max 2`
+
+**ENGINE_ARGS**
+
+```text
+-c 131072 -ngl all -fa on -ctk q8_0 -ctv q8_0 --jinja -np 1 --spec-type draft-mtp --spec-draft-n-max 2
+```
+
 - **LOG_LEVEL**：`Info`
 - **LLAMACPP_REQUIRED_GPU_MEMORY**：`23Gi`
 
-**推荐模型 2**
+</details>
 
-- **推荐模型**：Hugging Face 上的 [`Jackrong/Qwopus3.6-27B-v2-MTP-GGUF`](https://huggingface.co/Jackrong/Qwopus3.6-27B-v2-MTP-GGUF)，量化参数 `Q4_K_M`
-- **MODEL_SOURCE**：`hf://Jackrong/Qwopus3.6-27B-v2-MTP-GGUF --include Qwopus3.6-27B-v2-MTP-Q4_K_M.gguf`
-    :::tip 多模态模型
-    如果模型具备多模态能力，请在 `MODEL_SOURCE` 中带上 `mmproj-F32.gguf` 文件：
+<details>
+<summary>备选模型：Qwopus3.6-27B MTP</summary>
 
-    `hf://Jackrong/Qwopus3.6-27B-v2-MTP-GGUF --include Qwopus3.6-27B-v2-MTP-Q4_K_M.gguf,hf://Jackrong/Qwopus3.6-27B-v2-MTP-GGUF --include mmproj-F32.gguf`
-    :::
-- **MODEL_NAME**：`Jackrong/Qwopus3.6-27B-v2-MTP-GGUF:Q4_K_M`
+模型：Hugging Face 上的 [`Jackrong/Qwopus3.6-27B-v2-MTP-GGUF`](https://huggingface.co/Jackrong/Qwopus3.6-27B-v2-MTP-GGUF)，量化参数 `Q4_K_M`
+
+**MODEL_SOURCE**
+
+```text
+hf://Jackrong/Qwopus3.6-27B-v2-MTP-GGUF --include Qwopus3.6-27B-v2-MTP-Q4_K_M.gguf
+```
+
+需要处理图片时，在 **MODEL_SOURCE** 中添加配套的视觉投影文件：
+
+```text
+hf://Jackrong/Qwopus3.6-27B-v2-MTP-GGUF --include Qwopus3.6-27B-v2-MTP-Q4_K_M.gguf,hf://Jackrong/Qwopus3.6-27B-v2-MTP-GGUF --include mmproj-F32.gguf
+```
+
+**MODEL_NAME**
+
+```text
+Jackrong/Qwopus3.6-27B-v2-MTP-GGUF:Q4_K_M
+```
+
 - **MODEL_MODE**：`Chat`
 - **MODEL_SUPPORTS**：`Thinking`, `Tools`
-- **ENGINE_ARGS**：`-c 131072 -ngl all -fa on -ctk q8_0 -ctv q8_0 --jinja -np 1 --spec-type draft-mtp --spec-draft-n-max 2`
+
+**ENGINE_ARGS**
+
+```text
+-c 131072 -ngl all -fa on -ctk q8_0 -ctv q8_0 --jinja -np 1 --spec-type draft-mtp --spec-draft-n-max 2
+```
+
 - **LOG_LEVEL**：`Info`
 - **LLAMACPP_REQUIRED_GPU_MEMORY**：`23Gi`
 
-</template>
-<template #Ollama>
+</details>
 
-- **推荐模型**：Ollama 库中的 [`gemma4-26b`](https://ollama.com/library/gemma4:26b)，默认使用 Q4_K_M 量化
-- **MODEL_SOURCE**：`ollama://gemma4-26b`
-- **MODEL_NAME**：`gemma4-26b`
+### 使用 Ollama 配置模型 {#ollama}
+
+从 Ollama 模型库选择模型及标签。
+
+| 字段 | 格式 |
+| --- | --- |
+| **MODEL_SOURCE** | `ollama://<model>:<tag>` |
+| **MODEL_NAME** | `<model>:<tag>` |
+| **ENGINE_ARGS** | 包含 `OLLAMA_CONTEXT_LENGTH=<tokens>`，设置上下文 token 数。多个参数用空格分隔 |
+| **MODEL_MODE** | 聊天模型选 **Chat**，嵌入模型选 **Embedding** |
+| **MODEL_SUPPORTS** | 按模型能力选择 **Vision**（图片理解）、**Tools**（工具调用）或 **Thinking**（推理）。嵌入模型选 **None** |
+| **OLLAMA_REQUIRED_GPU_MEMORY** | 实例启动所需的最小 GPU 显存，单位为 MB 或 Gi，例如 `23Gi` |
+
+<details>
+<summary>示例：Gemma 4 26B</summary>
+
+模型：Ollama 库中的 [`gemma4:26b`](https://ollama.com/library/gemma4:26b)，默认使用 Q4_K_M 量化
+
+**MODEL_SOURCE**
+
+```text
+ollama://gemma4:26b
+```
+
+**MODEL_NAME**
+
+```text
+gemma4:26b
+```
+
 - **MODEL_MODE**：`Chat`
 - **MODEL_SUPPORTS**：Thinking, Tools, Vision
-- **ENGINE_ARGS**：`OLLAMA_KEEP_ALIVE=-1 OLLAMA_CONTEXT_LENGTH=131072 OLLAMA_FLASH_ATTENTION=1 OLLAMA_KV_CACHE_TYPE=q8_0 OLLAMA_NUM_PARALLEL=1`
+
+**ENGINE_ARGS**
+
+```text
+OLLAMA_KEEP_ALIVE=-1 OLLAMA_CONTEXT_LENGTH=131072 OLLAMA_FLASH_ATTENTION=1 OLLAMA_KV_CACHE_TYPE=q8_0 OLLAMA_NUM_PARALLEL=1
+```
+
 - **OLLAMA_REQUIRED_GPU_MEMORY**：`23Gi`
 
-</template>
-<template #SGLang>
+</details>
 
-:::info
-SGLang 模型可能需要较长时间加载，引擎才会进入 `RUNNING` 状态。
-:::
+### 使用 SGLang 配置 Hugging Face 模型 {#sglang}
 
-- **推荐模型**：Hugging Face 上的 [`Qwen3.5-9B-AWQ-4bit`](https://huggingface.co/cyankiwi/Qwen3.5-9B-AWQ-4bit)
-- **MODEL_SOURCE**：`hf://cyankiwi/Qwen3.5-9B-AWQ-4bit`
-- **MODEL_NAME**：`cyankiwi/Qwen3.5-9B-AWQ-4bit`
+选择 SGLang 支持的 Hugging Face 模型仓库，其中需包含 `.safetensors` 权重。`<repo>` 包含用户或组织名及仓库名。
+
+| 字段 | 格式 |
+| --- | --- |
+| **MODEL_SOURCE** | `hf://<repo>` |
+| **MODEL_NAME** | `<repo>` |
+| **ENGINE_ARGS** | 包含 `--context-length <tokens>`，设置上下文 token 数。多个参数用空格分隔 |
+| **MODEL_MODE** | 聊天模型选 **Chat**，嵌入模型选 **Embedding** |
+| **MODEL_SUPPORTS** | 按模型能力选择 **Vision**（图片理解）、**Tools**（工具调用）或 **Thinking**（推理）。嵌入模型选 **None** |
+| **SGLANG_REQUIRED_GPU_MEMORY** | 实例启动所需的最小 GPU 显存，单位为 MB 或 Gi，例如 `23Gi` |
+| **LOG_LEVEL** | 日志级别，例如 `Info` |
+
+<details>
+<summary>示例：Qwen3.5-9B AWQ</summary>
+
+模型：Hugging Face 上的 [`Qwen3.5-9B-AWQ-4bit`](https://huggingface.co/cyankiwi/Qwen3.5-9B-AWQ-4bit)
+
+**MODEL_SOURCE**
+
+```text
+hf://cyankiwi/Qwen3.5-9B-AWQ-4bit
+```
+
+**MODEL_NAME**
+
+```text
+cyankiwi/Qwen3.5-9B-AWQ-4bit
+```
+
 - **MODEL_MODE**：`Chat`
 - **MODEL_SUPPORTS**：`Thinking`、`Tools`、`Vision`
-- **ENGINE_ARGS**：`--context-length 65536 --mem-fraction-static 0.85 --chunked-prefill-size 4096 --reasoning-parser qwen3 --tool-call-parser qwen3_coder`
+
+**ENGINE_ARGS**
+
+```text
+--context-length 65536 --mem-fraction-static 0.85 --chunked-prefill-size 4096 --reasoning-parser qwen3 --tool-call-parser qwen3_coder
+```
+
 - **LOG_LEVEL**：`Info`
 - **SGLANG_REQUIRED_GPU_MEMORY**：`23Gi`
 
-</template>
-<template #vLLM>
+</details>
 
-:::info
-vLLM 模型可能需要较长时间加载，引擎才会进入 `RUNNING` 状态。
-:::
+### 使用 vLLM 配置 Hugging Face 模型 {#vllm}
 
-- **推荐模型**：Hugging Face 上的 [`gemma-4-12B-it-AWQ-INT4`](https://huggingface.co/cyankiwi/gemma-4-12B-it-AWQ-INT4)
-- **MODEL_SOURCE**：`hf://cyankiwi/gemma-4-12B-it-AWQ-INT4`
-- **MODEL_NAME**：`cyankiwi/gemma-4-12B-it-AWQ-INT4`
+选择 vLLM 支持的 Hugging Face 模型仓库，其中需包含 `.safetensors` 权重。`<repo>` 包含用户或组织名及仓库名。
+
+| 字段 | 格式 |
+| --- | --- |
+| **MODEL_SOURCE** | `hf://<repo>` |
+| **MODEL_NAME** | `<repo>` |
+| **ENGINE_ARGS** | 包含 `--max-model-len <tokens>`，设置上下文 token 数。多个参数用空格分隔 |
+| **MODEL_MODE** | 聊天模型选 **Chat**，嵌入模型选 **Embedding** |
+| **MODEL_SUPPORTS** | 按模型能力选择 **Vision**（图片理解）、**Tools**（工具调用）或 **Thinking**（推理）。嵌入模型选 **None** |
+| **VLLM_REQUIRED_GPU_MEMORY** | 实例启动所需的最小 GPU 显存，单位为 MB 或 Gi，例如 `23Gi` |
+| **LOG_LEVEL** | 日志级别，例如 `Info` |
+
+<details>
+<summary>示例：Gemma-4-12B AWQ</summary>
+
+模型：Hugging Face 上的 [`gemma-4-12B-it-AWQ-INT4`](https://huggingface.co/cyankiwi/gemma-4-12B-it-AWQ-INT4)
+
+**MODEL_SOURCE**
+
+```text
+hf://cyankiwi/gemma-4-12B-it-AWQ-INT4
+```
+
+**MODEL_NAME**
+
+```text
+cyankiwi/gemma-4-12B-it-AWQ-INT4
+```
+
 - **MODEL_MODE**：`Chat`
 - **MODEL_SUPPORTS**：`Thinking`、`Tools`、`Vision`
-- **ENGINE_ARGS**：`--max-model-len 65536 --gpu-memory-utilization 0.9 --tensor-parallel-size 1 --max-num-batched-tokens 8192 --tool-call-parser gemma4 --reasoning-parser gemma4 --enable-prefix-caching --enable-auto-tool-choice`
+
+**ENGINE_ARGS**
+
+```text
+--max-model-len 65536 --gpu-memory-utilization 0.9 --tensor-parallel-size 1 --max-num-batched-tokens 8192 --tool-call-parser gemma4 --reasoning-parser gemma4 --enable-prefix-caching --enable-auto-tool-choice
+```
+
 - **LOG_LEVEL**：`Info`
 - **VLLM_REQUIRED_GPU_MEMORY**：`23Gi`
 
-</template>
-</tabs>
+</details>
+
+### 使用 Strata 配置模型 {#strata}
+
+当大型混合专家（MoE）模型无法完全装入显存时，可以选择 Strata。它将模型数据分配到显存、系统内存和 SSD 中。例如，搭配足够的内存和高速 SSD，可以在单张消费级显卡上运行 Hy4-Flash，用于本地文本问答、推理和工具调用。
+
+以下以 Hy4-Flash 为例，从 Hugging Face 下载 `.strata` 文件。`<repo>` 包含用户或组织名及仓库名，多个下载项用逗号分隔。
+
+| 字段 | 格式与用途 |
+| --- | --- |
+| **MODEL_SOURCE** | `hf://<repo> --include <file>`。包含主模型及其必需的附加文件 |
+| **MODEL_NAME** | 模型服务名称，例如 `hy4-flash-sq-64` |
+| **MODEL_SUPPORTS** | 按模型能力选择 **Tools**（工具调用）和 **Thinking**（推理） |
+| **ENGINE_ARGS** | 空格分隔的初始化和引擎参数，例如 `--context 131072 --draft off`。各模型家族的选项见 [Strata 启动参数](#strata-tuning) |
+| **STRATA_CPU_REQUEST** | 调度所需的 CPU 核数，例如 `12` |
+| **STRATA_MEMORY_REQUEST** | 调度所需的系统内存，例如 `48Gi` |
+| **STRATA_CPU_LIMIT** | 容器最多可使用的 CPU 核数，例如 `19` |
+| **STRATA_MEMORY_LIMIT** | 容器的系统内存上限，例如 `56Gi`。超过上限可能导致容器因内存不足被终止并重启 |
+| **STRATA_REQUIRED_GPU_MEMORY** | 调度所需的 GPU 显存，例如 `23Gi`，与系统内存分别计算 |
+
+根据设备可分配的 CPU、内存和显存设置资源需求，并为模型加载与推理预留空间。
+
+<details>
+<summary>示例：Hy4-Flash SQ-64</summary>
+
+模型：[strata-engine/Hy4-Flash-Strata](https://huggingface.co/strata-engine/Hy4-Flash-Strata)，使用 SQ-64 模型包。主模型和必需的 Engram 文件合计约占 130 GB 磁盘空间。
+
+以下资源预算面向配备 64 GiB 系统内存、24 GiB 显存、至少 19 个可分配 CPU 核的设备，用于 128K 上下文的文本推理。这是一组估算的起始配置，尚未经过 Olares 实机验证。
+
+**MODEL_SOURCE**
+
+```text
+hf://strata-engine/Hy4-Flash-Strata --include Hy4-Flash-SQ-64.strata,hf://strata-engine/Hy4-Flash-Strata --include Hy4-Flash-Engram-Q8.strata
+```
+
+**MODEL_NAME**
+
+```text
+hy4-flash-sq-64
+```
+
+- **MODEL_SUPPORTS**：`Tools`、`Thinking`
+
+**ENGINE_ARGS**
+
+```text
+--context 131072
+```
+
+| 资源字段 | 示例值 | 用途 |
+| --- | --- | --- |
+| **STRATA_CPU_REQUEST** | `12` | 为实例预留 12 个 CPU 核 |
+| **STRATA_MEMORY_REQUEST** | `48Gi` | 为 SQ-64 在系统内存中的模型数据、缓存和推理缓冲区预留空间 |
+| **STRATA_CPU_LIMIT** | `19` | 在示例设备上最多使用 19 个 CPU 核 |
+| **STRATA_MEMORY_LIMIT** | `56Gi` | 为内存增长留出余量，并为 Olares 和其他服务留下 8 GiB 系统内存 |
+| **STRATA_REQUIRED_GPU_MEMORY** | `23Gi` | 调度到至少有 23 GiB 可用显存的 GPU |
+
+内存预算参考了 Strata 的 [Hy4 内存规划逻辑](https://github.com/Niko1221/Strata/blob/main/terminal/strata_control/hy4_fit.py)。CPU 分配和显存调度要求取决于设备；SQ-64 没有固定的 CPU 核数要求，也不要求必须具备 23 GiB 显存。显存越少，留在系统内存中或需要从 SSD 读取的模型数据就越多。请按设备调整预算，并检查模型加载后和处理长提示词时的内存占用。
+
+</details>
+
+## Step 3: 安装模型应用
+
+1. 填完所选引擎的配置后，点击 **Confirm** 保存并开始安装。
+2. 在右侧 **Instances** 面板中查看安装进度，等待按钮变为 **Open**。
+
+   ![模型实例安装完成](/images/manual/olares/llm-base-model-instance-installed1.png#bordered)
+
+## Step 4: 检查模型下载和引擎状态 {#监控部署并配置模型服务}
+
+安装完成后，打开模型应用查看下载进度和引擎启动状态。
+
+1. 在 **Instances** 面板或 Launchpad 中打开新建的模型应用。
+2. 在默认打开的 **Status** 标签页查看下载进度。模型文件会自动下载。
+3. 等待 **Service status** 中的两个状态都就绪：
+
+   | 状态项 | 可以继续的状态 | 含义 |
+   | --- | --- | --- |
+   | **Model** | **Ready** | 模型文件已下载并校验完成 |
+   | **Engine** | **Running** | 推理服务已启动 |
+
+   ![模型控制台就绪](/images/manual/olares/llm-base-model-console-status.png#bordered)
+
+vLLM 和 SGLang 加载模型可能需要较长时间。如果任一状态一直未就绪，参见[模型或引擎未就绪](/zh/manual/help/ts-model-engine-not-ready.md)。
+
+## 通过 Olares Router 连接 AI 应用 {#将客户端应用连接到模型服务}
+
+模型就绪后，请参见 [Olares Router：获取连接信息](olares-router.md#从-router-获取连接信息)，获取客户端所需的地址、模型名称和鉴权信息。
+
+## 调整 GPU 显存与模型上下文长度 {#参考资料}
+
+### 调整实例的 GPU 显存需求
+
+在模型实例的环境变量设置中，调整启动所需的最小 GPU 显存。
+
+1. 进入 **Settings** > **Applications**，选择新建的模型实例。
+2. 打开 **Manage environment variables**，找到所用引擎的显存需求字段：
+
+   | 引擎 | 字段 |
+   | --- | --- |
+   | llama.cpp | `LLAMACPP_REQUIRED_GPU_MEMORY` |
+   | Ollama | `OLLAMA_REQUIRED_GPU_MEMORY` |
+   | SGLang | `SGLANG_REQUIRED_GPU_MEMORY` |
+   | vLLM | `VLLM_REQUIRED_GPU_MEMORY` |
+   | Strata | `STRATA_REQUIRED_GPU_MEMORY` |
+
+3. 点击字段旁的编辑图标，填写显存值，单位为 MB 或 Gi，例如 `23Gi`。时间分片或独占模式下，需小于总显存。显存分片模式下，需小于剩余显存。CPU 模式下填 `0`。
+4. 保存修改，然后点击 **Apply**。
+5. 打开模型应用，确认 **Model** 为 **Ready**、**Engine** 为 **Running**。
+
+### 查看引擎的上下文长度 {#在-router-中查看模型详情}
+
+客户端需要填写上下文长度时，从 Router 查看实际配置。以下截图使用 Qwen3.8-27B (llama.cpp)，请以你创建的实例为准。
+
+<!--@include: ../reusables/ai-service-connections.md#model-context-window-->
+
+### 修改上下文长度或引擎显存比例
+
+1. 在 Router 的 **LLM** 页面找到模型，点击信息图标，打开 **Model card**。
+2. 点击 **Edit**，修改引擎参数。例如，llama.cpp 使用 `-c` 设置上下文长度，vLLM 使用 `--gpu-memory-utilization` 设置显存比例。其他引擎的参数见下方[推理引擎启动参数参考](#引擎调优参数)。
+3. 保存修改。引擎会重新启动，等待模型恢复可用后再发送请求。
+4. 如果调整了上下文长度，同步检查客户端配置，确保不超过引擎设置的值。
+
+## 推理引擎启动参数 {#引擎调优参数}
+
+通过 `ENGINE_ARGS` 调整上下文长度、内存占用、并发数和模型特有功能。下表列出常用参数，完整列表见各引擎的参考文档。示例值用于说明单个参数，不是一组需要原样组合的配置。
+
+### llama.cpp {#llama-cpp-tuning}
+
+参数之间用空格分隔，例如 `-c 65536 -np 1 -ngl all -fa on`。基座也接受 `LLAMA_ARG_*=value` 格式的环境变量。
+
+| 参数 | 用途 | 示例值 |
+| --- | --- | --- |
+| `-c` / `--ctx-size` | 上下文 token 预算。使用多个并发槽位时，需查看服务实际报告的单槽位上下文长度。 | `65536` |
+| `-np` / `--parallel` | 并发请求槽位数。设为 `1` 时，上下文预算供单个请求使用。 | `1` |
+| `-ngl` / `--gpu-layers` | 放到 GPU 上的模型层数。`all` 表示全部层；减小层数可降低显存占用。 | `all` |
+| `-fa` / `--flash-attn` | Flash Attention 模式。 | `on`、`off` 或 `auto` |
+| `-ctk` / `-ctv` | K 和 V 缓存的数据类型。量化缓存可节省内存，支持的组合取决于模型和后端。 | `q8_0` |
+| `-t` / `--threads` | 生成时使用的 CPU 线程数。 | `8` |
+| `--jinja` | 启用 Jinja 对话模板，包括工具调用所需的模板。 | 无需填值 |
+| `--spec-type` | 推测解码方式。`draft-mtp` 需要兼容的 MTP 权重。 | `draft-mtp` |
+| `--spec-draft-n-max` | 每轮推测解码最多生成的草稿 token 数。 | `2` |
+
+完整参数见 [llama.cpp 服务参考文档](https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md)。
+
+### Ollama {#Ollama-tuning}
+
+使用空格分隔的环境变量赋值，例如 `OLLAMA_CONTEXT_LENGTH=8192 OLLAMA_NUM_PARALLEL=1`。这些参数配置 Ollama 服务；`temperature` 等请求参数在客户端或 API 请求中设置。
+
+| 参数 | 用途 | 示例值 |
+| --- | --- | --- |
+| `OLLAMA_CONTEXT_LENGTH` | 默认上下文长度，单位为 token。 | `8192` |
+| `OLLAMA_KEEP_ALIVE` | 请求结束后模型保留在内存中的时间。基座默认值为 `-1`，表示一直保留。 | `-1` 或 `5m` |
+| `OLLAMA_FLASH_ATTENTION` | 启用 Flash Attention；量化 KV 缓存时需要开启。 | `1` |
+| `OLLAMA_KV_CACHE_TYPE` | KV 缓存精度。降低精度可减少内存占用，也可能影响输出质量。 | `f16`、`q8_0` 或 `q4_0` |
+| `OLLAMA_NUM_PARALLEL` | 每个模型同时处理的请求数。并发越高，上下文所需内存越多。 | `1` |
+| `OLLAMA_MAX_LOADED_MODELS` | 同时加载的模型数量上限。 | `1` |
+| `OLLAMA_MAX_QUEUE` | 排队请求数上限，超出后拒绝新请求。 | `64` |
+
+完整参数见 [Ollama 配置参考文档](https://docs.ollama.com/faq)。
+
+### SGLang {#SGLang-tuning}
+
+参数之间用空格分隔，例如 `--context-length 65536 --mem-fraction-static 0.85`。推理和工具调用解析器需要与所部署的模型家族匹配。
+
+| 参数 | 用途 | 示例值 |
+| --- | --- | --- |
+| `--context-length` | 最大序列长度，单位为 token。 | `65536` |
+| `--mem-fraction-static` | 为模型权重和 KV 缓存预留的显存比例，其余空间用于动态分配。 | `0.85` |
+| `--chunked-prefill-size` | 每个预填充块的 token 数。减小可降低预填充内存峰值，但也可能降低提示词处理吞吐。 | `4096` |
+| `--max-running-requests` | 同时运行的请求数上限。 | `4` |
+| `--tp-size` | 张量并行使用的 GPU 数量。 | `1` |
+| `--kv-cache-dtype` | KV 缓存数据类型，需模型和 GPU 支持。 | `auto` 或 `fp8_e4m3` |
+| `--reasoning-parser` | 从模型输出中提取推理内容。 | 兼容的 Qwen 模型可用 `qwen3` |
+| `--tool-call-parser` | 将模型的工具调用输出解析为 API 的结构化工具调用。 | 兼容的 Qwen 模型可用 `qwen25` |
+| `--attention-backend` | 为模型和硬件选择注意力计算实现。 | `flashinfer` |
+
+使用 SGLang 0.5.23 时，应从旧配置中移除 `--speculative-skip-dp-mlp-sync`，该参数会导致启动失败。支持的后端、解析器和推测解码选项见 [SGLang 服务参考文档](https://docs.sglang.io/docs/advanced_features/server_arguments)。
+
+### vLLM {#vLLM-tuning}
+
+参数之间用空格分隔，例如 `--max-model-len 65536 --gpu-memory-utilization 0.9`。显存利用率以引擎可见的显存为基准；在 Olares 上，`VLLM_REQUIRED_GPU_MEMORY` 决定这部分显存预算。
+
+| 参数 | 用途 | 示例值 |
+| --- | --- | --- |
+| `--max-model-len` | 最大序列长度，包括输入和输出 token。 | `65536` |
+| `--gpu-memory-utilization` | 引擎可见显存中用于推理的比例。 | `0.9` |
+| `--tensor-parallel-size` | 张量并行使用的 GPU 数量。 | `1` |
+| `--max-num-seqs` | 每轮处理的序列数量上限。 | `4` |
+| `--max-num-batched-tokens` | 每轮处理的 token 数上限。结合并发数和分块预填充设置，在吞吐与延迟之间取舍。 | `8192` |
+| `--enable-prefix-caching` | 复用相同提示词前缀的 KV 缓存。 | 无需填值 |
+| `--kv-cache-dtype` | KV 缓存数据类型，需模型和 GPU 支持。 | `auto` 或 `fp8` |
+| `--reasoning-parser` | 按模型的输出格式提取推理内容。 | 兼容的 Qwen 模型可用 `qwen3` |
+| `--enable-auto-tool-choice` | 允许模型自行选择工具调用，需配置匹配的工具调用解析器。 | 无需填值 |
+| `--tool-call-parser` | 解析模型的工具调用格式。 | 兼容的 Qwen 模型可用 `qwen3_xml` |
+| `--enforce-eager` | 使用即时执行，关闭 CUDA Graph。可用于排查图捕获问题或其内存开销。 | 无需填值 |
+| `--no-enable-extensible-kv-cache` | 关闭 vLLM 0.34.0 的可扩展 KV 缓存。 | 无需填值 |
+
+使用 vLLM 0.34.0 的基座默认启用可扩展 KV 缓存，显存利用率默认值为 `1.0`。需要在已分配的显存预算内留出余量时，应显式设置利用率。完整参数见 [vLLM 引擎参考文档](https://docs.vllm.ai/en/latest/configuration/engine_args/)。
+
+### Strata {#strata-tuning}
+
+参数之间用空格分隔。Strata 接受初始化参数和所选模型引擎的参数，基座会将它们交给对应组件。单独的 `--` 之后的参数直接传给引擎。支持的值取决于模型家族。
+
+| 参数 | 用途和适用范围 | 示例值 |
+| --- | --- | --- |
+| `--context` | 上下文长度，单位为 token。基座也接受 `--max-context` 和 `--ctx` 两个别名。 | `131072` |
+| `--draft` | 选择推测解码草稿模型：Qwen3.8 使用 MTP 或 DFlash2，Hy4-Flash 使用 DFly2，Inkling-2-Mini 使用 DSpark。`off` 表示关闭。 | Hy4-Flash 可用 `dfly2` |
+| `--kv` | KV 缓存精度。Qwen 引擎可选 `int8`、`q4_0`、`k8v4`、`fp16`；其他家族的缓存实现不同。 | Qwen 可用 `int8` |
+| `--parallel` | 支持并发解码的引擎（如 Qwen）的槽位数。增加槽位会增加内存开销。 | `1` |
+| `--low-ram` | Qwen 专家数据的加载方式：自动选择、驻留内存或从文件加载。 | `auto`、`resident` 或 `mmap` |
+| `--resident-budget-gib` | 支持的 Qwen UD-Q4_K_XL 和 UD-IQ4_XS 模型包中，驻留内存的专家数据预算，单位为 GiB。 | `40` |
+| `--vram-reserve-mib` | 在 Qwen 专家缓存之外预留的显存，单位为 MiB。 | `1024` |
+| `--vram-experts-gb` / `--ram-experts-gb` | Hy4-Flash 在显存和系统内存中存放专家数据的预算，单位为 GB，不含其他模型组件和缓冲区。 | `12` / `40` |
+| `--spec-k` | 提供该选项的引擎使用的草稿长度，需要结合所选草稿模型调整。 | `4` |
+
+Hy4-Flash SQ-64 使用 `--context 131072` 时保留默认的 DFly2 草稿模型，添加 `--draft off` 可关闭。专家数据预算决定模型如何分配；`STRATA_*_REQUEST`、`STRATA_*_LIMIT` 和 `STRATA_REQUIRED_GPU_MEMORY` 决定容器资源。
+
+模型选择、文件路径、网络、GPU 选择和视觉功能由基座管理。在 `ENGINE_ARGS` 中填写 `--family`、`--model`、`--host`、`--port`、`--gpu`、`--vision` 等覆盖参数会被拒绝。
+
+各模型家族的选项见 [Strata 启动参考文档](https://github.com/Niko1221/Strata/blob/main/docs/TERMINAL_LAUNCH.md)。
