@@ -117,6 +117,14 @@ var systemServerNativeFlows = []platformServiceFlow{
 	{service: types.NamespacedName{Namespace: "os-platform", Name: "lldap-service"}, to: map[string]string{"app": "lldap"}, servicePort: 17170, targetPort: 17170},
 }
 
+// Vault is already Linkerd-injected and does not use traffic-group enrollment.
+var systemServerVaultFlow = platformServiceFlow{
+	service:     types.NamespacedName{Namespace: "os-framework", Name: "vault-server"},
+	to:          map[string]string{"app": "vault-server"},
+	servicePort: 3000,
+	targetPort:  3000,
+}
+
 var systemServerMeshedProviderFlows = []platformServiceFlow{
 	{service: types.NamespacedName{Namespace: "os-framework", Name: "appstore-svc"}, to: map[string]string{"app": "appstore"}, servicePort: 81, targetPort: 8080},
 	{service: types.NamespacedName{Namespace: "os-framework", Name: "search3"}, to: map[string]string{"app": "search3"}, servicePort: 80, targetPort: 8080},
@@ -400,7 +408,8 @@ func SystemServerCitusEgressRule() netv1.NetworkPolicyEgressRule {
 
 // SystemServerDependencyServices lists the Services read when generating route egress.
 func SystemServerDependencyServices() []types.NamespacedName {
-	keys := make([]types.NamespacedName, 0, len(systemServerNativeFlows)+len(systemServerMeshedProviderFlows)+len(systemServerOptionalNativeFlows)+len(systemServerEnrollingFlows))
+	keys := make([]types.NamespacedName, 0, 1+len(systemServerNativeFlows)+len(systemServerMeshedProviderFlows)+len(systemServerOptionalNativeFlows)+len(systemServerEnrollingFlows))
+	keys = append(keys, systemServerVaultFlow.service)
 	for _, flow := range systemServerNativeFlows {
 		keys = append(keys, flow.service)
 	}
@@ -435,6 +444,14 @@ func SystemServerDependencyEgressRules(services map[types.NamespacedName]*corev1
 		rules = append(rules, netv1.NetworkPolicyEgressRule{
 			To:    []netv1.NetworkPolicyPeer{platformPeer(flow.service.Namespace, destination)},
 			Ports: []netv1.NetworkPolicyPort{tcpPort(flow.targetPort), tcpPort(4143)},
+		})
+	}
+	// The Wizard uses Vault's public RPC listener through the tenant proxy.
+	// Admit meshed Vault endpoints only; the Service also exposes admin RPC.
+	if systemServerVaultFlow.matchesService(services[systemServerVaultFlow.service]) {
+		rules = append(rules, netv1.NetworkPolicyEgressRule{
+			To:    []netv1.NetworkPolicyPeer{platformPeer(platformVault.namespace, maps.Clone(platformVault.selector))},
+			Ports: []netv1.NetworkPolicyPort{tcpPort(systemServerVaultFlow.targetPort), tcpPort(4143)},
 		})
 	}
 	for _, flow := range systemServerOptionalNativeFlows {

@@ -366,7 +366,18 @@ func TestSystemLoginStartsBackendTransportBeforeFrontend(t *testing.T) {
 			},
 		},
 	}
-	authBackends = append(authBackends, dns, infisical, bfl, appService, nats, redis, lldap, market, monitoring, headscale)
+	vault := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "os-framework", Name: "vault-server"},
+		Spec: corev1.ServiceSpec{
+			Type: corev1.ServiceTypeClusterIP, ClusterIP: "10.96.0.24",
+			Selector: map[string]string{"app": "vault-server"},
+			Ports: []corev1.ServicePort{
+				{Port: 3000, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt32(3000)},
+				{Port: 3010, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt32(3010)},
+			},
+		},
+	}
+	authBackends = append(authBackends, dns, infisical, bfl, appService, nats, redis, lldap, market, monitoring, headscale, vault)
 	c := fake.NewClientBuilder().WithScheme(testSchemeWithSecurityPolicy(t)).WithObjects(authBackends...).Build()
 	if err := gateway.EnsureSystemPlaneRoutes(ctx, c, "alice", "alice.olares.com", "user-space-alice", false); err != nil {
 		t.Fatal(err)
@@ -397,6 +408,9 @@ func TestSystemLoginStartsBackendTransportBeforeFrontend(t *testing.T) {
 	for _, p := range policies.Items {
 		if p.Namespace == "user-system-alice" {
 			systemEgress = p.DeepCopy()
+			if !security.IsAppServiceManagedExternalNP(systemEgress) {
+				t.Fatal("namespace policy reconciliation would prune route-controlled egress")
+			}
 			if !reflect.DeepEqual(p.Spec.PodSelector.MatchLabels, map[string]string{
 				"app": "systemserver", "linkerd.io/control-plane-ns": "os-mesh",
 			}) {
@@ -479,6 +493,12 @@ func TestSystemLoginStartsBackendTransportBeforeFrontend(t *testing.T) {
 						"app": "appstore", "linkerd.io/control-plane-ns": "os-mesh", "traffic.olares.io/platform-mesh": "true",
 					}}).networkPolicyPeer()},
 					Ports: []netv1.NetworkPolicyPort{meshTransportPort(8080), meshTransportPort(4143)},
+				},
+				{
+					To: []netv1.NetworkPolicyPeer{(meshTransportPeer{"os-framework", map[string]string{
+						"app": "vault-server", "linkerd.io/control-plane-ns": "os-mesh",
+					}}).networkPolicyPeer()},
+					Ports: []netv1.NetworkPolicyPort{meshTransportPort(3000), meshTransportPort(4143)},
 				},
 				{
 					To:    []netv1.NetworkPolicyPeer{(meshTransportPeer{"os-network", map[string]string{"app": "headscale"}}).networkPolicyPeer()},
@@ -567,6 +587,9 @@ func TestSystemLoginStartsBackendTransportBeforeFrontend(t *testing.T) {
 	if err := c.Delete(ctx, monitoring); err != nil {
 		t.Fatal(err)
 	}
+	if err := c.Delete(ctx, vault); err != nil {
+		t.Fatal(err)
+	}
 	headscale.Spec.Ports[0].TargetPort = intstr.FromString("policy")
 	if err := c.Update(ctx, headscale); err != nil {
 		t.Fatal(err)
@@ -599,6 +622,12 @@ func TestSystemLoginStartsBackendTransportBeforeFrontend(t *testing.T) {
 	if err := c.Create(ctx, &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{Namespace: monitoring.Namespace, Name: monitoring.Name},
 		Spec:       monitoring.Spec,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Create(ctx, &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Namespace: vault.Namespace, Name: vault.Name},
+		Spec:       vault.Spec,
 	}); err != nil {
 		t.Fatal(err)
 	}

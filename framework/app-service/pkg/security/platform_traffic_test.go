@@ -303,6 +303,52 @@ func TestSystemServerHeadscaleManagementEgress(t *testing.T) {
 	}
 }
 
+func TestSystemServerVaultEgressUsesOnlyMeshedRPC(t *testing.T) {
+	key := types.NamespacedName{Namespace: "os-framework", Name: "vault-server"}
+	vault := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Namespace: key.Namespace, Name: key.Name},
+		Spec: corev1.ServiceSpec{
+			Type: corev1.ServiceTypeClusterIP, ClusterIP: "10.96.0.24",
+			Selector: map[string]string{"app": "vault-server"},
+			Ports: []corev1.ServicePort{
+				{Name: "server", Port: 3000, TargetPort: intstr.FromInt32(3000), Protocol: corev1.ProtocolTCP},
+				{Name: "admin", Port: 3010, TargetPort: intstr.FromInt32(3010), Protocol: corev1.ProtocolTCP},
+			},
+		},
+	}
+	if !slices.Contains(SystemServerDependencyServices(), key) {
+		t.Fatal("Vault Service is missing from the route dependency inventory")
+	}
+	services := map[types.NamespacedName]*corev1.Service{key: vault}
+	want := []netv1.NetworkPolicyEgressRule{{
+		To: []netv1.NetworkPolicyPeer{platformPeer("os-framework", map[string]string{
+			"app": "vault-server", "linkerd.io/control-plane-ns": "os-mesh",
+		})},
+		Ports: []netv1.NetworkPolicyPort{tcpPort(3000), tcpPort(4143)},
+	}}
+	if got := SystemServerDependencyEgressRules(services); !reflect.DeepEqual(got, want) {
+		t.Fatalf("Vault egress must use meshed RPC endpoints only: %+v", got)
+	}
+	for _, tc := range []struct {
+		name   string
+		mutate func(*corev1.Service)
+	}{
+		{"management-only", func(s *corev1.Service) { s.Spec.Ports = s.Spec.Ports[1:] }},
+		{"redirected to management", func(s *corev1.Service) { s.Spec.Ports[0].TargetPort = intstr.FromInt32(3010) }},
+		{"unexpected selector", func(s *corev1.Service) { s.Spec.Selector["app"] = "other" }},
+		{"foreign namespace", func(s *corev1.Service) { s.Namespace = "user-system-other" }},
+		{"external alias", func(s *corev1.Service) { s.Spec.Type = corev1.ServiceTypeExternalName }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			mutated := vault.DeepCopy()
+			tc.mutate(mutated)
+			if got := SystemServerDependencyEgressRules(map[types.NamespacedName]*corev1.Service{key: mutated}); len(got) != 0 {
+				t.Fatalf("unverified Vault granted egress: %+v", got)
+			}
+		})
+	}
+}
+
 func TestSystemServerDesktopDependenciesRequireVerifiedServices(t *testing.T) {
 	lldapKey := types.NamespacedName{Namespace: "os-platform", Name: "lldap-service"}
 	marketKey := types.NamespacedName{Namespace: "os-framework", Name: "appstore-svc"}
