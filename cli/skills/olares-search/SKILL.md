@@ -1,7 +1,7 @@
 ---
 name: olares-search
 version: 0.0.0-cli.0
-description: "Olares search via olares-cli search — the Desktop global search over Drive files, Sync (Seafile) libraries, Google Drive, Dropbox, Wise/Knowledge, installed applications, and the Market app catalog, with paging and JSON output. On Olares 1.12.7+ one `search drive` (alias `search files`) covers all four file sources. Use for Olares search, full-text search, find a file by content, Text Search, global search, search apps, search market, find an app to install, search google drive, search dropbox, search sync, search wise."
+description: "Olares locator search via olares-cli search — find which Drive, Sync, Google Drive, Dropbox, or Wise file contains a name/text, or locate an installed/Market app, with paging and JSON output. On Olares 1.12.7+ one `search drive` (alias `search files`) covers all four file sources. Use when the result should be a file or app location. Do not use to answer, summarize, or cite a user's question from file contents; use olares-router Files RAG for a source-grounded answer."
 compatibility: Requires olares-cli on PATH and active Olares profile
 metadata:
   openclaw:
@@ -22,7 +22,15 @@ Use `olares-cli search <subcommand> --help` for syntax.
 - Find an installed application by visible title.
 - Find an app in the Market catalog, installed or not, by name, title, or description.
 
-> **Mental model:** `search drive` / `search sync` / `search knowledge` answer *"which file CONTAINS this text"* by querying the pre-built per-user index. `search app` answers *"which installed app matches this name"* and returns entrance URLs to open it. `search market` answers *"which app in the store matches this"*: it searches the catalog the signed-in user can see, returns the Market detail route `/app/<source_id>/<app_name>`, and says nothing about whether the app is installed. Neither is lifecycle inventory (`market list --mine` / `market status`) or resource ranking (`dashboard applications`). To LIST or READ a known path, use [`olares-files`](../olares-files/SKILL.md) (`files ls` / `files cat` / `files download`).
+Do **not** use this skill when the user asks a question that must be answered,
+summarized, or cited from their files. In that case use
+[`olares-router`](../olares-router/SKILL.md) Files RAG with
+`olares-cli router call search --source files`: it returns bounded evidence,
+source locators, highlights and an explicit empty-result/abstention contract.
+Use this skill only when the requested output is the file/app itself or its
+location.
+
+> **Mental model:** `search drive` / `search sync` / `search knowledge` answer *"which file CONTAINS this text"* by querying the pre-built per-user index. They do not answer *"according to my files, what should I do and what evidence supports it"*; that is [`olares-router`](../olares-router/SKILL.md) Files RAG. `search app` answers *"which installed app matches this name"* and returns entrance URLs to open it. `search market` answers *"which app in the store matches this"*: it searches the catalog the signed-in user can see, returns the Market detail route `/app/<source_id>/<app_name>`, and says nothing about whether the app is installed. Neither is lifecycle inventory (`market list --mine` / `market status`) or resource ranking (`dashboard applications`). To LIST or READ a known path, use [`olares-files`](../olares-files/SKILL.md) (`files ls` / `files cat` / `files download`).
 
 ## Fast paths
 

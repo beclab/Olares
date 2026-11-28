@@ -433,6 +433,37 @@ func TestEveryInlineRouterCLICommandPathResolves(t *testing.T) {
 	}
 }
 
+// Natural-language agents choose a skill from its description before they
+// read the body. Keep the file-locator and grounded-answer intents mutually
+// explicit so a request to answer from Files cannot silently fall back to the
+// older search-drive + files-cat path.
+func TestFilesSearchSkillsDeclareTheirRoutingBoundary(t *testing.T) {
+	checks := map[string][]string{
+		"olares-search/SKILL.md": {
+			"Do not use to answer, summarize, or cite",
+			"use olares-router Files RAG",
+			"Use this skill only when the requested output is the file/app itself",
+		},
+		"olares-router/SKILL.md": {
+			"answer and summarize questions",
+			"use olares-search instead only to locate",
+			"Do not replace",
+			"bypasses the RAG evidence",
+		},
+	}
+	for path, phrases := range checks {
+		source, err := fs.ReadFile(skills.FS(), path)
+		if err != nil {
+			t.Fatalf("read %s: %v", path, err)
+		}
+		for _, phrase := range phrases {
+			if !strings.Contains(string(source), phrase) {
+				t.Errorf("%s must state routing boundary %q", path, phrase)
+			}
+		}
+	}
+}
+
 func TestRouterSkillHasNoObsoleteCommandContracts(t *testing.T) {
 	suite := skills.FS()
 	oldSpeakerEmbed := regexp.MustCompile(`(?i)speaker[_-]embed[^\n]{0,80}router call embed`)

@@ -16,12 +16,12 @@ import (
 	"github.com/beclab/Olares/cli/pkg/cmdutil"
 )
 
-// `olares-cli router call …` — the data plane.
+// `olares-cli router call …` — Router's data plane.
 //
-// Everything else in this tree configures Router. These verbs use it: one call
-// each to the OpenAI-shaped routes it serves, whether the model behind them is
-// a cloud provider or a model application on this machine. Which it is does not
-// change the request, and that is the point of the gateway.
+// Everything else in this tree configures Router. Most of these verbs call an
+// OpenAI-shaped model route. Files RAG search is the deliberate exception: it
+// calls Router's delegated application route, which obtains authorized indexed
+// evidence from Search3 rather than asking a model to generate an answer.
 //
 // A call is metered. It lands in `router usage`, it counts against whatever
 // quota covers the credential, and — unlike every read in this tree — it can
@@ -31,12 +31,14 @@ import (
 func NewCallCommand(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "call",
-		Short: "call a model through Router",
-		Long: `Send work to a model.
+		Short: "call a model or delegated service through Router",
+		Long: `Send work through Router.
 
-The routes are OpenAI-shaped, so a call reaches a cloud provider and a model
+Most routes are OpenAI-shaped, so a call reaches a cloud provider and a model
 application on this machine the same way. Which one answers depends on the model
-name, and nothing else about the request changes.
+name, and nothing else about the request changes. Files RAG search is not a
+model call: "router call search --source files" retrieves authorized source
+evidence through Router and Search3 for a host-delegated final user.
 
 Leaving --model off names the default category for that kind of work —
 "default-chat", "default-stt", and so on. Router chooses what a category answers
@@ -60,7 +62,7 @@ Subcommands:
   chat [prompt]         a chat completion, streamed by default
   embed <text…>         embedding vectors
   rerank <query>        order documents by how well they answer a query
-  search <query>        search the web
+  search <query>        search the web, or authorized Files RAG evidence
   scrape <url>          a page as markdown
   translate <text>      translate, detect a language, list the pairs
   image <prompt>        generate an image
